@@ -10,8 +10,7 @@ from pipeline.policy import CorpusPolicy, SourcePolicy
 OPENALEX_SOURCES_URL = "https://api.openalex.org/sources"
 OPENALEX_WORKS_URL = "https://api.openalex.org/works"
 DEFAULT_PER_PAGE = 100
-# `has_abstract` must not appear here: OpenAlex returns HTTP 400 ("not a valid select field").
-# Abstract presence is enforced via filter `has_abstract:true` plus `abstract_inverted_index` below.
+# Omit has_abstract: invalid for works `select` (HTTP 400). Use filter has_abstract:true + abstract_inverted_index.
 DEFAULT_SELECT_FIELDS = (
     "id",
     "doi",

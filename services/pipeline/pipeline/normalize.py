@@ -113,7 +113,7 @@ def extract_authors(work: Mapping[str, Any]) -> tuple[AuthorLink, ...]:
 
 
 def _topic_level_from_payload(topic: Mapping[str, Any]) -> int:
-    """OpenAlex work `topics[]` entries often omit `level` (present on full /topics entities)."""
+    """Work-embedded topic objects may omit `level` (unlike full Topic entities)."""
     raw = topic.get("level")
     if raw is not None:
         return int(raw)
