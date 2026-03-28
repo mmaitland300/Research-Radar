@@ -9,4 +9,6 @@ __pycache__/
 dist/
 build/
 artifacts/
+.codex-pydeps/
+*.egg-info/
 .DS_Store
