@@ -57,5 +57,25 @@ class PaperListResponse(BaseModel):
     items: list[PaperListItem]
 
 
+class UndercitedRecommendationItem(BaseModel):
+    paper_id: str
+    title: str
+    year: int
+    citation_count: int
+    source_slug: str | None
+    reason: str
+    signal_breakdown: dict[str, float]
+
+
+class UndercitedRecommendationsResponse(BaseModel):
+    """Heuristic v0 baseline, not a trained ranking model."""
+
+    heuristic_label: str
+    heuristic_version: str
+    description: str
+    total: int
+    items: list[UndercitedRecommendationItem]
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)

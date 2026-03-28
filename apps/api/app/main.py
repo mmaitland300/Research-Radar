@@ -9,10 +9,13 @@ from app.contracts import (
     PaperListResponse,
     ProductSummary,
     RankingFamily,
+    UndercitedRecommendationItem,
+    UndercitedRecommendationsResponse,
     utc_now,
 )
 from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
+from app.papers_repo import list_undercited_heuristic_v0
 
 app = FastAPI(
     title="Research Radar API",
@@ -42,6 +45,55 @@ def get_product_summary() -> ProductSummary:
             "bridge": settings.weights.bridge,
             "diversity_penalty": settings.weights.diversity_penalty,
         },
+    )
+
+
+@app.get(
+    "/api/v1/recommendations/undercited",
+    response_model=UndercitedRecommendationsResponse,
+)
+def get_recommendations_undercited(
+    limit: int = Query(default=15, ge=1, le=100),
+    min_year: int = Query(default=2019, ge=1990, le=2100),
+    max_citations: int = Query(default=30, ge=0, le=10_000),
+) -> UndercitedRecommendationsResponse:
+    """
+    Heuristic v0 baseline: recent core-corpus papers with low citations and basic metadata quality.
+    Not a trained ranking model.
+    """
+    try:
+        rows = list_undercited_heuristic_v0(
+            limit=limit,
+            min_year=min_year,
+            max_citations=max_citations,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database query failed. Confirm Postgres is running and seeded.",
+        ) from exc
+
+    return UndercitedRecommendationsResponse(
+        heuristic_label="undercited-core-recent-v0",
+        heuristic_version="v0",
+        description=(
+            "Rule-based baseline: included core papers since min_year with citation count "
+            "at or below max_citations, non-empty title and abstract. Order: newest year first, "
+            "then fewer citations first."
+        ),
+        total=len(rows),
+        items=[
+            UndercitedRecommendationItem(
+                paper_id=r.paper_id,
+                title=r.title,
+                year=r.year,
+                citation_count=r.citation_count,
+                source_slug=r.source_slug,
+                reason=r.reason,
+                signal_breakdown=r.signal_breakdown,
+            )
+            for r in rows
+        ],
     )
 
 

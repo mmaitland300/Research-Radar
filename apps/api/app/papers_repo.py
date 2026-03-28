@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from datetime import date
 
 import psycopg
 from psycopg.rows import dict_row
@@ -134,3 +135,102 @@ def get_paper_detail(paper_id: str) -> PaperDetailRow | None:
         authors=[str(item) for item in authors if item],
         topics=[str(item) for item in topics if item],
     )
+
+
+UNDERCIITED_HEURISTIC_V0_REASON = (
+    "Recent core paper with low citation count (heuristic v0 baseline)."
+)
+
+
+@dataclass(frozen=True)
+class UndercitedHeuristicRow:
+    paper_id: str
+    title: str
+    year: int
+    citation_count: int
+    source_slug: str | None
+    reason: str
+    signal_breakdown: dict[str, float]
+
+
+def _heuristic_v0_breakdown(
+    *,
+    year: int,
+    citation_count: int,
+    min_year: int,
+    max_citations: int,
+) -> dict[str, float]:
+    """Rule-based scores in [0, 1] for transparency only; not a learned ranker."""
+    today = date.today()
+    current_year = today.year
+    span = max(1, current_year - min_year + 1)
+    recency = (year - min_year + 1) / span
+    recency = max(0.0, min(1.0, recency))
+    cap = max(1, max_citations)
+    low_cite = 1.0 - min(1.0, float(citation_count) / float(cap + 1))
+    core_gate = 1.0
+    metadata_gate = 1.0
+    composite = 0.45 * recency + 0.55 * low_cite
+    return {
+        "recency": round(recency, 4),
+        "low_citation_signal": round(low_cite, 4),
+        "core_corpus_gate": core_gate,
+        "metadata_quality_gate": metadata_gate,
+        "heuristic_composite": round(composite, 4),
+    }
+
+
+def list_undercited_heuristic_v0(
+    *,
+    limit: int,
+    min_year: int,
+    max_citations: int,
+) -> list[UndercitedHeuristicRow]:
+    """
+    Newest included core papers with citation count at or below a ceiling,
+    with a minimum metadata gate (non-empty title and abstract).
+    """
+    query = """
+        SELECT
+            openalex_id,
+            title,
+            year,
+            citation_count,
+            source_slug
+        FROM works
+        WHERE inclusion_status = 'included'
+          AND is_core_corpus = TRUE
+          AND year >= %s
+          AND citation_count <= %s
+          AND length(trim(COALESCE(title, ''))) > 0
+          AND length(trim(COALESCE(abstract, ''))) > 0
+        ORDER BY year DESC, citation_count ASC, openalex_id ASC
+        LIMIT %s
+    """
+    params: list[object] = [min_year, max_citations, limit]
+
+    with psycopg.connect(database_url_from_env(), row_factory=dict_row) as conn:
+        rows = conn.execute(query, params).fetchall()
+
+    out: list[UndercitedHeuristicRow] = []
+    for row in rows:
+        y = int(row["year"])
+        c = int(row["citation_count"] or 0)
+        breakdown = _heuristic_v0_breakdown(
+            year=y,
+            citation_count=c,
+            min_year=min_year,
+            max_citations=max_citations,
+        )
+        out.append(
+            UndercitedHeuristicRow(
+                paper_id=str(row["openalex_id"]),
+                title=str(row["title"]),
+                year=y,
+                citation_count=c,
+                source_slug=str(row["source_slug"]) if row["source_slug"] is not None else None,
+                reason=UNDERCIITED_HEURISTIC_V0_REASON,
+                signal_breakdown=breakdown,
+            )
+        )
+    return out
