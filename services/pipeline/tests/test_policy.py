@@ -12,8 +12,8 @@ def test_evaluate_work_includes_core_source_with_topic_signal() -> None:
         "abstract": "We study self-supervised audio embeddings in MIR tasks.",
         "primary_location": {
             "source": {
-                "id": None,
-                "display_name": "ISMIR",
+                "id": "https://openalex.org/S4210180030",
+                "display_name": "Transactions of the International Society for Music Information Retrieval",
             }
         },
     }
@@ -37,8 +37,8 @@ def test_evaluate_work_blocks_explicit_exclusion_terms() -> None:
         "abstract": "This paper uses music information retrieval methods for speech recognition.",
         "primary_location": {
             "source": {
-                "id": None,
-                "display_name": "International Society for Music Information Retrieval Conference",
+                "id": "https://openalex.org/S62507282",
+                "display_name": "Journal of the Audio Engineering Society",
             }
         },
     }

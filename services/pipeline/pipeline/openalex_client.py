@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import time
 import urllib.error
@@ -35,6 +36,19 @@ def fetch_openalex_json(url: str, *, mailto: str | None = None, timeout_sec: flo
             if exc.code in (429, 500, 502, 503) and attempt < MAX_RETRIES - 1:
                 time.sleep(DEFAULT_BACKOFF_SEC * (attempt + 1))
                 continue
+            if exc.code == 400:
+                try:
+                    detail = exc.read().decode("utf-8", errors="replace")[:2000]
+                except Exception:
+                    detail = ""
+                if detail:
+                    raise urllib.error.HTTPError(
+                        exc.url,
+                        exc.code,
+                        f"{exc.msg} — {detail}",
+                        exc.hdrs,
+                        io.BytesIO(detail.encode("utf-8")),
+                    ) from exc
             raise
         except urllib.error.URLError as exc:
             last_error = exc

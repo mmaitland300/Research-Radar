@@ -112,6 +112,14 @@ def extract_authors(work: Mapping[str, Any]) -> tuple[AuthorLink, ...]:
     return tuple(author_links)
 
 
+def _topic_level_from_payload(topic: Mapping[str, Any]) -> int:
+    """OpenAlex work `topics[]` entries often omit `level` (present on full /topics entities)."""
+    raw = topic.get("level")
+    if raw is not None:
+        return int(raw)
+    return 0
+
+
 def extract_topics(work: Mapping[str, Any]) -> tuple[TopicLink, ...]:
     raw_topics = work.get("topics")
     if not isinstance(raw_topics, list):
@@ -123,15 +131,14 @@ def extract_topics(work: Mapping[str, Any]) -> tuple[TopicLink, ...]:
             continue
         topic_id = topic.get("id")
         display_name = topic.get("display_name")
-        level = topic.get("level")
         score = topic.get("score")
-        if topic_id is None or display_name is None or level is None or score is None:
+        if topic_id is None or display_name is None or score is None:
             continue
         topics.append(
             TopicLink(
                 topic_openalex_id=str(topic_id),
                 display_name=str(display_name),
-                level=int(level),
+                level=_topic_level_from_payload(topic),
                 score=float(score),
             )
         )

@@ -50,39 +50,20 @@ class CorpusPolicy:
     exclude_retracted: bool = True
     source_policies: tuple[SourcePolicy, ...] = (
         SourcePolicy(
-            slug="ismir",
-            display_name="International Society for Music Information Retrieval Conference",
-            venue_class="core",
-            rationale="Core MIR proceedings venue for the corpus.",
-            aliases=("ISMIR",),
-        ),
-        SourcePolicy(
             slug="tismir",
             display_name="Transactions of the International Society for Music Information Retrieval",
             venue_class="core",
             rationale="Core MIR journal venue for the corpus.",
+            openalex_source_id="https://openalex.org/S4210180030",
             aliases=("TISMIR",),
-        ),
-        SourcePolicy(
-            slug="dafx",
-            display_name="International Conference on Digital Audio Effects",
-            venue_class="core",
-            rationale="Adjacent peer-reviewed audio effects venue with direct technical overlap.",
-            aliases=("DAFx",),
         ),
         SourcePolicy(
             slug="jaes",
             display_name="Journal of the Audio Engineering Society",
             venue_class="core",
             rationale="Peer-reviewed audio technology journal with relevant MIR and audio-ML work.",
+            openalex_source_id="https://openalex.org/S62507282",
             aliases=("JAES", "AES Journal"),
-        ),
-        SourcePolicy(
-            slug="icassp",
-            display_name="IEEE International Conference on Acoustics, Speech, and Signal Processing",
-            venue_class="core",
-            rationale="Flagship signal-processing venue where adjacent audio work appears.",
-            aliases=("ICASSP",),
         ),
     )
     strong_topic_signals: tuple[str, ...] = (
@@ -180,8 +161,6 @@ class CorpusPolicy:
             return PolicyDecision(False, "source_not_allowed", "excluded", matched_keywords=matched_keywords)
 
         if not matched_keywords:
-            if source.slug == "icassp":
-                return PolicyDecision(False, "topic_gate_failed", source.venue_class)
             if matched_edge:
                 return PolicyDecision(False, "edge_term_without_core_signal", source.venue_class, matched_keywords=matched_edge)
             return PolicyDecision(False, "topic_gate_failed", source.venue_class)
