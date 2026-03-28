@@ -11,6 +11,7 @@ from app.contracts import (
     RankingFamily,
     utc_now,
 )
+from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
 
 app = FastAPI(
@@ -69,20 +70,25 @@ def get_evaluation_summary() -> EvaluationSummary:
 
 @app.get("/api/v1/papers/{paper_id}", response_model=PaperDetail)
 def get_paper_detail(paper_id: str) -> PaperDetail:
+    try:
+        paper = get_paper_detail_row(paper_id)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database query failed. Confirm Postgres is running and seeded.") from exc
+
+    if paper is None:
+        raise HTTPException(status_code=404, detail="Paper not found.")
+
     return PaperDetail(
-        paper_id=paper_id,
-        title="Placeholder bridge-paper example",
-        summary="This placeholder response exists so the scaffold includes the paper-detail product surface from day one.",
-        recommendation_family="bridge",
-        ranking_version="ranking-v0",
-        signal_breakdown={
-            "semantic": 0.84,
-            "citation_velocity": 0.52,
-            "topic_growth": 0.67,
-            "bridge": 0.91,
-            "diversity_penalty": 0.18,
-            "final": 0.68,
-        },
+        paper_id=paper.paper_id,
+        title=paper.title,
+        abstract=paper.abstract,
+        venue=paper.venue,
+        year=paper.year,
+        citation_count=paper.citation_count,
+        source_slug=paper.source_slug,
+        is_core_corpus=paper.is_core_corpus,
+        authors=paper.authors,
+        topics=paper.topics,
     )
 
 

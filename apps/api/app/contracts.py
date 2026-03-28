@@ -33,10 +33,14 @@ class EvaluationSummary(BaseModel):
 class PaperDetail(BaseModel):
     paper_id: str
     title: str
-    summary: str
-    recommendation_family: str
-    ranking_version: str
-    signal_breakdown: dict[str, float]
+    abstract: str
+    venue: str | None
+    year: int
+    citation_count: int
+    source_slug: str | None
+    is_core_corpus: bool
+    authors: list[str]
+    topics: list[str]
 
 
 class PaperListItem(BaseModel):

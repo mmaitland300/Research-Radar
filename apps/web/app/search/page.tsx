@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type PaperListItem = {
   paper_id: string;
   title: string;
@@ -80,7 +82,11 @@ export default async function SearchPage() {
           <ul className="result-list">
             {items.map((paper) => (
               <li key={paper.paper_id} className="result-item">
-                <p className="result-title">{paper.title}</p>
+                <p className="result-title">
+                  <Link href={`/papers/${encodeURIComponent(paper.paper_id)}`}>
+                    {paper.title}
+                  </Link>
+                </p>
                 <p className="result-meta">
                   {paper.year} | cites: {paper.citation_count} |{" "}
                   {paper.source_slug ?? "unknown venue"} |{" "}
