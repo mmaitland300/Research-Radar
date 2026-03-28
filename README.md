@@ -39,6 +39,45 @@ V1 is intentionally scoped to `MIR + audio representation learning`, with `neura
 
 The repository contains the initial product scaffold plus an API-bootstrap-ready corpus policy, snapshot/run manifests, raw-payload retention helpers, normalization helpers, and a starter schema for reproducible ingest.
 
-### Running a real bootstrap load
+## Quickstart vertical slice (works now)
 
-Prerequisites: Postgres up with `infra/db/schema.sql` applied, `DATABASE_URL` (or matching `PG*` variables), and `OPENALEX_MAILTO` or `--mailto` for OpenAlex. Then from `services/pipeline`: `python -m pipeline.cli bootstrap-run` (see `docs/bootstrap-run-tutorial.md` for paths, flags, and failure checkpoints: `bootstrap-preflight-failure.json` vs snapshot folder / `ingest_runs`).
+This repo already supports one complete path: bootstrap a small corpus, start the API, open the web search page, and see live papers served from Postgres.
+
+### Fast path commands
+
+```bash
+docker compose up -d
+# schema is auto-applied from infra/db/schema.sql on first init
+
+pip install -e ./services/pipeline
+pip install -e ./apps/api
+npm install
+
+python -m pipeline.cli bootstrap-run --max-pages-per-source 1 --mailto "$OPENALEX_MAILTO"
+uvicorn app.main:app --reload --app-dir apps/api
+npm run dev:web
+```
+
+Open `http://localhost:3000/search`.
+
+### Required env vars
+
+- `DATABASE_URL` or equivalent `PG*` vars (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`)
+- `OPENALEX_MAILTO`
+- `API_BASE_URL` or `NEXT_PUBLIC_API_BASE_URL` (optional; default API target is `http://localhost:8000`)
+
+### What to expect
+
+- `GET /api/v1/papers` returns DB-backed rows from `works` with `inclusion_status='included'`
+- `/search` renders real paper rows from the API
+- Pipeline unit tests run in CI
+- Web build runs in CI
+
+### If it fails, check
+
+- `artifacts/bootstrap-preflight-failure.json`
+- The snapshot artifact folder under `artifacts/`
+- `ingest_runs` in Postgres
+- API startup logs for DB connection errors
+
+For more detailed bootstrap failure checkpoints, see `docs/bootstrap-run-tutorial.md`.
