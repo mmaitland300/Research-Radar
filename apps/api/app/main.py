@@ -120,7 +120,7 @@ def get_evaluation_summary() -> EvaluationSummary:
     )
 
 
-@app.get("/api/v1/papers/{paper_id}", response_model=PaperDetail)
+@app.get("/api/v1/papers/{paper_id:path}", response_model=PaperDetail)
 def get_paper_detail(paper_id: str) -> PaperDetail:
     try:
         paper = get_paper_detail_row(paper_id)

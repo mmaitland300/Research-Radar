@@ -47,7 +47,8 @@ export default async function PaperDetailPage({
 }: {
   params: { paperId: string };
 }) {
-  const { paper, error } = await fetchPaperDetail(params.paperId);
+  const canonicalPaperId = decodeURIComponent(params.paperId);
+  const { paper, error } = await fetchPaperDetail(canonicalPaperId);
 
   return (
     <main className="page">
@@ -57,7 +58,7 @@ export default async function PaperDetailPage({
         {error ? <p>{error}</p> : null}
         {!error && !paper ? <p>No detail was returned for this paper id.</p> : null}
         <div className="meta">
-          <span>Paper ID: {params.paperId}</span>
+          <span>Paper ID: {canonicalPaperId}</span>
           {paper ? <span>{paper.year}</span> : null}
           {paper ? <span>Citations: {paper.citation_count}</span> : null}
           {paper ? <span>{paper.venue ?? "Unknown venue"}</span> : null}
