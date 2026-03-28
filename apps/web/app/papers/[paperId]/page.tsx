@@ -61,9 +61,17 @@ export default async function PaperDetailPage({
           <span>Paper ID: {canonicalPaperId}</span>
           {paper ? <span>{paper.year}</span> : null}
           {paper ? <span>Citations: {paper.citation_count}</span> : null}
-          {paper ? <span>{paper.venue ?? "Unknown venue"}</span> : null}
           {paper ? <span>{paper.is_core_corpus ? "core" : "edge"}</span> : null}
         </div>
+        {paper ? (
+          <div className="source-block">
+            <h2 className="source-block-heading">Source</h2>
+            <p className="source-block-primary">{paper.venue ?? "Unknown venue"}</p>
+            <p className="source-block-secondary">
+              Slug: <strong>{paper.source_slug ?? "unknown"}</strong>
+            </p>
+          </div>
+        ) : null}
       </section>
 
       <section className="split">
@@ -88,17 +96,12 @@ export default async function PaperDetailPage({
       <section className="panel">
         <h2>Topics</h2>
         {paper && paper.topics.length > 0 ? (
-          <ul>
+          <p className="chip-row" aria-label="Topics">
             {paper.topics.map((topic) => (
-              <li key={topic}>{topic}</li>
+              <span key={topic} className="chip">
+                {topic}
+              </span>
             ))}
-          </ul>
-        ) : (
-          <p>No topics available.</p>
-        )}
-        {paper ? (
-          <p>
-            Source slug: <strong>{paper.source_slug ?? "unknown"}</strong>
           </p>
         ) : null}
       </section>

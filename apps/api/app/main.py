@@ -163,7 +163,9 @@ def get_papers(
                 year=paper.year,
                 citation_count=paper.citation_count,
                 source_slug=paper.source_slug,
+                source_label=paper.source_label,
                 is_core_corpus=paper.is_core_corpus,
+                topics=paper.topics,
             )
             for paper in papers
         ],

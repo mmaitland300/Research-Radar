@@ -6,7 +6,9 @@ type PaperListItem = {
   year: number;
   citation_count: number;
   source_slug: string | null;
+  source_label: string | null;
   is_core_corpus: boolean;
+  topics: string[];
 };
 
 const API_BASE_URL =
@@ -89,9 +91,18 @@ export default async function SearchPage() {
                 </p>
                 <p className="result-meta">
                   {paper.year} | cites: {paper.citation_count} |{" "}
-                  {paper.source_slug ?? "unknown venue"} |{" "}
+                  {paper.source_label ?? paper.source_slug ?? "unknown venue"} |{" "}
                   {paper.is_core_corpus ? "core" : "edge"}
                 </p>
+                {paper.topics.length > 0 ? (
+                  <p className="chip-row" aria-label="Topics">
+                    {paper.topics.map((topic) => (
+                      <span key={topic} className="chip">
+                        {topic}
+                      </span>
+                    ))}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

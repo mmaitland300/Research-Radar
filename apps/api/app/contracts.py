@@ -49,7 +49,9 @@ class PaperListItem(BaseModel):
     year: int
     citation_count: int
     source_slug: str | None
+    source_label: str | None
     is_core_corpus: bool
+    topics: list[str]
 
 
 class PaperListResponse(BaseModel):

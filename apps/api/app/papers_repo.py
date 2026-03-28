@@ -1,9 +1,27 @@
+import json
 import os
 from dataclasses import dataclass
 from datetime import date
+from typing import Any
 
 import psycopg
 from psycopg.rows import dict_row
+
+
+def _topic_names_from_json(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(x) for x in value if x is not None and str(x).strip()]
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(parsed, list):
+            return [str(x) for x in parsed if x is not None and str(x).strip()]
+        return []
+    return []
 
 
 @dataclass(frozen=True)
@@ -13,7 +31,9 @@ class PaperRow:
     year: int
     citation_count: int
     source_slug: str | None
+    source_label: str | None
     is_core_corpus: bool
+    topics: list[str]
 
 
 @dataclass(frozen=True)
@@ -45,21 +65,35 @@ def database_url_from_env() -> str:
 def list_papers(limit: int, q: str | None = None) -> list[PaperRow]:
     query = """
         SELECT
-            openalex_id,
-            title,
-            year,
-            citation_count,
-            source_slug,
-            is_core_corpus
-        FROM works
-        WHERE inclusion_status = 'included'
+            w.openalex_id,
+            w.title,
+            w.year,
+            w.citation_count,
+            w.source_slug,
+            v.display_name AS source_label,
+            w.is_core_corpus,
+            COALESCE(topic_agg.topics, '[]'::json) AS topics
+        FROM works w
+        LEFT JOIN venues v ON v.id = w.venue_id
+        LEFT JOIN LATERAL (
+            SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
+            FROM (
+                SELECT t.name AS topic_name, wt.score AS score
+                FROM work_topics wt
+                JOIN topics t ON t.id = wt.topic_id
+                WHERE wt.work_id = w.id
+                ORDER BY wt.score DESC, t.name ASC
+                LIMIT 3
+            ) sub
+        ) topic_agg ON TRUE
+        WHERE w.inclusion_status = 'included'
     """
     params: list[object] = []
     if q:
-        query += " AND title ILIKE %s"
+        query += " AND w.title ILIKE %s"
         params.append(f"%{q}%")
 
-    query += " ORDER BY year DESC, citation_count DESC LIMIT %s"
+    query += " ORDER BY w.year DESC, w.citation_count DESC LIMIT %s"
     params.append(limit)
 
     with psycopg.connect(database_url_from_env(), row_factory=dict_row) as conn:
@@ -72,7 +106,9 @@ def list_papers(limit: int, q: str | None = None) -> list[PaperRow]:
             year=int(row["year"]),
             citation_count=int(row["citation_count"] or 0),
             source_slug=str(row["source_slug"]) if row["source_slug"] is not None else None,
+            source_label=str(row["source_label"]) if row["source_label"] is not None else None,
             is_core_corpus=bool(row["is_core_corpus"]),
+            topics=_topic_names_from_json(row["topics"]),
         )
         for row in rows
     ]
@@ -101,7 +137,7 @@ def get_paper_detail(paper_id: str) -> PaperDetailRow | None:
             ) AS authors,
             COALESCE(
                 (
-                    SELECT json_agg(t.name ORDER BY wt.score DESC)
+                    SELECT json_agg(t.name ORDER BY wt.score DESC, t.name ASC)
                     FROM work_topics wt
                     JOIN topics t ON t.id = wt.topic_id
                     WHERE wt.work_id = w.id
@@ -121,7 +157,7 @@ def get_paper_detail(paper_id: str) -> PaperDetailRow | None:
         return None
 
     authors = row["authors"] if isinstance(row["authors"], list) else []
-    topics = row["topics"] if isinstance(row["topics"], list) else []
+    topics = _topic_names_from_json(row["topics"])
 
     return PaperDetailRow(
         paper_id=str(row["openalex_id"]),
