@@ -39,5 +39,19 @@ class PaperDetail(BaseModel):
     signal_breakdown: dict[str, float]
 
 
+class PaperListItem(BaseModel):
+    paper_id: str
+    title: str
+    year: int
+    citation_count: int
+    source_slug: str | None
+    is_core_corpus: bool
+
+
+class PaperListResponse(BaseModel):
+    total: int
+    items: list[PaperListItem]
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)

@@ -1,14 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 
 from app.config import settings
 from app.contracts import (
     EvaluationSummary,
     HealthResponse,
     PaperDetail,
+    PaperListItem,
+    PaperListResponse,
     ProductSummary,
     RankingFamily,
     utc_now,
 )
+from app.papers_repo import list_papers
 
 app = FastAPI(
     title="Research Radar API",
@@ -80,4 +83,30 @@ def get_paper_detail(paper_id: str) -> PaperDetail:
             "diversity_penalty": 0.18,
             "final": 0.68,
         },
+    )
+
+
+@app.get("/api/v1/papers", response_model=PaperListResponse)
+def get_papers(
+    q: str | None = Query(default=None, min_length=1),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> PaperListResponse:
+    try:
+        papers = list_papers(limit=limit, q=q)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database query failed. Confirm Postgres is running and seeded.") from exc
+
+    return PaperListResponse(
+        total=len(papers),
+        items=[
+            PaperListItem(
+                paper_id=paper.paper_id,
+                title=paper.title,
+                year=paper.year,
+                citation_count=paper.citation_count,
+                source_slug=paper.source_slug,
+                is_core_corpus=paper.is_core_corpus,
+            )
+            for paper in papers
+        ],
     )
