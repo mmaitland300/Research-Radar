@@ -9,7 +9,15 @@ import psycopg
 from psycopg.rows import dict_row
 
 from pipeline.config import RankingCounts, RankingRun
-from pipeline.ranking import PaperScoreRow
+from pipeline.ranking import PaperScoreRow, RankingCandidate
+
+
+def _topic_ids_tuple(value: Any) -> tuple[int, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, (list, tuple)):
+        return tuple(int(item) for item in value if item is not None)
+    return ()
 
 
 def latest_corpus_snapshot_version_with_works(conn: psycopg.Connection) -> str | None:
@@ -36,18 +44,37 @@ def latest_corpus_snapshot_version_with_works(conn: psycopg.Connection) -> str |
     return str(row[0])
 
 
-def list_ranking_candidate_work_ids(conn: psycopg.Connection, corpus_snapshot_version: str) -> list[int]:
+def list_ranking_candidates(
+    conn: psycopg.Connection, corpus_snapshot_version: str
+) -> list[RankingCandidate]:
     rows = conn.execute(
         """
-        SELECT id
-        FROM works
-        WHERE inclusion_status = 'included'
-          AND corpus_snapshot_version = %s
-        ORDER BY id ASC
+        SELECT
+            w.id,
+            w.year,
+            w.citation_count,
+            COALESCE(
+                array_agg(wt.topic_id ORDER BY wt.score DESC) FILTER (WHERE wt.topic_id IS NOT NULL),
+                '{}'::bigint[]
+            ) AS topic_ids
+        FROM works w
+        LEFT JOIN work_topics wt ON wt.work_id = w.id
+        WHERE w.inclusion_status = 'included'
+          AND w.corpus_snapshot_version = %s
+        GROUP BY w.id, w.year, w.citation_count
+        ORDER BY w.id ASC
         """,
         (corpus_snapshot_version,),
     ).fetchall()
-    return [int(r[0]) for r in rows]
+    return [
+        RankingCandidate(
+            work_id=int(row[0]),
+            year=int(row[1]),
+            citation_count=int(row[2] or 0),
+            topic_ids=_topic_ids_tuple(row[3]),
+        )
+        for row in rows
+    ]
 
 
 def latest_successful_ranking_run_id(

@@ -1,8 +1,9 @@
 from pipeline.config import RankingCounts, RankingRun
+from pipeline.ranking import RankingCandidate
 from pipeline.ranking_run import (
     RECOMMENDATION_FAMILIES,
     _ranking_counts_from_rows,
-    build_step2_stub_score_rows,
+    build_step3_heuristic_score_rows,
 )
 
 
@@ -33,21 +34,31 @@ def test_ranking_run_start_complete_fail_lifecycle() -> None:
     assert failed.error_message == "boom"
 
 
-def test_build_step2_stub_score_rows_shape() -> None:
-    rows = build_step2_stub_score_rows([10, 20])
-    assert len(rows) == 6
-    assert {r.work_id for r in rows} == {10, 20}
-    for r in rows:
-        assert r.recommendation_family in RECOMMENDATION_FAMILIES
-        assert r.semantic_score is None
-        assert r.bridge_score is None
-        assert r.citation_velocity_score == 0.0
-        assert r.reason_short
-        assert isinstance(r.final_score, float)
+def test_build_step3_heuristic_score_rows_shape_and_family_differences() -> None:
+    candidates = [
+        RankingCandidate(work_id=10, year=2026, citation_count=8, topic_ids=(1, 2, 3)),
+        RankingCandidate(work_id=20, year=2026, citation_count=1, topic_ids=(1,)),
+        RankingCandidate(work_id=30, year=2024, citation_count=20, topic_ids=(2,)),
+    ]
+
+    rows = build_step3_heuristic_score_rows(candidates)
+
+    assert len(rows) == 9
+    for row in rows:
+        assert row.recommendation_family in RECOMMENDATION_FAMILIES
+        assert row.semantic_score is None
+        assert row.bridge_score is None
+        assert row.reason_short
+        assert isinstance(row.final_score, float)
+
+    by_key = {(row.work_id, row.recommendation_family): row for row in rows}
+    assert by_key[(10, "bridge")].final_score > by_key[(20, "bridge")].final_score
+    assert by_key[(20, "undercited")].final_score > by_key[(30, "undercited")].final_score
+    assert by_key[(10, "emerging")].final_score > by_key[(30, "emerging")].final_score
 
 
 def test_ranking_counts_from_rows() -> None:
-    rows = build_step2_stub_score_rows([1])
+    rows = build_step3_heuristic_score_rows([RankingCandidate(work_id=1, year=2026, citation_count=0, topic_ids=(1,))])
     c = _ranking_counts_from_rows(1, rows)
     assert c.total_candidate_works == 1
     assert c.total_rows_written == 3

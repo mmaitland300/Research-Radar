@@ -23,6 +23,14 @@ class PaperSignals:
 
 
 @dataclass(frozen=True)
+class RankingCandidate:
+    work_id: int
+    year: int
+    citation_count: int
+    topic_ids: tuple[int, ...] = ()
+
+
+@dataclass(frozen=True)
 class PaperScoreRow:
     """One persisted row in paper_scores (per work, family, run)."""
 
