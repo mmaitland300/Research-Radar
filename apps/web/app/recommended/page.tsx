@@ -66,7 +66,7 @@ function formatSignals(signals: RankedSignals): string {
   if (signals.diversity_penalty != null) {
     entries.push(["diversity_penalty", signals.diversity_penalty]);
   }
-  if (entries.length === 0) return "—";
+  if (entries.length === 0) return "n/a";
   return entries.map(([k, v]) => `${k}=${Number(v).toFixed(4)}`).join(", ");
 }
 
@@ -144,9 +144,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         </nav>
         {data ? (
           <p className="muted-inline">
-            <strong>{data.ranking_version}</strong> · run{" "}
-            <code>{data.ranking_run_id}</code> · snapshot{" "}
-            <code>{data.corpus_snapshot_version}</code> · {data.total} paper
+            <strong>{data.ranking_version}</strong> | run{" "}
+            <code>{data.ranking_run_id}</code> | snapshot{" "}
+            <code>{data.corpus_snapshot_version}</code> | {data.total} paper
             {data.total === 1 ? "" : "s"}
           </p>
         ) : null}
@@ -179,9 +179,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
 
       {data && !error ? (
         <section className="panel">
-          <h2>{FAMILY_LABEL[family]} · live results</h2>
+          <h2>{FAMILY_LABEL[family]} | live results</h2>
           <p className="muted-inline">
-            Family: <strong>{data.family}</strong> · final_score descending
+            Family: <strong>{data.family}</strong> | final_score descending
           </p>
           {data.items.length === 0 ? (
             <p>No rows for this family in the selected run.</p>
