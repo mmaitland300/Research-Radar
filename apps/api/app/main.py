@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException, Query
 
 from app.config import settings
@@ -8,6 +10,9 @@ from app.contracts import (
     PaperListItem,
     PaperListResponse,
     ProductSummary,
+    RankedRecommendationItem,
+    RankedRecommendationsResponse,
+    RankedSignals,
     RankingFamily,
     UndercitedRecommendationItem,
     UndercitedRecommendationsResponse,
@@ -16,6 +21,7 @@ from app.contracts import (
 from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
 from app.papers_repo import list_undercited_heuristic_v0
+from app.scores_repo import list_ranked_recommendations
 
 app = FastAPI(
     title="Research Radar API",
@@ -91,6 +97,73 @@ def get_recommendations_undercited(
                 source_slug=r.source_slug,
                 reason=r.reason,
                 signal_breakdown=r.signal_breakdown,
+            )
+            for r in rows
+        ],
+    )
+
+
+@app.get(
+    "/api/v1/recommendations/ranked",
+    response_model=RankedRecommendationsResponse,
+)
+def get_recommendations_ranked(
+    family: Literal["emerging", "bridge", "undercited"] = Query(...),
+    limit: int = Query(default=20, ge=1, le=100),
+    corpus_snapshot_version: str | None = Query(default=None),
+    ranking_run_id: str | None = Query(default=None),
+    ranking_version: str | None = Query(default=None),
+) -> RankedRecommendationsResponse:
+    """
+    Read persisted paper_scores for a succeeded ranking run (latest for snapshot unless
+    ranking_run_id or ranking_version narrows the choice).
+    """
+    try:
+        resolved = list_ranked_recommendations(
+            family=family,
+            limit=limit,
+            corpus_snapshot_version=corpus_snapshot_version,
+            ranking_run_id=ranking_run_id,
+            ranking_version=ranking_version,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database query failed. Confirm Postgres is running and ranking data exists.",
+        ) from exc
+
+    if resolved is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No succeeded ranking run found for the given filters.",
+        )
+
+    ctx, rows = resolved
+    return RankedRecommendationsResponse(
+        ranking_run_id=ctx.ranking_run_id,
+        ranking_version=ctx.ranking_version,
+        corpus_snapshot_version=ctx.corpus_snapshot_version,
+        family=family,
+        total=len(rows),
+        items=[
+            RankedRecommendationItem(
+                paper_id=r.paper_id,
+                title=r.title,
+                year=r.year,
+                citation_count=r.citation_count,
+                source_slug=r.source_slug,
+                topics=r.topics,
+                signals=RankedSignals(
+                    semantic=r.semantic_score,
+                    citation_velocity=r.citation_velocity_score,
+                    topic_growth=r.topic_growth_score,
+                    bridge=r.bridge_score,
+                    diversity_penalty=r.diversity_penalty,
+                ),
+                final_score=r.final_score,
+                reason_short=r.reason_short,
             )
             for r in rows
         ],

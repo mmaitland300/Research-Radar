@@ -79,5 +79,38 @@ class UndercitedRecommendationsResponse(BaseModel):
     items: list[UndercitedRecommendationItem]
 
 
+class RankedSignals(BaseModel):
+    """Nullable components from paper_scores; semantic/bridge may be unset until embeddings exist."""
+
+    semantic: float | None = None
+    citation_velocity: float | None = None
+    topic_growth: float | None = None
+    bridge: float | None = None
+    diversity_penalty: float | None = None
+
+
+class RankedRecommendationItem(BaseModel):
+    paper_id: str
+    title: str
+    year: int
+    citation_count: int
+    source_slug: str | None = None
+    topics: list[str]
+    signals: RankedSignals
+    final_score: float
+    reason_short: str
+
+
+class RankedRecommendationsResponse(BaseModel):
+    """Materialized ranking run: one row per (work, family) from pipeline ranking-run."""
+
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    family: str
+    total: int
+    items: list[RankedRecommendationItem]
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
