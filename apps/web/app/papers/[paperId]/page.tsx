@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type PaperDetail = {
   paper_id: string;
   title: string;
@@ -11,10 +13,36 @@ type PaperDetail = {
   topics: string[];
 };
 
+type SimilarPaperItem = {
+  paper_id: string;
+  title: string;
+  year: number;
+  citation_count: number;
+  source_slug: string | null;
+  topics: string[];
+  similarity: number;
+};
+
+type SimilarPapersResponse = {
+  paper_id: string;
+  embedding_version: string;
+  total: number;
+  items: SimilarPaperItem[];
+};
+
 const API_BASE_URL =
   process.env.API_BASE_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:8000";
+
+const EMBEDDING_VERSION =
+  process.env.NEXT_PUBLIC_EMBEDDING_VERSION?.trim() || undefined;
+
+type SimilarPapersState =
+  | { kind: "disabled" }
+  | { kind: "ok"; data: SimilarPapersResponse }
+  | { kind: "not_found"; message: string }
+  | { kind: "error"; message: string };
 
 async function fetchPaperDetail(
   paperId: string
@@ -42,6 +70,47 @@ async function fetchPaperDetail(
   }
 }
 
+async function fetchSimilarPapers(paperId: string): Promise<SimilarPapersState> {
+  if (!EMBEDDING_VERSION) {
+    return { kind: "disabled" };
+  }
+
+  try {
+    const params = new URLSearchParams({
+      embedding_version: EMBEDDING_VERSION,
+      limit: "6"
+    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/papers/${encodeURIComponent(paperId)}/similar?${params.toString()}`,
+      { cache: "no-store" }
+    );
+
+    if (response.status === 404) {
+      return {
+        kind: "not_found",
+        message:
+          "No embedding-backed neighbors available for this paper/version yet."
+      };
+    }
+
+    if (!response.ok) {
+      return {
+        kind: "error",
+        message: `Similar papers could not be loaded (API ${response.status}).`
+      };
+    }
+
+    const data = (await response.json()) as SimilarPapersResponse;
+    return { kind: "ok", data };
+  } catch {
+    return {
+      kind: "error",
+      message:
+        "Could not load similar papers. The API may be unreachable."
+    };
+  }
+}
+
 export default async function PaperDetailPage({
   params
 }: {
@@ -49,6 +118,9 @@ export default async function PaperDetailPage({
 }) {
   const canonicalPaperId = decodeURIComponent(params.paperId);
   const { paper, error } = await fetchPaperDetail(canonicalPaperId);
+
+  const similar: SimilarPapersState | null =
+    paper && !error ? await fetchSimilarPapers(canonicalPaperId) : null;
 
   return (
     <main className="page">
@@ -105,6 +177,59 @@ export default async function PaperDetailPage({
           </p>
         ) : null}
       </section>
+
+      {similar ? (
+        <section className="panel">
+          <h2>Similar papers</h2>
+          {similar.kind === "disabled" ? (
+            <p className="muted-inline">
+              Set <code>NEXT_PUBLIC_EMBEDDING_VERSION</code> to enable
+              embedding-backed similar papers (e.g.{" "}
+              <code>v1-title-abstract-1536</code>).
+            </p>
+          ) : null}
+          {similar.kind === "not_found" ? (
+            <p className="muted-inline">{similar.message}</p>
+          ) : null}
+          {similar.kind === "error" ? (
+            <p className="muted-inline">{similar.message}</p>
+          ) : null}
+          {similar.kind === "ok" && similar.data.total === 0 ? (
+            <p className="muted-inline">
+              No similar papers found for this version.
+            </p>
+          ) : null}
+          {similar.kind === "ok" && similar.data.items.length > 0 ? (
+            <ul className="result-list">
+              {similar.data.items.map((item) => (
+                <li key={item.paper_id} className="result-item">
+                  <p className="result-title">
+                    <Link
+                      href={`/papers/${encodeURIComponent(item.paper_id)}`}
+                    >
+                      {item.title}
+                    </Link>
+                  </p>
+                  <p className="result-meta">
+                    {item.year} | cites: {item.citation_count} |{" "}
+                    {item.source_slug ?? "unknown venue"} | similarity:{" "}
+                    {item.similarity.toFixed(4)}
+                  </p>
+                  {item.topics.length > 0 ? (
+                    <div className="chip-row" aria-label="Top topics">
+                      {item.topics.map((t) => (
+                        <span key={t} className="chip">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="panel">
         <h2>Next explainability step</h2>

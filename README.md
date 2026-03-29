@@ -74,6 +74,7 @@ You can also materialize one embedding per included work from `title + abstract`
 - `OPENALEX_MAILTO`
 - `OPENAI_API_KEY` for `embed-works`
 - `API_BASE_URL` or `NEXT_PUBLIC_API_BASE_URL` (optional; default API target is `http://localhost:8000`)
+- `NEXT_PUBLIC_EMBEDDING_VERSION` (optional; e.g. `v1-title-abstract-1536` enables the Similar papers block on paper detail)
 - `OPENAI_BASE_URL` (optional; defaults to `https://api.openai.com/v1`)
 
 ### What to expect
