@@ -239,9 +239,39 @@ These milestones make the project legible as a machine-learning portfolio piece 
 
 ---
 
-#### ML1d — Quality review
+#### ML1d — Quality review (qualitative retrieval)
 
-**Goal:** 5–10 anchor `paper_id`s, manual neighbor inspection, short notes (PR description or roadmap appendix). Labels portfolio risk honestly.
+**Goal:** Lightweight judgment of neighbor quality **before** using retrieval in ranking. Portfolio-credible notes; honest failure modes.
+
+**Immediate checks (after ML1c ships):**
+
+- Confirm the **Similar papers** block in the browser with `NEXT_PUBLIC_EMBEDDING_VERSION` set.
+- Spot-check **3–5** papers: neighbors should feel **semantically reasonable** for the corpus slice (e.g. MIR / music-data cohesion is a good first sign).
+
+**Review pass (recommended shape):**
+
+- Pick **5 anchor** papers (mix of topics, citation levels, one “bridgey” title if available).
+- For each anchor, inspect **top 5** neighbors (API or UI).
+- Mark each neighbor set **good**, **mixed**, or **weak**.
+- Note recurring failure modes, for example:
+  - same-venue bias
+  - dataset-name / title-template bias
+  - metadata noise
+  - **abstract/title encoding issues** (mojibake, HTML entities — see cleanup task below)
+
+**Output:** Short log (PR description, this doc, or private notes): anchor ids, verdict per set, and 1–2 bullets on systematic issues.
+
+---
+
+#### Cleanup task: normalized display and embedding text (non-embedding)
+
+**Problem:** Some `works.title` / `works.abstract` strings show **encoding and entity artifacts** in UI and flow into **embedding input**, which hurts perceived quality and can skew neighbors (separate from retrieval math).
+
+**Examples observed:** Mojibake such as `âEverything Corpusâ`; literal or double-encoded HTML entities (e.g. `\u0026amp;ndash;`).
+
+**Direction:** Fix **upstream** in ingest/normalization (OpenAlex payload → stored text), optionally a shared sanitizer used at write time; avoid paper-by-paper patches in the API. Re-embed after a bulk fix if labels change materially.
+
+**Priority:** Next cleanup after ML1d notes are captured — track explicitly so it is not confused with “bad embeddings.”
 
 ### ML milestone 2: clustering + bridge score
 
@@ -306,7 +336,7 @@ These milestones make the project legible as a machine-learning portfolio piece 
 - After step 7: Evaluation page compares ranked output to citation/date baselines and clearly labels proxy metrics.
 - After step 8 / ML1a: Included works can be backfilled into `embeddings` for a version label without duplicating PK rows.
 - After ML1b–c: Similar papers are available via API and visible on paper detail for a pinned `embedding_version`.
-- After ML1d: Anchor-paper quality notes exist for portfolio credibility.
+- After ML1d: Five-anchor / top-5-neighbor qualitative log exists (good / mixed / weak + failure modes); encoding cleanup task is tracked for ingest/display text.
 - Later (ML2+): Semantic / bridge columns in `paper_scores` are filled from defined signals, not ad hoc.
 - After ML milestone 2: `bridge_score` is computed from learned or clustered structure rather than a placeholder.
 - After ML milestone 3: The ranking story includes measured comparison against simple baselines.
