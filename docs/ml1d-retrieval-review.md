@@ -2,6 +2,8 @@
 
 Worksheet for a **lightweight qualitative** pass on paper-to-paper neighbors before using retrieval in ranking. Use **5 anchors**, **top 5 neighbors** each (paper detail Similar block or `GET /api/v1/papers/{id}/similar`). **Embedding quality is tied to corpus state**, not `embedding_version` alone—record the snapshot you reviewed against.
 
+**Goal:** Judge whether embedding neighbors are good enough for **product demo use** and **early ranking experiments**.
+
 ## Column reference (conceptual)
 
 | Field | Purpose |
@@ -14,7 +16,7 @@ Worksheet for a **lightweight qualitative** pass on paper-to-paper neighbors bef
 | `judgment` | Per-neighbor: `good` / `mixed` / `weak` (see rubric) |
 | `notes` | Optional tags from legend + short free text |
 
-Neighbor `paper_id` does not need to be in the table unless you want it for traceability.
+**Default neighbor table has no `paper_id` column.** If you need an id for traceability, put it in `notes`. Consistency beats extra columns at this stage.
 
 ---
 
@@ -56,11 +58,11 @@ Neighbor `paper_id` does not need to be in the table unless you want it for trac
 | 4 |  |  | good / mixed / weak |  |
 | 5 |  |  | good / mixed / weak |  |
 
-**Summary**
+**Summary** *(same field order every anchor)*
 
 - overall:
-- main failure mode:
-- demo_worthy: yes / no *(good enough to showcase, not just “technically working”)*
+- main_failure_mode:
+- demo_worthy: yes / no *(showcase-ready, not only “technically working”)*
 
 ---
 
@@ -82,7 +84,7 @@ Neighbor `paper_id` does not need to be in the table unless you want it for trac
 **Summary**
 
 - overall:
-- main failure mode:
+- main_failure_mode:
 - demo_worthy: yes / no
 
 ---
@@ -105,7 +107,7 @@ Neighbor `paper_id` does not need to be in the table unless you want it for trac
 **Summary**
 
 - overall:
-- main failure mode:
+- main_failure_mode:
 - demo_worthy: yes / no
 
 ---
@@ -128,7 +130,7 @@ Neighbor `paper_id` does not need to be in the table unless you want it for trac
 **Summary**
 
 - overall:
-- main failure mode:
+- main_failure_mode:
 - demo_worthy: yes / no
 
 ---
@@ -151,14 +153,14 @@ Neighbor `paper_id` does not need to be in the table unless you want it for trac
 **Summary**
 
 - overall:
-- main failure mode:
+- main_failure_mode:
 - demo_worthy: yes / no
 
 ---
 
 ## Roll-up
 
-**Per-anchor set verdict** (one line each: anchor id + good/mixed/weak for the set as a whole):
+**Per-anchor set verdict** (one line each: anchor number + good/mixed/weak for the set as a whole):
 
 1.
 2.
@@ -166,15 +168,14 @@ Neighbor `paper_id` does not need to be in the table unless you want it for trac
 4.
 5.
 
-**Counts**
+**Counts** *(include which anchors fall in each bucket)*
 
-- `good_sets`: X/5
-- `mixed_sets`: X/5
-- `weak_sets`: X/5
+- `good_sets`: X/5 (Anchors )
+- `mixed_sets`: X/5 (Anchors )
+- `weak_sets`: X/5 (Anchors )
 
 **common_failure_modes:**
 
-**recommended_next_step:**  
-*(e.g. `clean text encoding before ranking integration` / `safe to prototype semantic ranking feature` / `needs broader embedding coverage first`)*
+**recommended_next_step** *(pick one best next engineering move):*
 
 **go/no-go for ranking integration:**
