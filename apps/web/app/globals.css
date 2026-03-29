@@ -54,6 +54,27 @@ a {
   font-size: 0.95rem;
 }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.tabs a {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.45);
+  font-size: 0.92rem;
+}
+
+.tabs a[aria-current="page"] {
+  border-color: var(--accent);
+  background: rgba(180, 72, 47, 0.12);
+  color: var(--text);
+}
+
 .hero,
 .panel {
   border: 1px solid var(--line);
