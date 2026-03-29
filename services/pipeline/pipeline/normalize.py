@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from pipeline.openalex_text import abstract_plain_text
+from pipeline.openalex_text import abstract_plain_text, clean_openalex_text
 from pipeline.policy import CorpusPolicy, PolicyDecision
 
 
@@ -61,7 +61,7 @@ def hydrate_work_record(work: Mapping[str, Any], policy: CorpusPolicy) -> Hydrat
     source = work.get("primary_location", {}).get("source", {}) if isinstance(work.get("primary_location"), Mapping) else {}
     normalized = NormalizedWork(
         openalex_id=str(work.get("id") or ""),
-        title=str(work.get("title") or "Untitled work"),
+        title=clean_openalex_text(str(work.get("title") or "Untitled work")),
         abstract=_abstract_text(work),
         year=int(work.get("publication_year") or 0),
         doi=work.get("doi"),
@@ -71,7 +71,7 @@ def hydrate_work_record(work: Mapping[str, Any], policy: CorpusPolicy) -> Hydrat
         updated_date=work.get("updated_date"),
         citation_count=int(work.get("cited_by_count") or 0),
         source_openalex_id=source.get("id") if isinstance(source, Mapping) else None,
-        source_display_name=source.get("display_name") if isinstance(source, Mapping) else None,
+        source_display_name=clean_openalex_text(source.get("display_name")) if isinstance(source, Mapping) else None,
         inclusion_status="included" if decision.included else "excluded",
         exclusion_reason=None if decision.included else decision.reason,
         is_core_corpus=decision.is_core_corpus,
@@ -105,7 +105,7 @@ def extract_authors(work: Mapping[str, Any]) -> tuple[AuthorLink, ...]:
         author_links.append(
             AuthorLink(
                 author_openalex_id=str(author_id),
-                display_name=str(display_name),
+                display_name=clean_openalex_text(str(display_name)),
                 author_position=position,
             )
         )
@@ -137,7 +137,7 @@ def extract_topics(work: Mapping[str, Any]) -> tuple[TopicLink, ...]:
         topics.append(
             TopicLink(
                 topic_openalex_id=str(topic_id),
-                display_name=str(display_name),
+                display_name=clean_openalex_text(str(display_name)),
                 level=_topic_level_from_payload(topic),
                 score=float(score),
             )
