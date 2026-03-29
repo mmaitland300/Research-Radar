@@ -1,4 +1,6 @@
+import io
 import json
+from urllib.error import HTTPError
 
 import pytest
 
@@ -64,4 +66,34 @@ def test_openai_embedding_provider_rejects_dimension_mismatch(monkeypatch) -> No
     provider = OpenAIEmbeddingProvider(api_key="test-key", expected_dimensions=3)
 
     with pytest.raises(RuntimeError, match="dimension mismatch"):
+        provider.embed_texts(["hello"])
+
+
+def test_openai_embedding_provider_surfaces_quota_exhaustion_clearly(monkeypatch) -> None:
+    def fake_urlopen(request, timeout: float):
+        body = io.BytesIO(
+            json.dumps(
+                {
+                    "error": {
+                        "message": "You exceeded your current quota.",
+                        "type": "insufficient_quota",
+                        "param": None,
+                        "code": "insufficient_quota",
+                    }
+                }
+            ).encode("utf-8")
+        )
+        raise HTTPError(
+            request.full_url,
+            429,
+            "Too Many Requests",
+            hdrs=None,
+            fp=body,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    provider = OpenAIEmbeddingProvider(api_key="test-key")
+
+    with pytest.raises(RuntimeError, match="OpenAI quota exhausted for embed-works; no embeddings were written."):
         provider.embed_texts(["hello"])

@@ -50,6 +50,24 @@ class OpenAIEmbeddingProvider:
                 raw_body = response.read()
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
+            try:
+                parsed_detail = json.loads(detail)
+            except json.JSONDecodeError:
+                parsed_detail = None
+
+            error_code = None
+            if isinstance(parsed_detail, dict):
+                error_obj = parsed_detail.get("error")
+                if isinstance(error_obj, dict):
+                    code = error_obj.get("code")
+                    if isinstance(code, str):
+                        error_code = code
+
+            if exc.code == 429 and error_code == "insufficient_quota":
+                raise RuntimeError(
+                    "OpenAI quota exhausted for embed-works; no embeddings were written."
+                ) from exc
+
             raise RuntimeError(
                 f"OpenAI embeddings request failed with status {exc.code}: {detail}"
             ) from exc
