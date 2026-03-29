@@ -10,6 +10,34 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 
 ---
 
+## Portfolio framing
+
+This project is intended to produce three portfolio assets, not just one:
+
+1. Data and systems asset
+   - reproducible corpus policy
+   - snapshot/versioned ingest
+   - raw payload retention
+   - debuggable manifests and watermarks
+
+2. ML asset
+   - embeddings for title + abstract
+   - similarity retrieval
+   - clustering / bridge detection
+   - ranking signals and scored recommendation families
+   - evaluation against citation/date baselines and temporal backtests
+
+3. Product asset
+   - search
+   - recommended feeds
+   - paper detail
+   - trends
+   - explainability
+
+Current status: the repo is strong on the data/systems asset, has an initial product slice, and has not yet surfaced the most portfolio-visible ML milestones.
+
+---
+
 ## Recommended build sequence
 
 ### 1. Metadata contracts + UX foundation
@@ -33,8 +61,8 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 
 **Deliverables**
 
-- Write path for `ranking_runs`: insert rows with `ranking_version`, `corpus_snapshot_version`, `embedding_version`, `notes`.
-- Write path for `paper_scores`: persist `ranking_version`, `recommendation_family`, `final_score`, per-signal columns, and foreign keys so every score row ties to corpus state via `ranking_runs`.
+- Write path for `ranking_runs`: insert rows keyed by `ranking_run_id`, with `ranking_version` as the algorithm/config label plus `corpus_snapshot_version`, `embedding_version`, status, timestamps, config, and notes.
+- Write path for `paper_scores`: persist `ranking_run_id`, `recommendation_family`, `final_score`, per-signal columns, and foreign keys so every score row ties to corpus state via `ranking_runs`.
 - Contract clarity: document which fields are real v0 vs placeholder / not yet modeled. Do not present silent zeros as authoritative semantic or bridge scores.
 - Persist enough run metadata from the first score write to compare runs later.
 
@@ -62,8 +90,8 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 **Deliverables**
 
 - New API module for the read path (`paper_scores` -> `works`, optional topics).
-- Single endpoint style: `GET /api/v1/recommendations/ranked?family=emerging|bridge|undercited&limit=...` with optional `ranking_version`; default = latest successful run for the current snapshot.
-- Response fields: `paper_id`, `title`, `year`, `citation_count`, `source_slug`, `topics`, per-signal map, `final_score`, `reason_short`, `ranking_version`, `family`.
+- Single endpoint style: `GET /api/v1/recommendations/ranked?family=emerging|bridge|undercited&limit=...` with optional `ranking_version`; default = latest successful `ranking_run_id` for the current snapshot.
+- Response fields: `paper_id`, `title`, `year`, `citation_count`, `source_slug`, `topics`, per-signal map, `final_score`, `reason_short`, `ranking_version`, `ranking_run_id`, `family`.
 
 **Legacy:** Keep `GET /api/v1/recommendations/undercited` (SQL heuristic) only as fallback or short-term comparison if useful.
 
@@ -127,6 +155,55 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 
 ---
 
+## ML milestones
+
+These milestones make the project legible as a machine-learning portfolio piece instead of only a data product.
+
+### ML milestone 1: embeddings + retrieval
+
+**Visible outcome:** Similarity-based retrieval over the curated corpus, powered by title + abstract embeddings.
+
+**Primary steps:** Builds primarily on step 8, after steps 1-5 establish stable paper contracts and product surfaces.
+
+**What ships**
+
+- embedding generation job with `embedding_version`
+- persisted vectors in `embeddings`
+- nearest-neighbor retrieval for a paper or query
+- an internal or user-facing similar-papers surface
+
+**Portfolio value:** Demonstrates representation learning usage, retrieval design, and versioned offline ML artifacts.
+
+### ML milestone 2: clustering + bridge score
+
+**Visible outcome:** Papers can be identified as connecting neighboring clusters rather than only matching keywords or citation counts.
+
+**Primary steps:** Builds on steps 2-5 and step 8, using ranking plumbing plus learned structure.
+
+**What ships**
+
+- cluster assignment versioning
+- bridge-oriented features using embedding neighborhoods and/or citation context
+- non-placeholder `bridge_score` in `paper_scores`
+
+**Portfolio value:** Demonstrates unsupervised structure discovery and a domain-specific recommendation signal.
+
+### ML milestone 3: evaluated ranking
+
+**Visible outcome:** Ranked families outperform simple citation/date sorting on explicit or proxy metrics.
+
+**Primary steps:** Centers on step 7, and depends on steps 2-5 for versioned runs, ranked outputs, and recommendation surfaces.
+
+**What ships**
+
+- versioned ranking runs
+- compared baselines
+- evaluation page with methodology notes
+- temporal backtest when labels are ready
+
+**Portfolio value:** Demonstrates applied ranking, experimentation discipline, and honest model evaluation.
+
+---
 ## Dependency graph (short)
 
 ```text
@@ -152,12 +229,16 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 ## Milestone exit criteria
 
 - After step 1: List API returns `topics: list[str]` with at most 3 topic names per paper, ordered by `work_topics.score DESC` then `topics.name ASC`. Search page renders those topics as chips. Detail page renders topic chips from Postgres-backed detail data and keeps or improves the source block (venue as primary label). List API uses one SQL query for papers plus top topics (no N+1). `source_label` is present on list items when venue join resolves.
-- After step 3: `paper_scores` contains versioned rows for all three recommendation families.
+- After step 2: Schema uses `ranking_run_id` as run PK; `paper_scores` references it with nullable signal columns and required `reason_short`. `ranking-run` CLI persists `running` then `succeeded` or `failed` with `config_json` / `counts_json`. Multiple runs may share the same `ranking_version`.
+- After step 3: `paper_scores` contains heuristic-ranked rows for all three recommendation families (beyond Step-2 stubs).
 - After step 4: Ranked recommendations can be fetched by family for the latest successful run.
 - After step 5: `/recommended` is powered by ranked data rather than the heuristic-only baseline.
 - After step 6: `/trends` is powered by curated-corpus topic aggregations rather than placeholder copy.
 - After step 7: Evaluation page compares ranked output to citation/date baselines and clearly labels proxy metrics.
 - After step 8: Semantic relevance and bridge signals are no longer placeholder-only.
+- After ML milestone 1: The repo can demo embedding-backed similarity retrieval over live corpus papers.
+- After ML milestone 2: `bridge_score` is computed from learned or clustered structure rather than a placeholder.
+- After ML milestone 3: The ranking story includes measured comparison against simple baselines.
 
 ---
 

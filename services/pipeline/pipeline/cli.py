@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from pipeline.bootstrap_loader import database_url_from_env, load_resolved_policy_from_database, run_bootstrap_ingest
+from pipeline.ranking_run import execute_ranking_run
 from pipeline.jobs import (
     create_bootstrap_bundle,
     write_bootstrap_plan,
@@ -72,6 +73,32 @@ def main() -> None:
         help="Contact for OpenAlex User-Agent (default: OPENALEX_MAILTO env)",
     )
 
+    ranking_parser = subparsers.add_parser(
+        "ranking-run",
+        help="Create ranking_runs row, write stub paper_scores, finalize (Step 2 plumbing)",
+    )
+    ranking_parser.add_argument(
+        "--ranking-version",
+        required=True,
+        help="Algorithm / config label (e.g. v0-heuristic-no-embeddings)",
+    )
+    ranking_parser.add_argument(
+        "--corpus-snapshot-version",
+        default=None,
+        help="Target snapshot; default = latest snapshot that has included works",
+    )
+    ranking_parser.add_argument(
+        "--embedding-version",
+        default="none-v0",
+        help="Embedding artifact version label stored on the run",
+    )
+    ranking_parser.add_argument("--note", default=None, help="Optional run notes")
+    ranking_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     args = parser.parse_args()
     policy = CorpusPolicy()
 
@@ -124,6 +151,18 @@ def main() -> None:
         )
         print(finalized.ingest_run_id)
         print(finalized.source_snapshot_version)
+        return
+
+    if args.command == "ranking-run":
+        finalized = execute_ranking_run(
+            database_url=args.database_url,
+            ranking_version=args.ranking_version,
+            corpus_snapshot_version=args.corpus_snapshot_version,
+            embedding_version=args.embedding_version,
+            note=args.note,
+        )
+        print(finalized.ranking_run_id)
+        print(finalized.corpus_snapshot_version)
         return
 
 

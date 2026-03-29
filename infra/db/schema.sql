@@ -139,24 +139,33 @@ CREATE TABLE IF NOT EXISTS clusters (
 );
 
 CREATE TABLE IF NOT EXISTS ranking_runs (
-    ranking_version TEXT PRIMARY KEY,
+    ranking_run_id TEXT PRIMARY KEY,
+    ranking_version TEXT NOT NULL,
     corpus_snapshot_version TEXT NOT NULL REFERENCES source_snapshot_versions(source_snapshot_version) ON DELETE RESTRICT,
     embedding_version TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    notes TEXT
+    status TEXT NOT NULL CHECK (status IN ('running', 'succeeded', 'failed')),
+    started_at TIMESTAMPTZ NOT NULL,
+    finished_at TIMESTAMPTZ,
+    config_json JSONB NOT NULL,
+    counts_json JSONB,
+    error_message TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS paper_scores (
-    ranking_version TEXT NOT NULL REFERENCES ranking_runs(ranking_version) ON DELETE CASCADE,
+    ranking_run_id TEXT NOT NULL REFERENCES ranking_runs(ranking_run_id) ON DELETE CASCADE,
     work_id BIGINT NOT NULL REFERENCES works(id) ON DELETE CASCADE,
-    semantic_score DOUBLE PRECISION NOT NULL,
-    citation_velocity_score DOUBLE PRECISION NOT NULL,
-    topic_growth_score DOUBLE PRECISION NOT NULL,
-    bridge_score DOUBLE PRECISION NOT NULL,
-    diversity_penalty DOUBLE PRECISION NOT NULL,
-    final_score DOUBLE PRECISION NOT NULL,
     recommendation_family TEXT NOT NULL CHECK (recommendation_family IN ('emerging', 'bridge', 'undercited')),
-    PRIMARY KEY (ranking_version, work_id, recommendation_family)
+    semantic_score DOUBLE PRECISION,
+    citation_velocity_score DOUBLE PRECISION,
+    topic_growth_score DOUBLE PRECISION,
+    bridge_score DOUBLE PRECISION,
+    diversity_penalty DOUBLE PRECISION,
+    final_score DOUBLE PRECISION NOT NULL,
+    reason_short TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (ranking_run_id, work_id, recommendation_family)
 );
 
 CREATE INDEX IF NOT EXISTS idx_source_snapshot_policy ON source_snapshot_versions(policy_hash, created_at DESC);
@@ -166,6 +175,11 @@ CREATE INDEX IF NOT EXISTS idx_works_snapshot ON works(corpus_snapshot_version, 
 CREATE INDEX IF NOT EXISTS idx_works_status ON works(inclusion_status, exclusion_reason);
 CREATE INDEX IF NOT EXISTS idx_works_core ON works(is_core_corpus, year);
 CREATE INDEX IF NOT EXISTS idx_raw_works_snapshot ON raw_openalex_works(source_snapshot_version, source_slug, updated_date);
-CREATE INDEX IF NOT EXISTS idx_paper_scores_family ON paper_scores(ranking_version, recommendation_family, final_score DESC);
+CREATE INDEX IF NOT EXISTS idx_ranking_runs_version_started ON ranking_runs(ranking_version, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ranking_runs_snapshot_started ON ranking_runs(corpus_snapshot_version, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ranking_runs_status_started ON ranking_runs(status, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ranking_runs_snapshot_status_finished ON ranking_runs(corpus_snapshot_version, status, finished_at DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_paper_scores_run_family_score ON paper_scores(ranking_run_id, recommendation_family, final_score DESC);
+CREATE INDEX IF NOT EXISTS idx_paper_scores_work_run ON paper_scores(work_id, ranking_run_id);
 CREATE INDEX IF NOT EXISTS idx_work_topics_topic ON work_topics(topic_id, score DESC);
 CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings USING hnsw (vector vector_cosine_ops);

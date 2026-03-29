@@ -60,6 +60,10 @@ npm run dev:web
 
 Open `http://localhost:3000/search`.
 
+After ingest, you can persist a Step-2 stub ranking run (writes `ranking_runs` + `paper_scores`):
+
+`python -m pipeline.cli ranking-run --ranking-version v0-heuristic-no-embeddings`
+
 ### Required env vars
 
 - `DATABASE_URL` or equivalent `PG*` vars (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`)
@@ -79,5 +83,7 @@ Open `http://localhost:3000/search`.
 - The snapshot artifact folder under `artifacts/`
 - `ingest_runs` in Postgres
 - API startup logs for DB connection errors
+
+If you change ranking tables in `infra/db/schema.sql` after the DB was first initialized, recreate the Postgres volume (or apply the DDL manually) so `ranking_runs` and `paper_scores` stay in sync.
 
 For more detailed bootstrap failure checkpoints, see `docs/bootstrap-run-tutorial.md`.

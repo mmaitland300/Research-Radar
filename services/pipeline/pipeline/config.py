@@ -55,6 +55,85 @@ class Watermark:
 
 
 @dataclass(frozen=True)
+class RankingCounts:
+    total_candidate_works: int = 0
+    total_rows_written: int = 0
+    rows_by_family: dict[str, int] = field(default_factory=dict)
+    rows_null_semantic: int = 0
+    rows_null_bridge: int = 0
+
+
+@dataclass(frozen=True)
+class RankingRun:
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    embedding_version: str
+    status: str
+    started_at: datetime
+    config: dict[str, Any]
+    counts: RankingCounts = field(default_factory=RankingCounts)
+    finished_at: datetime | None = None
+    error_message: str | None = None
+    notes: str | None = None
+
+    @classmethod
+    def start(
+        cls,
+        *,
+        ranking_version: str,
+        corpus_snapshot_version: str,
+        embedding_version: str,
+        config: dict[str, Any],
+        notes: str | None = None,
+    ) -> "RankingRun":
+        started_at = datetime.now(UTC)
+        digest = hashlib.sha1(
+            f"{ranking_version}:{corpus_snapshot_version}:{started_at.isoformat()}".encode("utf-8")
+        ).hexdigest()[:10]
+        return cls(
+            ranking_run_id=f"rank-{digest}",
+            ranking_version=ranking_version,
+            corpus_snapshot_version=corpus_snapshot_version,
+            embedding_version=embedding_version,
+            status="running",
+            started_at=started_at,
+            config=config,
+            notes=notes,
+        )
+
+    def complete(self, counts: RankingCounts) -> "RankingRun":
+        return RankingRun(
+            ranking_run_id=self.ranking_run_id,
+            ranking_version=self.ranking_version,
+            corpus_snapshot_version=self.corpus_snapshot_version,
+            embedding_version=self.embedding_version,
+            status="succeeded",
+            started_at=self.started_at,
+            config=self.config,
+            counts=counts,
+            finished_at=datetime.now(UTC),
+            error_message=None,
+            notes=self.notes,
+        )
+
+    def fail(self, message: str) -> "RankingRun":
+        return RankingRun(
+            ranking_run_id=self.ranking_run_id,
+            ranking_version=self.ranking_version,
+            corpus_snapshot_version=self.corpus_snapshot_version,
+            embedding_version=self.embedding_version,
+            status="failed",
+            started_at=self.started_at,
+            config=self.config,
+            counts=self.counts,
+            finished_at=datetime.now(UTC),
+            error_message=message,
+            notes=self.notes,
+        )
+
+
+@dataclass(frozen=True)
 class IngestRun:
     ingest_run_id: str
     source_snapshot_version: str
