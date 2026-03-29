@@ -112,5 +112,24 @@ class RankedRecommendationsResponse(BaseModel):
     items: list[RankedRecommendationItem]
 
 
+class SimilarPaperItem(BaseModel):
+    paper_id: str
+    title: str
+    year: int
+    citation_count: int
+    source_slug: str | None = None
+    topics: list[str]
+    similarity: float
+
+
+class SimilarPapersResponse(BaseModel):
+    """Nearest neighbors from stored embeddings only (same embedding_version as source)."""
+
+    paper_id: str
+    embedding_version: str
+    total: int
+    items: list[SimilarPaperItem]
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)

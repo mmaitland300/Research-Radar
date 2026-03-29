@@ -14,6 +14,8 @@ from app.contracts import (
     RankedRecommendationsResponse,
     RankedSignals,
     RankingFamily,
+    SimilarPaperItem,
+    SimilarPapersResponse,
     UndercitedRecommendationItem,
     UndercitedRecommendationsResponse,
     utc_now,
@@ -22,6 +24,7 @@ from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
 from app.papers_repo import list_undercited_heuristic_v0
 from app.scores_repo import list_ranked_recommendations
+from app.similarity_repo import list_similar_papers
 
 app = FastAPI(
     title="Research Radar API",
@@ -190,6 +193,55 @@ def get_evaluation_summary() -> EvaluationSummary:
         primary_metrics=["precision@10", "precision@20"],
         checks=list(settings.evaluation_checks),
         generated_at=utc_now(),
+    )
+
+
+@app.get(
+    "/api/v1/papers/{paper_id:path}/similar",
+    response_model=SimilarPapersResponse,
+)
+def get_paper_similar(
+    paper_id: str,
+    embedding_version: str = Query(..., min_length=1),
+    limit: int = Query(default=10, ge=1, le=100),
+) -> SimilarPapersResponse:
+    """
+    Nearest included neighbors by cosine similarity on persisted vectors for embedding_version.
+    """
+    try:
+        result = list_similar_papers(
+            paper_id=paper_id,
+            embedding_version=embedding_version,
+            limit=limit,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database query failed. Confirm Postgres is running and embeddings exist.",
+        ) from exc
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Paper not found or no embedding for this embedding_version.",
+        )
+
+    return SimilarPapersResponse(
+        paper_id=result.paper_id,
+        embedding_version=result.embedding_version,
+        total=len(result.items),
+        items=[
+            SimilarPaperItem(
+                paper_id=r.paper_id,
+                title=r.title,
+                year=r.year,
+                citation_count=r.citation_count,
+                source_slug=r.source_slug,
+                topics=r.topics,
+                similarity=r.similarity,
+            )
+            for r in result.items
+        ],
     )
 
 
