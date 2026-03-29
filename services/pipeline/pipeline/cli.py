@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from pipeline.bootstrap_loader import database_url_from_env, load_resolved_policy_from_database, run_bootstrap_ingest
+from pipeline.embedding_run import execute_embedding_run
 from pipeline.ranking_run import execute_ranking_run
 from pipeline.jobs import (
     create_bootstrap_bundle,
@@ -71,6 +72,43 @@ def main() -> None:
         "--mailto",
         default=None,
         help="Contact for OpenAlex User-Agent (default: OPENALEX_MAILTO env)",
+    )
+
+    embed_parser = subparsers.add_parser(
+        "embed-works",
+        help="Write one embedding per included work from title + abstract",
+    )
+    embed_parser.add_argument(
+        "--embedding-version",
+        required=True,
+        help="Embedding artifact label stored on embeddings rows (e.g. v1-title-abstract-1536)",
+    )
+    embed_parser.add_argument(
+        "--corpus-snapshot-version",
+        default=None,
+        help="Target snapshot; default = latest snapshot that has included works",
+    )
+    embed_parser.add_argument(
+        "--model",
+        default="text-embedding-3-small",
+        help="Embedding model label for the provider request (default: text-embedding-3-small)",
+    )
+    embed_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Texts per embedding request batch",
+    )
+    embed_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Cap missing works processed on this run (useful for smoke tests)",
+    )
+    embed_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
     ranking_parser = subparsers.add_parser(
@@ -151,6 +189,20 @@ def main() -> None:
         )
         print(finalized.ingest_run_id)
         print(finalized.source_snapshot_version)
+        return
+
+    if args.command == "embed-works":
+        summary = execute_embedding_run(
+            database_url=args.database_url,
+            embedding_version=args.embedding_version,
+            corpus_snapshot_version=args.corpus_snapshot_version,
+            model=args.model,
+            batch_size=args.batch_size,
+            limit=args.limit,
+        )
+        print(summary.embedding_version)
+        print(summary.corpus_snapshot_version)
+        print(summary.rows_written)
         return
 
     if args.command == "ranking-run":

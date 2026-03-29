@@ -64,11 +64,17 @@ After ingest, you can persist a Step-2 stub ranking run (writes `ranking_runs` +
 
 `python -m pipeline.cli ranking-run --ranking-version v0-heuristic-no-embeddings`
 
+You can also materialize one embedding per included work from `title + abstract`:
+
+`python -m pipeline.cli embed-works --embedding-version v1-title-abstract-1536`
+
 ### Required env vars
 
 - `DATABASE_URL` or equivalent `PG*` vars (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`)
 - `OPENALEX_MAILTO`
+- `OPENAI_API_KEY` for `embed-works`
 - `API_BASE_URL` or `NEXT_PUBLIC_API_BASE_URL` (optional; default API target is `http://localhost:8000`)
+- `OPENAI_BASE_URL` (optional; defaults to `https://api.openai.com/v1`)
 
 ### What to expect
 

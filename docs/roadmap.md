@@ -6,7 +6,7 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 
 - Bootstrap / ingest: Corpus policy, OpenAlex bootstrap, Postgres schema, raw retention, and manifest counts are in place for the current slice.
 - Live product slice: DB-backed search and paper detail; topic metadata flows through normalize + `work_topics`; list/detail IDs support full OpenAlex URLs where needed.
-- Not yet product-complete: Materialized `paper_scores` writes, ranked recommendations API, corpus-scoped trends, evaluation vs baselines, embeddings-backed semantic and bridge signals.
+- Not yet product-complete: Corpus-scoped trends, evaluation vs baselines, embeddings-backed similarity UI, clustering / non-placeholder bridge and semantic scores in ranking.
 
 ---
 
@@ -143,15 +143,17 @@ Current status: the repo is strong on the data/systems asset, has an initial pro
 
 ### 8. Embeddings and vector retrieval (2b / 3b)
 
-**Goal:** Improve semantic relevance and bridge quality without blocking the first honest ranked release.
+**Goal:** Add representation learning and retrieval as a **separate seam** from ranking first: offline work-level vectors, then similar-paper read paths, then (later) optional use in `paper_scores`.
 
-**Deliverables**
+**Deliverables (sequenced — see ML milestone 1 below)**
 
-- Title+abstract embeddings -> `embeddings` table; real `semantic_score` in `paper_scores`.
-- Similar-paper retrieval (product or internal).
-- Cluster assignment -> stronger bridge scoring.
+- ML1a: Write path — title+abstract embeddings -> `embeddings` table, versioned by `embedding_version`, idempotent upserts.
+- ML1b: Read path — nearest neighbors from stored vectors only (no live embed in API).
+- ML1c: Product — similar papers on paper detail.
+- ML1d: Quality — manual spot-check on anchor papers; notes for portfolio credibility.
+- **Defer:** Forcing `semantic_score` into family ranking until there is a clear relevance target (seed, centroid, or query context). Cluster assignment remains a bridge / ML2 concern.
 
-**Why not earlier:** Useful for quality, but not required to ship versioned, explainable, ranked families over the curated corpus.
+**Why not earlier:** Useful for quality, but not required to ship versioned, explainable, ranked families over the curated corpus. **Why retrieval before ranking integration:** Lower risk; uses existing `embeddings` + HNSW; avoids undefined “semantic relevance” for family feeds.
 
 ---
 
@@ -159,20 +161,87 @@ Current status: the repo is strong on the data/systems asset, has an initial pro
 
 These milestones make the project legible as a machine-learning portfolio piece instead of only a data product.
 
-### ML milestone 1: embeddings + retrieval
+### ML milestone 1: embeddings + retrieval (paper-to-paper first)
 
-**Visible outcome:** Similarity-based retrieval over the curated corpus, powered by title + abstract embeddings.
+**Strategy:** Ship **offline work embeddings** and **stored-vector nearest-neighbor retrieval** before touching ranking semantics. One vector per **included** work from **title + abstract** only (no chunking in v1). API reads never call the embed provider — only Postgres/pgvector.
 
-**Primary steps:** Builds primarily on step 8, after steps 1-5 establish stable paper contracts and product surfaces.
+**Schema already in place:** `embeddings(work_id, embedding_version, vector VECTOR(1536))` with PK `(work_id, embedding_version)`, `idx_embeddings_vector` (HNSW, cosine). `ranking_runs.embedding_version` is for **provenance later**, not required for ML1a.
 
-**What ships**
+**Visible outcome:** Similar papers for a known `paper_id`, demoable on paper detail, versioned by `embedding_version`.
 
-- embedding generation job with `embedding_version`
-- persisted vectors in `embeddings`
-- nearest-neighbor retrieval for a paper or query
-- an internal or user-facing similar-papers surface
+**Primary dependency:** Step 1 stable list/detail/topic contracts; steps 2–5 can proceed in parallel. Do not block ML1 on ranking integration.
 
-**Portfolio value:** Demonstrates representation learning usage, retrieval design, and versioned offline ML artifacts.
+**Portfolio value:** Representation learning + versioned offline artifacts + retrieval design, explainable without conflating “family feed semantic score.”
+
+**Out of scope for ML milestone 1 (defer):** Query-text semantic search, chunk embeddings, writing `semantic_score` into `paper_scores` without a defined relevance target.
+
+---
+
+#### ML1a — Embedding write path (implementation checklist)
+
+**Goal:** Idempotently fill `embeddings` for included works missing a given `embedding_version`, using batched calls to the chosen provider (e.g. OpenAI-compatible embeddings → 1536 dims to match `VECTOR(1536)`).
+
+**Deliverables**
+
+- Select candidate works: `inclusion_status = 'included'`, optional corpus snapshot filter (same “latest snapshot with works” pattern as ranking), **anti-join** works with no row for `(work_id, embedding_version)`.
+- Build **one text per work**: title + abstract (define empty-abstract behavior explicitly, e.g. title-only).
+- Batch provider requests; handle rate limits / retries at orchestration layer.
+- **UPSERT** into `embeddings` so re-runs are safe (same PK replaces vector + `created_at` behavior per your SQL policy).
+- CLI entry point for operators.
+- Tests: persistence SQL/upsert behavior (mocks or DB pattern used elsewhere); run orchestration with mocked provider.
+
+**File-by-file checklist**
+
+| Order | File | What to implement |
+| ----- | ---- | ------------------- |
+| 0 | `infra/db/schema.sql` | **No change** for ML1a — confirm table matches intent (1536-dim, PK, HNSW). Only edit here if a real migration is required. |
+| 1 | `services/pipeline/pipeline/embedding_persistence.py` | **New.** DB-only helpers: resolve target `corpus_snapshot_version` (reuse or mirror `latest_corpus_snapshot_version_with_works` from ranking persistence), `list_work_ids_missing_embedding(conn, snapshot, embedding_version) -> list[WorkEmbeddingSource]` (or separate id + text query), `upsert_embeddings(conn, rows: Sequence[EmbeddingRow])`. Use `dict_row` consistently if returning dicts from `execute`. |
+| 2 | `services/pipeline/pipeline/embedding_provider.py` (optional split) | **New (optional).** Thin wrapper: `embed_texts(texts: list[str]) -> list[list[float]]` with fixed model name + dimension assert (1536). Keeps `embedding_run.py` testable. Alternatively fold into `embedding_run.py` if you want fewer files. |
+| 3 | `services/pipeline/pipeline/embedding_run.py` | **New.** `execute_embedding_run(...)` — open connection, list missing works, fetch title/abstract for those ids, chunk into batches, call provider, upsert in transactional batches, log counts / failures. No ranking or `paper_scores` writes. |
+| 4 | `services/pipeline/pipeline/cli.py` | **Extend.** Subcommand e.g. `embed-works --embedding-version v1-title-abstract-1536` with `--corpus-snapshot-version`, `--database-url`, `--batch-size`, optional `--limit` for smoke. Wire to `execute_embedding_run`. |
+| 5 | `services/pipeline/tests/test_embedding_persistence.py` | **New.** Unit-style tests for selection + upsert contracts (mock connection or test DB). |
+| 6 | `services/pipeline/tests/test_embedding_run.py` | **New.** Mock provider + mock/patch DB; assert batching and upsert calls for a small fake corpus. |
+| 7 | `pyproject.toml` / deps | Add HTTP client + any SDK only if needed; pin versions consistent with repo. |
+| 8 | Env / ops docs | Document required secrets (e.g. API key), model id, and example CLI invocation in `docs/build-brief.md` or README slice — **only if** the repo already documents pipeline env elsewhere; avoid new markdown files unless the project already uses them for this. |
+
+**ML1a exit criteria**
+
+- Running `python -m pipeline.cli embed-works --embedding-version <label> ...` twice does not duplicate PK rows; second run processes only still-missing works.
+- Spot check: `SELECT COUNT(*) FROM embeddings WHERE embedding_version = '<label>'` matches included works with text after full run.
+- `services/pipeline/tests` green with new tests.
+
+**ML1a explicit non-goals**
+
+- No `GET /api/.../similar` (ML1b).
+- No web UI (ML1c).
+- No updates to `paper_scores.semantic_score` or ranking heuristics.
+
+---
+
+#### ML1b — Similar-papers API (read path)
+
+**Goal:** `GET /api/v1/papers/{paper_id}/similar?limit=10&embedding_version=...` using **stored** vectors only; pgvector cosine distance; exclude self; return metadata + similarity + topics (reuse list/detail SQL patterns).
+
+**File-by-file (outline for next seam)**
+
+| File | Responsibility |
+| ---- | ---------------- |
+| `apps/api/app/similarity_repo.py` | **New.** Resolve internal `work_id` from OpenAlex id; fetch source vector; `<->` or `<=>` neighbor query with HNSW; map to response rows. |
+| `apps/api/app/contracts.py` | **Extend.** Response models for similar items. |
+| `apps/api/app/main.py` | **Extend.** New route under `/api/v1/papers/...`. |
+| `apps/api/tests/test_similar_papers.py` | **New.** Monkeypatch repo; 404/503 cases. |
+
+---
+
+#### ML1c — Paper detail UI
+
+**Goal:** “Similar papers” block on `apps/web/app/papers/[paperId]/page.tsx` using ML1b; reuse chips / result styles from search or recommended.
+
+---
+
+#### ML1d — Quality review
+
+**Goal:** 5–10 anchor `paper_id`s, manual neighbor inspection, short notes (PR description or roadmap appendix). Labels portfolio risk honestly.
 
 ### ML milestone 2: clustering + bridge score
 
@@ -221,7 +290,7 @@ These milestones make the project legible as a machine-learning portfolio piece 
 
 (7) Evaluation instrumentation -> starts with (2); UI expands as metrics mature
 
-(8) Embeddings / retrieval -> refines (3) and (4) signal semantics
+(8) Embeddings / retrieval -> ML1a–c similar-papers path first; optional later tie-in to (3)/(4) signals
 ```
 
 ---
@@ -235,8 +304,10 @@ These milestones make the project legible as a machine-learning portfolio piece 
 - After step 5: `/recommended` is powered by ranked data rather than the heuristic-only baseline.
 - After step 6: `/trends` is powered by curated-corpus topic aggregations rather than placeholder copy.
 - After step 7: Evaluation page compares ranked output to citation/date baselines and clearly labels proxy metrics.
-- After step 8: Semantic relevance and bridge signals are no longer placeholder-only.
-- After ML milestone 1: The repo can demo embedding-backed similarity retrieval over live corpus papers.
+- After step 8 / ML1a: Included works can be backfilled into `embeddings` for a version label without duplicating PK rows.
+- After ML1b–c: Similar papers are available via API and visible on paper detail for a pinned `embedding_version`.
+- After ML1d: Anchor-paper quality notes exist for portfolio credibility.
+- Later (ML2+): Semantic / bridge columns in `paper_scores` are filled from defined signals, not ad hoc.
 - After ML milestone 2: `bridge_score` is computed from learned or clustered structure rather than a placeholder.
 - After ML milestone 3: The ranking story includes measured comparison against simple baselines.
 
