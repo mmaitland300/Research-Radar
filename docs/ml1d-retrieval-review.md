@@ -46,6 +46,8 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 - `encoding-issue`
 - `strong-match`
 
+**CLI vs browser titles:** Some terminals mangle Unicode in JSON (e.g. PowerShell showing `â` instead of quotes or dashes). If the **browser** paper detail renders the same title cleanly, use that for neighbor titles in this worksheet and **do not** apply `encoding-issue` from console output alone.
+
 ### Pass 1 — Anchor set (reuse for Pass 2)
 
 | # | anchor_paper_id |
@@ -213,7 +215,7 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 | --- | --- | --- | --- | --- |
 | 1 | mixed | mixed | same five neighbors; small similarity shifts | cleantext UI clean; `dataset-title-bias` still dominant |
 | 2 | good | good | same five neighbors; small similarity shifts | still strong for corpus/dataset neighborhood; `same-venue-bias` on one row |
-| 3 | | | | |
+| 3 | weak | weak | same five neighbors; similarity nudges | domain coherence yes; bibliometric/authorship intent still lost (`too-broad`) |
 | 4 | | | | |
 | 5 | | | | |
 
@@ -271,23 +273,23 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 ## Pass 2 — Anchor 3
 
 **anchor_paper_id:** `https://openalex.org/W4415947443`  
-**anchor_title:** `_short label_`
+**anchor_title:** Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship
 
 **Neighbors**
 
 | rank | neighbor_title | similarity | judgment | notes |
 | --- | --- | ---: | --- | --- |
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 1 | Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data | 0.6238 | mixed | too-broad |
+| 2 | RWC Revisited: Towards a Community-Driven MIR Corpus | 0.6045 | mixed | same-venue-bias, too-broad |
+| 3 | CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research | 0.6013 | mixed | same-venue-bias, too-broad |
+| 4 | MGPHot: A Dataset of Musicological Annotations for Popular Music (1958-2022) | 0.5123 | weak | dataset-title-bias, too-broad |
+| 5 | Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music | 0.5050 | weak | too-broad |
 
 **Summary**
 
-- overall:  
-- main_failure_mode:  
-- demo_worthy:  
+- overall: weak
+- main_failure_mode: too-broad
+- demo_worthy: no - retrieval stays inside MIR, but the neighbors do not preserve the bibliometric/authorship-analysis intent.
 
 ## Pass 2 — Anchor 4
 
@@ -337,7 +339,7 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 
 1. Anchor 1 - mixed
 2. Anchor 2 - good
-3. Anchor 3 -  
+3. Anchor 3 - weak
 4. Anchor 4 -  
 5. Anchor 5 -  
 
