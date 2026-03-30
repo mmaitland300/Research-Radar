@@ -201,7 +201,7 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 
 Fill after cleantext (or successor) embeddings are written under a **new** `embedding_version` (do not reuse Pass 1’s label if vectors changed).
 
-**Embedding version:** `_fill_me_`  
+**Embedding version:** `v1-title-abstract-1536-cleantext`  
 **Corpus snapshot version:** `_fill_me_`  
 **Date:** `_fill_me_`
 
@@ -211,7 +211,7 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 
 | anchor # | Pass 1 overall | Pass 2 overall | neighbor overlap (rough) | main change in failure modes |
 | --- | --- | --- | --- | --- |
-| 1 | | | | |
+| 1 | mixed | mixed | same five neighbors; small similarity shifts | `encoding-issue` still on rows 3–4; `dataset-title-bias` still dominant |
 | 2 | | | | |
 | 3 | | | | |
 | 4 | | | | |
@@ -229,23 +229,23 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 ## Pass 2 — Anchor 1
 
 **anchor_paper_id:** `https://openalex.org/W7119099299`  
-**anchor_title:** `_short label_`
+**anchor_title:** Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music
 
 **Neighbors**
 
 | rank | neighbor_title | similarity | judgment | notes |
 | --- | --- | ---: | --- | --- |
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 1 | CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research | 0.6127 | mixed | same-venue-bias, too-broad |
+| 2 | The GigaMIDI Dataset with Features for Expressive Music Performance Detection | 0.5900 | mixed | dataset-title-bias, too-broad |
+| 3 | Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data | 0.5729 | weak | dataset-title-bias, too-broad, encoding-issue |
+| 4 | MusiQAl: A Dataset for Music Question–Answering through Audio–Video Fusion | 0.5559 | weak | dataset-title-bias, too-broad, encoding-issue |
+| 5 | ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research | 0.5226 | weak | dataset-title-bias, too-broad |
 
 **Summary**
 
-- overall:  
-- main_failure_mode:  
-- demo_worthy:  
+- overall: mixed
+- main_failure_mode: dataset-title-bias
+- demo_worthy: yes - stays in-domain, but retrieval is still broad rather than method-specific
 
 ## Pass 2 — Anchor 2
 
@@ -335,7 +335,7 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 
 **Per-anchor set verdict**
 
-1. Anchor 1 -  
+1. Anchor 1 - mixed
 2. Anchor 2 -  
 3. Anchor 3 -  
 4. Anchor 4 -  
