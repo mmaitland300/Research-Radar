@@ -216,7 +216,7 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 | 1 | mixed | mixed | same five neighbors; small similarity shifts | cleantext UI clean; `dataset-title-bias` still dominant |
 | 2 | good | good | same five neighbors; small similarity shifts | still strong for corpus/dataset neighborhood; `same-venue-bias` on one row |
 | 3 | weak | weak | same five neighbors; similarity nudges | domain coherence yes; bibliometric/authorship intent still lost (`too-broad`) |
-| 4 | | | | |
+| 4 | mixed | mixed | same five neighbors; small similarity shifts | rank 1 still performance-adjacent; ranks 2–5 still drift (`too-broad`) |
 | 5 | | | | |
 
 **Roll-up delta**
@@ -294,23 +294,23 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 ## Pass 2 — Anchor 4
 
 **anchor_paper_id:** `https://openalex.org/W4413990340`  
-**anchor_title:** `_short label_`
+**anchor_title:** Smartwatch-Based Audio-Gestural Insights in Violin Bow Stroke Analyses
 
 **Neighbors**
 
 | rank | neighbor_title | similarity | judgment | notes |
 | --- | --- | ---: | --- | --- |
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 1 | The GigaMIDI Dataset with Features for Expressive Music Performance Detection | 0.5540 | good | strong-match |
+| 2 | Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music | 0.5082 | mixed | too-broad |
+| 3 | MusiQAl: A Dataset for Music Question-Answering through Audio-Video Fusion | 0.4921 | mixed | dataset-title-bias, too-broad |
+| 4 | ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research | 0.4689 | mixed | too-broad |
+| 5 | Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data | 0.4233 | weak | too-broad |
 
 **Summary**
 
-- overall:  
-- main_failure_mode:  
-- demo_worthy:  
+- overall: mixed
+- main_failure_mode: too-broad
+- demo_worthy: no - the top neighbor is promising, but the rest of the set drifts quickly into broad music-data adjacency.
 
 ## Pass 2 — Anchor 5
 
@@ -340,7 +340,7 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 1. Anchor 1 - mixed
 2. Anchor 2 - good
 3. Anchor 3 - weak
-4. Anchor 4 -  
+4. Anchor 4 - mixed
 5. Anchor 5 -  
 
 **Counts**
