@@ -217,16 +217,20 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 | 2 | good | good | same five neighbors; small similarity shifts | still strong for corpus/dataset neighborhood; `same-venue-bias` on one row |
 | 3 | weak | weak | same five neighbors; similarity nudges | domain coherence yes; bibliometric/authorship intent still lost (`too-broad`) |
 | 4 | mixed | mixed | same five neighbors; small similarity shifts | rank 1 still performance-adjacent; ranks 2–5 still drift (`too-broad`) |
-| 5 | | | | |
+| 5 | mixed | mixed | same five neighbors; similarity shifts | rank 1 still strong multimodal/corpus match; tail still dataset/MIR adjacency (`dataset-title-bias`) |
 
 **Roll-up delta**
 
-- `good_sets` Pass 1 → Pass 2:  
-- `mixed_sets` Pass 1 → Pass 2:  
-- `weak_sets` Pass 1 → Pass 2:  
-- **common_failure_modes** Pass 1 → Pass 2:  
-- **recommended_next_step** (single best next move):  
-- **go/no-go for semantic ranking integration** (guardrail: only if Pass 2 is good enough for the intended use case **and** the semantic relevance target for scoring is written down elsewhere):
+- `good_sets` Pass 1 → Pass 2: 1/5 → 1/5 (unchanged)
+- `mixed_sets` Pass 1 → Pass 2: 3/5 → 3/5 (unchanged)
+- `weak_sets` Pass 1 → Pass 2: 1/5 → 1/5 (unchanged)
+- **common_failure_modes** Pass 1 → Pass 2: `dataset-title-bias`, `too-broad`, `same-venue-bias` still dominant; Pass 2 reviews drop `encoding-issue` when browser text is clean (cleartext + worksheet discipline), even if PowerShell JSON shows mojibake.
+- **recommended_next_step** (single best next move): Keep retrieval exploratory; do **not** integrate semantic signals into `paper_scores` yet. Proceed with low-cite product definition (`docs/candidate-pool-low-cite.md`), trends, evaluation, and operational hardening (e.g. DB-backed health check, structured logging).
+- **go/no-go for semantic ranking integration** (guardrail: only if Pass 2 is good enough for the intended use case **and** the semantic relevance target for scoring is written down elsewhere): **No-go.** Retrieval is demo-worthy as Similar papers; it is not yet task-faithful enough across anchors to feed ranking.
+
+**Judgment lens (Pass 2):** For each anchor: *Do neighbors preserve the anchor’s task/intent, or only a broad MIR / music-data neighborhood?* **Good** = most neighbors match the anchor’s role or task; **mixed** = one or two useful neighbors but the set drifts broad; **weak** = in-domain but misses the anchor’s purpose (e.g. Anchor 3 bibliometrics).
+
+**Outcome / what’s next:** Ship Similar papers as an exploratory feature. Next stage: low-cite usage, trends, evaluation instrumentation, health check + logging — not `semantic_score` in `paper_scores` until the roadmap guardrail is met.
 
 ## Pass 2 — Anchor 1
 
@@ -315,23 +319,23 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 ## Pass 2 — Anchor 5
 
 **anchor_paper_id:** `https://openalex.org/W4412780451`  
-**anchor_title:** `_short label_`
+**anchor_title:** MusiQAl: A Dataset for Music Question-Answering through Audio-Video Fusion
 
 **Neighbors**
 
 | rank | neighbor_title | similarity | judgment | notes |
 | --- | --- | ---: | --- | --- |
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 1 | Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data | 0.5926 | good | strong-match |
+| 2 | CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research | 0.5871 | mixed | dataset-title-bias, too-broad |
+| 3 | The GigaMIDI Dataset with Features for Expressive Music Performance Detection | 0.5615 | mixed | dataset-title-bias, too-broad |
+| 4 | Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music | 0.5559 | mixed | too-broad |
+| 5 | MGPHot: A Dataset of Musicological Annotations for Popular Music (1958-2022) | 0.5262 | mixed | dataset-title-bias, too-broad |
 
 **Summary**
 
-- overall:  
-- main_failure_mode:  
-- demo_worthy:  
+- overall: mixed
+- main_failure_mode: dataset-title-bias
+- demo_worthy: no - the first neighbor is strong, but the set as a whole is still broader music-data adjacency rather than task-specific QA/audio-video retrieval.
 
 ## Pass 2 — Roll-up
 
@@ -341,16 +345,16 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 2. Anchor 2 - good
 3. Anchor 3 - weak
 4. Anchor 4 - mixed
-5. Anchor 5 -  
+5. Anchor 5 - mixed
 
 **Counts**
 
-- `good_sets`:  
-- `mixed_sets`:  
-- `weak_sets`:  
+- `good_sets`: 1/5 (Anchor 2)
+- `mixed_sets`: 3/5 (Anchors 1, 4, 5)
+- `weak_sets`: 1/5 (Anchor 3)
 
-**common_failure_modes:**  
+**common_failure_modes:** `dataset-title-bias`, `too-broad`, `same-venue-bias`
 
-**recommended_next_step:**  
+**recommended_next_step:** Keep retrieval exploratory; do not integrate semantic ranking into `paper_scores` yet. Next: low-cite product definition usage, trends, evaluation, operational hardening (health check, structured logging).
 
-**go/no-go for ranking integration:**  
+**go/no-go for ranking integration:** **No-go** for semantic ranking integration. Retrieval is adequate to demo Similar papers; it does not yet preserve task/intent reliably enough across anchors to drive `semantic_score` or similar.
