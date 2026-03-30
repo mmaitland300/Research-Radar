@@ -56,9 +56,15 @@ def test_execute_embedding_run_batches_missing_candidates(monkeypatch) -> None:
         "pipeline.embedding_run.count_included_works_for_snapshot",
         lambda conn, snapshot: 4,
     )
+    missing_calls: list[int] = []
+
+    def _count_missing(conn, *, corpus_snapshot_version, embedding_version):
+        missing_calls.append(1)
+        return 3 if len(missing_calls) == 1 else 0
+
     monkeypatch.setattr(
         "pipeline.embedding_run.count_missing_embedding_candidates",
-        lambda conn, corpus_snapshot_version, embedding_version: 3,
+        _count_missing,
     )
     monkeypatch.setattr(
         "pipeline.embedding_run.list_embedding_candidates",
@@ -92,6 +98,9 @@ def test_execute_embedding_run_batches_missing_candidates(monkeypatch) -> None:
     assert summary.candidate_works == 3
     assert summary.rows_written == 3
     assert summary.batch_count == 2
+    assert summary.planned_batches == 2
+    assert summary.still_missing_after_run == 0
+    assert len(missing_calls) == 2
     assert provider.calls == [
         ["Title: One\n\nAbstract: Alpha", "Title: Two"],
         ["Title: Three\n\nAbstract: Gamma"],
@@ -133,3 +142,5 @@ def test_execute_embedding_run_returns_empty_summary_when_all_rows_exist(monkeyp
     assert summary.already_embedded_works == 2
     assert summary.rows_written == 0
     assert summary.batch_count == 0
+    assert summary.planned_batches == 0
+    assert summary.still_missing_after_run == 0

@@ -39,6 +39,17 @@ V1 is intentionally scoped to `MIR + audio representation learning`, with `neura
 
 The repository contains the initial product scaffold plus an API-bootstrap-ready corpus policy, snapshot/run manifests, raw-payload retention helpers, normalization helpers, and a starter schema for reproducible ingest.
 
+**Bootstrap corpus (implemented):** OpenAlex ingest is wired for the venues in `services/pipeline/pipeline/policy.py` (currently **TISMIR** and **JAES**). The broader venue list in `docs/build-brief.md` is product intent; expand `policy.py` when adding sources.
+
+### Embedding versions and the web UI
+
+Multiple rows in `embeddings` can coexist: each vector is keyed by `(work_id, embedding_version)`. Typical workflow:
+
+- Run `embed-works` with one label (e.g. `v1-title-abstract-1536`).
+- After text normalization or model changes, run again with a **new** label (e.g. `v1-title-abstract-1536-cleantext`) so Pass 1 / Pass 2 retrieval reviews stay comparable without overwriting prior vectors.
+
+`NEXT_PUBLIC_EMBEDDING_VERSION` selects which label the **paper detail** “Similar papers” block calls (`GET /api/v1/papers/{id}/similar?embedding_version=...`). Match it to the version you are demoing or reviewing so UI and ML1d worksheets do not drift. The API always accepts an explicit `embedding_version` query parameter for scripts and reviews.
+
 ## Quickstart vertical slice (works now)
 
 This repo already supports one complete path: bootstrap a small corpus, start the API, open the web search page, and see live papers served from Postgres.
@@ -64,9 +75,11 @@ After ingest, you can persist a Step-2 stub ranking run (writes `ranking_runs` +
 
 `python -m pipeline.cli ranking-run --ranking-version v0-heuristic-no-embeddings`
 
-You can also materialize one embedding per included work from `title + abstract`:
+You can also materialize one embedding per included work from `title + abstract` (stored text; cleantext normalization runs at ingest in `normalize.py` / `openalex_text.py`):
 
 `python -m pipeline.cli embed-works --embedding-version v1-title-abstract-1536`
+
+Use a **distinct** `--embedding-version` string for each comparable retrieval experiment (e.g. cleantext follow-up) so both vector sets remain in Postgres.
 
 ### Required env vars
 
@@ -74,7 +87,7 @@ You can also materialize one embedding per included work from `title + abstract`
 - `OPENALEX_MAILTO`
 - `OPENAI_API_KEY` for `embed-works`
 - `API_BASE_URL` or `NEXT_PUBLIC_API_BASE_URL` (optional; default API target is `http://localhost:8000`)
-- `NEXT_PUBLIC_EMBEDDING_VERSION` (optional; e.g. `v1-title-abstract-1536` enables the Similar papers block on paper detail)
+- `NEXT_PUBLIC_EMBEDDING_VERSION` (optional; pins which `embedding_version` the Similar papers UI uses; must match a row set you have written — see “Embedding versions and the web UI” above)
 - `OPENAI_BASE_URL` (optional; defaults to `https://api.openai.com/v1`)
 
 ### What to expect
@@ -94,3 +107,5 @@ You can also materialize one embedding per included work from `title + abstract`
 If you change ranking tables in `infra/db/schema.sql` after the DB was first initialized, recreate the Postgres volume (or apply the DDL manually) so `ranking_runs` and `paper_scores` stay in sync.
 
 For more detailed bootstrap failure checkpoints, see `docs/bootstrap-run-tutorial.md`.
+
+For frozen low-citation candidate semantics (before ranking changes), see `docs/candidate-pool-low-cite.md`.

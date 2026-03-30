@@ -2,10 +2,11 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
 
-from app.config import settings
+from app.config import PRODUCT_RANKING_METADATA_NOTE, settings
 from app.contracts import (
     EvaluationSummary,
     HealthResponse,
+    MaterializedRankingMeta,
     PaperDetail,
     PaperListItem,
     PaperListResponse,
@@ -23,7 +24,7 @@ from app.contracts import (
 from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
 from app.papers_repo import list_undercited_heuristic_v0
-from app.scores_repo import list_ranked_recommendations
+from app.scores_repo import fetch_latest_materialized_ranking_for_meta, list_ranked_recommendations
 from app.similarity_repo import list_similar_papers
 
 app = FastAPI(
@@ -40,6 +41,20 @@ def health_check() -> HealthResponse:
 
 @app.get("/api/v1/meta/product", response_model=ProductSummary)
 def get_product_summary() -> ProductSummary:
+    materialized = None
+    try:
+        row = fetch_latest_materialized_ranking_for_meta()
+        if row is not None:
+            materialized = MaterializedRankingMeta(
+                ranking_run_id=row.ranking_run_id,
+                ranking_version=row.ranking_version,
+                corpus_snapshot_version=row.corpus_snapshot_version,
+                embedding_version=row.embedding_version,
+                config_json=row.config_json,
+            )
+    except Exception:
+        materialized = None
+
     return ProductSummary(
         name=settings.name,
         thesis=settings.thesis,
@@ -54,6 +69,8 @@ def get_product_summary() -> ProductSummary:
             "bridge": settings.weights.bridge,
             "diversity_penalty": settings.weights.diversity_penalty,
         },
+        ranking_metadata_note=PRODUCT_RANKING_METADATA_NOTE,
+        materialized_ranking=materialized,
     )
 
 

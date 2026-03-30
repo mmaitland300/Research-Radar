@@ -4,6 +4,11 @@ Worksheet for a lightweight qualitative pass on paper-to-paper neighbors before 
 
 Goal: judge whether embedding neighbors are good enough for product demo use and early ranking experiments.
 
+## Review passes
+
+- **Pass 1:** First qualitative worksheet against an initial `embedding_version` (baseline stored vectors and snapshot).
+- **Pass 2:** Repeat with the **same five anchors and the same rubric**, after a successor embedding pass (e.g. cleantext-normalized ingest and a **new** `embedding_version` label). Do not overwrite Pass 1 vectors in Postgres; write under a new version and pin `NEXT_PUBLIC_EMBEDDING_VERSION` (or the API query param) to Pass 2 during review so UI and notes cannot drift.
+
 ## Column reference (conceptual)
 
 | Field | Purpose |
@@ -20,7 +25,7 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 
 ---
 
-## Run metadata
+## Pass 1 — Run metadata
 
 **Embedding version:** `v1-title-abstract-1536`  
 **Corpus snapshot version:** `source-snapshot-20260328-170751`  
@@ -41,9 +46,19 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 - `encoding-issue`
 - `strong-match`
 
+### Pass 1 — Anchor set (reuse for Pass 2)
+
+| # | anchor_paper_id |
+| --- | --- |
+| 1 | `https://openalex.org/W7119099299` |
+| 2 | `https://openalex.org/W7128803784` |
+| 3 | `https://openalex.org/W4415947443` |
+| 4 | `https://openalex.org/W4413990340` |
+| 5 | `https://openalex.org/W4412780451` |
+
 ---
 
-## Anchor 1
+## Pass 1 — Anchor 1
 
 **anchor_paper_id:** `https://openalex.org/W7119099299`  
 **anchor_title:** `Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music`
@@ -66,7 +81,7 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 
 ---
 
-## Anchor 2
+## Pass 1 — Anchor 2
 
 **anchor_paper_id:** `https://openalex.org/W7128803784`  
 **anchor_title:** `RWC Revisited: Towards a Community-Driven MIR Corpus`
@@ -89,7 +104,7 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 
 ---
 
-## Anchor 3
+## Pass 1 — Anchor 3
 
 **anchor_paper_id:** `https://openalex.org/W4415947443`  
 **anchor_title:** `Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship`
@@ -112,7 +127,7 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 
 ---
 
-## Anchor 4
+## Pass 1 — Anchor 4
 
 **anchor_paper_id:** `https://openalex.org/W4413990340`  
 **anchor_title:** `Smartwatch-Based Audio&amp;ndash;Gestural Insights in Violin Bow Stroke Analyses`
@@ -135,7 +150,7 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 
 ---
 
-## Anchor 5
+## Pass 1 — Anchor 5
 
 **anchor_paper_id:** `https://openalex.org/W4412780451`  
 **anchor_title:** `MusiQAl: A Dataset for Music Question&amp;ndash;Answering through Audio&amp;ndash;Video Fusion`
@@ -158,7 +173,7 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 
 ---
 
-## Roll-up
+## Pass 1 — Roll-up
 
 **Per-anchor set verdict**
 
@@ -179,3 +194,161 @@ Default neighbor table has no `paper_id` column. If you need an id for traceabil
 **recommended_next_step** (pick one best next engineering move): clean text encoding before ranking integration (or `safe to prototype semantic ranking feature`, or `needs broader embedding coverage first`)
 
 **go/no-go for ranking integration:** No-go for semantic ranking integration yet. Retrieval is good enough to demo as an exploratory similar-papers surface, but not yet stable enough to feed ranking without more coverage and cleanup.
+
+---
+
+## Pass 2 — Run metadata
+
+Fill after cleantext (or successor) embeddings are written under a **new** `embedding_version` (do not reuse Pass 1’s label if vectors changed).
+
+**Embedding version:** `_fill_me_`  
+**Corpus snapshot version:** `_fill_me_`  
+**Date:** `_fill_me_`
+
+Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `anchor_paper_id` values** as in the Pass 1 table above; replace neighbor tables below top-to-bottom for each anchor.
+
+## Pass 2 — Delta vs Pass 1
+
+| anchor # | Pass 1 overall | Pass 2 overall | neighbor overlap (rough) | main change in failure modes |
+| --- | --- | --- | --- | --- |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+**Roll-up delta**
+
+- `good_sets` Pass 1 → Pass 2:  
+- `mixed_sets` Pass 1 → Pass 2:  
+- `weak_sets` Pass 1 → Pass 2:  
+- **common_failure_modes** Pass 1 → Pass 2:  
+- **recommended_next_step** (single best next move):  
+- **go/no-go for semantic ranking integration** (guardrail: only if Pass 2 is good enough for the intended use case **and** the semantic relevance target for scoring is written down elsewhere):
+
+## Pass 2 — Anchor 1
+
+**anchor_paper_id:** `https://openalex.org/W7119099299`  
+**anchor_title:** `_short label_`
+
+**Neighbors**
+
+| rank | neighbor_title | similarity | judgment | notes |
+| --- | --- | ---: | --- | --- |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+**Summary**
+
+- overall:  
+- main_failure_mode:  
+- demo_worthy:  
+
+## Pass 2 — Anchor 2
+
+**anchor_paper_id:** `https://openalex.org/W7128803784`  
+**anchor_title:** `_short label_`
+
+**Neighbors**
+
+| rank | neighbor_title | similarity | judgment | notes |
+| --- | --- | ---: | --- | --- |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+**Summary**
+
+- overall:  
+- main_failure_mode:  
+- demo_worthy:  
+
+## Pass 2 — Anchor 3
+
+**anchor_paper_id:** `https://openalex.org/W4415947443`  
+**anchor_title:** `_short label_`
+
+**Neighbors**
+
+| rank | neighbor_title | similarity | judgment | notes |
+| --- | --- | ---: | --- | --- |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+**Summary**
+
+- overall:  
+- main_failure_mode:  
+- demo_worthy:  
+
+## Pass 2 — Anchor 4
+
+**anchor_paper_id:** `https://openalex.org/W4413990340`  
+**anchor_title:** `_short label_`
+
+**Neighbors**
+
+| rank | neighbor_title | similarity | judgment | notes |
+| --- | --- | ---: | --- | --- |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+**Summary**
+
+- overall:  
+- main_failure_mode:  
+- demo_worthy:  
+
+## Pass 2 — Anchor 5
+
+**anchor_paper_id:** `https://openalex.org/W4412780451`  
+**anchor_title:** `_short label_`
+
+**Neighbors**
+
+| rank | neighbor_title | similarity | judgment | notes |
+| --- | --- | ---: | --- | --- |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+**Summary**
+
+- overall:  
+- main_failure_mode:  
+- demo_worthy:  
+
+## Pass 2 — Roll-up
+
+**Per-anchor set verdict**
+
+1. Anchor 1 -  
+2. Anchor 2 -  
+3. Anchor 3 -  
+4. Anchor 4 -  
+5. Anchor 5 -  
+
+**Counts**
+
+- `good_sets`:  
+- `mixed_sets`:  
+- `weak_sets`:  
+
+**common_failure_modes:**  
+
+**recommended_next_step:**  
+
+**go/no-go for ranking integration:**  

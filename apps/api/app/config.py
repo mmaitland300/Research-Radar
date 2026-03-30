@@ -33,3 +33,11 @@ class ProductConfig:
 
 
 settings = ProductConfig()
+
+PRODUCT_RANKING_METADATA_NOTE = (
+    "ranking_weights are illustrative long-term formula defaults (semantic, citation_velocity, "
+    "topic_growth, bridge, diversity_penalty) from the product build brief. They do not match "
+    "per-family weights used when writing paper_scores; those live in ranking_runs.config_json "
+    "for each materialized run. When materialized_ranking is present, treat its config_json as "
+    "the source of truth for the latest succeeded run on the default corpus snapshot."
+)

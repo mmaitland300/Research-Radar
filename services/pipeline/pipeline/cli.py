@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from pipeline.bootstrap_loader import database_url_from_env, load_resolved_policy_from_database, run_bootstrap_ingest
@@ -200,6 +201,20 @@ def main() -> None:
             batch_size=args.batch_size,
             limit=args.limit,
         )
+        lines = [
+            f"embedding_version={summary.embedding_version}",
+            f"corpus_snapshot_version={summary.corpus_snapshot_version}",
+            f"model={summary.model}",
+            f"total_included_works={summary.total_included_works}",
+            f"already_embedded_before_run={summary.already_embedded_works}",
+            f"missing_before_run={summary.missing_embedding_works}",
+            f"candidate_works_this_run={summary.candidate_works}",
+            f"planned_batches={summary.planned_batches}",
+            f"batches_committed={summary.batch_count}",
+            f"rows_written_this_run={summary.rows_written}",
+            f"still_missing_after_run={summary.still_missing_after_run}",
+        ]
+        print("\n".join(lines), file=sys.stderr)
         print(summary.embedding_version)
         print(summary.corpus_snapshot_version)
         print(summary.rows_written)

@@ -5,8 +5,9 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 ## Where things stand
 
 - Bootstrap / ingest: Corpus policy, OpenAlex bootstrap, Postgres schema, raw retention, and manifest counts are in place for the current slice.
+- **Implemented bootstrap sources:** `policy.py` ingests only the venues listed there — **TISMIR** and **JAES** today. `docs/build-brief.md` describes a broader long-term core-source allowlist (ISMIR, DAFx, ICASSP, etc.); those are not yet wired into `bootstrap-run` until added as `SourcePolicy` rows with OpenAlex source ids.
 - Live product slice: DB-backed search and paper detail; topic metadata flows through normalize + `work_topics`; list/detail IDs support full OpenAlex URLs where needed.
-- Not yet product-complete: Corpus-scoped trends, evaluation vs baselines, embeddings-backed similarity UI, clustering / non-placeholder bridge and semantic scores in ranking.
+- Not yet product-complete: Corpus-scoped trends, evaluation vs baselines, clustering / non-placeholder bridge and semantic scores in ranking. Similar-papers UI is gated on `NEXT_PUBLIC_EMBEDDING_VERSION` and stored `embeddings` rows.
 
 ---
 
@@ -357,6 +358,7 @@ These milestones make the project legible as a machine-learning portfolio piece 
 
 ## Guardrails
 
+- No semantic signal in `paper_scores` until ML1d Pass 2 shows retrieval is good enough for the intended use case **and** the semantic relevance target for scoring is explicitly written down (seed, profile, query context, or similar).
 - No full OpenAlex ingest.
 - No graph UI in V1.
 - No LLM summary feature as a core dependency.

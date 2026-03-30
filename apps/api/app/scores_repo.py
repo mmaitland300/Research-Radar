@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -37,6 +38,15 @@ class RankedRunContext:
     corpus_snapshot_version: str
 
 
+@dataclass(frozen=True)
+class MaterializedRankingForMeta:
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    embedding_version: str
+    config_json: dict[str, Any]
+
+
 def latest_corpus_snapshot_version_with_works(conn: psycopg.Connection) -> str | None:
     row = conn.execute(
         """
@@ -55,6 +65,47 @@ def latest_corpus_snapshot_version_with_works(conn: psycopg.Connection) -> str |
     if row is None:
         return None
     return str(row["source_snapshot_version"])
+
+
+def fetch_latest_materialized_ranking_for_meta() -> MaterializedRankingForMeta | None:
+    """
+    Latest succeeded ranking run for the newest corpus snapshot that has included works,
+    same default resolution as GET /api/v1/recommendations/ranked without filters.
+    """
+    with psycopg.connect(database_url_from_env(), row_factory=dict_row) as conn:
+        snap = latest_corpus_snapshot_version_with_works(conn)
+        if snap is None:
+            return None
+        rid = _latest_successful_ranking_run_id(
+            conn, corpus_snapshot_version=snap, ranking_version=None
+        )
+        if rid is None:
+            return None
+        row = conn.execute(
+            """
+            SELECT ranking_run_id, ranking_version, corpus_snapshot_version, embedding_version, config_json
+            FROM ranking_runs
+            WHERE ranking_run_id = %s AND status = 'succeeded'
+            """,
+            (rid,),
+        ).fetchone()
+        if row is None:
+            return None
+        raw_cfg = row["config_json"]
+        if isinstance(raw_cfg, str):
+            parsed = json.loads(raw_cfg)
+            cfg: dict[str, Any] = parsed if isinstance(parsed, dict) else {}
+        elif isinstance(raw_cfg, dict):
+            cfg = dict(raw_cfg)
+        else:
+            cfg = {}
+        return MaterializedRankingForMeta(
+            ranking_run_id=str(row["ranking_run_id"]),
+            ranking_version=str(row["ranking_version"]),
+            corpus_snapshot_version=str(row["corpus_snapshot_version"]),
+            embedding_version=str(row["embedding_version"]),
+            config_json=cfg,
+        )
 
 
 def _latest_successful_ranking_run_id(

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -6,6 +7,16 @@ from pydantic import BaseModel
 class HealthResponse(BaseModel):
     status: str
     timestamp: datetime
+
+
+class MaterializedRankingMeta(BaseModel):
+    """Latest succeeded ranking run on the default corpus snapshot (for transparency)."""
+
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    embedding_version: str
+    config_json: dict[str, Any]
 
 
 class ProductSummary(BaseModel):
@@ -16,6 +27,8 @@ class ProductSummary(BaseModel):
     pages: list[str]
     evaluation_checks: list[str]
     ranking_weights: dict[str, float]
+    ranking_metadata_note: str
+    materialized_ranking: MaterializedRankingMeta | None = None
 
 
 class RankingFamily(BaseModel):

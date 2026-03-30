@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -32,6 +33,8 @@ class EmbeddingRunSummary:
     candidate_works: int
     rows_written: int
     batch_count: int
+    planned_batches: int
+    still_missing_after_run: int
 
 
 def build_work_embedding_text(title: str, abstract: str | None) -> str:
@@ -102,10 +105,15 @@ def execute_embedding_run(
             candidate_works=0,
             rows_written=0,
             batch_count=0,
+            planned_batches=0,
+            still_missing_after_run=missing_embedding_works,
         )
 
     rows_written = 0
     batch_count = 0
+    planned_batches = (len(candidates) + batch_size - 1) // batch_size
+    still_missing_after_run = missing_embedding_works
+
     with psycopg.connect(dsn, autocommit=False) as conn:
         for batch in _batched(candidates, batch_size):
             texts = [build_work_embedding_text(candidate.title, candidate.abstract) for candidate in batch]
@@ -123,6 +131,18 @@ def execute_embedding_run(
             conn.commit()
             rows_written += len(batch)
             batch_count += 1
+            print(
+                (
+                    f"embed-works: batch {batch_count}/{planned_batches} committed "
+                    f"({len(batch)} works, cumulative written {rows_written}/{len(candidates)})"
+                ),
+                file=sys.stderr,
+            )
+        still_missing_after_run = count_missing_embedding_candidates(
+            conn,
+            corpus_snapshot_version=snapshot,
+            embedding_version=embedding_version,
+        )
 
     return EmbeddingRunSummary(
         corpus_snapshot_version=snapshot,
@@ -134,4 +154,6 @@ def execute_embedding_run(
         candidate_works=len(candidates),
         rows_written=rows_written,
         batch_count=batch_count,
+        planned_batches=planned_batches,
+        still_missing_after_run=still_missing_after_run,
     )
