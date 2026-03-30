@@ -211,8 +211,8 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 
 | anchor # | Pass 1 overall | Pass 2 overall | neighbor overlap (rough) | main change in failure modes |
 | --- | --- | --- | --- | --- |
-| 1 | mixed | mixed | same five neighbors; small similarity shifts | `encoding-issue` still on rows 3–4; `dataset-title-bias` still dominant |
-| 2 | | | | |
+| 1 | mixed | mixed | same five neighbors; small similarity shifts | cleantext UI clean; `dataset-title-bias` still dominant |
+| 2 | good | good | same five neighbors; small similarity shifts | still strong for corpus/dataset neighborhood; `same-venue-bias` on one row |
 | 3 | | | | |
 | 4 | | | | |
 | 5 | | | | |
@@ -235,10 +235,10 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 
 | rank | neighbor_title | similarity | judgment | notes |
 | --- | --- | ---: | --- | --- |
-| 1 | CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research | 0.6127 | mixed | same-venue-bias, too-broad |
+| 1 | CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research | 0.6127 | mixed | too-broad, same-venue-bias |
 | 2 | The GigaMIDI Dataset with Features for Expressive Music Performance Detection | 0.5900 | mixed | dataset-title-bias, too-broad |
-| 3 | Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data | 0.5729 | weak | dataset-title-bias, too-broad, encoding-issue |
-| 4 | MusiQAl: A Dataset for Music Question–Answering through Audio–Video Fusion | 0.5559 | weak | dataset-title-bias, too-broad, encoding-issue |
+| 3 | Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data | 0.5729 | weak | dataset-title-bias, too-broad |
+| 4 | MusiQAl: A Dataset for Music Question-Answering through Audio-Video Fusion | 0.5559 | weak | dataset-title-bias, too-broad |
 | 5 | ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research | 0.5226 | weak | dataset-title-bias, too-broad |
 
 **Summary**
@@ -250,23 +250,23 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 ## Pass 2 — Anchor 2
 
 **anchor_paper_id:** `https://openalex.org/W7128803784`  
-**anchor_title:** `_short label_`
+**anchor_title:** RWC Revisited: Towards a Community-Driven MIR Corpus
 
 **Neighbors**
 
 | rank | neighbor_title | similarity | judgment | notes |
 | --- | --- | ---: | --- | --- |
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 1 | Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data | 0.6480 | good | strong-match |
+| 2 | CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research | 0.6359 | good | strong-match |
+| 3 | Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship | 0.6045 | mixed | same-venue-bias, too-broad |
+| 4 | ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research | 0.5685 | good | strong-match |
+| 5 | MGPHot: A Dataset of Musicological Annotations for Popular Music (1958-2022) | 0.5490 | good | strong-match |
 
 **Summary**
 
-- overall:  
-- main_failure_mode:  
-- demo_worthy:  
+- overall: good
+- main_failure_mode: same-venue-bias
+- demo_worthy: yes - this is a solid retrieval example for corpus and dataset papers in MIR.
 
 ## Pass 2 — Anchor 3
 
@@ -336,7 +336,7 @@ Use the **same judgment rubric and note tags** as Pass 1. Use the **same five `a
 **Per-anchor set verdict**
 
 1. Anchor 1 - mixed
-2. Anchor 2 -  
+2. Anchor 2 - good
 3. Anchor 3 -  
 4. Anchor 4 -  
 5. Anchor 5 -  
