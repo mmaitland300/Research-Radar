@@ -64,6 +64,80 @@ class RankingCounts:
 
 
 @dataclass(frozen=True)
+class ClusteringCounts:
+    total_input_works: int = 0
+    clustered_works: int = 0
+    cluster_count: int = 0
+
+
+@dataclass(frozen=True)
+class ClusteringRun:
+    cluster_version: str
+    embedding_version: str
+    corpus_snapshot_version: str
+    status: str
+    algorithm: str
+    started_at: datetime
+    config: dict[str, Any]
+    counts: ClusteringCounts = field(default_factory=ClusteringCounts)
+    finished_at: datetime | None = None
+    error_message: str | None = None
+    notes: str | None = None
+
+    @classmethod
+    def start(
+        cls,
+        *,
+        cluster_version: str,
+        embedding_version: str,
+        corpus_snapshot_version: str,
+        algorithm: str,
+        config: dict[str, Any],
+        notes: str | None = None,
+    ) -> "ClusteringRun":
+        return cls(
+            cluster_version=cluster_version,
+            embedding_version=embedding_version,
+            corpus_snapshot_version=corpus_snapshot_version,
+            status="running",
+            algorithm=algorithm,
+            started_at=datetime.now(UTC),
+            config=config,
+            notes=notes,
+        )
+
+    def complete(self, counts: ClusteringCounts) -> "ClusteringRun":
+        return ClusteringRun(
+            cluster_version=self.cluster_version,
+            embedding_version=self.embedding_version,
+            corpus_snapshot_version=self.corpus_snapshot_version,
+            status="succeeded",
+            algorithm=self.algorithm,
+            started_at=self.started_at,
+            config=self.config,
+            counts=counts,
+            finished_at=datetime.now(UTC),
+            error_message=None,
+            notes=self.notes,
+        )
+
+    def fail(self, message: str) -> "ClusteringRun":
+        return ClusteringRun(
+            cluster_version=self.cluster_version,
+            embedding_version=self.embedding_version,
+            corpus_snapshot_version=self.corpus_snapshot_version,
+            status="failed",
+            algorithm=self.algorithm,
+            started_at=self.started_at,
+            config=self.config,
+            counts=self.counts,
+            finished_at=datetime.now(UTC),
+            error_message=message,
+            notes=self.notes,
+        )
+
+
+@dataclass(frozen=True)
 class RankingRun:
     ranking_run_id: str
     ranking_version: str

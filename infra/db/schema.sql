@@ -131,10 +131,25 @@ CREATE TABLE IF NOT EXISTS embeddings (
     PRIMARY KEY (work_id, embedding_version)
 );
 
+CREATE TABLE IF NOT EXISTS clustering_runs (
+    cluster_version TEXT PRIMARY KEY,
+    embedding_version TEXT NOT NULL,
+    corpus_snapshot_version TEXT NOT NULL REFERENCES source_snapshot_versions(source_snapshot_version) ON DELETE RESTRICT,
+    status TEXT NOT NULL CHECK (status IN ('running', 'succeeded', 'failed')),
+    algorithm TEXT NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL,
+    finished_at TIMESTAMPTZ,
+    config_json JSONB NOT NULL,
+    counts_json JSONB,
+    error_message TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS clusters (
     work_id BIGINT NOT NULL REFERENCES works(id) ON DELETE CASCADE,
     cluster_id TEXT NOT NULL,
-    cluster_version TEXT NOT NULL,
+    cluster_version TEXT NOT NULL REFERENCES clustering_runs(cluster_version) ON DELETE CASCADE,
     PRIMARY KEY (work_id, cluster_version)
 );
 
@@ -183,3 +198,5 @@ CREATE INDEX IF NOT EXISTS idx_paper_scores_run_family_score ON paper_scores(ran
 CREATE INDEX IF NOT EXISTS idx_paper_scores_work_run ON paper_scores(work_id, ranking_run_id);
 CREATE INDEX IF NOT EXISTS idx_work_topics_topic ON work_topics(topic_id, score DESC);
 CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings USING hnsw (vector vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_clustering_runs_snapshot_started ON clustering_runs(corpus_snapshot_version, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_clustering_runs_embedding_started ON clustering_runs(embedding_version, started_at DESC);

@@ -288,6 +288,41 @@ These milestones make the project legible as a machine-learning portfolio piece 
 - bridge-oriented features using embedding neighborhoods and/or citation context
 - non-placeholder `bridge_score` in `paper_scores`
 
+#### ML2 prototype execution scaffold (lean docs)
+
+Use `docs/roadmap.md` for planning/tickets/gate criteria. Create `docs/ml2-bridge-review.md` only when there are real cluster/bridge outputs to review (not for planning prose).
+
+**Hard constraints**
+
+- Do not skip cluster inspection before bridge scoring.
+- Pin provenance on every artifact (`corpus_snapshot_version`, `embedding_version`, `cluster_version`).
+
+**Ticket order**
+
+1. **ML2-1 Contract + versioning rules**
+   - Define one assignment per `(work_id, cluster_version)` and deterministic `cluster_version` naming.
+   - Lock write semantics so assignments are versioned and reproducible.
+2. **ML2-2 Input slice (explicit provenance)**
+   - Deterministic clustering inputs: included works, one `embedding_version`, one explicit `corpus_snapshot_version` (default latest only as convenience).
+   - Persist resolved snapshot/version values on run metadata.
+3. **ML2-3 Write path + CLI (idempotent)**
+   - Add clustering CLI entrypoint and persistence helpers.
+   - Re-run behavior must be explicitly defined and tested (overwrite-by-version or upsert with constraints).
+4. **ML2-4 Minimal inspection API**
+   - API-first inspection: cluster id, size, and sample paper titles.
+   - Enough visibility to validate plausibility without direct DB poking.
+5. **ML2-6 Review worksheet scaffold starts here**
+   - Start the qualitative worksheet structure once inspection exists; fill it during prototype runs.
+   - Keep this lightweight and evidence-first.
+6. **ML2-5 Bridge heuristic prototype**
+   - Implement first structural bridge signal from cluster structure.
+   - Keep semantic score null; apply bridge changes to bridge family first.
+7. **ML2-7 Evaluation compatibility only**
+   - Ensure evaluation surfaces remain truthful/inspectable with non-placeholder bridge behavior.
+   - No expanded benchmark claims in this step.
+8. **ML2-8 Checklist-based go/no-go gate**
+   - Written decision using explicit criteria: cluster quality, bridge distinctiveness, explanation honesty, evaluation sanity.
+
 **Portfolio value:** Demonstrates unsupervised structure discovery and a domain-specific recommendation signal.
 
 ### ML milestone 3: evaluated ranking

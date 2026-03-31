@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from pipeline.bootstrap_loader import database_url_from_env, load_resolved_policy_from_database, run_bootstrap_ingest
+from pipeline.clustering_run import execute_clustering_run
 from pipeline.embedding_run import execute_embedding_run
 from pipeline.ranking_run import execute_ranking_run
 from pipeline.jobs import (
@@ -150,6 +151,44 @@ def main() -> None:
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    cluster_parser = subparsers.add_parser(
+        "cluster-works",
+        help="Cluster embedded included works for a snapshot/version identity",
+    )
+    cluster_parser.add_argument(
+        "--embedding-version",
+        required=True,
+        help="Embedding artifact label to cluster (must already exist in embeddings table)",
+    )
+    cluster_parser.add_argument(
+        "--cluster-version",
+        required=True,
+        help="Cluster assignment artifact label written to clusters + clustering_runs",
+    )
+    cluster_parser.add_argument(
+        "--corpus-snapshot-version",
+        default=None,
+        help="Target snapshot; default = latest snapshot that has included works",
+    )
+    cluster_parser.add_argument(
+        "--cluster-count",
+        type=int,
+        default=12,
+        help="Target number of clusters for kmeans-l2-v0 (default 12)",
+    )
+    cluster_parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=20,
+        help="Maximum kmeans iterations (default 20)",
+    )
+    cluster_parser.add_argument("--note", default=None, help="Optional run notes")
+    cluster_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     args = parser.parse_args()
     policy = CorpusPolicy()
 
@@ -243,6 +282,31 @@ def main() -> None:
             low_cite_max_citations=args.low_cite_max_citations,
         )
         print(finalized.ranking_run_id)
+        print(finalized.corpus_snapshot_version)
+        return
+
+    if args.command == "cluster-works":
+        finalized = execute_clustering_run(
+            database_url=args.database_url,
+            cluster_version=args.cluster_version,
+            embedding_version=args.embedding_version,
+            corpus_snapshot_version=args.corpus_snapshot_version,
+            cluster_count=args.cluster_count,
+            max_iterations=args.max_iterations,
+            note=args.note,
+        )
+        lines = [
+            f"cluster_version={finalized.cluster_version}",
+            f"embedding_version={finalized.embedding_version}",
+            f"corpus_snapshot_version={finalized.corpus_snapshot_version}",
+            f"algorithm={finalized.algorithm}",
+            f"status={finalized.status}",
+            f"total_input_works={finalized.counts.total_input_works}",
+            f"clustered_works={finalized.counts.clustered_works}",
+            f"cluster_count={finalized.counts.cluster_count}",
+        ]
+        print("\n".join(lines), file=sys.stderr)
+        print(finalized.cluster_version)
         print(finalized.corpus_snapshot_version)
         return
 
