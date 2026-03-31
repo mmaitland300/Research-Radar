@@ -9,6 +9,84 @@ class HealthResponse(BaseModel):
     timestamp: datetime
 
 
+class ReadinessResponse(BaseModel):
+    """Liveness stays cheap; readiness includes a database dependency check."""
+
+    status: str
+    database: str
+    timestamp: datetime
+
+
+class EvaluationDisclaimer(BaseModel):
+    headline: str
+    bullets: list[str]
+
+
+class EvaluationPaperItem(BaseModel):
+    paper_id: str
+    title: str
+    year: int
+    citation_count: int
+    source_slug: str | None = None
+    topics: list[str]
+    final_score: float | None = None
+
+
+class EvaluationRecencyProxy(BaseModel):
+    mean_year: float
+    min_year: int
+    max_year: int
+    share_in_latest_two_years: float
+
+
+class EvaluationCitationProxy(BaseModel):
+    mean: float
+    median: float
+    min_val: int
+    max_val: int
+
+
+class EvaluationTopicMixProxy(BaseModel):
+    unique_topic_labels: int
+    top_topics: list[str]
+
+
+class EvaluationListArmResponse(BaseModel):
+    arm_label: str
+    arm_description: str
+    ordering_description: str
+    items: list[EvaluationPaperItem]
+    recency: EvaluationRecencyProxy
+    citations: EvaluationCitationProxy
+    topics: EvaluationTopicMixProxy
+
+
+class EvaluationTopicOverlap(BaseModel):
+    jaccard_ranked_vs_citation_baseline: float
+    jaccard_ranked_vs_date_baseline: float
+    jaccard_citation_vs_date_baseline: float
+
+
+class EvaluationCompareResponse(BaseModel):
+    disclaimer: EvaluationDisclaimer
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    embedding_version: str
+    family: str
+    pool_definition: str
+    pool_size: int
+    low_cite_min_year: int | None = None
+    low_cite_max_citations: int | None = None
+    candidate_pool_doc_revision: str | None = None
+    topic_overlap_note: str
+    ranked: EvaluationListArmResponse
+    citation_baseline: EvaluationListArmResponse
+    date_baseline: EvaluationListArmResponse
+    topic_overlap: EvaluationTopicOverlap
+    generated_at: datetime
+
+
 class MaterializedRankingMeta(BaseModel):
     """Latest succeeded ranking run on the default corpus snapshot (for transparency)."""
 
@@ -101,7 +179,7 @@ class UndercitedRecommendationItem(BaseModel):
 
 
 class UndercitedRecommendationsResponse(BaseModel):
-    """Heuristic v0 baseline, not a trained ranking model."""
+    """Heuristic v0: frozen low-cite pool (docs/candidate-pool-low-cite.md); global, not snapshot-scoped."""
 
     heuristic_label: str
     heuristic_version: str

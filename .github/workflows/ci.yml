@@ -40,5 +40,8 @@ jobs:
       - name: Install web dependencies
         run: npm install
 
+      - name: Lint web app
+        run: npm run lint:web
+
       - name: Build web app
         run: npm run build:web

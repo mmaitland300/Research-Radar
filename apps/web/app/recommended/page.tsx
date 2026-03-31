@@ -126,10 +126,12 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <p className="accent">Recommended</p>
         <h1>Ranked recommendations</h1>
         <p>
-          Papers come from a <strong>materialized ranking run</strong>{" "}
-          (<code>paper_scores</code> per family). Semantic and bridge components stay empty
-          until embeddings land; citation and topic heuristics still produce an ordered list
-          and a short reason per row.
+          Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code>{" "}
+          per family). The <strong>undercited</strong> family only scores works in the frozen low-cite
+          candidate pool (<code>docs/candidate-pool-low-cite.md</code> v0): core corpus, recency floor,
+          citation ceiling, and non-empty title plus abstract — same gate as the heuristic undercited
+          API, scoped here to your corpus snapshot via the run. Semantic and bridge signals stay unset
+          in v0; citation and topic heuristics drive order and <code>reason_short</code>.
         </p>
         <nav className="tabs" aria-label="Recommendation family">
           {FAMILIES.map((f) => (
@@ -230,8 +232,10 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <article className="card">
           <h2>Heuristic baseline</h2>
           <p>
-            The rule-only undercited list is still available at{" "}
-            <code>/api/v1/recommendations/undercited</code> for comparisons and eval baselines.
+            The rule-only undercited list (<code>/api/v1/recommendations/undercited</code>) uses the
+            same pool definition but is not tied to a corpus snapshot. For snapshot-scoped A/B against
+            the ranked undercited family, use{" "}
+            <Link href="/evaluation?family=undercited">Evaluation</Link>.
           </p>
         </article>
       </section>
