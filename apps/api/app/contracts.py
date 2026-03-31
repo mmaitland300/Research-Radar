@@ -140,6 +140,29 @@ class TopicTrendsResponse(BaseModel):
     generated_at: datetime
 
 
+class ClusterSamplePaperItem(BaseModel):
+    paper_id: str
+    title: str
+
+
+class ClusterGroupItem(BaseModel):
+    cluster_id: str
+    work_count: int
+    sample_papers: list[ClusterSamplePaperItem]
+
+
+class ClusterInspectionResponse(BaseModel):
+    cluster_version: str
+    embedding_version: str
+    corpus_snapshot_version: str
+    algorithm: str
+    status: str
+    clustering_metric: str | None = None
+    metric_note: str | None = None
+    groups: list[ClusterGroupItem]
+    generated_at: datetime
+
+
 class PaperDetail(BaseModel):
     paper_id: str
     title: str

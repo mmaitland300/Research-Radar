@@ -17,6 +17,7 @@ CLUSTERING_ALGORITHM = "kmeans-l2-v0"
 
 def _build_clustering_config(
     *,
+    cluster_version: str,
     embedding_version: str,
     corpus_snapshot_version: str,
     cluster_count: int,
@@ -25,13 +26,18 @@ def _build_clustering_config(
     return {
         "algorithm": CLUSTERING_ALGORITHM,
         "identity": {
-            "cluster_version": "user_supplied",
+            "cluster_version": cluster_version,
             "embedding_version": embedding_version,
             "corpus_snapshot_version": corpus_snapshot_version,
         },
         "cluster_count": cluster_count,
         "max_iterations": max_iterations,
         "idempotency": "delete_rows_for_cluster_version_then_insert_cleanly",
+        "clustering_metric": "squared_l2_euclidean",
+        "note": (
+            "kmeans-l2-v0 assigns by L2 distance on stored embedding vectors; "
+            "similar-papers retrieval uses cosine distance on the same vectors."
+        ),
     }
 
 
@@ -67,6 +73,7 @@ def execute_clustering_run(
                 "No included works with embeddings found for the resolved snapshot + embedding_version."
             )
         config = _build_clustering_config(
+            cluster_version=cluster_version,
             embedding_version=embedding_version,
             corpus_snapshot_version=inputs.corpus_snapshot_version,
             cluster_count=cluster_count,

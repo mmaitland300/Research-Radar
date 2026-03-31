@@ -76,6 +76,10 @@ def test_execute_clustering_run_uses_identity_and_writes_counts(monkeypatch) -> 
     assert conn1.commit_calls == 1
     assert conn2.commit_calls == 1
     assert calls[0][0] == "started"
+    started_run = calls[0][1]
+    assert started_run.config["identity"]["cluster_version"] == "cluster-v0"
+    assert started_run.config["identity"]["embedding_version"] == "embed-v1"
+    assert started_run.config["identity"]["corpus_snapshot_version"] == "source-snapshot-1"
     assert calls[1][0] == "assignments"
     assert calls[2][0] == "final"
     assigned_cluster_version, assigned_rows = calls[1][1]

@@ -311,6 +311,7 @@ Use `docs/roadmap.md` for planning/tickets/gate criteria. Create `docs/ml2-bridg
 4. **ML2-4 Minimal inspection API**
    - API-first inspection: cluster id, size, and sample paper titles.
    - Enough visibility to validate plausibility without direct DB poking.
+   - Implemented: `GET /api/v1/clusters/{cluster_version}/inspect` (optional `sample_per_cluster`; response includes clustering metric note vs cosine similar-papers).
 5. **ML2-6 Review worksheet scaffold starts here**
    - Start the qualitative worksheet structure once inspection exists; fill it during prototype runs.
    - Keep this lightweight and evidence-first.
