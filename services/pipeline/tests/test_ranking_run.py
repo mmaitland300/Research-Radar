@@ -1,6 +1,9 @@
 from pipeline.config import RankingCounts, RankingRun
 from pipeline.ranking import RankingCandidate
 from pipeline.ranking_run import (
+    BRIDGE_REASON_LEGACY,
+    BRIDGE_REASON_NO_CLUSTER,
+    BRIDGE_REASON_STRUCTURAL,
     RECOMMENDATION_FAMILIES,
     _ranking_counts_from_rows,
     build_step3_heuristic_score_rows,
@@ -100,6 +103,46 @@ def test_citation_popularity_penalty_normalized_within_pool_only() -> None:
     u1 = next(r for r in rows if r.work_id == 1 and r.recommendation_family == "undercited")
     u2 = next(r for r in rows if r.work_id == 2 and r.recommendation_family == "undercited")
     assert u1.final_score > u2.final_score
+
+
+def test_bridge_family_persists_score_when_cluster_context_but_final_score_unchanged() -> None:
+    candidates = [
+        _pool_candidate(work_id=10, topic_ids=(1, 2, 3), citation_count=8),
+        _pool_candidate(work_id=20, topic_ids=(1,), citation_count=1),
+    ]
+    bridge_map = {10: 0.99, 20: 0.101}
+    rows_base = build_step3_heuristic_score_rows(candidates)
+    rows_sig = build_step3_heuristic_score_rows(
+        candidates,
+        cluster_version="cluster-v0",
+        bridge_boundary_by_work=bridge_map,
+    )
+    for wid in (10, 20):
+        base_b = next(r for r in rows_base if r.work_id == wid and r.recommendation_family == "bridge")
+        sig_b = next(r for r in rows_sig if r.work_id == wid and r.recommendation_family == "bridge")
+        assert base_b.final_score == sig_b.final_score
+        assert sig_b.bridge_score is not None
+        assert sig_b.semantic_score is None
+        assert sig_b.reason_short == BRIDGE_REASON_STRUCTURAL
+
+
+def test_bridge_legacy_reason_when_cluster_version_not_pinned() -> None:
+    rows = build_step3_heuristic_score_rows([_pool_candidate(work_id=42)])
+    b = next(r for r in rows if r.recommendation_family == "bridge")
+    assert b.bridge_score is None
+    assert b.reason_short == BRIDGE_REASON_LEGACY
+
+
+def test_bridge_no_cluster_reason_when_score_missing_in_map() -> None:
+    c = _pool_candidate(work_id=7, topic_ids=(1, 2))
+    rows = build_step3_heuristic_score_rows(
+        [c],
+        cluster_version="cv",
+        bridge_boundary_by_work={},
+    )
+    b = next(r for r in rows if r.recommendation_family == "bridge")
+    assert b.bridge_score is None
+    assert b.reason_short == BRIDGE_REASON_NO_CLUSTER
 
 
 def test_ranking_counts_from_rows() -> None:

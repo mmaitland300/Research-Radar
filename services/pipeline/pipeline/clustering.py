@@ -74,3 +74,62 @@ def cluster_inputs_kmeans(
         for item in ordered
     ]
 
+
+_BRIDGE_RATIO_EPS = 1e-12
+
+
+def compute_bridge_boundary_scores(
+    inputs: list[ClusteringInput],
+    assignments: dict[int, str],
+    *,
+    epsilon: float = _BRIDGE_RATIO_EPS,
+) -> dict[int, float | None]:
+    """
+    Prototype structural bridge signal: ratio of squared L2 distance to the assigned cluster
+    centroid vs distance to the nearest other centroid (clamped to [0, 1]). Higher when the
+    paper sits near a boundary between two centroids. Requires at least two clusters with
+    embedded members. Uses the same squared L2 notion as kmeans-l2-v0.
+    """
+    if epsilon <= 0:
+        raise ValueError("epsilon must be positive.")
+    vectors_by_work = {item.work_id: item.vector for item in inputs}
+    cluster_members: dict[str, list[int]] = {}
+    for work_id, cluster_id in assignments.items():
+        if work_id not in vectors_by_work:
+            continue
+        cluster_members.setdefault(cluster_id, []).append(work_id)
+
+    if len(cluster_members) < 2:
+        return {wid: None for wid in assignments}
+
+    centroids: dict[str, tuple[float, ...]] = {}
+    for cluster_id, member_ids in cluster_members.items():
+        vecs = [vectors_by_work[i] for i in member_ids]
+        centroids[cluster_id] = _mean_vector(vecs)
+
+    out: dict[int, float | None] = {}
+    for work_id, cluster_id in assignments.items():
+        if work_id not in vectors_by_work:
+            out[work_id] = None
+            continue
+        if cluster_id not in centroids:
+            out[work_id] = None
+            continue
+        vec = vectors_by_work[work_id]
+        d1 = _squared_l2_distance(vec, centroids[cluster_id])
+        other_dists = [
+            _squared_l2_distance(vec, centroids[cid]) for cid in centroids if cid != cluster_id
+        ]
+        if not other_dists:
+            out[work_id] = None
+            continue
+        d2 = min(other_dists)
+        ratio = d1 / max(d2, epsilon)
+        if ratio <= 0:
+            out[work_id] = 0.0
+        elif ratio >= 1:
+            out[work_id] = 1.0
+        else:
+            out[work_id] = ratio
+    return out
+

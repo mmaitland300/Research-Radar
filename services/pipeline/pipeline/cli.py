@@ -132,6 +132,11 @@ def main() -> None:
         default="none-v0",
         help="Embedding artifact version label stored on the run",
     )
+    ranking_parser.add_argument(
+        "--cluster-version",
+        default=None,
+        help="Optional succeeded clustering_runs.cluster_version for ML2-5a bridge_score column (must match snapshot + embedding-version)",
+    )
     ranking_parser.add_argument("--note", default=None, help="Optional run notes")
     ranking_parser.add_argument(
         "--low-cite-min-year",
@@ -277,6 +282,7 @@ def main() -> None:
             ranking_version=args.ranking_version,
             corpus_snapshot_version=args.corpus_snapshot_version,
             embedding_version=args.embedding_version,
+            cluster_version=args.cluster_version,
             note=args.note,
             low_cite_min_year=args.low_cite_min_year,
             low_cite_max_citations=args.low_cite_max_citations,

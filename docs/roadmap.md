@@ -315,13 +315,16 @@ Use `docs/roadmap.md` for planning/tickets/gate criteria. Create `docs/ml2-bridg
 5. **ML2-6 Review worksheet scaffold starts here**
    - Start the qualitative worksheet structure once inspection exists; fill it during prototype runs.
    - Keep this lightweight and evidence-first.
-6. **ML2-5 Bridge heuristic prototype**
-   - Implement first structural bridge signal from cluster structure.
-   - Keep semantic score null; apply bridge changes to bridge family first.
-7. **ML2-7 Evaluation compatibility only**
+6. **ML2-5a Bridge signal only (no ordering change)**
+   - Persist `bridge_score` on bridge-family rows from cluster-boundary ratio (squared L2 vs centroids); `ranking-run --cluster-version` pins `clustering_runs` + snapshot + `embedding-version`.
+   - Keep `FAMILY_WEIGHTS["bridge"].bridge` at 0 so `final_score` is unchanged; `semantic_score` stays null.
+   - Missing cluster data: null `bridge_score` and explicit `reason_short`.
+7. **ML2-5b Bridge affects ordering (when trusted)**
+   - Small positive bridge weight for bridge family; recheck evaluation and lists.
+8. **ML2-7 Evaluation compatibility only**
    - Ensure evaluation surfaces remain truthful/inspectable with non-placeholder bridge behavior.
    - No expanded benchmark claims in this step.
-8. **ML2-8 Checklist-based go/no-go gate**
+9. **ML2-8 Checklist-based go/no-go gate**
    - Written decision using explicit criteria: cluster quality, bridge distinctiveness, explanation honesty, evaluation sanity.
 
 **Portfolio value:** Demonstrates unsupervised structure discovery and a domain-specific recommendation signal.

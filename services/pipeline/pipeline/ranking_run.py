@@ -20,6 +20,12 @@ from pipeline.ranking import (
     final_score_partial,
     in_low_cite_candidate_pool,
 )
+from pipeline.clustering import compute_bridge_boundary_scores
+from pipeline.clustering_persistence import (
+    list_clustering_inputs,
+    load_cluster_assignments,
+    require_successful_clustering_run,
+)
 from pipeline.ranking_persistence import (
     insert_ranking_run_started,
     latest_corpus_snapshot_version_with_works,
@@ -33,9 +39,14 @@ RECOMMENDATION_FAMILIES: tuple[str, ...] = ("emerging", "bridge", "undercited")
 EMERGING_REASON = (
     "Recent paper with citation momentum in active topics; semantic and bridge not yet modeled."
 )
-BRIDGE_REASON = (
-    "Multi-topic paper in active topics; explicit bridge score not yet modeled."
+BRIDGE_REASON_LEGACY = (
+    "Multi-topic paper in active topics; no cluster_version on this run so bridge_score was not computed."
 )
+BRIDGE_REASON_STRUCTURAL = (
+    "Near a boundary between k-means cluster centroids in embedding space (squared L2 vs other centroids); "
+    "bridge family weight is still zero so final_score does not use this signal. Semantic score not used."
+)
+BRIDGE_REASON_NO_CLUSTER = "No cluster-backed bridge signal available for this run."
 UNDERCITED_REASON = (
     "Low-cite candidate pool (see docs/candidate-pool-low-cite.md v0): core corpus, recency floor, "
     "citation ceiling, title+abstract gate; popularity penalty among pool members only. "
@@ -73,12 +84,30 @@ def _build_ranking_config(
     placeholder_policy: str,
     low_cite_min_year: int,
     low_cite_max_citations: int,
+    cluster_version: str | None,
+    embedding_version: str,
 ) -> dict[str, Any]:
+    bridge_policy = (
+        "null_until_clusters_or_neighbor_features"
+        if cluster_version is None
+        else "cluster_boundary_ratio_v0_persisted_bridge_weight_zero"
+    )
     return {
         "default_weights": asdict(ScoreWeights()),
         "family_weights": {family: asdict(weights) for family, weights in FAMILY_WEIGHTS.items()},
         "families_written": list(RECOMMENDATION_FAMILIES),
         "placeholder_policy": placeholder_policy,
+        "clustering_artifact": (
+            None
+            if cluster_version is None
+            else {
+                "cluster_version": cluster_version,
+                "embedding_version": embedding_version,
+                "corpus_snapshot_version": corpus_snapshot_version,
+                "bridge_score_mode": "cluster_boundary_ratio_v0",
+                "bridge_weight_in_final_score": False,
+            }
+        ),
         "selection_scope": {
             "type": "included_works",
             "corpus_snapshot_version": corpus_snapshot_version,
@@ -94,7 +123,7 @@ def _build_ranking_config(
             "semantic_score": "null_until_embeddings",
             "citation_velocity_score": "citations_per_year_normalized_within_run",
             "topic_growth_score": "mean_recent_topic_share_within_snapshot",
-            "bridge_score": "null_until_clusters_or_neighbor_features",
+            "bridge_score": bridge_policy,
             "diversity_penalty": {
                 "emerging": "0.0_for_step3_v0",
                 "bridge": "lack_of_topic_breadth_penalty",
@@ -194,12 +223,13 @@ def _make_score_row(
     topic_growth: float,
     diversity_penalty: float,
     reason_short: str,
+    bridge_score: float | None = None,
 ) -> PaperScoreRow:
     final = final_score_partial(
         semantic=None,
         citation_velocity=citation_velocity,
         topic_growth=topic_growth,
-        bridge=None,
+        bridge=bridge_score,
         diversity_penalty=diversity_penalty,
         weights=FAMILY_WEIGHTS[family],
     )
@@ -209,11 +239,29 @@ def _make_score_row(
         semantic_score=None,
         citation_velocity_score=_round_score(citation_velocity),
         topic_growth_score=_round_score(topic_growth),
-        bridge_score=None,
+        bridge_score=_round_score(bridge_score),
         diversity_penalty=_round_score(diversity_penalty),
         final_score=_round_score(final) or 0.0,
         reason_short=reason_short,
     )
+
+
+def _bridge_fields_for_work(
+    *,
+    work_id: int,
+    cluster_version: str | None,
+    bridge_boundary_by_work: dict[int, float | None] | None,
+) -> tuple[float | None, str]:
+    if cluster_version is None:
+        return None, BRIDGE_REASON_LEGACY
+    if bridge_boundary_by_work is None:
+        return None, BRIDGE_REASON_NO_CLUSTER
+    if work_id not in bridge_boundary_by_work:
+        return None, BRIDGE_REASON_NO_CLUSTER
+    score = bridge_boundary_by_work[work_id]
+    if score is None:
+        return None, BRIDGE_REASON_NO_CLUSTER
+    return score, BRIDGE_REASON_STRUCTURAL
 
 
 def build_step3_heuristic_score_rows(
@@ -221,10 +269,14 @@ def build_step3_heuristic_score_rows(
     *,
     low_cite_min_year: int = DEFAULT_LOW_CITE_MIN_YEAR,
     low_cite_max_citations: int = DEFAULT_LOW_CITE_MAX_CITATIONS,
+    cluster_version: str | None = None,
+    bridge_boundary_by_work: dict[int, float | None] | None = None,
 ) -> list[PaperScoreRow]:
     """
     Build heuristic rows using available metadata only.
-    semantic_score and bridge_score remain null until embeddings/clusters exist.
+    semantic_score stays null. bridge_score for the bridge family may be set when cluster_version
+    and clustering assignments/embeddings support the cluster-boundary prototype (ML2-5a); bridge
+    family weight remains zero so final_score does not use bridge_score yet.
     Emerging and bridge: one row per included work. Undercited: only works in the frozen
     low-cite pool (docs/candidate-pool-low-cite.md), so signals stay comparable to that definition.
     """
@@ -238,6 +290,11 @@ def build_step3_heuristic_score_rows(
     for candidate in candidates:
         citation_velocity = citation_velocity_by_work[candidate.work_id]
         topic_growth = topic_growth_by_work[candidate.work_id]
+        bridge_score, bridge_reason = _bridge_fields_for_work(
+            work_id=candidate.work_id,
+            cluster_version=cluster_version,
+            bridge_boundary_by_work=bridge_boundary_by_work,
+        )
 
         rows.append(
             _make_score_row(
@@ -256,7 +313,8 @@ def build_step3_heuristic_score_rows(
                 citation_velocity=citation_velocity,
                 topic_growth=topic_growth,
                 diversity_penalty=topic_breadth_penalty_by_work[candidate.work_id],
-                reason_short=BRIDGE_REASON,
+                reason_short=bridge_reason,
+                bridge_score=bridge_score,
             )
         )
         if in_low_cite_candidate_pool(
@@ -300,6 +358,7 @@ def execute_ranking_run(
     ranking_version: str,
     corpus_snapshot_version: str | None = None,
     embedding_version: str = "none-v0",
+    cluster_version: str | None = None,
     note: str | None = None,
     placeholder_policy: str = "semantic_and_bridge_null_until_embeddings_and_clusters",
     low_cite_min_year: int = DEFAULT_LOW_CITE_MIN_YEAR,
@@ -324,7 +383,28 @@ def execute_ranking_run(
             placeholder_policy=placeholder_policy,
             low_cite_min_year=low_cite_min_year,
             low_cite_max_citations=low_cite_max_citations,
+            cluster_version=cluster_version.strip() if cluster_version and cluster_version.strip() else None,
+            embedding_version=embedding_version,
         )
+        cluster_v = config.get("clustering_artifact")
+        cluster_key = (
+            cluster_v.get("cluster_version")
+            if isinstance(cluster_v, dict) and isinstance(cluster_v.get("cluster_version"), str)
+            else None
+        )
+        bridge_boundary_by_work: dict[int, float | None] | None = None
+        if cluster_key:
+            require_successful_clustering_run(
+                conn,
+                cluster_version=cluster_key,
+                corpus_snapshot_version=snapshot,
+                embedding_version=embedding_version,
+            )
+            assignments = load_cluster_assignments(conn, cluster_version=cluster_key)
+            summary = list_clustering_inputs(
+                conn, embedding_version=embedding_version, corpus_snapshot_version=snapshot
+            )
+            bridge_boundary_by_work = compute_bridge_boundary_scores(summary.rows, assignments)
         run = RankingRun.start(
             ranking_version=ranking_version,
             corpus_snapshot_version=snapshot,
@@ -346,6 +426,8 @@ def execute_ranking_run(
                 candidates,
                 low_cite_min_year=low_cite_min_year,
                 low_cite_max_citations=low_cite_max_citations,
+                cluster_version=cluster_key,
+                bridge_boundary_by_work=bridge_boundary_by_work,
             )
             upsert_paper_scores(conn, run.ranking_run_id, score_rows)
             counts = _ranking_counts_from_rows(len(candidates), score_rows)

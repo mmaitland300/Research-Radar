@@ -146,3 +146,44 @@ def update_clustering_run_final(
         ),
     )
 
+
+def load_cluster_assignments(
+    conn: psycopg.Connection, *, cluster_version: str
+) -> dict[int, str]:
+    rows = conn.execute(
+        """
+        SELECT work_id, cluster_id
+        FROM clusters
+        WHERE cluster_version = %s
+        ORDER BY work_id ASC
+        """,
+        (cluster_version,),
+    ).fetchall()
+    return {int(row[0]): str(row[1]) for row in rows}
+
+
+def require_successful_clustering_run(
+    conn: psycopg.Connection,
+    *,
+    cluster_version: str,
+    corpus_snapshot_version: str,
+    embedding_version: str,
+) -> None:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM clustering_runs
+        WHERE cluster_version = %s
+          AND corpus_snapshot_version = %s
+          AND embedding_version = %s
+          AND status = 'succeeded'
+        """,
+        (cluster_version, corpus_snapshot_version, embedding_version),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError(
+            "No succeeded clustering_runs row matches cluster_version="
+            f"{cluster_version!r}, corpus_snapshot_version={corpus_snapshot_version!r}, "
+            f"embedding_version={embedding_version!r}."
+        )
+
