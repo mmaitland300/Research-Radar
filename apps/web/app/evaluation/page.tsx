@@ -133,19 +133,19 @@ function ArmProxyStats({ arm }: { arm: EvalArm }) {
       <dl className="eval-dl">
         <dt>Recency</dt>
         <dd>
-          mean year {fmtFixed(arm.recency.mean_year, 2)}; min–max {arm.recency.min_year}–
+          mean year {fmtFixed(arm.recency.mean_year, 2)}; min-max {arm.recency.min_year}-
           {arm.recency.max_year}; share in latest two years{" "}
           {fmtPercent01(arm.recency.share_in_latest_two_years)}
         </dd>
         <dt>Citations</dt>
         <dd>
           mean {fmtFixed(arm.citations.mean, 2)}; median {fmtFixed(arm.citations.median, 2)};
-          range {arm.citations.min_val}–{arm.citations.max_val}
+          range {arm.citations.min_val}-{arm.citations.max_val}
         </dd>
         <dt>Topic mix</dt>
         <dd>
           {arm.topics.unique_topic_labels} unique labels in list; top:{" "}
-          {arm.topics.top_topics.length ? arm.topics.top_topics.join(", ") : "—"}
+          {arm.topics.top_topics.length ? arm.topics.top_topics.join(", ") : "-"}
         </dd>
       </dl>
     </div>
@@ -171,7 +171,7 @@ function ArmColumn({ title, arm }: { title: string; arm: EvalArm }) {
                 <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>{item.title}</Link>
               </p>
               <p className="result-meta">
-                {item.year} | cites: {item.citation_count} | {item.source_slug ?? "—"}
+                {item.year} | cites: {item.citation_count} | {item.source_slug ?? "-"}
                 {item.final_score != null ? ` | score: ${item.final_score.toFixed(4)}` : null}
               </p>
               {item.topics.length > 0 ? (
@@ -207,7 +207,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
         <p>
           This page calls <code>GET /api/v1/evaluation/compare</code> so you can inspect the same
           candidate pool under three orderings: materialized ranking, citation-sorted, and
-          date-sorted. Nothing here claims human relevance — only distributional checks on short
+          date-sorted. Nothing here claims human relevance - only distributional checks on short
           lists.
         </p>
         <nav className="tabs" aria-label="Recommendation family">
@@ -268,7 +268,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             <p className="muted-inline">{data.pool_definition}</p>
             {data.family === "undercited" ? (
               <p className="muted-inline">
-                Low-cite gate from run config: year ≥ {data.low_cite_min_year}, citations ≤{" "}
+                Low-cite gate from run config: year at least {data.low_cite_min_year}, citations at most
                 {data.low_cite_max_citations} (revision {data.candidate_pool_doc_revision ?? "v0"}).
                 Frozen definition: <code>docs/candidate-pool-low-cite.md</code>.
               </p>
@@ -295,8 +295,8 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
           </div>
 
           <p className="muted-inline">
-            Generated at {data.generated_at} · Later work: labeled benchmarks, P@k, freeze-at-T
-            backtests — see product checklist in API <code>/api/v1/evaluation/summary</code>.
+            Generated at {data.generated_at} | Later work: labeled benchmarks, P@k, freeze-at-T
+            backtests - see product checklist in API <code>/api/v1/evaluation/summary</code>.
           </p>
         </>
       ) : null}
