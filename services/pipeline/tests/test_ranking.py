@@ -1,6 +1,14 @@
+from dataclasses import replace
 from math import isclose
 
-from pipeline.ranking import PaperSignals, ScoreWeights, final_score, final_score_partial
+from pipeline.ranking import (
+    PaperSignals,
+    RankingCandidate,
+    ScoreWeights,
+    final_score,
+    final_score_partial,
+    in_low_cite_candidate_pool,
+)
 
 
 def test_final_score_uses_default_weights() -> None:
@@ -71,6 +79,24 @@ def test_final_score_partial_renormalizes_over_available_signals() -> None:
         weights=w,
     )
     assert isclose(s, 1.0, rel_tol=1e-9)
+
+
+def test_in_low_cite_candidate_pool_matches_doc_defaults() -> None:
+    ok = RankingCandidate(
+        work_id=1,
+        year=2020,
+        citation_count=5,
+        topic_ids=(),
+        is_core_corpus=True,
+        title="  T  ",
+        abstract=" A ",
+    )
+    assert in_low_cite_candidate_pool(ok) is True
+    assert in_low_cite_candidate_pool(replace(ok, is_core_corpus=False)) is False
+    assert in_low_cite_candidate_pool(replace(ok, year=2018)) is False
+    assert in_low_cite_candidate_pool(replace(ok, citation_count=31)) is False
+    assert in_low_cite_candidate_pool(replace(ok, title="")) is False
+    assert in_low_cite_candidate_pool(replace(ok, abstract=None)) is False
 
 
 def test_final_score_partial_null_semantic_and_bridge() -> None:

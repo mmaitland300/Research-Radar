@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import fsum
 
+LOW_CITE_CANDIDATE_POOL_DOC = "docs/candidate-pool-low-cite.md"
+LOW_CITE_CANDIDATE_POOL_REVISION = "v0"
+DEFAULT_LOW_CITE_MIN_YEAR = 2019
+DEFAULT_LOW_CITE_MAX_CITATIONS = 30
+
 
 @dataclass(frozen=True)
 class ScoreWeights:
@@ -28,6 +33,32 @@ class RankingCandidate:
     year: int
     citation_count: int
     topic_ids: tuple[int, ...] = ()
+    is_core_corpus: bool = True
+    title: str = ""
+    abstract: str | None = None
+
+
+def in_low_cite_candidate_pool(
+    candidate: RankingCandidate,
+    *,
+    min_year: int = DEFAULT_LOW_CITE_MIN_YEAR,
+    max_citations: int = DEFAULT_LOW_CITE_MAX_CITATIONS,
+) -> bool:
+    """
+    Frozen definition in LOW_CITE_CANDIDATE_POOL_DOC (revision LOW_CITE_CANDIDATE_POOL_REVISION).
+    Used for the undercited recommendation family only; emerging/bridge use the full included set.
+    """
+    if not candidate.is_core_corpus:
+        return False
+    if candidate.year < min_year:
+        return False
+    if candidate.citation_count > max_citations:
+        return False
+    if not str(candidate.title or "").strip():
+        return False
+    if not str(candidate.abstract or "").strip():
+        return False
+    return True
 
 
 @dataclass(frozen=True)

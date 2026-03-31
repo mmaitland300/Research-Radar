@@ -7,6 +7,7 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 - Bootstrap / ingest: Corpus policy, OpenAlex bootstrap, Postgres schema, raw retention, and manifest counts are in place for the current slice.
 - **Implemented bootstrap sources:** `policy.py` ingests only the venues listed there — **TISMIR** and **JAES** today. `docs/build-brief.md` describes a broader long-term core-source allowlist (ISMIR, DAFx, ICASSP, etc.); those are not yet wired into `bootstrap-run` until added as `SourcePolicy` rows with OpenAlex source ids.
 - Live product slice: DB-backed search and paper detail; topic metadata flows through normalize + `work_topics`; list/detail IDs support full OpenAlex URLs where needed.
+- **Milestone 1 (low-cite pool):** The undercited recommendation family is gated on the frozen definition in `docs/candidate-pool-low-cite.md` (implemented in `in_low_cite_candidate_pool` / `build_step3_heuristic_score_rows`). Emerging and bridge still score every included work; semantic and bridge scores stay null; `reason_short` states the pool doc and that those signals are not modeled. CLI: `ranking-run --low-cite-min-year` / `--low-cite-max-citations` (defaults 2019 / 30).
 - Not yet product-complete: Corpus-scoped trends, evaluation vs baselines, clustering / non-placeholder bridge and semantic scores in ranking. Similar-papers UI is gated on `NEXT_PUBLIC_EMBEDDING_VERSION` and stored `embeddings` rows.
 
 ---
@@ -81,6 +82,7 @@ Current status: the repo is strong on the data/systems asset, has an initial pro
 - Be explicit where not modeled: semantic relevance and bridge score may be null, omitted in API, or labeled `not_yet_modeled` until embeddings/clusters exist. Prefer honesty over fake richness.
 - Version naming: e.g. `v0-heuristic-no-embeddings` so consumers know what they are getting.
 - Keep `final_score` aligned with the weighting strategy in `docs/build-brief.md` and API settings, even if some signals are not yet modeled.
+- **Undercited scope:** Only papers in the low-cite candidate pool get an undercited row; citation popularity penalty for that family is normalized within pool members only. Changing thresholds requires updating the doc revision and `LOW_CITE_CANDIDATE_POOL_REVISION` in code when the definition changes, so ranking config and `reason_short` stay aligned with the written contract.
 
 ---
 

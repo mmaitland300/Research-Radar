@@ -53,6 +53,9 @@ def list_ranking_candidates(
             w.id,
             w.year,
             w.citation_count,
+            w.is_core_corpus,
+            w.title,
+            w.abstract,
             COALESCE(
                 array_agg(wt.topic_id ORDER BY wt.score DESC) FILTER (WHERE wt.topic_id IS NOT NULL),
                 '{}'::bigint[]
@@ -61,7 +64,7 @@ def list_ranking_candidates(
         LEFT JOIN work_topics wt ON wt.work_id = w.id
         WHERE w.inclusion_status = 'included'
           AND w.corpus_snapshot_version = %s
-        GROUP BY w.id, w.year, w.citation_count
+        GROUP BY w.id, w.year, w.citation_count, w.is_core_corpus, w.title, w.abstract
         ORDER BY w.id ASC
         """,
         (corpus_snapshot_version,),
@@ -71,7 +74,10 @@ def list_ranking_candidates(
             work_id=int(row[0]),
             year=int(row[1]),
             citation_count=int(row[2] or 0),
-            topic_ids=_topic_ids_tuple(row[3]),
+            is_core_corpus=bool(row[3]),
+            title=str(row[4] or ""),
+            abstract=str(row[5]) if row[5] is not None else None,
+            topic_ids=_topic_ids_tuple(row[6]),
         )
         for row in rows
     ]

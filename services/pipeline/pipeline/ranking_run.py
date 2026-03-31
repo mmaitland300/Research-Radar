@@ -9,7 +9,17 @@ import psycopg
 
 from pipeline.bootstrap_loader import database_url_from_env
 from pipeline.config import RankingCounts, RankingRun
-from pipeline.ranking import RankingCandidate, PaperScoreRow, ScoreWeights, final_score_partial
+from pipeline.ranking import (
+    DEFAULT_LOW_CITE_MAX_CITATIONS,
+    DEFAULT_LOW_CITE_MIN_YEAR,
+    LOW_CITE_CANDIDATE_POOL_DOC,
+    LOW_CITE_CANDIDATE_POOL_REVISION,
+    RankingCandidate,
+    PaperScoreRow,
+    ScoreWeights,
+    final_score_partial,
+    in_low_cite_candidate_pool,
+)
 from pipeline.ranking_persistence import (
     insert_ranking_run_started,
     latest_corpus_snapshot_version_with_works,
@@ -27,7 +37,9 @@ BRIDGE_REASON = (
     "Multi-topic paper in active topics; explicit bridge score not yet modeled."
 )
 UNDERCITED_REASON = (
-    "Recent paper in active topics with a popularity penalty; semantic and bridge not yet modeled."
+    "Low-cite candidate pool (see docs/candidate-pool-low-cite.md v0): core corpus, recency floor, "
+    "citation ceiling, title+abstract gate; popularity penalty among pool members only. "
+    "Semantic and bridge not yet modeled."
 )
 
 FAMILY_WEIGHTS: dict[str, ScoreWeights] = {
@@ -59,6 +71,8 @@ def _build_ranking_config(
     *,
     corpus_snapshot_version: str,
     placeholder_policy: str,
+    low_cite_min_year: int,
+    low_cite_max_citations: int,
 ) -> dict[str, Any]:
     return {
         "default_weights": asdict(ScoreWeights()),
@@ -68,6 +82,13 @@ def _build_ranking_config(
         "selection_scope": {
             "type": "included_works",
             "corpus_snapshot_version": corpus_snapshot_version,
+            "emerging_and_bridge": "all_included_works_in_snapshot",
+            "undercited": {
+                "low_cite_candidate_pool_revision": LOW_CITE_CANDIDATE_POOL_REVISION,
+                "doc": LOW_CITE_CANDIDATE_POOL_DOC,
+                "min_year": low_cite_min_year,
+                "max_citations": low_cite_max_citations,
+            },
         },
         "signal_policies": {
             "semantic_score": "null_until_embeddings",
@@ -195,15 +216,23 @@ def _make_score_row(
     )
 
 
-def build_step3_heuristic_score_rows(candidates: list[RankingCandidate]) -> list[PaperScoreRow]:
+def build_step3_heuristic_score_rows(
+    candidates: list[RankingCandidate],
+    *,
+    low_cite_min_year: int = DEFAULT_LOW_CITE_MIN_YEAR,
+    low_cite_max_citations: int = DEFAULT_LOW_CITE_MAX_CITATIONS,
+) -> list[PaperScoreRow]:
     """
-    Build one heuristic row per (work, family) using available metadata only.
+    Build heuristic rows using available metadata only.
     semantic_score and bridge_score remain null until embeddings/clusters exist.
+    Emerging and bridge: one row per included work. Undercited: only works in the frozen
+    low-cite pool (docs/candidate-pool-low-cite.md), so signals stay comparable to that definition.
     """
     citation_velocity_by_work = _citation_velocity_scores(candidates)
     topic_growth_by_work = _topic_growth_scores(candidates)
     topic_breadth_penalty_by_work = _topic_breadth_penalties(candidates)
-    citation_popularity_penalty_by_work = _citation_popularity_penalties(candidates)
+    pool_members = [c for c in candidates if in_low_cite_candidate_pool(c, min_year=low_cite_min_year, max_citations=low_cite_max_citations)]
+    citation_popularity_penalty_by_work = _citation_popularity_penalties(pool_members)
 
     rows: list[PaperScoreRow] = []
     for candidate in candidates:
@@ -230,16 +259,19 @@ def build_step3_heuristic_score_rows(candidates: list[RankingCandidate]) -> list
                 reason_short=BRIDGE_REASON,
             )
         )
-        rows.append(
-            _make_score_row(
-                work_id=candidate.work_id,
-                family="undercited",
-                citation_velocity=citation_velocity,
-                topic_growth=topic_growth,
-                diversity_penalty=citation_popularity_penalty_by_work[candidate.work_id],
-                reason_short=UNDERCITED_REASON,
+        if in_low_cite_candidate_pool(
+            candidate, min_year=low_cite_min_year, max_citations=low_cite_max_citations
+        ):
+            rows.append(
+                _make_score_row(
+                    work_id=candidate.work_id,
+                    family="undercited",
+                    citation_velocity=citation_velocity,
+                    topic_growth=topic_growth,
+                    diversity_penalty=citation_popularity_penalty_by_work[candidate.work_id],
+                    reason_short=UNDERCITED_REASON,
+                )
             )
-        )
     return rows
 
 
@@ -270,6 +302,8 @@ def execute_ranking_run(
     embedding_version: str = "none-v0",
     note: str | None = None,
     placeholder_policy: str = "semantic_and_bridge_null_until_embeddings_and_clusters",
+    low_cite_min_year: int = DEFAULT_LOW_CITE_MIN_YEAR,
+    low_cite_max_citations: int = DEFAULT_LOW_CITE_MAX_CITATIONS,
 ) -> RankingRun:
     """
     Resolve snapshot, persist a running row (committed), write scores, finalize succeeded.
@@ -288,6 +322,8 @@ def execute_ranking_run(
         config = _build_ranking_config(
             corpus_snapshot_version=snapshot,
             placeholder_policy=placeholder_policy,
+            low_cite_min_year=low_cite_min_year,
+            low_cite_max_citations=low_cite_max_citations,
         )
         run = RankingRun.start(
             ranking_version=ranking_version,
@@ -306,7 +342,11 @@ def execute_ranking_run(
                 raise RuntimeError(
                     f"No included works for corpus_snapshot_version={snapshot!r}; nothing to rank."
                 )
-            score_rows = build_step3_heuristic_score_rows(candidates)
+            score_rows = build_step3_heuristic_score_rows(
+                candidates,
+                low_cite_min_year=low_cite_min_year,
+                low_cite_max_citations=low_cite_max_citations,
+            )
             upsert_paper_scores(conn, run.ranking_run_id, score_rows)
             counts = _ranking_counts_from_rows(len(candidates), score_rows)
             update_ranking_run_final(conn, run.ranking_run_id, "succeeded", counts, None)

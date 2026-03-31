@@ -133,6 +133,18 @@ def main() -> None:
     )
     ranking_parser.add_argument("--note", default=None, help="Optional run notes")
     ranking_parser.add_argument(
+        "--low-cite-min-year",
+        type=int,
+        default=2019,
+        help="Undercited family: min publication year (default 2019; see docs/candidate-pool-low-cite.md)",
+    )
+    ranking_parser.add_argument(
+        "--low-cite-max-citations",
+        type=int,
+        default=30,
+        help="Undercited family: max citation_count inclusive (default 30)",
+    )
+    ranking_parser.add_argument(
         "--database-url",
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
@@ -227,6 +239,8 @@ def main() -> None:
             corpus_snapshot_version=args.corpus_snapshot_version,
             embedding_version=args.embedding_version,
             note=args.note,
+            low_cite_min_year=args.low_cite_min_year,
+            low_cite_max_citations=args.low_cite_max_citations,
         )
         print(finalized.ranking_run_id)
         print(finalized.corpus_snapshot_version)
