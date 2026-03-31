@@ -17,6 +17,8 @@ from app.contracts import (
     RankingFamily,
     SimilarPaperItem,
     SimilarPapersResponse,
+    TopicTrendItem,
+    TopicTrendsResponse,
     UndercitedRecommendationItem,
     UndercitedRecommendationsResponse,
     utc_now,
@@ -26,6 +28,7 @@ from app.papers_repo import list_papers
 from app.papers_repo import list_undercited_heuristic_v0
 from app.scores_repo import fetch_latest_materialized_ranking_for_meta, list_ranked_recommendations
 from app.similarity_repo import list_similar_papers
+from app.trends_repo import list_topic_trends
 
 app = FastAPI(
     title="Research Radar API",
@@ -209,6 +212,40 @@ def get_evaluation_summary() -> EvaluationSummary:
         benchmark_target_size="100-200 papers",
         primary_metrics=["precision@10", "precision@20"],
         checks=list(settings.evaluation_checks),
+        generated_at=utc_now(),
+    )
+
+
+@app.get("/api/v1/trends/topics", response_model=TopicTrendsResponse)
+def get_topic_trends(
+    limit: int = Query(default=20, ge=1, le=100),
+    since_year: int = Query(default=utc_now().year - 1, ge=1990, le=2100),
+    min_works: int = Query(default=2, ge=1, le=10_000),
+) -> TopicTrendsResponse:
+    try:
+        rows = list_topic_trends(limit=limit, since_year=since_year, min_works=min_works)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database query failed. Confirm Postgres is running and topic data exists.",
+        ) from exc
+
+    return TopicTrendsResponse(
+        since_year=since_year,
+        min_works=min_works,
+        total=len(rows),
+        items=[
+            TopicTrendItem(
+                topic_id=r.topic_id,
+                topic_name=r.topic_name,
+                total_works=r.total_works,
+                recent_works=r.recent_works,
+                prior_works=r.prior_works,
+                delta=r.delta,
+                growth_label=r.growth_label,
+            )
+            for r in rows
+        ],
         generated_at=utc_now(),
     )
 

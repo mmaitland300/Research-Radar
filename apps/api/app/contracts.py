@@ -43,6 +43,24 @@ class EvaluationSummary(BaseModel):
     generated_at: datetime
 
 
+class TopicTrendItem(BaseModel):
+    topic_id: int
+    topic_name: str
+    total_works: int
+    recent_works: int
+    prior_works: int
+    delta: int
+    growth_label: str
+
+
+class TopicTrendsResponse(BaseModel):
+    since_year: int
+    min_works: int
+    total: int
+    items: list[TopicTrendItem]
+    generated_at: datetime
+
+
 class PaperDetail(BaseModel):
     paper_id: str
     title: str
