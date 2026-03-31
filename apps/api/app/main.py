@@ -360,9 +360,15 @@ def get_topic_trends(
     limit: int = Query(default=20, ge=1, le=100),
     since_year: int = Query(default=utc_now().year - 1, ge=1990, le=2100),
     min_works: int = Query(default=2, ge=1, le=10_000),
+    corpus_snapshot_version: str | None = Query(default=None),
 ) -> TopicTrendsResponse:
     try:
-        rows = list_topic_trends(limit=limit, since_year=since_year, min_works=min_works)
+        result = list_topic_trends(
+            limit=limit,
+            since_year=since_year,
+            min_works=min_works,
+            corpus_snapshot_version=corpus_snapshot_version,
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=503,
@@ -370,9 +376,10 @@ def get_topic_trends(
         ) from exc
 
     return TopicTrendsResponse(
+        corpus_snapshot_version=result.corpus_snapshot_version,
         since_year=since_year,
         min_works=min_works,
-        total=len(rows),
+        total=len(result.rows),
         items=[
             TopicTrendItem(
                 topic_id=r.topic_id,
@@ -383,7 +390,7 @@ def get_topic_trends(
                 delta=r.delta,
                 growth_label=r.growth_label,
             )
-            for r in rows
+            for r in result.rows
         ],
         generated_at=utc_now(),
     )

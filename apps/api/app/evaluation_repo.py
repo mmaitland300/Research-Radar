@@ -408,7 +408,7 @@ def load_evaluation_compare(
         ranked_rows = conn.execute(ranked_sql, tuple(ranked_params)).fetchall()
 
         cit_order = "pool.citation_count DESC, pool.year DESC, pool.openalex_id ASC"
-        date_order = "pool.year DESC, pool.citation_count ASC, pool.openalex_id ASC"
+        date_order = "pool.year DESC, pool.openalex_id ASC"
 
         cit_sql, cit_params = _select_from_pool(
             order_clause=cit_order,
@@ -440,19 +440,19 @@ def load_evaluation_compare(
         ranked_items,
         arm_label="ranked_family",
         arm_desc="Materialized ranking run: order by final_score descending (heuristic signals only in v0; semantic is not used).",
-        ordering_description="final_score DESC",
+        ordering_desc="final_score DESC",
     )
     cit_arm = _arm_stats(
         cit_items,
         arm_label="citation_baseline",
         arm_desc="Popularity-style baseline on the same pool: highest citations first (not a relevance judgment).",
-        ordering_description="citation_count DESC, year DESC, openalex_id ASC",
+        ordering_desc="citation_count DESC, year DESC, openalex_id ASC",
     )
     date_arm = _arm_stats(
         date_items,
         arm_label="date_baseline",
-        arm_desc="Recency-style baseline on the same pool: newest year first (not a relevance judgment).",
-        ordering_description="year DESC, citation_count ASC, openalex_id ASC",
+        arm_desc="Pure recency baseline on the same pool: newest year first (not a relevance judgment).",
+        ordering_desc="year DESC, openalex_id ASC",
     )
 
     sr = _topic_label_set(ranked_items)

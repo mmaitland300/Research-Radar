@@ -13,6 +13,7 @@ type TopicTrendItem = {
 };
 
 type TopicTrendsResponse = {
+  corpus_snapshot_version: string;
   since_year: number;
   min_works: number;
   total: number;
@@ -90,9 +91,10 @@ export default async function TrendsPage() {
         <section className="panel">
           <h2>Topic momentum (curated corpus)</h2>
           <p className="muted-inline">
-            Recent band starts at year <strong>{data.since_year}</strong> (API{" "}
-            <code>since_year</code>, aligned with topic-growth heuristics) | min works per topic:{" "}
-            <strong>{data.min_works}</strong> | topics shown: <strong>{data.total}</strong>
+            Snapshot <code>{data.corpus_snapshot_version}</code> | recent band starts at year{" "}
+            <strong>{data.since_year}</strong> (API <code>since_year</code>, aligned with
+            topic-growth heuristics) | min works per topic: <strong>{data.min_works}</strong> |
+            topics shown: <strong>{data.total}</strong>
           </p>
           {data.items.length === 0 ? (
             <p>No topic rows matched the current thresholds.</p>

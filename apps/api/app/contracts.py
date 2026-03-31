@@ -132,6 +132,7 @@ class TopicTrendItem(BaseModel):
 
 
 class TopicTrendsResponse(BaseModel):
+    corpus_snapshot_version: str
     since_year: int
     min_works: int
     total: int

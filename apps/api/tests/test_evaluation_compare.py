@@ -11,6 +11,7 @@ from app.evaluation_repo import (
     EvalRecencyProxy,
     EvalTopicMixProxy,
     EvalTopicOverlap,
+    _arm_stats,
 )
 
 
@@ -70,6 +71,26 @@ def _fake_payload() -> EvalComparePayload:
         date_baseline=arm_date,
         topic_overlap=EvalTopicOverlap(1.0, 1.0, 1.0),
     )
+
+
+def test_arm_stats_builds_ordering_description() -> None:
+    paper = EvalPaperRow(
+        paper_id="https://openalex.org/W1",
+        title="Example",
+        year=2022,
+        citation_count=3,
+        source_slug="tismir",
+        topics=["mir"],
+        final_score=0.9,
+    )
+    arm = _arm_stats(
+        [paper],
+        arm_label="ranked_family",
+        arm_desc="ranked",
+        ordering_desc="final_score DESC",
+    )
+    assert arm.ordering_description == "final_score DESC"
+    assert arm.recency.mean_year == 2022.0
 
 
 def test_evaluation_compare_smoke(monkeypatch) -> None:

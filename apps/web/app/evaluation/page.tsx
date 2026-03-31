@@ -71,6 +71,14 @@ type EvalCompareResponse = {
   generated_at: string;
 };
 
+function fmtFixed(value: number, digits: number): string {
+  return value.toFixed(digits);
+}
+
+function fmtPercent01(value: number): string {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
 function parseFamily(raw: string | string[] | undefined): Family {
   const v = Array.isArray(raw) ? raw[0] : raw;
   if (v && (FAMILIES as readonly string[]).includes(v)) {
@@ -125,13 +133,14 @@ function ArmProxyStats({ arm }: { arm: EvalArm }) {
       <dl className="eval-dl">
         <dt>Recency</dt>
         <dd>
-          mean year {arm.recency.mean_year.toFixed(2)}; min–max {arm.recency.min_year}–
-          {arm.recency.max_year}; share in latest two years {arm.recency.share_in_latest_two_years}
+          mean year {fmtFixed(arm.recency.mean_year, 2)}; min–max {arm.recency.min_year}–
+          {arm.recency.max_year}; share in latest two years{" "}
+          {fmtPercent01(arm.recency.share_in_latest_two_years)}
         </dd>
         <dt>Citations</dt>
         <dd>
-          mean {arm.citations.mean}; median {arm.citations.median}; range {arm.citations.min_val}–
-          {arm.citations.max_val}
+          mean {fmtFixed(arm.citations.mean, 2)}; median {fmtFixed(arm.citations.median, 2)};
+          range {arm.citations.min_val}–{arm.citations.max_val}
         </dd>
         <dt>Topic mix</dt>
         <dd>
@@ -271,11 +280,11 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             <p className="muted-inline">{data.topic_overlap_note}</p>
             <dl className="eval-dl">
               <dt>Ranked vs citation baseline</dt>
-              <dd>{data.topic_overlap.jaccard_ranked_vs_citation_baseline}</dd>
+              <dd>{fmtFixed(data.topic_overlap.jaccard_ranked_vs_citation_baseline, 4)}</dd>
               <dt>Ranked vs date baseline</dt>
-              <dd>{data.topic_overlap.jaccard_ranked_vs_date_baseline}</dd>
+              <dd>{fmtFixed(data.topic_overlap.jaccard_ranked_vs_date_baseline, 4)}</dd>
               <dt>Citation vs date baseline</dt>
-              <dd>{data.topic_overlap.jaccard_citation_vs_date_baseline}</dd>
+              <dd>{fmtFixed(data.topic_overlap.jaccard_citation_vs_date_baseline, 4)}</dd>
             </dl>
           </section>
 

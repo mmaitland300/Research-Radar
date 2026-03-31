@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.trends_repo import TopicTrendRow
+from app.trends_repo import TopicTrendRow, TopicTrendsResult
 
 
 def sample_row() -> TopicTrendRow:
@@ -19,12 +19,16 @@ def sample_row() -> TopicTrendRow:
 def test_get_topic_trends_smoke(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.main.list_topic_trends",
-        lambda *, limit, since_year, min_works: [sample_row()],
+        lambda *, limit, since_year, min_works, corpus_snapshot_version: TopicTrendsResult(
+            corpus_snapshot_version="source-snapshot-20260301",
+            rows=[sample_row()],
+        ),
     )
     client = TestClient(app)
     response = client.get("/api/v1/trends/topics?limit=5&since_year=2025&min_works=2")
     assert response.status_code == 200
     payload = response.json()
+    assert payload["corpus_snapshot_version"] == "source-snapshot-20260301"
     assert payload["since_year"] == 2025
     assert payload["min_works"] == 2
     assert payload["total"] == 1
@@ -33,7 +37,7 @@ def test_get_topic_trends_smoke(monkeypatch) -> None:
 
 
 def test_get_topic_trends_503(monkeypatch) -> None:
-    def _boom(*, limit, since_year, min_works):
+    def _boom(*, limit, since_year, min_works, corpus_snapshot_version):
         raise RuntimeError("db down")
 
     monkeypatch.setattr("app.main.list_topic_trends", _boom)

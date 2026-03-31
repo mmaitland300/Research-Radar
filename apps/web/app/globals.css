@@ -282,7 +282,7 @@ ul {
 
 .eval-proxy-title {
   margin: 0 0 8px;
-  font-size: 0.88rem;
+  font-size: 0.94rem;
   font-weight: 600;
   color: var(--text);
 }
@@ -295,14 +295,14 @@ ul {
 
 .eval-dl dt {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text);
 }
 
 .eval-dl dd {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 0.94rem;
   color: var(--muted);
 }
 
