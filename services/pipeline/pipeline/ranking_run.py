@@ -5,9 +5,12 @@ from dataclasses import asdict
 from math import log1p
 from typing import Any
 
+import sys
+
 import psycopg
 
 from pipeline.bootstrap_loader import database_url_from_env
+from pipeline.embedding_persistence import count_missing_embedding_candidates
 from pipeline.config import RankingCounts, RankingRun
 from pipeline.ranking import (
     DEFAULT_LOW_CITE_MAX_CITATIONS,
@@ -35,6 +38,28 @@ from pipeline.ranking_persistence import (
 )
 
 RECOMMENDATION_FAMILIES: tuple[str, ...] = ("emerging", "bridge", "undercited")
+
+
+def warn_embedding_gaps_if_any(
+    conn: psycopg.Connection,
+    *,
+    corpus_snapshot_version: str,
+    embedding_version: str,
+) -> None:
+    """Stderr notice when a clustered ranking run may leave bridge rows without cluster-backed scores."""
+    n_missing = count_missing_embedding_candidates(
+        conn,
+        corpus_snapshot_version=corpus_snapshot_version,
+        embedding_version=embedding_version,
+    )
+    if n_missing > 0:
+        print(
+            "ranking-run: warning: "
+            f"{n_missing} included work(s) have no embedding for {embedding_version!r} "
+            "in this snapshot; cluster-backed bridge scores cannot be computed for those rows. "
+            "Run `embed-works` without --limit for full coverage, then re-run `cluster-works`.",
+            file=sys.stderr,
+        )
 
 EMERGING_REASON = (
     "Recent paper with citation momentum in active topics; semantic and bridge not yet modeled."
@@ -405,6 +430,11 @@ def execute_ranking_run(
                 conn, embedding_version=embedding_version, corpus_snapshot_version=snapshot
             )
             bridge_boundary_by_work = compute_bridge_boundary_scores(summary.rows, assignments)
+            warn_embedding_gaps_if_any(
+                conn,
+                corpus_snapshot_version=snapshot,
+                embedding_version=embedding_version,
+            )
         run = RankingRun.start(
             ranking_version=ranking_version,
             corpus_snapshot_version=snapshot,

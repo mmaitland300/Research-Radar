@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from html import unescape
 from typing import Any, Mapping
 
@@ -7,8 +8,10 @@ from typing import Any, Mapping
 _MOJIBAKE_MARKERS = (
     "Ã",
     "Â",
+    "â",
     "â€",
     "ðŸ",
+    "\ufffd",
 )
 
 
@@ -39,6 +42,38 @@ def _repair_mojibake(text: str) -> str:
     return text
 
 
+def _repair_truncated_utf8_mojibake(text: str) -> str:
+    """
+    Fix leftover sequences when UTF-8 punctuation was mis-decoded (often only `â` + neighbors survive).
+    Applied after _repair_mojibake; safe to run on already-clean strings (no-ops if patterns absent).
+    """
+    if "â" not in text:
+        return text
+    # UTF-8 for apostrophe / quotes misread as Windows-1252-style triplets
+    text = text.replace("â€™", "'")
+    text = text.replace("â€œ", '"')
+    text = text.replace("â€", '"')
+    # Spaced en dash (UTF-8 E2 80 93 split across decoders) before other `â`+letter rules
+    text = text.replace(" â ", " \u2013 ")
+    text = re.sub(r"([a-z])â([A-Z])", r"\1-\2", text)
+    text = re.sub(r"([a-z])âs\b", r"\1's", text)
+    text = re.sub(r" â([A-Z])", lambda m: ' "' + m.group(1), text)
+    text = re.sub(r"([a-z])â:(\s)", lambda m: m.group(1) + '":' + m.group(2), text)
+    return text
+
+
+def _ascii_quotes_and_dashes(text: str) -> str:
+    """Normalize typographic punctuation to ASCII for stable API/UI and embedding text."""
+    return (
+        text.replace("\u2019", "'")
+        .replace("\u2018", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+    )
+
+
 def clean_openalex_text(value: str | None) -> str:
     if value is None:
         return ""
@@ -48,6 +83,8 @@ def clean_openalex_text(value: str | None) -> str:
     text = _repair_mojibake(text)
     text = _iterative_html_unescape(text)
     text = _repair_mojibake(text)
+    text = _repair_truncated_utf8_mojibake(text)
+    text = _ascii_quotes_and_dashes(text)
     text = _normalize_whitespace(text)
     return text
 

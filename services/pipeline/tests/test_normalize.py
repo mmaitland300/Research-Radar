@@ -14,9 +14,9 @@ MOJIBAKE_TITLE = (
     + ": Audio&amp;ndash;Video Methods"
 )
 MOJIBAKE_AUTHOR = "Vlora Arifi-M" + chr(0x00C3) + chr(0x00BC) + "ller"
-EXPECTED_TITLE = "Towards an " + chr(0x2018) + "Everything Corpus" + chr(0x2019) + ": Audio" + chr(0x2013) + "Video Methods"
-EXPECTED_DASH_TEXT = "Music Question" + chr(0x2013) + "Answering"
-EXPECTED_SOURCE = "Transactions of Music" + chr(0x2013) + "IR"
+EXPECTED_TITLE = "Towards an 'Everything Corpus': Audio-Video Methods"
+EXPECTED_DASH_TEXT = "Music Question-Answering"
+EXPECTED_SOURCE = "Transactions of Music-IR"
 EXPECTED_AUTHOR = "Vlora Arifi-M" + chr(0x00FC) + "ller"
 
 

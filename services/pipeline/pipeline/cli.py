@@ -4,10 +4,18 @@ import argparse
 import sys
 from pathlib import Path
 
+import psycopg
+
 from pipeline.bootstrap_loader import database_url_from_env, load_resolved_policy_from_database, run_bootstrap_ingest
 from pipeline.clustering_run import execute_clustering_run
+from pipeline.embedding_persistence import (
+    count_included_works_for_snapshot,
+    count_missing_embedding_candidates,
+    latest_corpus_snapshot_version_with_works,
+)
 from pipeline.embedding_run import execute_embedding_run
 from pipeline.ranking_run import execute_ranking_run
+from pipeline.work_text_repair import run_work_text_repair_cli
 from pipeline.jobs import (
     create_bootstrap_bundle,
     write_bootstrap_plan,
@@ -105,7 +113,7 @@ def main() -> None:
         "--limit",
         type=int,
         default=None,
-        help="Cap missing works processed on this run (useful for smoke tests)",
+        help="Cap missing works processed on this run (smoke tests only; omit for full snapshot coverage)",
     )
     embed_parser.add_argument(
         "--database-url",
@@ -189,6 +197,51 @@ def main() -> None:
     )
     cluster_parser.add_argument("--note", default=None, help="Optional run notes")
     cluster_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
+    repair_parser = subparsers.add_parser(
+        "repair-works-text",
+        help="Re-apply title/abstract text cleanup (mojibake, HTML entities) to included works in a snapshot",
+    )
+    repair_parser.add_argument(
+        "--corpus-snapshot-version",
+        default=None,
+        help="Target snapshot; default = latest snapshot that has included works",
+    )
+    repair_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Report how many rows would change without writing",
+    )
+    repair_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
+    cov_parser = subparsers.add_parser(
+        "embedding-coverage",
+        help="Report how many included works in a snapshot have rows in embeddings for a version",
+    )
+    cov_parser.add_argument(
+        "--embedding-version",
+        required=True,
+        help="Embedding artifact label (same as embed-works and cluster-works)",
+    )
+    cov_parser.add_argument(
+        "--corpus-snapshot-version",
+        default=None,
+        help="Target snapshot; default = latest snapshot that has included works",
+    )
+    cov_parser.add_argument(
+        "--fail-on-gaps",
+        action="store_true",
+        help="Exit with code 1 if any included work is missing an embedding",
+    )
+    cov_parser.add_argument(
         "--database-url",
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
@@ -314,6 +367,49 @@ def main() -> None:
         print("\n".join(lines), file=sys.stderr)
         print(finalized.cluster_version)
         print(finalized.corpus_snapshot_version)
+        return
+
+    if args.command == "repair-works-text":
+        snap, scanned, updated = run_work_text_repair_cli(
+            database_url=args.database_url,
+            corpus_snapshot_version=args.corpus_snapshot_version,
+            dry_run=args.dry_run,
+        )
+        mode = "dry-run" if args.dry_run else "committed"
+        print(
+            f"repair-works-text ({mode}): corpus_snapshot_version={snap} "
+            f"scanned={scanned} rows_changed={updated}",
+            file=sys.stderr,
+        )
+        print(snap)
+        print(updated)
+        return
+
+    if args.command == "embedding-coverage":
+        dsn = args.database_url or database_url_from_env()
+        with psycopg.connect(dsn) as conn:
+            snap = args.corpus_snapshot_version or latest_corpus_snapshot_version_with_works(conn)
+            if snap is None:
+                parser.error("No corpus snapshot with included works found.")
+            total = count_included_works_for_snapshot(conn, snap)
+            missing = count_missing_embedding_candidates(
+                conn,
+                corpus_snapshot_version=snap,
+                embedding_version=args.embedding_version,
+            )
+        embedded = total - missing
+        lines = [
+            f"corpus_snapshot_version={snap}",
+            f"embedding_version={args.embedding_version}",
+            f"included_works={total}",
+            f"with_embedding={embedded}",
+            f"missing_embedding={missing}",
+        ]
+        print("\n".join(lines), file=sys.stderr)
+        print(snap)
+        print(missing)
+        if args.fail_on_gaps and missing:
+            sys.exit(1)
         return
 
 
