@@ -319,6 +319,83 @@ Use `docs/roadmap.md` for planning/tickets/gate criteria. Create `docs/ml2-bridg
    - Persist `bridge_score` on bridge-family rows from cluster-boundary ratio (squared L2 vs centroids); `ranking-run --cluster-version` pins `clustering_runs` + snapshot + `embedding-version`.
    - Keep `FAMILY_WEIGHTS["bridge"].bridge` at 0 so `final_score` is unchanged; `semantic_score` stays null.
    - Missing cluster data: null `bridge_score` and explicit `reason_short`.
+   - **DB validation (two `ranking_run_id` values: baseline without clustering artifact vs ML2-5a with it; same `corpus_snapshot_version` and `embedding_version`):** (1) sanity on `ranking_runs`; (2) bridge row counts must match; (3) invariance query must return **zero rows** (same `final_score` per `work_id` on bridge rows); (4) optional signal-delta query should show `bridge_score` and/or `reason_short` changed where ML2-5a applied.
+
+```sql
+-- (1) Sanity: same snapshot + embedding; clustering_artifact null vs set
+SELECT ranking_run_id, ranking_version, corpus_snapshot_version, embedding_version, status,
+       config_json->'clustering_artifact' AS clustering_artifact
+FROM ranking_runs
+WHERE ranking_run_id IN ('REPLACE_BASELINE_RANKING_RUN_ID', 'REPLACE_ML25A_RANKING_RUN_ID');
+
+-- (2) Bridge row counts must match
+SELECT ranking_run_id, COUNT(*) AS bridge_rows
+FROM paper_scores
+WHERE ranking_run_id IN ('REPLACE_BASELINE_RANKING_RUN_ID', 'REPLACE_ML25A_RANKING_RUN_ID')
+  AND recommendation_family = 'bridge'
+GROUP BY ranking_run_id
+ORDER BY ranking_run_id;
+
+-- (3) Strongest invariance: expect zero rows
+WITH baseline AS (
+    SELECT work_id, final_score, bridge_score, reason_short
+    FROM paper_scores
+    WHERE ranking_run_id = 'REPLACE_BASELINE_RANKING_RUN_ID'
+      AND recommendation_family = 'bridge'
+),
+ml25a AS (
+    SELECT work_id, final_score, bridge_score, reason_short
+    FROM paper_scores
+    WHERE ranking_run_id = 'REPLACE_ML25A_RANKING_RUN_ID'
+      AND recommendation_family = 'bridge'
+)
+SELECT
+    COALESCE(baseline.work_id, ml25a.work_id) AS work_id,
+    baseline.final_score AS baseline_final_score,
+    ml25a.final_score AS ml25a_final_score,
+    baseline.bridge_score AS baseline_bridge_score,
+    ml25a.bridge_score AS ml25a_bridge_score,
+    LEFT(baseline.reason_short, 80) AS baseline_reason_prefix,
+    LEFT(ml25a.reason_short, 80) AS ml25a_reason_prefix
+FROM baseline
+FULL OUTER JOIN ml25a USING (work_id)
+WHERE baseline.work_id IS NULL
+   OR ml25a.work_id IS NULL
+   OR baseline.final_score IS DISTINCT FROM ml25a.final_score;
+
+-- (4) Optional: expect some bridge_score or reason change when ML2-5a wired
+SELECT
+    COUNT(*) FILTER (
+        WHERE baseline_bridge_score IS DISTINCT FROM ml25a_bridge_score
+    ) AS rows_where_bridge_score_changed,
+    COUNT(*) FILTER (
+        WHERE baseline_reason IS DISTINCT FROM ml25a_reason
+    ) AS rows_where_reason_changed,
+    COUNT(*) AS bridge_rows_compared
+FROM (
+    SELECT
+        b.work_id,
+        b.bridge_score AS baseline_bridge_score,
+        b.reason_short AS baseline_reason,
+        m.bridge_score AS ml25a_bridge_score,
+        m.reason_short AS ml25a_reason
+    FROM paper_scores b
+    JOIN paper_scores m
+      ON b.work_id = m.work_id
+     AND b.recommendation_family = 'bridge'
+     AND m.recommendation_family = 'bridge'
+    WHERE b.ranking_run_id = 'REPLACE_BASELINE_RANKING_RUN_ID'
+      AND m.ranking_run_id = 'REPLACE_ML25A_RANKING_RUN_ID'
+) s;
+```
+
+   - **Interpretation:** Step (3) any row => stop and debug. Step (3) empty and step (4) shows changes => ML2-5a behaved as intended (signal moved, `final_score` did not). Step (4) all zeros => cluster artifact likely did not affect bridge rows.
+   - **Recorded check (2026-03-31, local `docker-compose` Postgres):** Same snapshot `source-snapshot-20260329-170012` and embedding `v1-title-abstract-1536-cleantext`. Baseline `rank-63710a0277` (`ml2-5a-val-baseline-20260331`, `clustering_artifact` null). ML2-5a `rank-c765e2de5c` (`ml2-5a-val-cluster-20260331`, cluster `kmeans-l2-v0-cleantext-k12`). Step (2): 38 bridge rows each. Step (3): **0** violation rows. Step (4): `bridge_score` differed on **10** / 38 joined rows; `reason_short` differed on **38** / 38. **Outcome:** matches the success rule (ordering invariant, signal moved); safe to treat as a defensible ML2-5a regression pass on this corpus before ML2-5b planning.
+   - **Qualitative review before ML2-5b:** Use **k12** (or any artifact) for the SQL regression pass; use **k3** when you want a more interpretable cluster geometry for human list review. Pin the API with `ranking_run_id` (and snapshot / `ranking_version` when comparing): `GET /api/v1/recommendations/ranked?family=bridge&ranking_run_id=...`. Prefer `docs/ml2-bridge-review.md` only if you need worked examples and a longer pass/fail narrative.
+   - **Recorded qualitative review (2026-03-31, local `docker-compose` Postgres):** Run **`rank-c34fa85261`** (`ml2-5a-qual-k3-20260331`) on `source-snapshot-20260329-170012`, embedding `v1-title-abstract-1536-cleantext`, cluster **`kmeans-l2-v0-cleantext-k3`**. **Checks:** **10 / 38** bridge rows return non-null `items[].signals.bridge`; those rows use the structural centroid-boundary `reason_short`; the rest use the explicit no-signal fallback, so copy does not overclaim semantics. **List shape:** With bridge weight still 0, bridge **top 10** overlaps emerging **top 10** on **8** papers (expected until weighting); overlap with undercited **top 10** is **4**. Papers that carry a numeric bridge score look like plausible cross-cutting MIR (datasets, regional/method breadth, multimodal corpora), not obvious random outliers.
+   - **ML2-5b readiness (same review):** **Do not** treat this as automatic clearance for positive bridge weight. Most bridge rows still lack a numeric signal on this snapshot, so the family is not yet **meaningfully** separated from emerging at the head of the list, and weighting would barely move ordering until coverage improves. Treat ML2-5b as a **decision after** a denser or broader validation pass (more embedded works aligned with clustering, different k, or a larger corpus), reusing the same honesty and distinctness checks.
+   - **HTTP API echo (k3 run):** `GET /api/v1/recommendations/ranked?family=bridge&ranking_version=ml2-5a-qual-k3-20260331&corpus_snapshot_version=source-snapshot-20260329-170012` returns `rank-c34fa85261` and matches the qualitative picture: mixed non-null `signals.bridge` with structural `reason_short`, many fallback rows, heuristic-only `final_score`. **Separate issue:** some `title` fields still show mojibake (`â` where punctuation or apostrophes should be); fix in ingest/cleanup for trust and embedding inputs, not part of ML2-5a correctness.
+
 7. **ML2-5b Bridge affects ordering (when trusted)**
    - Small positive bridge weight for bridge family; recheck evaluation and lists.
 8. **ML2-7 Evaluation compatibility only**
