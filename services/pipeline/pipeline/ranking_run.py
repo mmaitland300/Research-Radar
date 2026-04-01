@@ -57,7 +57,9 @@ def warn_embedding_gaps_if_any(
             "ranking-run: warning: "
             f"{n_missing} included work(s) have no embedding for {embedding_version!r} "
             "in this snapshot; cluster-backed bridge scores cannot be computed for those rows. "
-            "Run `embed-works` without --limit for full coverage, then re-run `cluster-works`.",
+            "Run `embed-works` without --limit for full coverage, then re-run `cluster-works`. "
+            "Audit with `embedding-coverage --embedding-version ... --corpus-snapshot-version ... "
+            "--fail-on-gaps`.",
             file=sys.stderr,
         )
 

@@ -1,7 +1,11 @@
 from unittest.mock import MagicMock
 
 from pipeline.clustering import ClusterAssignment
-from pipeline.clustering_persistence import list_clustering_inputs, replace_cluster_assignments
+from pipeline.clustering_persistence import (
+    count_included_missing_cluster_assignment,
+    list_clustering_inputs,
+    replace_cluster_assignments,
+)
 
 
 def test_list_clustering_inputs_uses_explicit_snapshot_and_embedding_version() -> None:
@@ -18,6 +22,20 @@ def test_list_clustering_inputs_uses_explicit_snapshot_and_embedding_version() -
     assert [row.work_id for row in summary.rows] == [1, 2]
     params = conn.execute.call_args[0][1]
     assert params == ("v1-embed", "source-snapshot-xyz")
+
+
+def test_count_included_missing_cluster_assignment_uses_left_join() -> None:
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = (4,)
+    n = count_included_missing_cluster_assignment(
+        conn,
+        corpus_snapshot_version="snap-x",
+        cluster_version="kmeans-v0",
+    )
+    assert n == 4
+    sql = conn.execute.call_args[0][0]
+    assert "LEFT JOIN clusters c" in sql
+    assert conn.execute.call_args[0][1] == ("kmeans-v0", "snap-x")
 
 
 def test_replace_cluster_assignments_delete_then_insert_idempotency_rule() -> None:

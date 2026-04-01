@@ -7,6 +7,7 @@ from pathlib import Path
 import psycopg
 
 from pipeline.bootstrap_loader import database_url_from_env, load_resolved_policy_from_database, run_bootstrap_ingest
+from pipeline.clustering_persistence import count_included_missing_cluster_assignment
 from pipeline.clustering_run import execute_clustering_run
 from pipeline.embedding_persistence import (
     count_included_works_for_snapshot,
@@ -239,7 +240,12 @@ def main() -> None:
     cov_parser.add_argument(
         "--fail-on-gaps",
         action="store_true",
-        help="Exit with code 1 if any included work is missing an embedding",
+        help="Exit with code 1 if any included work is missing an embedding, or (with --cluster-version) any included work lacks a cluster row",
+    )
+    cov_parser.add_argument(
+        "--cluster-version",
+        default=None,
+        help="Optional cluster artifact label: report included works missing a clusters row (after cluster-works)",
     )
     cov_parser.add_argument(
         "--database-url",
@@ -397,6 +403,43 @@ def main() -> None:
                 corpus_snapshot_version=snap,
                 embedding_version=args.embedding_version,
             )
+            missing_cluster: int | None = None
+            if args.cluster_version:
+                cr = conn.execute(
+                    """
+                    SELECT embedding_version, status
+                    FROM clustering_runs
+                    WHERE cluster_version = %s
+                      AND corpus_snapshot_version = %s
+                    """,
+                    (args.cluster_version, snap),
+                ).fetchone()
+                if cr is None:
+                    print(
+                        "embedding-coverage: error: no clustering_runs row for "
+                        f"cluster_version={args.cluster_version!r} and "
+                        f"corpus_snapshot_version={snap!r}.",
+                        file=sys.stderr,
+                    )
+                    sys.exit(2)
+                run_emb, run_status = str(cr[0]), str(cr[1])
+                if run_emb != args.embedding_version:
+                    print(
+                        "embedding-coverage: warning: clustering_runs.embedding_version="
+                        f"{run_emb!r} differs from --embedding-version={args.embedding_version!r}.",
+                        file=sys.stderr,
+                    )
+                if run_status != "succeeded":
+                    print(
+                        "embedding-coverage: warning: clustering_runs.status="
+                        f"{run_status!r} (expected succeeded).",
+                        file=sys.stderr,
+                    )
+                missing_cluster = count_included_missing_cluster_assignment(
+                    conn,
+                    corpus_snapshot_version=snap,
+                    cluster_version=args.cluster_version,
+                )
         embedded = total - missing
         lines = [
             f"corpus_snapshot_version={snap}",
@@ -405,10 +448,21 @@ def main() -> None:
             f"with_embedding={embedded}",
             f"missing_embedding={missing}",
         ]
+        if args.cluster_version and missing_cluster is not None:
+            lines.extend(
+                [
+                    f"cluster_version={args.cluster_version}",
+                    f"with_cluster_assignment={total - missing_cluster}",
+                    f"missing_cluster_assignment={missing_cluster}",
+                ]
+            )
         print("\n".join(lines), file=sys.stderr)
         print(snap)
         print(missing)
-        if args.fail_on_gaps and missing:
+        gap = missing > 0 or (
+            args.cluster_version is not None and missing_cluster is not None and missing_cluster > 0
+        )
+        if args.fail_on_gaps and gap:
             sys.exit(1)
         return
 

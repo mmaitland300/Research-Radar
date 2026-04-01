@@ -147,6 +147,29 @@ def update_clustering_run_final(
     )
 
 
+def count_included_missing_cluster_assignment(
+    conn: psycopg.Connection,
+    *,
+    corpus_snapshot_version: str,
+    cluster_version: str,
+) -> int:
+    """Included works in the snapshot with no `clusters` row for this cluster_version."""
+    row = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM works w
+        LEFT JOIN clusters c
+          ON c.work_id = w.id
+         AND c.cluster_version = %s
+        WHERE w.inclusion_status = 'included'
+          AND w.corpus_snapshot_version = %s
+          AND c.work_id IS NULL
+        """,
+        (cluster_version, corpus_snapshot_version),
+    ).fetchone()
+    return int(row[0] or 0) if row is not None else 0
+
+
 def load_cluster_assignments(
     conn: psycopg.Connection, *, cluster_version: str
 ) -> dict[int, str]:

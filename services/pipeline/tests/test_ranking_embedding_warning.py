@@ -19,6 +19,7 @@ def test_warn_embedding_gaps_prints_to_stderr_when_missing(
     assert "5" in err
     assert "v1-emb" in err
     assert "embed-works" in err
+    assert "embedding-coverage" in err
 
 
 @patch("pipeline.ranking_run.count_missing_embedding_candidates", return_value=0)
