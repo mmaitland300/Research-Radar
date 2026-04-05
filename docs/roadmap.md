@@ -290,7 +290,7 @@ These milestones make the project legible as a machine-learning portfolio piece 
 
 #### ML2 prototype execution scaffold (lean docs)
 
-Use `docs/roadmap.md` for planning/tickets/gate criteria. Create `docs/ml2-bridge-review.md` only when there are real cluster/bridge outputs to review (not for planning prose).
+Use `docs/roadmap.md` for planning/tickets/gate criteria. **Executable operator checklist (repair -> re-embed -> cluster -> inspect):** `docs/ml-r2-execution-plan.md`. Create `docs/ml2-bridge-review.md` only when there are real cluster/bridge outputs to review (not for planning prose).
 
 **Hard constraints**
 
