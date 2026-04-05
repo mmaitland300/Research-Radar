@@ -15,7 +15,11 @@ from pipeline.embedding_persistence import (
     latest_corpus_snapshot_version_with_works,
 )
 from pipeline.embedding_run import execute_embedding_run
-from pipeline.ranking_run import execute_ranking_run
+from pipeline.ranking_run import (
+    MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY,
+    execute_ranking_run,
+    validate_bridge_weight_for_bridge_family,
+)
 from pipeline.work_text_repair import run_work_text_repair_cli
 from pipeline.jobs import (
     create_bootstrap_bundle,
@@ -158,6 +162,16 @@ def main() -> None:
         type=int,
         default=30,
         help="Undercited family: max citation_count inclusive (default 30)",
+    )
+    ranking_parser.add_argument(
+        "--bridge-weight-for-family-bridge",
+        type=lambda s: validate_bridge_weight_for_bridge_family(float(s)),
+        default=0.0,
+        metavar="W",
+        help=(
+            "Bridge family only: weight on cluster-boundary bridge_score in final_score (ML2-5b). "
+            f"Default 0.0 (ML2-5a). Range [0.0, {MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY}]."
+        ),
     )
     ranking_parser.add_argument(
         "--database-url",
@@ -342,6 +356,7 @@ def main() -> None:
             corpus_snapshot_version=args.corpus_snapshot_version,
             embedding_version=args.embedding_version,
             cluster_version=args.cluster_version,
+            bridge_weight_for_bridge_family=args.bridge_weight_for_family_bridge,
             note=args.note,
             low_cite_min_year=args.low_cite_min_year,
             low_cite_max_citations=args.low_cite_max_citations,

@@ -1,12 +1,18 @@
 from pipeline.config import RankingCounts, RankingRun
 from pipeline.ranking import RankingCandidate
+import pytest
+
 from pipeline.ranking_run import (
     BRIDGE_REASON_LEGACY,
     BRIDGE_REASON_NO_CLUSTER,
     BRIDGE_REASON_STRUCTURAL,
+    BRIDGE_REASON_STRUCTURAL_WEIGHTED,
     RECOMMENDATION_FAMILIES,
+    _build_ranking_config,
     _ranking_counts_from_rows,
     build_step3_heuristic_score_rows,
+    resolved_family_weights,
+    validate_bridge_weight_for_bridge_family,
 )
 
 
@@ -103,6 +109,74 @@ def test_citation_popularity_penalty_normalized_within_pool_only() -> None:
     u1 = next(r for r in rows if r.work_id == 1 and r.recommendation_family == "undercited")
     u2 = next(r for r in rows if r.work_id == 2 and r.recommendation_family == "undercited")
     assert u1.final_score > u2.final_score
+
+
+def test_bridge_weight_override_changes_bridge_final_score_not_emerging() -> None:
+    candidates = [_pool_candidate(work_id=10, topic_ids=(1, 2, 3), citation_count=8)]
+    bridge_map = {10: 0.8}
+    rows0 = build_step3_heuristic_score_rows(
+        candidates,
+        cluster_version="cv",
+        bridge_boundary_by_work=bridge_map,
+        bridge_weight_for_bridge_family=0.0,
+    )
+    rows_w = build_step3_heuristic_score_rows(
+        candidates,
+        cluster_version="cv",
+        bridge_boundary_by_work=bridge_map,
+        bridge_weight_for_bridge_family=0.15,
+    )
+    e0 = next(r for r in rows0 if r.recommendation_family == "emerging")
+    e1 = next(r for r in rows_w if r.recommendation_family == "emerging")
+    assert e0.final_score == e1.final_score
+    b0 = next(r for r in rows0 if r.recommendation_family == "bridge")
+    b1 = next(r for r in rows_w if r.recommendation_family == "bridge")
+    assert b1.final_score != b0.final_score
+    assert b0.reason_short == BRIDGE_REASON_STRUCTURAL
+    assert b1.reason_short == BRIDGE_REASON_STRUCTURAL_WEIGHTED
+
+
+def test_validate_bridge_weight_for_bridge_family_range() -> None:
+    assert validate_bridge_weight_for_bridge_family(0.0) == 0.0
+    assert validate_bridge_weight_for_bridge_family(0.25) == 0.25
+    with pytest.raises(ValueError):
+        validate_bridge_weight_for_bridge_family(-0.01)
+    with pytest.raises(ValueError):
+        validate_bridge_weight_for_bridge_family(0.26)
+
+
+def test_build_ranking_config_bridge_reason_mode_and_persisted_weight() -> None:
+    eff0 = resolved_family_weights(0.0)
+    effw = resolved_family_weights(0.12)
+    c0 = _build_ranking_config(
+        corpus_snapshot_version="snap",
+        placeholder_policy="p",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+        cluster_version="k1",
+        embedding_version="ev",
+        bridge_weight_for_bridge_family=0.0,
+        family_weights_resolved=eff0,
+    )
+    cw = _build_ranking_config(
+        corpus_snapshot_version="snap",
+        placeholder_policy="p",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+        cluster_version="k1",
+        embedding_version="ev",
+        bridge_weight_for_bridge_family=0.12,
+        family_weights_resolved=effw,
+    )
+    ca0 = c0["clustering_artifact"]
+    caw = cw["clustering_artifact"]
+    assert isinstance(ca0, dict) and isinstance(caw, dict)
+    assert ca0["bridge_weight_in_final_score"] == 0.0
+    assert ca0["bridge_reason_mode"] == "structural_zero_weight"
+    assert caw["bridge_weight_in_final_score"] == 0.12
+    assert caw["bridge_reason_mode"] == "structural_weighted"
+    assert c0["family_weights"]["bridge"]["bridge"] == 0.0
+    assert cw["family_weights"]["bridge"]["bridge"] == 0.12
 
 
 def test_bridge_family_persists_score_when_cluster_context_but_final_score_unchanged() -> None:

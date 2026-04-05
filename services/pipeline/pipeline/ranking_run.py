@@ -39,6 +39,9 @@ from pipeline.ranking_persistence import (
 
 RECOMMENDATION_FAMILIES: tuple[str, ...] = ("emerging", "bridge", "undercited")
 
+# Upper bound for --bridge-weight-for-family-bridge (ML2-5b experiments); keeps fat-finger runs bounded.
+MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY = 0.25
+
 
 def warn_embedding_gaps_if_any(
     conn: psycopg.Connection,
@@ -69,10 +72,15 @@ EMERGING_REASON = (
 BRIDGE_REASON_LEGACY = (
     "Multi-topic paper in active topics; no cluster_version on this run so bridge_score was not computed."
 )
-BRIDGE_REASON_STRUCTURAL = (
+BRIDGE_REASON_STRUCTURAL_ZERO_WEIGHT = (
     "Near a boundary between k-means cluster centroids in embedding space (squared L2 vs other centroids); "
-    "bridge family weight is still zero so final_score does not use this signal. Semantic score not used."
+    "bridge family weight is zero so final_score does not use this signal. Semantic score not used."
 )
+BRIDGE_REASON_STRUCTURAL_WEIGHTED = (
+    "Near a boundary between k-means cluster centroids in embedding space (squared L2 vs other centroids); "
+    "bridge signal contributes to final_score for the bridge recommendation family in this run. Semantic score not used."
+)
+BRIDGE_REASON_STRUCTURAL = BRIDGE_REASON_STRUCTURAL_ZERO_WEIGHT
 BRIDGE_REASON_NO_CLUSTER = "No cluster-backed bridge signal available for this run."
 UNDERCITED_REASON = (
     "Low-cite candidate pool (see docs/candidate-pool-low-cite.md v0): core corpus, recency floor, "
@@ -105,6 +113,37 @@ FAMILY_WEIGHTS: dict[str, ScoreWeights] = {
 }
 
 
+def validate_bridge_weight_for_bridge_family(value: float) -> float:
+    w = float(value)
+    if w < 0.0 or w > MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY:
+        raise ValueError(
+            "bridge_weight_for_bridge_family must be in "
+            f"[0.0, {MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY}], got {w!r}"
+        )
+    return w
+
+
+def resolved_family_weights(bridge_weight_for_bridge_family: float) -> dict[str, ScoreWeights]:
+    """
+    Per-run weight map: emerging and undercited match checked-in defaults; bridge family uses the
+    resolved bridge weight (do not mutate FAMILY_WEIGHTS).
+    """
+    bw = float(bridge_weight_for_bridge_family)
+    base_b = FAMILY_WEIGHTS["bridge"]
+    bridge_row = ScoreWeights(
+        semantic=base_b.semantic,
+        citation_velocity=base_b.citation_velocity,
+        topic_growth=base_b.topic_growth,
+        bridge=bw,
+        diversity_penalty=base_b.diversity_penalty,
+    )
+    return {
+        "emerging": FAMILY_WEIGHTS["emerging"],
+        "bridge": bridge_row,
+        "undercited": FAMILY_WEIGHTS["undercited"],
+    }
+
+
 def _build_ranking_config(
     *,
     corpus_snapshot_version: str,
@@ -113,15 +152,21 @@ def _build_ranking_config(
     low_cite_max_citations: int,
     cluster_version: str | None,
     embedding_version: str,
+    bridge_weight_for_bridge_family: float,
+    family_weights_resolved: dict[str, ScoreWeights],
 ) -> dict[str, Any]:
     bridge_policy = (
         "null_until_clusters_or_neighbor_features"
         if cluster_version is None
-        else "cluster_boundary_ratio_v0_persisted_bridge_weight_zero"
+        else "cluster_boundary_ratio_v0"
     )
+    bw = float(bridge_weight_for_bridge_family)
+    bridge_reason_mode: str | None = None
+    if cluster_version is not None:
+        bridge_reason_mode = "structural_zero_weight" if bw <= 0.0 else "structural_weighted"
     return {
         "default_weights": asdict(ScoreWeights()),
-        "family_weights": {family: asdict(weights) for family, weights in FAMILY_WEIGHTS.items()},
+        "family_weights": {family: asdict(weights) for family, weights in family_weights_resolved.items()},
         "families_written": list(RECOMMENDATION_FAMILIES),
         "placeholder_policy": placeholder_policy,
         "clustering_artifact": (
@@ -132,7 +177,8 @@ def _build_ranking_config(
                 "embedding_version": embedding_version,
                 "corpus_snapshot_version": corpus_snapshot_version,
                 "bridge_score_mode": "cluster_boundary_ratio_v0",
-                "bridge_weight_in_final_score": False,
+                "bridge_weight_in_final_score": bw,
+                "bridge_reason_mode": bridge_reason_mode,
             }
         ),
         "selection_scope": {
@@ -250,6 +296,7 @@ def _make_score_row(
     topic_growth: float,
     diversity_penalty: float,
     reason_short: str,
+    weights: ScoreWeights,
     bridge_score: float | None = None,
 ) -> PaperScoreRow:
     final = final_score_partial(
@@ -258,7 +305,7 @@ def _make_score_row(
         topic_growth=topic_growth,
         bridge=bridge_score,
         diversity_penalty=diversity_penalty,
-        weights=FAMILY_WEIGHTS[family],
+        weights=weights,
     )
     return PaperScoreRow(
         work_id=work_id,
@@ -278,6 +325,7 @@ def _bridge_fields_for_work(
     work_id: int,
     cluster_version: str | None,
     bridge_boundary_by_work: dict[int, float | None] | None,
+    structural_bridge_weight: float,
 ) -> tuple[float | None, str]:
     if cluster_version is None:
         return None, BRIDGE_REASON_LEGACY
@@ -288,7 +336,9 @@ def _bridge_fields_for_work(
     score = bridge_boundary_by_work[work_id]
     if score is None:
         return None, BRIDGE_REASON_NO_CLUSTER
-    return score, BRIDGE_REASON_STRUCTURAL
+    if structural_bridge_weight <= 0.0:
+        return score, BRIDGE_REASON_STRUCTURAL_ZERO_WEIGHT
+    return score, BRIDGE_REASON_STRUCTURAL_WEIGHTED
 
 
 def build_step3_heuristic_score_rows(
@@ -298,15 +348,19 @@ def build_step3_heuristic_score_rows(
     low_cite_max_citations: int = DEFAULT_LOW_CITE_MAX_CITATIONS,
     cluster_version: str | None = None,
     bridge_boundary_by_work: dict[int, float | None] | None = None,
+    bridge_weight_for_bridge_family: float = 0.0,
 ) -> list[PaperScoreRow]:
     """
     Build heuristic rows using available metadata only.
     semantic_score stays null. bridge_score for the bridge family may be set when cluster_version
-    and clustering assignments/embeddings support the cluster-boundary prototype (ML2-5a); bridge
-    family weight remains zero so final_score does not use bridge_score yet.
+    and clustering assignments/embeddings support the cluster-boundary prototype (ML2-5a).
+    bridge_weight_for_bridge_family defaults to 0 (ML2-5a: bridge signal persisted but not blended
+    into final_score); set positive for isolated ML2-5b experiments via CLI override only.
     Emerging and bridge: one row per included work. Undercited: only works in the frozen
     low-cite pool (docs/candidate-pool-low-cite.md), so signals stay comparable to that definition.
     """
+    bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
+    family_w = resolved_family_weights(bw)
     citation_velocity_by_work = _citation_velocity_scores(candidates)
     topic_growth_by_work = _topic_growth_scores(candidates)
     topic_breadth_penalty_by_work = _topic_breadth_penalties(candidates)
@@ -321,6 +375,7 @@ def build_step3_heuristic_score_rows(
             work_id=candidate.work_id,
             cluster_version=cluster_version,
             bridge_boundary_by_work=bridge_boundary_by_work,
+            structural_bridge_weight=bw,
         )
 
         rows.append(
@@ -331,6 +386,7 @@ def build_step3_heuristic_score_rows(
                 topic_growth=topic_growth,
                 diversity_penalty=0.0,
                 reason_short=EMERGING_REASON,
+                weights=family_w["emerging"],
             )
         )
         rows.append(
@@ -342,6 +398,7 @@ def build_step3_heuristic_score_rows(
                 diversity_penalty=topic_breadth_penalty_by_work[candidate.work_id],
                 reason_short=bridge_reason,
                 bridge_score=bridge_score,
+                weights=family_w["bridge"],
             )
         )
         if in_low_cite_candidate_pool(
@@ -355,6 +412,7 @@ def build_step3_heuristic_score_rows(
                     topic_growth=topic_growth,
                     diversity_penalty=citation_popularity_penalty_by_work[candidate.work_id],
                     reason_short=UNDERCITED_REASON,
+                    weights=family_w["undercited"],
                 )
             )
     return rows
@@ -386,6 +444,7 @@ def execute_ranking_run(
     corpus_snapshot_version: str | None = None,
     embedding_version: str = "none-v0",
     cluster_version: str | None = None,
+    bridge_weight_for_bridge_family: float = 0.0,
     note: str | None = None,
     placeholder_policy: str = "semantic_and_bridge_null_until_embeddings_and_clusters",
     low_cite_min_year: int = DEFAULT_LOW_CITE_MIN_YEAR,
@@ -405,6 +464,8 @@ def execute_ranking_run(
                 "Pass --corpus-snapshot-version or ingest data first."
             )
 
+        bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
+        family_resolved = resolved_family_weights(bw)
         config = _build_ranking_config(
             corpus_snapshot_version=snapshot,
             placeholder_policy=placeholder_policy,
@@ -412,6 +473,8 @@ def execute_ranking_run(
             low_cite_max_citations=low_cite_max_citations,
             cluster_version=cluster_version.strip() if cluster_version and cluster_version.strip() else None,
             embedding_version=embedding_version,
+            bridge_weight_for_bridge_family=bw,
+            family_weights_resolved=family_resolved,
         )
         cluster_v = config.get("clustering_artifact")
         cluster_key = (
@@ -460,6 +523,7 @@ def execute_ranking_run(
                 low_cite_max_citations=low_cite_max_citations,
                 cluster_version=cluster_key,
                 bridge_boundary_by_work=bridge_boundary_by_work,
+                bridge_weight_for_bridge_family=bw,
             )
             upsert_paper_scores(conn, run.ranking_run_id, score_rows)
             counts = _ranking_counts_from_rows(len(candidates), score_rows)
