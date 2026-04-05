@@ -191,12 +191,15 @@ python -m pipeline.cli ranking-run `
   --ranking-version RANK_VER `
   --corpus-snapshot-version CORPUS_SNAPSHOT `
   --embedding-version EMBED_VER `
-  --cluster-version CLUSTER_VER
+  --cluster-version CLUSTER_VER `
+  --bridge-weight-for-family-bridge 0
 ```
+
+For an **ML2-5b** experiment (bridge signal in `final_score` for the bridge family only), set **`--bridge-weight-for-family-bridge`** to a small positive **W** in **[0.0, 0.25]** (same snapshot/cluster/embed as your ML2-5a control for a fair diff). Omit the flag or use **0** for ML2-5a-style runs. Example (pin IDs to your environment): `python -m pipeline.cli ranking-run --ranking-version ml2-5b-exp-r2-k3-w006-YYYYMMDD --embedding-version v1-title-abstract-1536-cleantext-r2 --cluster-version kmeans-l2-v0-cleantext-r2-k3 --corpus-snapshot-version source-snapshot-20260329-170012 --bridge-weight-for-family-bridge 0.06`
 
 **Capture stdout:** first line is `ranking_run_id` (pin this in API queries and evaluations).
 
-**Guardrails:** Do not raise bridge weight in settings until roadmap ML2-5b criteria are met; do not set `semantic_score` via this path.
+**Guardrails:** Do not ship production weighting until roadmap ML2-5b criteria are met; do not set `semantic_score` via this path.
 
 ---
 
