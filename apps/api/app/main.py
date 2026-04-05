@@ -212,6 +212,7 @@ def get_recommendations_undercited(
 @app.get(
     "/api/v1/recommendations/ranked",
     response_model=RankedRecommendationsResponse,
+    response_model_exclude_none=False,
 )
 def get_recommendations_ranked(
     family: Literal["emerging", "bridge", "undercited"] = Query(...),

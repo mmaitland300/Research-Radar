@@ -61,6 +61,8 @@ def test_get_recommendations_ranked_smoke(monkeypatch) -> None:
     item = payload["items"][0]
     assert item["paper_id"] == "W999"
     assert item["signals"]["semantic"] is None
+    assert "bridge" in item["signals"]
+    assert item["signals"]["bridge"] is None
     assert item["signals"]["citation_velocity"] == 0.7
     assert item["final_score"] == 0.88
 

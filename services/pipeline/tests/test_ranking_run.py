@@ -7,6 +7,7 @@ from pipeline.ranking_run import (
     BRIDGE_REASON_NO_CLUSTER,
     BRIDGE_REASON_STRUCTURAL,
     BRIDGE_REASON_STRUCTURAL_WEIGHTED,
+    BRIDGE_REASON_STRUCTURAL_ZERO_WEIGHT,
     RECOMMENDATION_FAMILIES,
     _build_ranking_config,
     _ranking_counts_from_rows,
@@ -217,6 +218,44 @@ def test_bridge_no_cluster_reason_when_score_missing_in_map() -> None:
     b = next(r for r in rows if r.recommendation_family == "bridge")
     assert b.bridge_score is None
     assert b.reason_short == BRIDGE_REASON_NO_CLUSTER
+
+
+def test_bridge_map_value_none_uses_no_cluster_not_weighted_copy() -> None:
+    """Explicit None in the boundary map must not pair with structural weighted reason_short."""
+    c = _pool_candidate(work_id=7, topic_ids=(1, 2))
+    rows = build_step3_heuristic_score_rows(
+        [c],
+        cluster_version="cv",
+        bridge_boundary_by_work={7: None},
+        bridge_weight_for_bridge_family=0.06,
+    )
+    b = next(r for r in rows if r.recommendation_family == "bridge")
+    assert b.bridge_score is None
+    assert b.reason_short == BRIDGE_REASON_NO_CLUSTER
+    assert b.reason_short != BRIDGE_REASON_STRUCTURAL_WEIGHTED
+
+
+def test_structural_bridge_reason_always_has_bridge_score() -> None:
+    """Invariant: centroid-boundary copy is only emitted when a numeric bridge signal exists."""
+    candidates = [
+        _pool_candidate(work_id=1, topic_ids=(1, 2), citation_count=3),
+        _pool_candidate(work_id=2, topic_ids=(1,), citation_count=1),
+    ]
+    for bw in (0.0, 0.06, 0.12):
+        rows = build_step3_heuristic_score_rows(
+            candidates,
+            cluster_version="cv",
+            bridge_boundary_by_work={1: 0.7, 2: 0.2},
+            bridge_weight_for_bridge_family=bw,
+        )
+        for r in rows:
+            if r.recommendation_family != "bridge":
+                continue
+            if r.reason_short in (
+                BRIDGE_REASON_STRUCTURAL_ZERO_WEIGHT,
+                BRIDGE_REASON_STRUCTURAL_WEIGHTED,
+            ):
+                assert r.bridge_score is not None, (bw, r.work_id, r.reason_short)
 
 
 def test_ranking_counts_from_rows() -> None:
