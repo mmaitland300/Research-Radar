@@ -21,6 +21,20 @@ Implements the handoff described in `docs/roadmap.md` (clean text -> new `embedd
 
 ---
 
+**Existing databases (important)**
+
+- `infra/db/schema.sql` only applies automatically when Postgres initializes a fresh volume.
+- If your DB was created before the bridge-v2 columns existed, run this DDL manually before using the new path:
+
+```sql
+ALTER TABLE paper_scores ADD COLUMN IF NOT EXISTS bridge_eligible BOOLEAN NULL;
+ALTER TABLE paper_scores ADD COLUMN IF NOT EXISTS bridge_signal_json JSONB NULL;
+```
+
+- Legacy rows stay `NULL` in these columns until you materialize new ranking runs with updated code.
+
+---
+
 ## 2. Preconditions (must all pass before Phase A)
 
 1. **Working directory**  
