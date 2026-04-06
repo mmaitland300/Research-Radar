@@ -6,11 +6,11 @@ from typing import Any, Mapping
 
 
 _MOJIBAKE_MARKERS = (
-    "Ã",
-    "Â",
-    "â",
-    "â€",
-    "ðŸ",
+    "\u00c3",
+    "\u00c2",
+    "\u00e2",
+    "\u00e2\u20ac",
+    "\u00f0\u0178",
     "\ufffd",
 )
 
@@ -44,21 +44,28 @@ def _repair_mojibake(text: str) -> str:
 
 def _repair_truncated_utf8_mojibake(text: str) -> str:
     """
-    Fix leftover sequences when UTF-8 punctuation was mis-decoded (often only `â` + neighbors survive).
+    Fix leftover sequences when UTF-8 punctuation was mis-decoded.
+    Often only `\u00e2` plus neighboring bytes survive.
     Applied after _repair_mojibake; safe to run on already-clean strings (no-ops if patterns absent).
     """
-    if "â" not in text:
+    if "\u00e2" not in text:
         return text
+    # UTF-8 for U+2013/U+2014 misread as Latin-1 byte triplets (E2 80 93 / 94)
+    text = text.replace("\u00e2\u0080\u0093", "\u2013")
+    text = text.replace("\u00e2\u0080\u0094", "\u2014")
+    # Same UTF-8 bytes misread through cp1252 (common in APIs and exports)
+    text = text.replace("\u00e2\u20ac\u201c", "\u2013")
+    text = text.replace("\u00e2\u20ac\u201d", "\u2014")
     # UTF-8 for apostrophe / quotes misread as Windows-1252-style triplets
-    text = text.replace("â€™", "'")
-    text = text.replace("â€œ", '"')
-    text = text.replace("â€", '"')
-    # Spaced en dash (UTF-8 E2 80 93 split across decoders) before other `â`+letter rules
-    text = text.replace(" â ", " \u2013 ")
-    text = re.sub(r"([a-z])â([A-Z])", r"\1-\2", text)
-    text = re.sub(r"([a-z])âs\b", r"\1's", text)
-    text = re.sub(r" â([A-Z])", lambda m: ' "' + m.group(1), text)
-    text = re.sub(r"([a-z])â:(\s)", lambda m: m.group(1) + '":' + m.group(2), text)
+    text = text.replace("\u00e2\u20ac\u2122", "'")
+    text = text.replace("\u00e2\u20ac\u0153", '"')
+    text = text.replace("\u00e2\u20ac\u009d", '"')
+    # Spaced en dash (UTF-8 E2 80 93 split across decoders) before other `\u00e2`+letter rules
+    text = text.replace(" \u00e2 ", " \u2013 ")
+    text = re.sub(r"([a-z])\u00e2([A-Z])", r"\1-\2", text)
+    text = re.sub(r"([a-z])\u00e2s\b", r"\1's", text)
+    text = re.sub(r" \u00e2([A-Z])", lambda m: ' "' + m.group(1), text)
+    text = re.sub(r"([a-z])\u00e2:(\s)", lambda m: m.group(1) + '":' + m.group(2), text)
     return text
 
 
