@@ -7,8 +7,10 @@ ENV PYTHONUNBUFFERED=1
 
 COPY pyproject.toml ./
 COPY app ./app
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .
+    && pip install --no-cache-dir . \
+    && chmod +x /docker-entrypoint.sh
 
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
