@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -222,6 +222,31 @@ class RankedSignals(BaseModel):
     diversity_penalty: float | None = None
 
 
+RankedSignalRole = Literal["used", "measured", "experimental", "penalty", "not_computed"]
+
+
+class RankedSignalExplanation(BaseModel):
+    """Per-signal derived explanation aligned with the same weights as final_score for this run."""
+
+    key: str
+    label: str
+    role: RankedSignalRole
+    value: float | None = None
+    contribution: float | None = None
+    summary: str
+
+
+class RankedListExplanation(BaseModel):
+    """Family-level copy for how the list is ordered (weights from ranking run config when present)."""
+
+    family: str
+    headline: str
+    bullets: list[str]
+    used_in_ordering: list[str]
+    measured_only: list[str]
+    experimental: list[str]
+
+
 class RankedRecommendationItem(BaseModel):
     paper_id: str
     title: str
@@ -232,6 +257,7 @@ class RankedRecommendationItem(BaseModel):
     signals: RankedSignals
     final_score: float
     reason_short: str
+    signal_explanations: list[RankedSignalExplanation]
 
 
 class RankedRecommendationsResponse(BaseModel):
@@ -242,6 +268,7 @@ class RankedRecommendationsResponse(BaseModel):
     corpus_snapshot_version: str
     family: str
     total: int
+    list_explanation: RankedListExplanation
     items: list[RankedRecommendationItem]
 
 
