@@ -44,6 +44,8 @@ Implements the handoff described in `docs/roadmap.md` (clean text -> new `embedd
 6. **Recorded values**  
    Open a log (ticket, PR, or scratch file) and copy **stdout/stderr** lines after each phase for `rows_changed`, `rows_written`, `missing_embedding`, `missing_cluster_assignment`, and printed IDs.
 
+   **One place for production repair / re-embed:** Copy `docs/ops-repair-record.template.md` to **`ops-repair-last-run.md`** in the repo root and fill the table after each run. Keep that file **out of git** in your clone (e.g. list `ops-repair-last-run.md` in **`.git/info/exclude`** alongside any recurring local logs such as `rr-3001.log`). Use a shared ticket instead if your team standardizes there.
+
    **Minimum fields to jot down for a repair / re-embed cycle:**
 
    - `corpus_snapshot_version` (the `CORPUS_SNAPSHOT` you used).
