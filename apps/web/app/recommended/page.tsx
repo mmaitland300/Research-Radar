@@ -17,6 +17,24 @@ type RankedSignals = {
   diversity_penalty: number | null;
 };
 
+type RankedSignalExplanation = {
+  key: string;
+  label: string;
+  role: "used" | "measured" | "experimental" | "penalty" | "not_computed";
+  value: number | null;
+  contribution: number | null;
+  summary: string;
+};
+
+type RankedListExplanation = {
+  family: string;
+  headline: string;
+  bullets: string[];
+  used_in_ordering: string[];
+  measured_only: string[];
+  experimental: string[];
+};
+
 type RankedItem = {
   paper_id: string;
   title: string;
@@ -27,6 +45,7 @@ type RankedItem = {
   signals: RankedSignals;
   final_score: number;
   reason_short: string;
+  signal_explanations: RankedSignalExplanation[];
 };
 
 type RankedResponse = {
@@ -35,6 +54,7 @@ type RankedResponse = {
   corpus_snapshot_version: string;
   family: string;
   total: number;
+  list_explanation: RankedListExplanation;
   items: RankedItem[];
 };
 
@@ -43,7 +63,6 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:8000";
 
-/** Optional: pin a pipeline run label, e.g. v0-heuristic-no-embeddings-step3 */
 const RANKING_VERSION =
   process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
 
@@ -68,6 +87,77 @@ function formatSignals(signals: RankedSignals): string {
   }
   if (entries.length === 0) return "n/a";
   return entries.map(([k, v]) => `${k}=${Number(v).toFixed(4)}`).join(", ");
+}
+
+function barWidthPercent(value: number | null, role: RankedSignalExplanation["role"]): number {
+  if (value == null || role === "not_computed") return 0;
+  return Math.min(100, Math.round(Math.max(0, value) * 100));
+}
+
+function barFillClass(role: RankedSignalExplanation["role"]): string {
+  if (role === "used") return "ranking-bar-fill ranking-bar-used";
+  if (role === "measured" || role === "experimental") {
+    return "ranking-bar-fill ranking-bar-measured";
+  }
+  if (role === "penalty") return "ranking-bar-fill ranking-bar-penalty";
+  return "ranking-bar-fill ranking-bar-none";
+}
+
+function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanation; rankingVersion: string }) {
+  return (
+    <div className="ranking-how-panel">
+      <h3>{expl.headline}</h3>
+      <ul>
+        {expl.bullets.map((b) => (
+          <li key={b}>{b}</li>
+        ))}
+      </ul>
+      <p className="ranking-how-meta">
+        <strong>Used in ordering:</strong> {expl.used_in_ordering.join(", ") || "—"}
+        <br />
+        <strong>Measured only (transparency):</strong> {expl.measured_only.join(", ") || "—"}
+        {expl.experimental.length > 0 ? (
+          <>
+            <br />
+            <strong>Experimental:</strong> {expl.experimental.join(", ")}
+          </>
+        ) : null}
+        <br />
+        <span className="muted-inline">Pinned run label: {rankingVersion}</span>
+      </p>
+    </div>
+  );
+}
+
+function EmergingWhySurfaced({ explanations }: { explanations: RankedSignalExplanation[] }) {
+  return (
+    <details className="ranking-why-details">
+      <summary>Why this surfaced</summary>
+      {explanations.map((e) => (
+        <div key={e.key} className="ranking-signal-row">
+          <div className="ranking-signal-label">
+            <span>{e.label}</span>
+            <span className="ranking-signal-role">{e.role.replace("_", " ")}</span>
+          </div>
+          <div className="ranking-bar-track" aria-hidden>
+            <div
+              className={barFillClass(e.role)}
+              style={{ width: `${barWidthPercent(e.value, e.role)}%` }}
+            />
+          </div>
+          <p className="result-breakdown" style={{ marginTop: 4 }}>
+            {e.summary}
+            {e.contribution != null && e.role !== "not_computed" ? (
+              <>
+                {" "}
+                (contribution to score: {e.contribution.toFixed(4)})
+              </>
+            ) : null}
+          </p>
+        </div>
+      ))}
+    </details>
+  );
 }
 
 async function fetchRanked(family: Family): Promise<{
@@ -95,9 +185,18 @@ async function fetchRanked(family: Family): Promise<{
       };
     }
     if (!response.ok) {
+      let detail = "";
+      try {
+        const errBody = (await response.json()) as { detail?: unknown };
+        if (typeof errBody.detail === "string") {
+          detail = ` ${errBody.detail}`;
+        }
+      } catch {
+        /* ignore non-JSON error bodies */
+      }
       return {
         data: null,
-        error: `API responded with ${response.status}.`,
+        error: `API responded with ${response.status}.${detail}`,
         status: response.status
       };
     }
@@ -126,12 +225,10 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <p className="accent">Recommended</p>
         <h1>Ranked recommendations</h1>
         <p>
-          Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code>{" "}
-          per family). The <strong>undercited</strong> family only scores works in the frozen low-cite
-          candidate pool (<code>docs/candidate-pool-low-cite.md</code> v0): core corpus, recency floor,
-          citation ceiling, and non-empty title plus abstract — same gate as the heuristic undercited
-          API, scoped here to your corpus snapshot via the run. Semantic and bridge signals stay unset
-          in v0; citation and topic heuristics drive order and <code>reason_short</code>.
+          Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code> per
+          family). The API derives plain-language explanations from the same weights stored on the run.
+          The <strong>undercited</strong> family only scores works in the frozen low-cite candidate pool (
+          <code>docs/candidate-pool-low-cite.md</code> v0), scoped to your corpus snapshot.
         </p>
         <nav className="tabs" aria-label="Recommendation family">
           {FAMILIES.map((f) => (
@@ -154,8 +251,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         ) : null}
         {RANKING_VERSION ? (
           <p className="muted-inline">
-            Web is filtering runs with{" "}
-            <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>.
+            Web is filtering runs with <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>.
           </p>
         ) : (
           <p className="muted-inline">
@@ -171,9 +267,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           {status === 404 ? (
             <p className="muted-inline">
               Example:{" "}
-              <code>
-                NEXT_PUBLIC_RANKING_VERSION=v0-heuristic-no-embeddings-step3
-              </code>
+              <code>NEXT_PUBLIC_RANKING_VERSION=v0-heuristic-no-embeddings-step3</code>
             </p>
           ) : null}
         </section>
@@ -183,8 +277,12 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <section className="panel">
           <h2>{FAMILY_LABEL[family]} | live results</h2>
           <p className="muted-inline">
-            Family: <strong>{data.family}</strong> | final_score descending
+            Family: <strong>{data.family}</strong> | order by materialized{" "}
+            <code>final_score</code> descending
           </p>
+          {family === "emerging" ? (
+            <EmergingHowPanel expl={data.list_explanation} rankingVersion={data.ranking_version} />
+          ) : null}
           {data.items.length === 0 ? (
             <p>No rows for this family in the selected run.</p>
           ) : (
@@ -211,9 +309,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     </div>
                   ) : null}
                   <p className="result-reason">{item.reason_short}</p>
-                  <p className="result-breakdown">
-                    Signals: {formatSignals(item.signals)}
-                  </p>
+                  {family === "emerging" && item.signal_explanations?.length ? (
+                    <EmergingWhySurfaced explanations={item.signal_explanations} />
+                  ) : (
+                    <p className="result-breakdown">Signals: {formatSignals(item.signals)}</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -225,17 +325,16 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <article className="card">
           <h2>Roadmap: embeddings</h2>
           <p>
-            ML milestone 1 fills <code>semantic_score</code> and retrieval; bridge-style
-            scores follow once clusters are available.
+            ML milestone 1 fills <code>semantic_score</code> and retrieval; bridge-style scores follow
+            once clusters are available.
           </p>
         </article>
         <article className="card">
           <h2>Heuristic baseline</h2>
           <p>
-            The rule-only undercited list (<code>/api/v1/recommendations/undercited</code>) uses the
-            same pool definition but is not tied to a corpus snapshot. For snapshot-scoped A/B against
-            the ranked undercited family, use{" "}
-            <Link href="/evaluation?family=undercited">Evaluation</Link>.
+            The rule-only undercited list (<code>/api/v1/recommendations/undercited</code>) uses the same
+            pool definition but is not tied to a corpus snapshot. For snapshot-scoped A/B against the
+            ranked undercited family, use <Link href="/evaluation?family=undercited">Evaluation</Link>.
           </p>
         </article>
       </section>
