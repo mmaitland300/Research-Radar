@@ -44,6 +44,14 @@ Implements the handoff described in `docs/roadmap.md` (clean text -> new `embedd
 6. **Recorded values**  
    Open a log (ticket, PR, or scratch file) and copy **stdout/stderr** lines after each phase for `rows_changed`, `rows_written`, `missing_embedding`, `missing_cluster_assignment`, and printed IDs.
 
+   **Minimum fields to jot down for a repair / re-embed cycle:**
+
+   - `corpus_snapshot_version` (the `CORPUS_SNAPSHOT` you used).
+   - `repair-works-text`: whether `rows_changed` was **0** or **> 0** (paste the exact stderr summary line).
+   - `embedding_version` (`EMBED_VER`) after you mint it (required **new** label if repair changed any stored title/abstract).
+   - `cluster_version` (`CLUSTER_VER`) after `cluster-works` (and note k / geometry if relevant).
+   - `ranking_version` and ranking run id if you regenerated ranking and pinned it in product or docs.
+
 ---
 
 ## 3. Phase A - Text repair (dry run, then commit)
