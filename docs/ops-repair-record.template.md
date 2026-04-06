@@ -1,7 +1,7 @@
 # Ops: text repair / re-embed record (copy to a local file)
 
 Copy this file to **`ops-repair-last-run.md`** in the repo root and fill after each production cycle.  
-In your clone, add `ops-repair-last-run.md` to **`.git/info/exclude`** (already listed there in the maintainer setup) so the filled file never gets committed.
+In your clone, add `ops-repair-last-run.md` to **`.git/info/exclude`** so the filled file never gets committed.
 
 | Field | Value |
 |-------|--------|
