@@ -5,6 +5,11 @@ import psycopg
 from fastapi import FastAPI, HTTPException, Query
 
 from app.config import PRODUCT_RANKING_METADATA_NOTE, settings
+from app.ranked_explanations import (
+    build_list_ranking_explanation,
+    build_signal_explanations,
+    family_weights_from_config,
+)
 from app.contracts import (
     ClusterGroupItem,
     ClusterInspectionResponse,
@@ -24,8 +29,10 @@ from app.contracts import (
     PaperListItem,
     PaperListResponse,
     ProductSummary,
+    RankedListExplanation,
     RankedRecommendationItem,
     RankedRecommendationsResponse,
+    RankedSignalExplanation,
     RankedSignals,
     RankingFamily,
     ReadinessResponse,
@@ -247,14 +254,23 @@ def get_recommendations_ranked(
             detail="No succeeded ranking run found for the given filters.",
         )
 
-    ctx, rows = resolved
-    return RankedRecommendationsResponse(
-        ranking_run_id=ctx.ranking_run_id,
-        ranking_version=ctx.ranking_version,
-        corpus_snapshot_version=ctx.corpus_snapshot_version,
-        family=family,
-        total=len(rows),
-        items=[
+    ctx, rows, run_config = resolved
+    weights = family_weights_from_config(run_config, family)
+    list_payload = build_list_ranking_explanation(family=family, weights=weights)
+    list_explanation = RankedListExplanation(**list_payload)
+
+    items_out: list[RankedRecommendationItem] = []
+    for r in rows:
+        expl = build_signal_explanations(
+            family=family,
+            semantic=r.semantic_score,
+            citation_velocity=r.citation_velocity_score,
+            topic_growth=r.topic_growth_score,
+            bridge=r.bridge_score,
+            diversity_penalty=r.diversity_penalty,
+            weights=weights,
+        )
+        items_out.append(
             RankedRecommendationItem(
                 paper_id=r.paper_id,
                 title=r.title,
@@ -271,9 +287,18 @@ def get_recommendations_ranked(
                 ),
                 final_score=r.final_score,
                 reason_short=r.reason_short,
+                signal_explanations=[RankedSignalExplanation(**x) for x in expl],
             )
-            for r in rows
-        ],
+        )
+
+    return RankedRecommendationsResponse(
+        ranking_run_id=ctx.ranking_run_id,
+        ranking_version=ctx.ranking_version,
+        corpus_snapshot_version=ctx.corpus_snapshot_version,
+        family=family,
+        total=len(rows),
+        list_explanation=list_explanation,
+        items=items_out,
     )
 
 

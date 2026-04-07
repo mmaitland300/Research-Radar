@@ -43,7 +43,7 @@ def test_get_recommendations_ranked_smoke(monkeypatch) -> None:
                 reason_short="undercited heuristic",
             )
         ]
-        return ctx, rows
+        return ctx, rows, {}
 
     monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
     response = client.get(
@@ -65,6 +65,9 @@ def test_get_recommendations_ranked_smoke(monkeypatch) -> None:
     assert item["signals"]["bridge"] is None
     assert item["signals"]["citation_velocity"] == 0.7
     assert item["final_score"] == 0.88
+    assert "list_explanation" in payload
+    assert payload["list_explanation"]["family"] == "undercited"
+    assert len(item["signal_explanations"]) >= 5
 
 
 def test_get_recommendations_ranked_not_found(monkeypatch) -> None:

@@ -197,6 +197,20 @@ def resolve_ranked_run_context(
     )
 
 
+def _parse_config_json(raw: Any) -> dict[str, Any]:
+    if raw is None:
+        return {}
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    if isinstance(raw, dict):
+        return dict(raw)
+    return {}
+
+
 def list_ranked_recommendations(
     *,
     family: str,
@@ -204,7 +218,7 @@ def list_ranked_recommendations(
     corpus_snapshot_version: str | None = None,
     ranking_run_id: str | None = None,
     ranking_version: str | None = None,
-) -> tuple[RankedRunContext, list[RankedRecommendationRow]] | None:
+) -> tuple[RankedRunContext, list[RankedRecommendationRow], dict[str, Any]] | None:
     if family not in VALID_FAMILIES:
         raise ValueError(f"Invalid recommendation family: {family!r}")
 
@@ -254,6 +268,15 @@ def list_ranked_recommendations(
             return None
         params = (ctx.ranking_run_id, family, limit)
         rows = conn.execute(query, params).fetchall()
+        cfg_row = conn.execute(
+            """
+            SELECT config_json
+            FROM ranking_runs
+            WHERE ranking_run_id = %s
+            """,
+            (ctx.ranking_run_id,),
+        ).fetchone()
+        run_config = _parse_config_json(cfg_row["config_json"] if cfg_row else None)
 
     items = [
         RankedRecommendationRow(
@@ -279,4 +302,4 @@ def list_ranked_recommendations(
         )
         for row in rows
     ]
-    return ctx, items
+    return ctx, items, run_config

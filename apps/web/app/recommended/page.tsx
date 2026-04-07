@@ -17,6 +17,24 @@ type RankedSignals = {
   diversity_penalty: number | null;
 };
 
+type RankedSignalExplanation = {
+  key: string;
+  label: string;
+  role: "used" | "measured" | "experimental" | "penalty" | "not_computed";
+  value: number | null;
+  contribution: number | null;
+  summary: string;
+};
+
+type RankedListExplanation = {
+  family: string;
+  headline: string;
+  bullets: string[];
+  used_in_ordering: string[];
+  measured_only: string[];
+  experimental: string[];
+};
+
 type RankedItem = {
   paper_id: string;
   title: string;
@@ -27,6 +45,7 @@ type RankedItem = {
   signals: RankedSignals;
   final_score: number;
   reason_short: string;
+  signal_explanations: RankedSignalExplanation[];
 };
 
 type RankedResponse = {
@@ -35,15 +54,144 @@ type RankedResponse = {
   corpus_snapshot_version: string;
   family: string;
   total: number;
+  list_explanation: RankedListExplanation;
   items: RankedItem[];
 };
+
+const EMPTY_SIGNALS: RankedSignals = {
+  semantic: null,
+  citation_velocity: null,
+  topic_growth: null,
+  bridge: null,
+  diversity_penalty: null
+};
+
+const SIGNAL_ROLES: RankedSignalExplanation["role"][] = [
+  "used",
+  "measured",
+  "experimental",
+  "penalty",
+  "not_computed"
+];
+
+function coerceSignalExplanation(e: Record<string, unknown>): RankedSignalExplanation {
+  const roleRaw = e.role;
+  const role = SIGNAL_ROLES.includes(roleRaw as RankedSignalExplanation["role"])
+    ? (roleRaw as RankedSignalExplanation["role"])
+    : "not_computed";
+  const v = e.value;
+  const value = typeof v === "number" && Number.isFinite(v) ? v : v == null ? null : Number(v);
+  const c = e.contribution;
+  const contribution =
+    typeof c === "number" && Number.isFinite(c) ? c : c == null ? null : Number(c);
+  return {
+    key: String(e.key ?? ""),
+    label: String(e.label ?? ""),
+    role,
+    value: value != null && Number.isFinite(value) ? value : null,
+    contribution: contribution != null && Number.isFinite(contribution) ? contribution : null,
+    summary: String(e.summary ?? "")
+  };
+}
+
+/** Tolerate older API payloads (no explanation fields) so SSR does not throw. */
+function normalizeRankedPayload(json: unknown, family: Family): RankedResponse | null {
+  if (!json || typeof json !== "object") return null;
+  const raw = json as Record<string, unknown>;
+  if (!Array.isArray(raw.items)) return null;
+
+  const defaultListExplanation: RankedListExplanation = {
+    family: typeof raw.family === "string" ? raw.family : family,
+    headline: "How this list is ranked",
+    bullets: [
+      "List-level explanations were not returned by this API (often an older deploy). Redeploy apps/api from current main, or use Evaluation for the same run."
+    ],
+    used_in_ordering: [],
+    measured_only: [],
+    experimental: []
+  };
+
+  let list_explanation: RankedListExplanation = defaultListExplanation;
+  const le = raw.list_explanation;
+  if (le && typeof le === "object") {
+    const o = le as Record<string, unknown>;
+    if (typeof o.headline === "string" && Array.isArray(o.bullets)) {
+      list_explanation = {
+        family: typeof o.family === "string" ? o.family : defaultListExplanation.family,
+        headline: o.headline,
+        bullets: o.bullets.filter((b): b is string => typeof b === "string"),
+        used_in_ordering: Array.isArray(o.used_in_ordering)
+          ? o.used_in_ordering.filter((x): x is string => typeof x === "string")
+          : [],
+        measured_only: Array.isArray(o.measured_only)
+          ? o.measured_only.filter((x): x is string => typeof x === "string")
+          : [],
+        experimental: Array.isArray(o.experimental)
+          ? o.experimental.filter((x): x is string => typeof x === "string")
+          : []
+      };
+    }
+  }
+
+  const items: RankedItem[] = raw.items.map((row: unknown) => {
+    const r = row as Record<string, unknown>;
+    const sig = r.signals;
+    const signals: RankedSignals =
+      sig && typeof sig === "object"
+        ? {
+            semantic: (sig as RankedSignals).semantic ?? null,
+            citation_velocity: (sig as RankedSignals).citation_velocity ?? null,
+            topic_growth: (sig as RankedSignals).topic_growth ?? null,
+            bridge: (sig as RankedSignals).bridge ?? null,
+            diversity_penalty: (sig as RankedSignals).diversity_penalty ?? null
+          }
+        : { ...EMPTY_SIGNALS };
+
+    const fs = r.final_score;
+    const finalNum = typeof fs === "number" ? fs : Number(fs);
+
+    const explRaw = r.signal_explanations;
+    const signal_explanations: RankedSignalExplanation[] = Array.isArray(explRaw)
+      ? explRaw
+          .filter((e): e is Record<string, unknown> => e != null && typeof e === "object")
+          .map((e) => coerceSignalExplanation(e))
+      : [];
+
+    const topicsRaw = r.topics;
+    const topics = Array.isArray(topicsRaw)
+      ? topicsRaw.filter((t): t is string => typeof t === "string")
+      : [];
+
+    return {
+      paper_id: String(r.paper_id ?? ""),
+      title: String(r.title ?? ""),
+      year: Number(r.year ?? 0),
+      citation_count: Number(r.citation_count ?? 0),
+      source_slug: r.source_slug == null ? null : String(r.source_slug),
+      topics,
+      signals,
+      final_score: Number.isFinite(finalNum) ? finalNum : 0,
+      reason_short: String(r.reason_short ?? ""),
+      signal_explanations
+    };
+  });
+
+  return {
+    ranking_run_id: String(raw.ranking_run_id ?? ""),
+    ranking_version: String(raw.ranking_version ?? ""),
+    corpus_snapshot_version: String(raw.corpus_snapshot_version ?? ""),
+    family: typeof raw.family === "string" ? raw.family : family,
+    total: typeof raw.total === "number" ? raw.total : items.length,
+    list_explanation,
+    items
+  };
+}
 
 const API_BASE_URL =
   process.env.API_BASE_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:8000";
 
-/** Optional: pin a pipeline run label, e.g. v0-heuristic-no-embeddings-step3 */
 const RANKING_VERSION =
   process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
 
@@ -68,6 +216,77 @@ function formatSignals(signals: RankedSignals): string {
   }
   if (entries.length === 0) return "n/a";
   return entries.map(([k, v]) => `${k}=${Number(v).toFixed(4)}`).join(", ");
+}
+
+function barWidthPercent(value: number | null, role: RankedSignalExplanation["role"]): number {
+  if (value == null || role === "not_computed") return 0;
+  return Math.min(100, Math.round(Math.max(0, value) * 100));
+}
+
+function barFillClass(role: RankedSignalExplanation["role"]): string {
+  if (role === "used") return "ranking-bar-fill ranking-bar-used";
+  if (role === "measured" || role === "experimental") {
+    return "ranking-bar-fill ranking-bar-measured";
+  }
+  if (role === "penalty") return "ranking-bar-fill ranking-bar-penalty";
+  return "ranking-bar-fill ranking-bar-none";
+}
+
+function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanation; rankingVersion: string }) {
+  return (
+    <div className="ranking-how-panel">
+      <h3>{expl.headline}</h3>
+      <ul>
+        {expl.bullets.map((b) => (
+          <li key={b}>{b}</li>
+        ))}
+      </ul>
+      <p className="ranking-how-meta">
+        <strong>Used in ordering:</strong> {expl.used_in_ordering.join(", ") || "—"}
+        <br />
+        <strong>Measured only (transparency):</strong> {expl.measured_only.join(", ") || "—"}
+        {expl.experimental.length > 0 ? (
+          <>
+            <br />
+            <strong>Experimental:</strong> {expl.experimental.join(", ")}
+          </>
+        ) : null}
+        <br />
+        <span className="muted-inline">Pinned run label: {rankingVersion}</span>
+      </p>
+    </div>
+  );
+}
+
+function EmergingWhySurfaced({ explanations }: { explanations: RankedSignalExplanation[] }) {
+  return (
+    <details className="ranking-why-details">
+      <summary>Why this surfaced</summary>
+      {explanations.map((e) => (
+        <div key={e.key} className="ranking-signal-row">
+          <div className="ranking-signal-label">
+            <span>{e.label}</span>
+            <span className="ranking-signal-role">{e.role.replace("_", " ")}</span>
+          </div>
+          <div className="ranking-bar-track" aria-hidden>
+            <div
+              className={barFillClass(e.role)}
+              style={{ width: `${barWidthPercent(e.value, e.role)}%` }}
+            />
+          </div>
+          <p className="result-breakdown" style={{ marginTop: 4 }}>
+            {e.summary}
+            {e.contribution != null && e.role !== "not_computed" ? (
+              <>
+                {" "}
+                (contribution to score: {e.contribution.toFixed(4)})
+              </>
+            ) : null}
+          </p>
+        </div>
+      ))}
+    </details>
+  );
 }
 
 async function fetchRanked(family: Family): Promise<{
@@ -95,13 +314,30 @@ async function fetchRanked(family: Family): Promise<{
       };
     }
     if (!response.ok) {
+      let detail = "";
+      try {
+        const errBody = (await response.json()) as { detail?: unknown };
+        if (typeof errBody.detail === "string") {
+          detail = ` ${errBody.detail}`;
+        }
+      } catch {
+        /* ignore non-JSON error bodies */
+      }
       return {
         data: null,
-        error: `API responded with ${response.status}.`,
+        error: `API responded with ${response.status}.${detail}`,
         status: response.status
       };
     }
-    const data = (await response.json()) as RankedResponse;
+    const rawJson: unknown = await response.json();
+    const data = normalizeRankedPayload(rawJson, family);
+    if (!data) {
+      return {
+        data: null,
+        error: "API returned ranked data in an unexpected shape.",
+        status: 200
+      };
+    }
     return { data, error: null, status: 200 };
   } catch {
     return {
@@ -126,12 +362,10 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <p className="accent">Recommended</p>
         <h1>Ranked recommendations</h1>
         <p>
-          Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code>{" "}
-          per family). The <strong>undercited</strong> family only scores works in the frozen low-cite
-          candidate pool (<code>docs/candidate-pool-low-cite.md</code> v0): core corpus, recency floor,
-          citation ceiling, and non-empty title plus abstract — same gate as the heuristic undercited
-          API, scoped here to your corpus snapshot via the run. Semantic and bridge signals stay unset
-          in v0; citation and topic heuristics drive order and <code>reason_short</code>.
+          Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code> per
+          family). The API derives plain-language explanations from the same weights stored on the run.
+          The <strong>undercited</strong> family only scores works in the frozen low-cite candidate pool (
+          <code>docs/candidate-pool-low-cite.md</code> v0), scoped to your corpus snapshot.
         </p>
         <nav className="tabs" aria-label="Recommendation family">
           {FAMILIES.map((f) => (
@@ -154,8 +388,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         ) : null}
         {RANKING_VERSION ? (
           <p className="muted-inline">
-            Web is filtering runs with{" "}
-            <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>.
+            Web is filtering runs with <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>.
           </p>
         ) : (
           <p className="muted-inline">
@@ -171,9 +404,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           {status === 404 ? (
             <p className="muted-inline">
               Example:{" "}
-              <code>
-                NEXT_PUBLIC_RANKING_VERSION=v0-heuristic-no-embeddings-step3
-              </code>
+              <code>NEXT_PUBLIC_RANKING_VERSION=v0-heuristic-no-embeddings-step3</code>
             </p>
           ) : null}
         </section>
@@ -183,8 +414,12 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <section className="panel">
           <h2>{FAMILY_LABEL[family]} | live results</h2>
           <p className="muted-inline">
-            Family: <strong>{data.family}</strong> | final_score descending
+            Family: <strong>{data.family}</strong> | order by materialized{" "}
+            <code>final_score</code> descending
           </p>
+          {family === "emerging" ? (
+            <EmergingHowPanel expl={data.list_explanation} rankingVersion={data.ranking_version} />
+          ) : null}
           {data.items.length === 0 ? (
             <p>No rows for this family in the selected run.</p>
           ) : (
@@ -211,9 +446,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     </div>
                   ) : null}
                   <p className="result-reason">{item.reason_short}</p>
-                  <p className="result-breakdown">
-                    Signals: {formatSignals(item.signals)}
-                  </p>
+                  {family === "emerging" && item.signal_explanations?.length ? (
+                    <EmergingWhySurfaced explanations={item.signal_explanations} />
+                  ) : (
+                    <p className="result-breakdown">Signals: {formatSignals(item.signals)}</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -225,17 +462,16 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <article className="card">
           <h2>Roadmap: embeddings</h2>
           <p>
-            ML milestone 1 fills <code>semantic_score</code> and retrieval; bridge-style
-            scores follow once clusters are available.
+            ML milestone 1 fills <code>semantic_score</code> and retrieval; bridge-style scores follow
+            once clusters are available.
           </p>
         </article>
         <article className="card">
           <h2>Heuristic baseline</h2>
           <p>
-            The rule-only undercited list (<code>/api/v1/recommendations/undercited</code>) uses the
-            same pool definition but is not tied to a corpus snapshot. For snapshot-scoped A/B against
-            the ranked undercited family, use{" "}
-            <Link href="/evaluation?family=undercited">Evaluation</Link>.
+            The rule-only undercited list (<code>/api/v1/recommendations/undercited</code>) uses the same
+            pool definition but is not tied to a corpus snapshot. For snapshot-scoped A/B against the
+            ranked undercited family, use <Link href="/evaluation?family=undercited">Evaluation</Link>.
           </p>
         </article>
       </section>

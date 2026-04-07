@@ -58,6 +58,16 @@ ALTER TABLE paper_scores ADD COLUMN IF NOT EXISTS bridge_signal_json JSONB NULL;
 6. **Recorded values**  
    Open a log (ticket, PR, or scratch file) and copy **stdout/stderr** lines after each phase for `rows_changed`, `rows_written`, `missing_embedding`, `missing_cluster_assignment`, and printed IDs.
 
+   **One place for production repair / re-embed:** Copy `docs/ops-repair-record.template.md` to **`ops-repair-last-run.md`** in the repo root and fill the table after each run. Keep that file **out of git** in your clone (e.g. list `ops-repair-last-run.md` in **`.git/info/exclude`** alongside any recurring local logs such as `rr-3001.log`). Use a shared ticket instead if your team standardizes there.
+
+   **Minimum fields to jot down for a repair / re-embed cycle:**
+
+   - `corpus_snapshot_version` (the `CORPUS_SNAPSHOT` you used).
+   - `repair-works-text`: whether `rows_changed` was **0** or **> 0** (paste the exact stderr summary line).
+   - `embedding_version` (`EMBED_VER`) after you mint it (required **new** label if repair changed any stored title/abstract).
+   - `cluster_version` (`CLUSTER_VER`) after `cluster-works` (and note k / geometry if relevant).
+   - `ranking_version` and ranking run id if you regenerated ranking and pinned it in product or docs.
+
 ---
 
 ## 3. Phase A - Text repair (dry run, then commit)
