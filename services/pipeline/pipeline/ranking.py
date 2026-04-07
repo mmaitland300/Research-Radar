@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import fsum
+from typing import Any
 
 LOW_CITE_CANDIDATE_POOL_DOC = "docs/candidate-pool-low-cite.md"
 LOW_CITE_CANDIDATE_POOL_REVISION = "v0"
@@ -74,6 +75,8 @@ class PaperScoreRow:
     diversity_penalty: float | None
     final_score: float
     reason_short: str
+    bridge_eligible: bool | None = None
+    bridge_signal_json: dict[str, Any] | None = None
 
 
 def final_score(signals: PaperSignals, weights: ScoreWeights | None = None) -> float:

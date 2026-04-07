@@ -58,12 +58,18 @@ Output
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import fsum, sqrt
-from typing import Mapping
+from typing import Any
+
+from pipeline.clustering import ClusteringInput
 
 
 _NORM_EPS_DEFAULT = 1e-12
+
+# Neighbor count for neighbor_mix_v1 in ranking runs (persisted in ranking_runs.config_json).
+NEIGHBOR_MIX_V1_DEFAULT_K = 15
 
 
 @dataclass(frozen=True)
@@ -157,3 +163,36 @@ def neighbor_mix_v1(
         anchor_cluster_id=anchor_cluster,
         foreign_neighbor_count=foreign,
     )
+
+
+def compute_neighbor_mix_v1_by_work(
+    inputs: Sequence[ClusteringInput],
+    cluster_by_work: Mapping[int, str],
+    k: int,
+    *,
+    norm_eps: float = _NORM_EPS_DEFAULT,
+) -> dict[int, NeighborMixV1Result]:
+    """Run ``neighbor_mix_v1`` for every ``work_id`` in ``inputs``."""
+    vectors_by_work = {inp.work_id: inp.vector for inp in inputs}
+    return {
+        wid: neighbor_mix_v1(wid, vectors_by_work, cluster_by_work, k, norm_eps=norm_eps)
+        for wid in vectors_by_work
+    }
+
+
+def neighbor_mix_v1_json_payload(result: NeighborMixV1Result, *, k: int) -> dict[str, Any]:
+    """JSON-serializable payload for ``paper_scores.bridge_signal_json`` (debug / future API)."""
+    payload: dict[str, Any] = {
+        "signal_version": "neighbor_mix_v1",
+        "k": k,
+        "eligible": result.eligible,
+    }
+    if result.anchor_cluster_id is not None:
+        payload["anchor_cluster_id"] = result.anchor_cluster_id
+    if result.eligible:
+        if result.mix_score is not None:
+            payload["mix_score"] = result.mix_score
+        payload["neighbor_work_ids"] = list(result.neighbor_work_ids)
+        if result.foreign_neighbor_count is not None:
+            payload["foreign_neighbor_count"] = result.foreign_neighbor_count
+    return payload
