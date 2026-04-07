@@ -375,6 +375,8 @@ def build_step3_heuristic_score_rows(
     into final_score); set positive for isolated ML2-5b experiments via CLI override only.
     Emerging and bridge: one row per included work. Undercited: only works in the frozen
     low-cite pool (docs/candidate-pool-low-cite.md), so signals stay comparable to that definition.
+    neighbor_mix_v1 fields (bridge_eligible, bridge_signal_json) are written only on bridge-family
+    rows; other families keep them null.
     """
     bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
     family_w = resolved_family_weights(bw)
@@ -399,11 +401,11 @@ def build_step3_heuristic_score_rows(
             if neighbor_mix_by_work is not None
             else None
         )
-        bridge_eligible: bool | None = None
-        bridge_signal_json: dict[str, Any] | None = None
+        mix_bridge_eligible: bool | None = None
+        mix_bridge_signal_json: dict[str, Any] | None = None
         if mix is not None:
-            bridge_eligible = mix.eligible
-            bridge_signal_json = neighbor_mix_v1_json_payload(mix, k=neighbor_mix_k)
+            mix_bridge_eligible = mix.eligible
+            mix_bridge_signal_json = neighbor_mix_v1_json_payload(mix, k=neighbor_mix_k)
 
         rows.append(
             _make_score_row(
@@ -414,8 +416,6 @@ def build_step3_heuristic_score_rows(
                 diversity_penalty=0.0,
                 reason_short=EMERGING_REASON,
                 weights=family_w["emerging"],
-                bridge_eligible=bridge_eligible,
-                bridge_signal_json=bridge_signal_json,
             )
         )
         rows.append(
@@ -428,8 +428,8 @@ def build_step3_heuristic_score_rows(
                 reason_short=bridge_reason,
                 bridge_score=bridge_score,
                 weights=family_w["bridge"],
-                bridge_eligible=bridge_eligible,
-                bridge_signal_json=bridge_signal_json,
+                bridge_eligible=mix_bridge_eligible,
+                bridge_signal_json=mix_bridge_signal_json,
             )
         )
         if in_low_cite_candidate_pool(
@@ -444,8 +444,6 @@ def build_step3_heuristic_score_rows(
                     diversity_penalty=citation_popularity_penalty_by_work[candidate.work_id],
                     reason_short=UNDERCITED_REASON,
                     weights=family_w["undercited"],
-                    bridge_eligible=bridge_eligible,
-                    bridge_signal_json=bridge_signal_json,
                 )
             )
     return rows

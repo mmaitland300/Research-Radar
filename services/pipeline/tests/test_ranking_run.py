@@ -282,7 +282,7 @@ def test_ranking_counts_from_rows() -> None:
     assert c.rows_by_family["undercited"] == 1
 
 
-def test_neighbor_mix_fields_on_all_families_when_map_present() -> None:
+def test_neighbor_mix_fields_on_bridge_family_when_map_present() -> None:
     mix = NeighborMixV1Result(
         eligible=True,
         mix_score=0.4,
@@ -299,12 +299,34 @@ def test_neighbor_mix_fields_on_all_families_when_map_present() -> None:
         neighbor_mix_by_work={10: mix},
         neighbor_mix_k=k,
     )
+    b = next(r for r in rows if r.recommendation_family == "bridge")
+    assert b.bridge_eligible is True
+    assert b.bridge_signal_json is not None
+    assert b.bridge_signal_json["signal_version"] == "neighbor_mix_v1"
+    assert b.bridge_signal_json["k"] == k
+    assert b.bridge_signal_json["mix_score"] == 0.4
+
+
+def test_neighbor_mix_null_on_non_bridge_families_when_map_present() -> None:
+    mix = NeighborMixV1Result(
+        eligible=True,
+        mix_score=0.4,
+        neighbor_work_ids=(2, 3, 4),
+        anchor_cluster_id="c0",
+        foreign_neighbor_count=6,
+    )
+    c = _pool_candidate(work_id=10)
+    rows = build_step3_heuristic_score_rows(
+        [c],
+        cluster_version="cv",
+        bridge_boundary_by_work={10: 0.5},
+        neighbor_mix_by_work={10: mix},
+    )
     for r in rows:
-        assert r.bridge_eligible is True
-        assert r.bridge_signal_json is not None
-        assert r.bridge_signal_json["signal_version"] == "neighbor_mix_v1"
-        assert r.bridge_signal_json["k"] == k
-        assert r.bridge_signal_json["mix_score"] == 0.4
+        if r.recommendation_family == "bridge":
+            continue
+        assert r.bridge_eligible is None
+        assert r.bridge_signal_json is None
 
 
 def test_neighbor_mix_absent_when_work_not_in_map() -> None:
