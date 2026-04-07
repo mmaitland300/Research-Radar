@@ -232,7 +232,7 @@ def get_recommendations_ranked(
         description=(
             "If true, return only bridge rows with bridge_eligible = true (SQL: IS TRUE). "
             "Only applies when family=bridge; for other families this parameter is ignored. "
-            "Legacy rows with null eligibility are excluded when this filter is on."
+            "Rows with false or null eligibility are excluded (null is legacy or unset neighbor_mix)."
         ),
     ),
 ) -> RankedRecommendationsResponse:

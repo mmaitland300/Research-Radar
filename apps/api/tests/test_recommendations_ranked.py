@@ -252,6 +252,43 @@ def test_get_recommendations_ranked_legacy_bridge_row_null_eligibility(monkeypat
     assert response.json()["items"][0]["bridge_eligible"] is None
 
 
+def test_get_recommendations_ranked_bridge_false_encodes_neighbor_mix_not_legacy_null(
+    monkeypatch,
+) -> None:
+    """neighbor_mix_v1 runs use false for ineligible or missing mix support; legacy stays null."""
+
+    def fake_list_ranked_recommendations(**_kwargs):
+        ctx = RankedRunContext(
+            ranking_run_id="run-nm",
+            ranking_version="v2",
+            corpus_snapshot_version="snap-nm",
+        )
+        rows = [
+            RankedRecommendationRow(
+                paper_id="W99",
+                title="No mix support",
+                year=2020,
+                citation_count=2,
+                source_slug=None,
+                topics=[],
+                semantic_score=None,
+                citation_velocity_score=0.5,
+                topic_growth_score=0.5,
+                bridge_score=0.5,
+                diversity_penalty=0.1,
+                final_score=0.55,
+                reason_short="structural",
+                bridge_eligible=False,
+            )
+        ]
+        return ctx, rows, {}
+
+    monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
+    response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=5")
+    assert response.status_code == 200
+    assert response.json()["items"][0]["bridge_eligible"] is False
+
+
 def test_get_recommendations_ranked_not_found(monkeypatch) -> None:
     def fake_returns_none(**_kwargs):
         return None

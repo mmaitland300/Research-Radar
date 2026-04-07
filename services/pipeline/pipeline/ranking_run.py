@@ -28,6 +28,7 @@ from pipeline.bridge_neighbor_mix import (
     NeighborMixV1Result,
     compute_neighbor_mix_v1_by_work,
     neighbor_mix_v1_json_payload,
+    neighbor_mix_v1_unsupported_payload,
 )
 from pipeline.clustering import compute_bridge_boundary_scores
 from pipeline.clustering_persistence import (
@@ -376,7 +377,10 @@ def build_step3_heuristic_score_rows(
     Emerging and bridge: one row per included work. Undercited: only works in the frozen
     low-cite pool (docs/candidate-pool-low-cite.md), so signals stay comparable to that definition.
     neighbor_mix_v1 fields (bridge_eligible, bridge_signal_json) are written only on bridge-family
-    rows; other families keep them null.
+    rows; other families keep them null. When a neighbor_mix map is supplied for the run, bridge
+    rows are always true or false (never null); null is reserved when neighbor_mix was not part of
+    the run (legacy). A work missing from the map is treated as ineligible (false) with a minimal
+    payload.
     """
     bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
     family_w = resolved_family_weights(bw)
@@ -403,9 +407,13 @@ def build_step3_heuristic_score_rows(
         )
         mix_bridge_eligible: bool | None = None
         mix_bridge_signal_json: dict[str, Any] | None = None
-        if mix is not None:
-            mix_bridge_eligible = mix.eligible
-            mix_bridge_signal_json = neighbor_mix_v1_json_payload(mix, k=neighbor_mix_k)
+        if neighbor_mix_by_work is not None:
+            if mix is not None:
+                mix_bridge_eligible = mix.eligible
+                mix_bridge_signal_json = neighbor_mix_v1_json_payload(mix, k=neighbor_mix_k)
+            else:
+                mix_bridge_eligible = False
+                mix_bridge_signal_json = neighbor_mix_v1_unsupported_payload(k=neighbor_mix_k)
 
         rows.append(
             _make_score_row(

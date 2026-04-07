@@ -196,3 +196,12 @@ def neighbor_mix_v1_json_payload(result: NeighborMixV1Result, *, k: int) -> dict
         if result.foreign_neighbor_count is not None:
             payload["foreign_neighbor_count"] = result.foreign_neighbor_count
     return payload
+
+
+def neighbor_mix_v1_unsupported_payload(*, k: int) -> dict[str, Any]:
+    """When neighbor_mix_v1 ran for the run but this work has no mix row (e.g. missing from clustering inputs)."""
+    return {
+        "signal_version": "neighbor_mix_v1",
+        "k": k,
+        "eligible": False,
+    }

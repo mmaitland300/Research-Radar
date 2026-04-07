@@ -261,9 +261,10 @@ class RankedRecommendationItem(BaseModel):
     bridge_eligible: bool | None = Field(
         default=None,
         description=(
-            "neighbor_mix_v1 gate for bridge-family rows only: true when eligible, false when computed "
-            "but ineligible; null for non-bridge families, legacy runs without persisted eligibility, "
-            "or rows with no neighbor_mix signal."
+            "neighbor_mix_v1 gate for bridge-family rows only. On runs that persist neighbor_mix_v1: "
+            "true when eligible, false when ineligible or when mix support is missing for that work "
+            "(e.g. not in clustering inputs). Null only for non-bridge families or legacy bridge rows "
+            "from runs that never wrote neighbor_mix eligibility."
         ),
     )
 

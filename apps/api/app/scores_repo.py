@@ -224,8 +224,8 @@ def list_ranked_recommendations(
     """
     Return top ``limit`` rows for ``family`` ordered by ``final_score`` desc.
 
-    ``bridge_eligible_only``: when true, adds ``ps.bridge_eligible IS TRUE`` so NULL and false
-    rows drop out. Only applied for ``family=\"bridge\"``; ignored for other families.
+    ``bridge_eligible_only``: when true, adds ``ps.bridge_eligible IS TRUE`` so rows with false
+    or null eligibility drop out. Only applied for ``family=\"bridge\"``; ignored for other families.
     ``total`` in the HTTP layer is ``len(items)`` (filtered count).
     """
     if family not in VALID_FAMILIES:

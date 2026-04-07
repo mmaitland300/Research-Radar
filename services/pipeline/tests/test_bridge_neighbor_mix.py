@@ -6,7 +6,12 @@ import math
 
 import pytest
 
-from pipeline.bridge_neighbor_mix import _cosine_similarity_raw, neighbor_mix_v1
+from pipeline.bridge_neighbor_mix import (
+    NEIGHBOR_MIX_V1_DEFAULT_K,
+    _cosine_similarity_raw,
+    neighbor_mix_v1,
+    neighbor_mix_v1_unsupported_payload,
+)
 
 
 def _v(*xs: float) -> tuple[float, ...]:
@@ -155,3 +160,12 @@ def test_deterministic_full_ordering() -> None:
     r2 = neighbor_mix_v1(1, vectors, clusters, k=3)
     assert r1 == r2
     assert r1.eligible is True
+
+
+def test_neighbor_mix_v1_unsupported_payload_shape() -> None:
+    p = neighbor_mix_v1_unsupported_payload(k=NEIGHBOR_MIX_V1_DEFAULT_K)
+    assert p == {
+        "signal_version": "neighbor_mix_v1",
+        "k": NEIGHBOR_MIX_V1_DEFAULT_K,
+        "eligible": False,
+    }
