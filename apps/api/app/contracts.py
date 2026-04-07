@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -258,6 +258,14 @@ class RankedRecommendationItem(BaseModel):
     final_score: float
     reason_short: str
     signal_explanations: list[RankedSignalExplanation]
+    bridge_eligible: bool | None = Field(
+        default=None,
+        description=(
+            "neighbor_mix_v1 gate for bridge-family rows only: true when eligible, false when computed "
+            "but ineligible; null for non-bridge families, legacy runs without persisted eligibility, "
+            "or rows with no neighbor_mix signal."
+        ),
+    )
 
 
 class RankedRecommendationsResponse(BaseModel):

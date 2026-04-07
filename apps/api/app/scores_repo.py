@@ -29,6 +29,7 @@ class RankedRecommendationRow:
     diversity_penalty: float | None
     final_score: float
     reason_short: str
+    bridge_eligible: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -218,11 +219,23 @@ def list_ranked_recommendations(
     corpus_snapshot_version: str | None = None,
     ranking_run_id: str | None = None,
     ranking_version: str | None = None,
+    bridge_eligible_only: bool = False,
 ) -> tuple[RankedRunContext, list[RankedRecommendationRow], dict[str, Any]] | None:
+    """
+    Return top ``limit`` rows for ``family`` ordered by ``final_score`` desc.
+
+    ``bridge_eligible_only``: when true, adds ``ps.bridge_eligible IS TRUE`` so NULL and false
+    rows drop out. Only applied for ``family=\"bridge\"``; ignored for other families.
+    ``total`` in the HTTP layer is ``len(items)`` (filtered count).
+    """
     if family not in VALID_FAMILIES:
         raise ValueError(f"Invalid recommendation family: {family!r}")
 
-    query = """
+    eligibility_sql = ""
+    if family == "bridge" and bridge_eligible_only:
+        eligibility_sql = "          AND ps.bridge_eligible IS TRUE\n"
+
+    query = f"""
         SELECT
             w.openalex_id,
             w.title,
@@ -236,7 +249,8 @@ def list_ranked_recommendations(
             ps.bridge_score,
             ps.diversity_penalty,
             ps.final_score,
-            ps.reason_short
+            ps.reason_short,
+            ps.bridge_eligible
         FROM paper_scores ps
         JOIN works w ON w.id = ps.work_id
         LEFT JOIN LATERAL (
@@ -252,10 +266,9 @@ def list_ranked_recommendations(
         ) topic_agg ON TRUE
         WHERE ps.ranking_run_id = %s
           AND ps.recommendation_family = %s
-        ORDER BY ps.final_score DESC
+{eligibility_sql}        ORDER BY ps.final_score DESC
         LIMIT %s
     """
-    params: tuple[Any, ...]
 
     with psycopg.connect(database_url_from_env(), row_factory=dict_row) as conn:
         ctx = resolve_ranked_run_context(
@@ -299,6 +312,11 @@ def list_ranked_recommendations(
             else None,
             final_score=float(row["final_score"]),
             reason_short=str(row["reason_short"]),
+            bridge_eligible=(
+                None
+                if row.get("bridge_eligible") is None
+                else bool(row["bridge_eligible"])
+            ),
         )
         for row in rows
     ]

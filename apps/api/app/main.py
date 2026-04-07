@@ -227,6 +227,14 @@ def get_recommendations_ranked(
     corpus_snapshot_version: str | None = Query(default=None),
     ranking_run_id: str | None = Query(default=None),
     ranking_version: str | None = Query(default=None),
+    bridge_eligible_only: bool = Query(
+        default=False,
+        description=(
+            "If true, return only bridge rows with bridge_eligible = true (SQL: IS TRUE). "
+            "Only applies when family=bridge; for other families this parameter is ignored. "
+            "Legacy rows with null eligibility are excluded when this filter is on."
+        ),
+    ),
 ) -> RankedRecommendationsResponse:
     """
     Read persisted paper_scores for a succeeded ranking run (latest for snapshot unless
@@ -239,6 +247,7 @@ def get_recommendations_ranked(
             corpus_snapshot_version=corpus_snapshot_version,
             ranking_run_id=ranking_run_id,
             ranking_version=ranking_version,
+            bridge_eligible_only=bridge_eligible_only,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -288,6 +297,7 @@ def get_recommendations_ranked(
                 final_score=r.final_score,
                 reason_short=r.reason_short,
                 signal_explanations=[RankedSignalExplanation(**x) for x in expl],
+                bridge_eligible=r.bridge_eligible,
             )
         )
 
