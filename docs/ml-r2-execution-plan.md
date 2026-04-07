@@ -289,6 +289,27 @@ Repeat with **`$elig.items`** instead of **`$full.items`** if you want **eligibl
 
 **Record** in your ops log: `ranking_run_id`, `full.total`, `elig.total`, overlap numbers, and a one-line verdict.
 
+### Recorded Phase H outcome (local Docker, 2026-03-31)
+
+Pinned artifacts: `corpus_snapshot_version=source-snapshot-20260329-170012`, `embedding_version=v1-title-abstract-1536-cleantext-r2`, `cluster_version=kmeans-l2-v0-cleantext-r2-k6`. Prior `embedding-coverage … --fail-on-gaps`: `missing_embedding=0`, `missing_cluster_assignment=0`. `paper_scores` DDL for `bridge_eligible` / `bridge_signal_json` applied on this DB before the ranking run.
+
+| Field | Value |
+| ----- | ----- |
+| `ranking_run_id` | `rank-d7f3d82d05` |
+| `ranking_version` | `bridge-v2-nm1-zero-r2-k6-20260407` |
+| Full bridge `total` (API) | 38 |
+| `bridge_eligible_only=true` `total` | 38 (no-op vs full) |
+| Bridge vs emerging **top-10** overlap | 8/10 (same for full and eligible-only) |
+| `bridge_eligible` (SQL, bridge rows) | all **true** (38/38) |
+
+**H5 verdict:** Eligible-only gating did **not** change the bridge head on this corpus/run; **do not** treat this as clearance for ML2-5b weighting on this artifact alone.
+
+**`mix_score` (from `bridge_signal_json`, bridge rows):** Not flat — nine discrete levels (k=15 ⇒ steps of 1/15). Approx **min ~0.467, max 1.0, avg ~0.67**. Threshold counts on this run: **`mix_score >= 11/15` (~0.7333)** → **15** papers; **`mix_score >= 12/15` (0.8)** → **8** papers. Eight-paper **≥ 0.8** set includes multimodal / demixing / community-corpus style titles; lowest deciles skew dataset- and task-focused (qualitative spot-check; geometry ≠ bibliography ground truth).
+
+**Next research step:** Use **`mix_score` (threshold or promoted flag)** for selective bridge surfacing; keep **`bridge_eligible`** as the **computability** gate. Optional API/read-path work after locking a threshold.
+
+**PowerShell + `psql`:** Prefer `psql -d "$env:DATABASE_URL" -c "$sql"` with `$sql` in a here-string, or put **`-c "…"` before** the URI if your `psql` ignores `-c` when the URI is first.
+
 ---
 
 ## 12. Definition of done (minimum for "r2 path" complete)
@@ -300,7 +321,7 @@ Repeat with **`$elig.items`** instead of **`$full.items`** if you want **eligibl
 - [ ] Phase D2: `missing_cluster_assignment=0` with `--fail-on-gaps`.  
 - [ ] Phase F: inspect JSON reviewed and notes filed.  
 - [ ] (Optional) Phase G: new `ranking_run_id` recorded for downstream UI/API pins.  
-- [ ] (Optional) Phase H: full vs `bridge_eligible_only` bridge lists recorded; emerging overlap noted; verdict on whether ML2-5b is worth trying on this artifact.
+- [x] (Optional) Phase H: recorded for `rank-d7f3d82d05` / `bridge-v2-nm1-zero-r2-k6-20260407` (see subsection above); H5 not cleared; follow-up = `mix_score` thresholding, not ML2-5b.
 
 ---
 
