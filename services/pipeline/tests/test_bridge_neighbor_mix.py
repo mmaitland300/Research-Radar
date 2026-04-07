@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from pipeline.bridge_neighbor_mix import NeighborMixV1Result, neighbor_mix_v1
+from pipeline.bridge_neighbor_mix import _cosine_similarity_raw, neighbor_mix_v1
 
 
 def _v(*xs: float) -> tuple[float, ...]:
@@ -110,11 +110,28 @@ def test_neighbor_with_tiny_norm_skipped() -> None:
     assert r.neighbor_work_ids == (3,)
 
 
+def test_cosine_similarity_raw_mismatched_lengths_returns_none() -> None:
+    assert _cosine_similarity_raw(_v(1.0, 0.0), _v(1.0, 0.0, 0.0)) is None
+
+
+def test_neighbor_mix_skips_mismatched_dimension_neighbors() -> None:
+    """Wrong-length embedding rows are skipped; not silently truncated to a fake cosine."""
+    vectors = {
+        1: _v(1.0, 0.0),
+        2: _v(0.0, 1.0, 0.0),
+        3: _v(0.99, 0.01),
+    }
+    clusters = {1: "c0", 2: "c0", 3: "c1"}
+    r = neighbor_mix_v1(1, vectors, clusters, k=2)
+    assert r.eligible is False
+    r1 = neighbor_mix_v1(1, vectors, clusters, k=1)
+    assert r1.eligible is True
+    assert r1.neighbor_work_ids == (3,)
+
+
 def test_cosine_on_raw_matches_normalized_dot() -> None:
     a = _v(3.0, 4.0)
     b = _v(5.0, 12.0)
-    from pipeline.bridge_neighbor_mix import _cosine_similarity_raw
-
     raw = _cosine_similarity_raw(a, b)
     na = math.sqrt(9 + 16)
     nb = math.sqrt(25 + 144)

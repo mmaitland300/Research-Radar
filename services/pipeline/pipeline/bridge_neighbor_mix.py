@@ -21,6 +21,8 @@ Cosine similarity (reproducibility)
   order for non-unit vectors.
 - If ``||anchor||_2 < norm_eps`` or ``||neighbor||_2 < norm_eps``, that vector is **invalid**
   for similarity (anchor invalid ⇒ ineligible; neighbor invalid ⇒ skipped for ranking).
+- If two vectors differ in **length** (corrupted / wrong embedding row), the pair is **invalid**
+  for similarity (``None``); we never truncate with ``zip`` to a shorter length.
 
 Self exclusion
 --------------
@@ -79,8 +81,10 @@ def _l2_norm(vec: tuple[float, ...]) -> float:
 
 
 def _cosine_similarity_raw(a: tuple[float, ...], b: tuple[float, ...]) -> float | None:
-    """Cosine similarity on raw vectors; ``None`` if either L2 norm is zero."""
-    dot_ab = fsum(float(x) * float(y) for x, y in zip(a, b))
+    """Cosine similarity on raw vectors; ``None`` if lengths differ or either L2 norm is zero."""
+    if len(a) != len(b):
+        return None
+    dot_ab = fsum(float(x) * float(y) for x, y in zip(a, b, strict=True))
     na = _l2_norm(a)
     nb = _l2_norm(b)
     if na <= 0.0 or nb <= 0.0:
