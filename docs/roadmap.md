@@ -9,6 +9,7 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 - Live product slice: DB-backed search and paper detail; topic metadata flows through normalize + `work_topics`; list/detail IDs support full OpenAlex URLs where needed.
 - **Milestone 1 (low-cite pool):** The undercited recommendation family is gated on the frozen definition in `docs/candidate-pool-low-cite.md` (implemented in `in_low_cite_candidate_pool` / `build_step3_heuristic_score_rows`). Emerging and bridge still score every included work; semantic and bridge scores stay null; `reason_short` states the pool doc and that those signals are not modeled. CLI: `ranking-run --low-cite-min-year` / `--low-cite-max-citations` (defaults 2019 / 30).
 - Not yet product-complete: Corpus-scoped trends, evaluation vs baselines, clustering / non-placeholder bridge and semantic scores in ranking. Similar-papers UI is gated on `NEXT_PUBLIC_EMBEDDING_VERSION` and stored `embeddings` rows.
+- **Bridge-v2 (neighbor_mix_v1):** Clustered ranking runs persist `bridge_eligible` and `bridge_signal_json` on **bridge-family** `paper_scores` rows only (emerging/undercited stay null in those columns). When neighbor_mix is computed for the run, bridge eligibility is **always boolean** (true = passed gate, false = ineligible or no mix support for that work); **null** on bridge rows means the run did not include neighbor_mix (legacy materializations). `ranking_runs.config_json.clustering_artifact.neighbor_mix_v1` records `{ signal_version, k }`. **API:** `GET /api/v1/recommendations/ranked` includes `bridge_eligible` per item; `bridge_eligible_only=true` applies **`ps.bridge_eligible IS TRUE`** for `family=bridge` only and makes `total` the filtered count. `bridge_signal_json` is not exposed on the public API. First operational validation checklist: `docs/ml-r2-execution-plan.md` Phase H.
 
 ---
 
@@ -296,6 +297,14 @@ Use `docs/roadmap.md` for planning/tickets/gate criteria. **Executable operator 
 
 - Do not skip cluster inspection before bridge scoring.
 - Pin provenance on every artifact (`corpus_snapshot_version`, `embedding_version`, `cluster_version`).
+
+### Bridge-v2 (neighbor_mix_v1) — frozen contract
+
+- **Persistence:** `bridge_eligible` / `bridge_signal_json` only on bridge-family score rows. Non-bridge rows keep both null.
+- **Modern clustered runs:** If neighbor_mix is part of the ranking build (`neighbor_mix_by_work` supplied), every bridge row gets **true or false**, never null for “missing support” (missing-from-map ⇒ false + minimal JSON payload).
+- **Legacy:** Runs that never wrote neighbor_mix eligibility keep **null** on bridge rows for those columns.
+- **Product read path:** Ranked API exposes `bridge_eligible` only; optional `bridge_eligible_only` for bridge lists. Do not conflate null (legacy) with false (computed ineligible).
+- **Commit 5 (ops):** After a **zero bridge-weight** clustered ranking, validate in the API: full bridge list vs `bridge_eligible_only=true`, overlap of bridge **top-k** vs emerging **top-k**, and only revisit **positive bridge weight** (ML2-5b) if the eligible-gated head is **materially different** from the ungated bridge head **and** other ML2-5b guardrails still pass. Step-by-step: `docs/ml-r2-execution-plan.md` Phase H.
 
 **Ticket order**
 

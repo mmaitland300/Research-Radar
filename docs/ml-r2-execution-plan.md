@@ -1,7 +1,7 @@
 # ML "r2" data execution plan
 
-Operational sequence: **repair stored title/abstract text** -> **new embedding artifact** -> **full embed** -> **verify no gaps** -> **cluster** -> **verify assignments** -> **inspect via API** -> (optional) **new ranking run**.  
-Implements the handoff described in `docs/roadmap.md` (clean text -> new `embedding_version` -> `cluster-works` -> inspect; bridge weight stays **0** until a separate ML2-5b decision).
+Operational sequence: **repair stored title/abstract text** -> **new embedding artifact** -> **full embed** -> **verify no gaps** -> **cluster** -> **verify assignments** -> **inspect via API** -> (optional) **new ranking run** -> (optional) **bridge-v2 API validation (Phase H)**.  
+Implements the handoff described in `docs/roadmap.md` (clean text -> new `embedding_version` -> `cluster-works` -> inspect; bridge weight stays **0** until a separate ML2-5b decision). Phase H compares full vs **eligible-only** bridge lists after neighbor_mix_v1 is persisted.
 
 ---
 
@@ -206,9 +206,9 @@ Invoke-RestMethod "$API_BASE/api/v1/clusters/CLUSTER_VER/inspect?sample_per_clus
 
 ## 10. Phase G - Optional: new ranking run (bridge signal still non-ordering)
 
-**Goal:** Materialize `paper_scores` with ML2-5a-style `bridge_score` on rows where clustering applies; **`final_score` unchanged** while bridge weight remains **0** in app config.
+**Goal:** Materialize `paper_scores` with ML2-5a-style `bridge_score` on rows where clustering applies; **`final_score` unchanged** while bridge weight remains **0** in app config. When `--cluster-version` is set, the pipeline also computes **neighbor_mix_v1** and persists **`bridge_eligible`** / **`bridge_signal_json`** on bridge-family rows only (`config_json.clustering_artifact.neighbor_mix_v1` records `k` and signal version).
 
-Pick a **new** `RANK_VER` string (e.g. `ml2-5a-cleantext-r2-k3-YYYYMMDD`).
+Pick a **new** `RANK_VER` string (e.g. `ml2-5a-cleantext-r2-k3-YYYYMMDD` or `bridge-v2-nm1-zero-YYYYMMDD` for an explicit bridge-v2 validation label).
 
 ```powershell
 python -m pipeline.cli ranking-run `
@@ -227,7 +227,71 @@ For an **ML2-5b** experiment (bridge signal in `final_score` for the bridge fami
 
 ---
 
-## 11. Definition of done (minimum for "r2 path" complete)
+## 11. Phase H - Bridge-v2 validation (neighbor_mix_v1, zero bridge weight)
+
+**Goal:** Operational pass after Phase G with **`--bridge-weight-for-family-bridge 0`**: confirm neighbor_mix eligibility is populated as intended, compare **full** vs **eligible-only** bridge lists, and relate bridge head shape to emerging before any ML2-5b weight experiment.
+
+**Prerequisites**
+
+- Phase G completed with the **same** `CORPUS_SNAPSHOT`, `EMBED_VER`, `CLUSTER_VER`, and a recorded **`ranking_run_id`** / **`RANK_VER`**.
+- API running against the **same** `DATABASE_URL`.
+- DDL from section 1 applied if this database predates `bridge_eligible` / `bridge_signal_json`.
+
+**H1 - Pin the run**
+
+From Phase G stdout, copy `ranking_run_id`. Optionally pin `ranking_version` + `corpus_snapshot_version` in query params instead of `ranking_run_id`.
+
+**H2 - Full bridge list**
+
+```powershell
+$rid = "REPLACE_RANKING_RUN_ID"
+$base = "http://127.0.0.1:8000"
+$full = Invoke-RestMethod "$base/api/v1/recommendations/ranked?family=bridge&limit=50&ranking_run_id=$rid"
+$full.total
+$full.items | ForEach-Object { $_.paper_id }
+```
+
+Record **`total`** and (for overlap) the ordered **paper_id** list (or top 10–20 only).
+
+**H3 - Eligible-only bridge list (`bridge_eligible_only=true`)**
+
+```powershell
+$elig = Invoke-RestMethod "$base/api/v1/recommendations/ranked?family=bridge&limit=50&ranking_run_id=$rid&bridge_eligible_only=true"
+$elig.total
+$elig.items | ForEach-Object { $_.paper_id }
+```
+
+- **`bridge_eligible_only`** adds **`ps.bridge_eligible IS TRUE`** in SQL; **`total`** is the **filtered** count (not the unfiltered bridge-family size).
+- Rows with **`bridge_eligible` false** or **null** (legacy) **do not** appear here.
+
+Compare **`elig.total`** vs **`full.total`**. Inspect a few items from each response: **`bridge_eligible`** should be **true/false** on modern bridge rows (null only on legacy runs).
+
+**H4 - Overlap vs emerging (same run pin)**
+
+Use the same **k** for both families (here **10**); if **`total`** is smaller, shrink the slice so indexes stay in range.
+
+```powershell
+$k = 10
+$em = Invoke-RestMethod "$base/api/v1/recommendations/ranked?family=emerging&limit=$k&ranking_run_id=$rid"
+$bridgeIds = @($full.items | Select-Object -First $k | ForEach-Object { $_.paper_id })
+$bridgeTop = [System.Collections.Generic.HashSet[string]]::new([string[]]$bridgeIds)
+$emIds = @($em.items | Select-Object -First $k)
+$overlap = ($emIds | Where-Object { $bridgeTop.Contains($_.paper_id) }).Count
+"bridge vs emerging top-$k overlap: $overlap / $($emIds.Count)"
+```
+
+Repeat with **`$elig.items`** instead of **`$full.items`** if you want **eligible-only** overlap vs emerging.
+
+**H5 - Decision gate before ML2-5b**
+
+- If **eligible-only** top-k is **almost identical** to **full** bridge top-k and **emerging** overlap stays **very high**, treat **positive bridge weight** as **low leverage** on this geometry (aligns with existing ML2-5b “distinct head” guardrails).
+- Consider **ML2-5b** only when the **eligible-gated** bridge head is **materially different** from the ungated bridge head **and** cluster/signal quality still passes the roadmap checks—not from weight tuning alone on a frozen head.
+
+**Record** in your ops log: `ranking_run_id`, `full.total`, `elig.total`, overlap numbers, and a one-line verdict.
+
+---
+
+## 12. Definition of done (minimum for "r2 path" complete)
 
 - [ ] Phase A: dry-run recorded; apply step run iff `rows_changed > 0`.  
 - [ ] `EMBED_VER` / `CLUSTER_VER` documented.  
@@ -235,11 +299,12 @@ For an **ML2-5b** experiment (bridge signal in `final_score` for the bridge fami
 - [ ] Phase E: clustering `succeeded`.  
 - [ ] Phase D2: `missing_cluster_assignment=0` with `--fail-on-gaps`.  
 - [ ] Phase F: inspect JSON reviewed and notes filed.  
-- [ ] (Optional) Phase G: new `ranking_run_id` recorded for downstream UI/API pins.
+- [ ] (Optional) Phase G: new `ranking_run_id` recorded for downstream UI/API pins.  
+- [ ] (Optional) Phase H: full vs `bridge_eligible_only` bridge lists recorded; emerging overlap noted; verdict on whether ML2-5b is worth trying on this artifact.
 
 ---
 
-## 12. Failure triage (short)
+## 13. Failure triage (short)
 
 | Symptom | Likely cause |
 |---------|----------------|
@@ -251,7 +316,7 @@ For an **ML2-5b** experiment (bridge signal in `final_score` for the bridge fami
 
 ---
 
-## 13. Reference - command index
+## 14. Reference - command index
 
 All subcommands: `python -m pipeline.cli --help`  
 Per command: `python -m pipeline.cli <command> --help`
