@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock, patch
 
 from app.scores_repo import (
+    PaperRankingFamilyRow,
     _latest_successful_ranking_run_id,
+    get_paper_family_rankings,
     latest_corpus_snapshot_version_with_works,
     list_ranked_recommendations,
     resolve_ranked_run_context,
@@ -139,3 +141,64 @@ def test_list_ranked_recommendations_no_eligible_filter_for_non_bridge_family(
 
     list_query = mock_conn.execute.call_args_list[1][0][0]
     assert "ps.bridge_eligible IS TRUE" not in list_query
+
+
+@patch("app.scores_repo.database_url_from_env", return_value="postgresql://test")
+@patch("app.scores_repo.psycopg.connect")
+def test_get_paper_family_rankings_uses_global_family_rank_window(
+    mock_connect: MagicMock,
+    _mock_dsn: MagicMock,
+) -> None:
+    mock_conn = MagicMock()
+    mock_connect.return_value.__enter__.return_value = mock_conn
+
+    r_ctx = MagicMock()
+    r_ctx.fetchone.return_value = {
+        "ranking_run_id": "rank-x",
+        "ranking_version": "v0",
+        "corpus_snapshot_version": "snap-a",
+    }
+    r_rows = MagicMock()
+    r_rows.fetchall.return_value = [
+        {
+            "family": "emerging",
+            "family_rank": 12,
+            "semantic_score": None,
+            "citation_velocity_score": 0.7,
+            "topic_growth_score": 0.6,
+            "bridge_score": None,
+            "diversity_penalty": 0.1,
+            "final_score": 0.88,
+            "reason_short": "Strong momentum in-slice.",
+            "bridge_eligible": None,
+        }
+    ]
+    r_cfg = MagicMock()
+    r_cfg.fetchone.return_value = {"config_json": {}}
+    mock_conn.execute.side_effect = [r_ctx, r_rows, r_cfg]
+
+    out = get_paper_family_rankings(
+        paper_id="W456",
+        ranking_run_id="rank-x",
+    )
+
+    assert out is not None
+    ranking_query = mock_conn.execute.call_args_list[1][0][0]
+    assert "RANK() OVER" in ranking_query
+    assert "PARTITION BY ps.recommendation_family" in ranking_query
+    assert "ORDER BY ps.final_score DESC, ps.work_id ASC" in ranking_query
+    _, rows, _ = out
+    assert rows == [
+        PaperRankingFamilyRow(
+            family="emerging",
+            rank=12,
+            final_score=0.88,
+            reason_short="Strong momentum in-slice.",
+            semantic_score=None,
+            citation_velocity_score=0.7,
+            topic_growth_score=0.6,
+            bridge_score=None,
+            diversity_penalty=0.1,
+            bridge_eligible=None,
+        )
+    ]

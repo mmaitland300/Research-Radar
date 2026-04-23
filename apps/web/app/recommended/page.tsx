@@ -264,12 +264,12 @@ function explanationSummary(explanations: RankedSignalExplanation[]): string {
   const measured = count("measured");
   const experimental = count("experimental");
   const penalty = count("penalty");
-  const not_computed = count("not_computed");
+  const notComputed = count("not_computed");
   if (used) parts.push(`${used} used`);
   if (measured) parts.push(`${measured} measured`);
   if (experimental) parts.push(`${experimental} experimental`);
   if (penalty) parts.push(`${penalty} penalty`);
-  if (not_computed) parts.push(`${not_computed} not computed`);
+  if (notComputed) parts.push(`${notComputed} not computed`);
   return parts.length > 0 ? parts.join(" · ") : "No signal breakdown";
 }
 

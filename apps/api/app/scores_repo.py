@@ -40,6 +40,20 @@ class RankedRunContext:
 
 
 @dataclass(frozen=True)
+class PaperRankingFamilyRow:
+    family: str
+    rank: int | None
+    final_score: float | None
+    reason_short: str | None
+    semantic_score: float | None
+    citation_velocity_score: float | None
+    topic_growth_score: float | None
+    bridge_score: float | None
+    diversity_penalty: float | None
+    bridge_eligible: bool | None = None
+
+
+@dataclass(frozen=True)
 class MaterializedRankingForMeta:
     ranking_run_id: str
     ranking_version: str
@@ -312,6 +326,116 @@ def list_ranked_recommendations(
             else None,
             final_score=float(row["final_score"]),
             reason_short=str(row["reason_short"]),
+            bridge_eligible=(
+                None
+                if row.get("bridge_eligible") is None
+                else bool(row["bridge_eligible"])
+            ),
+        )
+        for row in rows
+    ]
+    return ctx, items, run_config
+
+
+def get_paper_family_rankings(
+    *,
+    paper_id: str,
+    corpus_snapshot_version: str | None = None,
+    ranking_run_id: str | None = None,
+    ranking_version: str | None = None,
+) -> tuple[RankedRunContext, list[PaperRankingFamilyRow], dict[str, Any]] | None:
+    query = """
+        WITH target_work AS (
+            SELECT w.id
+            FROM works w
+            WHERE w.openalex_id = %s
+              AND w.inclusion_status = 'included'
+            LIMIT 1
+        ),
+        families AS (
+            SELECT family_name::text AS family
+            FROM (VALUES ('emerging'), ('bridge'), ('undercited')) AS family_set(family_name)
+        ),
+        ranked AS (
+            SELECT
+                ps.recommendation_family,
+                ps.work_id,
+                ps.semantic_score,
+                ps.citation_velocity_score,
+                ps.topic_growth_score,
+                ps.bridge_score,
+                ps.diversity_penalty,
+                ps.final_score,
+                ps.reason_short,
+                ps.bridge_eligible,
+                RANK() OVER (
+                    PARTITION BY ps.recommendation_family
+                    ORDER BY ps.final_score DESC, ps.work_id ASC
+                ) AS family_rank
+            FROM paper_scores ps
+            WHERE ps.ranking_run_id = %s
+        )
+        SELECT
+            f.family,
+            ranked.family_rank,
+            ranked.semantic_score,
+            ranked.citation_velocity_score,
+            ranked.topic_growth_score,
+            ranked.bridge_score,
+            ranked.diversity_penalty,
+            ranked.final_score,
+            ranked.reason_short,
+            ranked.bridge_eligible
+        FROM families f
+        CROSS JOIN target_work tw
+        LEFT JOIN ranked
+          ON ranked.recommendation_family = f.family
+         AND ranked.work_id = tw.id
+        ORDER BY CASE f.family
+            WHEN 'emerging' THEN 1
+            WHEN 'bridge' THEN 2
+            WHEN 'undercited' THEN 3
+            ELSE 99
+        END
+    """
+
+    with psycopg.connect(database_url_from_env(), row_factory=dict_row) as conn:
+        ctx = resolve_ranked_run_context(
+            conn,
+            ranking_run_id=ranking_run_id,
+            corpus_snapshot_version=corpus_snapshot_version,
+            ranking_version=ranking_version,
+        )
+        if ctx is None:
+            return None
+        rows = conn.execute(query, (paper_id, ctx.ranking_run_id)).fetchall()
+        cfg_row = conn.execute(
+            """
+            SELECT config_json
+            FROM ranking_runs
+            WHERE ranking_run_id = %s
+            """,
+            (ctx.ranking_run_id,),
+        ).fetchone()
+        run_config = _parse_config_json(cfg_row["config_json"] if cfg_row else None)
+
+    items = [
+        PaperRankingFamilyRow(
+            family=str(row["family"]),
+            rank=int(row["family_rank"]) if row["family_rank"] is not None else None,
+            final_score=float(row["final_score"]) if row["final_score"] is not None else None,
+            reason_short=str(row["reason_short"]) if row["reason_short"] is not None else None,
+            semantic_score=float(row["semantic_score"]) if row["semantic_score"] is not None else None,
+            citation_velocity_score=float(row["citation_velocity_score"])
+            if row["citation_velocity_score"] is not None
+            else None,
+            topic_growth_score=float(row["topic_growth_score"])
+            if row["topic_growth_score"] is not None
+            else None,
+            bridge_score=float(row["bridge_score"]) if row["bridge_score"] is not None else None,
+            diversity_penalty=float(row["diversity_penalty"])
+            if row["diversity_penalty"] is not None
+            else None,
             bridge_eligible=(
                 None
                 if row.get("bridge_eligible") is None

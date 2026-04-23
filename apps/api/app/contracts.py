@@ -281,6 +281,34 @@ class RankedRecommendationsResponse(BaseModel):
     items: list[RankedRecommendationItem]
 
 
+class PaperRankingFamilyItem(BaseModel):
+    family: str
+    present: bool
+    in_top_n: bool
+    rank: int | None = None
+    final_score: float | None = None
+    reason_short: str | None = None
+    signals: RankedSignals | None = None
+    signal_explanations: list[RankedSignalExplanation] = Field(default_factory=list)
+    bridge_eligible: bool | None = Field(
+        default=None,
+        description=(
+            "Same meaning as RankedRecommendationItem.bridge_eligible. Null for non-bridge families, "
+            "legacy bridge rows, or families with no materialized row for the paper."
+        ),
+    )
+
+
+class PaperRankingResponse(BaseModel):
+    paper_id: str
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    top_n: int
+    rank_scope: str
+    families: list[PaperRankingFamilyItem]
+
+
 class SimilarPaperItem(BaseModel):
     paper_id: str
     title: str
