@@ -121,42 +121,133 @@ export default async function PaperDetailPage({
 
   const similar: SimilarPapersState | null =
     paper && !error ? await fetchSimilarPapers(canonicalPaperId) : null;
+  const similarCount = similar?.kind === "ok" ? similar.data.items.length : 0;
 
   return (
     <main className="page">
-      <section className="panel">
-        <p className="accent">Paper Detail</p>
-        <h1>{paper?.title ?? "Paper detail"}</h1>
-        {error ? <p>{error}</p> : null}
-        {!error && !paper ? <p>No detail was returned for this paper id.</p> : null}
-        <div className="meta">
-          <span>Paper ID: {canonicalPaperId}</span>
-          {paper ? <span>{paper.year}</span> : null}
-          {paper ? <span>Citations: {paper.citation_count}</span> : null}
-          {paper ? <span>{paper.is_core_corpus ? "core" : "edge"}</span> : null}
-        </div>
-        {paper ? (
-          <div className="source-block">
-            <h2 className="source-block-heading">Source</h2>
-            <p className="source-block-primary">{paper.venue ?? "Unknown venue"}</p>
-            <p className="source-block-secondary">
-              Slug: <strong>{paper.source_slug ?? "unknown"}</strong>
-            </p>
+      <section className="panel page-hero family-hero family-hero-emerging">
+        <div className="family-hero-grid">
+          <div>
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow family-emerging">Paper dossier</p>
+                <h1>{paper?.title ?? "Paper detail"}</h1>
+              </div>
+              <div className="stamp-row">
+                <span className="stamp">Detail view</span>
+                <span className="stamp">Similarity handoff</span>
+              </div>
+            </div>
+            {error ? <p>{error}</p> : null}
+            {!error && !paper ? <p>No detail was returned for this paper id.</p> : null}
+            {paper ? (
+              <>
+                <p className="hero-lead">
+                  Review source metadata, abstract, authors, topics, and local similarity context
+                  before moving into explanation and ranking views.
+                </p>
+                <div className="hero-metrics" aria-label="Paper summary">
+                  <article className="metric-card">
+                    <p className="metric-label">Paper year</p>
+                    <p className="metric-value">{paper.year}</p>
+                  </article>
+                  <article className="metric-card">
+                    <p className="metric-label">Citations</p>
+                    <p className="metric-value">{paper.citation_count}</p>
+                  </article>
+                  <article className="metric-card">
+                    <p className="metric-label">Authors</p>
+                    <p className="metric-value">{paper.authors.length}</p>
+                  </article>
+                  <article className="metric-card">
+                    <p className="metric-label">Topic labels</p>
+                    <p className="metric-value">{paper.topics.length}</p>
+                  </article>
+                </div>
+                <div className="meta">
+                  <span>Paper ID: {canonicalPaperId}</span>
+                  <span>{paper.is_core_corpus ? "core corpus" : "edge slice"}</span>
+                  <span>{paper.source_slug ?? "unknown source slug"}</span>
+                </div>
+                <div className="action-row" aria-label="Paper workflow handoff">
+                  <Link className="action-link" href="/recommended?family=emerging">
+                    Check emerging feed
+                  </Link>
+                  <Link className="action-link" href="/recommended?family=bridge">
+                    Check bridge feed
+                  </Link>
+                  <Link className="action-link" href="/trends">
+                    Inspect topic momentum
+                  </Link>
+                </div>
+              </>
+            ) : null}
           </div>
-        ) : null}
+          <aside className="family-brief">
+            <div className="family-brief-diagram" aria-hidden="true">
+              <span className="family-ring family-ring-a" />
+              <span className="family-ring family-ring-b" />
+              <span className="family-ring family-ring-c" />
+              <span className="family-sweep family-sweep-emerging" />
+              <span className="family-node family-node-emerging family-node-1" />
+              <span className="family-node family-node-emerging family-node-2" />
+              <span className="family-node family-node-emerging family-node-3" />
+            </div>
+            <div className="family-brief-copy">
+              <p className="eyebrow family-emerging">Reading guide</p>
+              <h2>Use this page as a paper dossier</h2>
+              <ul className="measure-list">
+                <li>Confirm the source and abstract before judging similarity.</li>
+                <li>Use topic labels to understand neighborhood placement.</li>
+                <li>Hand off from this page into ranked or similar-paper surfaces.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
       </section>
 
-      <section className="split">
-        <article className="panel">
+      {paper ? (
+        <section className="panel section-panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow eyebrow-muted">Source readout</p>
+              <h2>Source and corpus status</h2>
+            </div>
+          </div>
+          <div className="info-grid">
+            <article className="brief-card">
+              <h3>Venue</h3>
+              <p>{paper.venue ?? "Unknown venue"}</p>
+            </article>
+            <article className="brief-card">
+              <h3>Source slug</h3>
+              <p className="metric-value metric-value-mono">{paper.source_slug ?? "unknown"}</p>
+            </article>
+            <article className="brief-card">
+              <h3>Corpus placement</h3>
+              <p>{paper.is_core_corpus ? "Core corpus" : "Controlled edge slice"}</p>
+            </article>
+            <article className="brief-card">
+              <h3>Similarity rows</h3>
+              <p>{similarCount || "Not available yet"}</p>
+            </article>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="split detail-split">
+        <article className="panel instrument-panel">
           <h2>Abstract</h2>
-          <p>{paper?.abstract || "No abstract available."}</p>
+          <p className="detail-abstract">{paper?.abstract || "No abstract available."}</p>
         </article>
-        <article className="panel">
+        <article className="panel instrument-panel">
           <h2>Authors</h2>
           {paper && paper.authors.length > 0 ? (
-            <ul>
+            <ul className="author-list">
               {paper.authors.map((author) => (
-                <li key={author}>{author}</li>
+                <li key={author} className="author-chip">
+                  {author}
+                </li>
               ))}
             </ul>
           ) : (
@@ -165,8 +256,18 @@ export default async function PaperDetailPage({
         </article>
       </section>
 
-      <section className="panel">
-        <h2>Topics</h2>
+      <section className="panel section-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow eyebrow-muted">Neighborhood labels</p>
+            <h2>Topics</h2>
+          </div>
+          {paper ? (
+            <div className="stamp-row">
+              <span className="stamp">{paper.topics.length} labels</span>
+            </div>
+          ) : null}
+        </div>
         {paper && paper.topics.length > 0 ? (
           <p className="chip-row" aria-label="Topics">
             {paper.topics.map((topic) => (
@@ -179,8 +280,21 @@ export default async function PaperDetailPage({
       </section>
 
       {similar ? (
-        <section className="panel">
-          <h2>Similar papers</h2>
+        <section className="panel section-panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow eyebrow-muted">Neighbor surface</p>
+              <h2>Similar papers</h2>
+            </div>
+            {similar.kind === "ok" ? (
+              <div className="stamp-row">
+                <span className="stamp">{similar.data.total} total neighbors</span>
+                <span className="stamp">
+                  Embedding {similar.data.embedding_version}
+                </span>
+              </div>
+            ) : null}
+          </div>
           {similar.kind === "disabled" ? (
             <p className="muted-inline">
               Set <code>NEXT_PUBLIC_EMBEDDING_VERSION</code> to enable
@@ -202,18 +316,22 @@ export default async function PaperDetailPage({
           {similar.kind === "ok" && similar.data.items.length > 0 ? (
             <ul className="result-list">
               {similar.data.items.map((item) => (
-                <li key={item.paper_id} className="result-item">
-                  <p className="result-title">
-                    <Link
-                      href={`/papers/${encodeURIComponent(item.paper_id)}`}
-                    >
-                      {item.title}
-                    </Link>
-                  </p>
+                <li key={item.paper_id} className="result-item result-item-emerging">
+                  <div className="result-heading">
+                    <p className="result-title">
+                      <Link
+                        href={`/papers/${encodeURIComponent(item.paper_id)}`}
+                      >
+                        {item.title}
+                      </Link>
+                    </p>
+                    <span className="result-score result-score-emerging">
+                      {item.similarity.toFixed(3)}
+                    </span>
+                  </div>
                   <p className="result-meta">
                     {item.year} | cites: {item.citation_count} |{" "}
-                    {item.source_slug ?? "unknown venue"} | similarity:{" "}
-                    {item.similarity.toFixed(4)}
+                    {item.source_slug ?? "unknown venue"}
                   </p>
                   {item.topics.length > 0 ? (
                     <div className="chip-row" aria-label="Top topics">
@@ -224,6 +342,14 @@ export default async function PaperDetailPage({
                       ))}
                     </div>
                   ) : null}
+                  <div className="action-row" aria-label="Neighbor handoff">
+                    <Link className="action-link" href={`/papers/${encodeURIComponent(item.paper_id)}`}>
+                      Open neighbor dossier
+                    </Link>
+                    <Link className="action-link" href="/recommended?family=emerging">
+                      Compare in feed
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -231,12 +357,60 @@ export default async function PaperDetailPage({
         </section>
       ) : null}
 
-      <section className="panel">
-        <h2>Next explainability step</h2>
-        <p>
-          This page now serves real metadata from Postgres. Next, attach ranking
-          run context and per-signal contributions.
-        </p>
+      <section className="panel section-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow eyebrow-muted">Next handoff</p>
+            <h2>Best next moves from here</h2>
+          </div>
+        </div>
+        <div className="workflow-grid">
+          <article className="workflow-card">
+            <p className="workflow-step">01</p>
+            <h3>Check recommendation families</h3>
+            <p>
+              Use Recommended to see whether this paper behaves like an emerging, bridge, or
+              undercited signal in the current ranked feed.
+            </p>
+            <div className="action-row">
+              <Link className="action-link" href="/recommended?family=emerging">
+                Emerging
+              </Link>
+              <Link className="action-link" href="/recommended?family=bridge">
+                Bridge
+              </Link>
+              <Link className="action-link" href="/recommended?family=undercited">
+                Under-cited
+              </Link>
+            </div>
+          </article>
+          <article className="workflow-card">
+            <p className="workflow-step">02</p>
+            <h3>Inspect nearby topics</h3>
+            <p>
+              Use Trends to understand whether its attached labels are heating up or cooling down
+              inside the curated corpus.
+            </p>
+            <div className="action-row">
+              <Link className="action-link" href="/trends">
+                Open trends
+              </Link>
+            </div>
+          </article>
+          <article className="workflow-card">
+            <p className="workflow-step">03</p>
+            <h3>Add signal explanations</h3>
+            <p>
+              This page is now ready for a deeper explainability pass with run-specific score
+              contributions and family-level annotations.
+            </p>
+            <div className="action-row">
+              <Link className="action-link" href="/evaluation?family=emerging">
+                Open evaluation
+              </Link>
+            </div>
+          </article>
+        </div>
       </section>
     </main>
   );

@@ -203,6 +203,11 @@ pre {
   justify-content: flex-end;
 }
 
+.stamp-row-inline {
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+
 .stamp {
   display: inline-flex;
   align-items: center;
@@ -595,7 +600,8 @@ pre {
 .eval-proxy,
 .ranking-how-panel,
 .ranking-why-details,
-.result-item {
+.result-item,
+.workflow-card {
   position: relative;
   border: 1px solid var(--line);
   background:
@@ -606,7 +612,8 @@ pre {
 
 .signal-card,
 .brief-card,
-.source-block {
+.source-block,
+.workflow-card {
   border-radius: 18px;
 }
 
@@ -782,6 +789,65 @@ pre {
 .measure-list {
   margin: 0;
   padding-left: 18px;
+}
+
+.workflow-grid,
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.workflow-card {
+  padding: 18px;
+}
+
+.workflow-step {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.workflow-card h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.action-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.action-link:hover {
+  background: var(--panel-ink);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
 
 ul {
@@ -966,6 +1032,32 @@ ul {
 .source-block {
   margin-top: 12px;
   padding: 16px 18px;
+}
+
+.detail-split {
+  align-items: stretch;
+}
+
+.detail-abstract {
+  font-size: 1.02rem;
+}
+
+.author-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+}
+
+.author-chip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.25;
 }
 
 .source-block-primary {

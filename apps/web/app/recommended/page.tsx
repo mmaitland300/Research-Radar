@@ -548,6 +548,12 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     {item.year} | cites: {item.citation_count} |{" "}
                     {item.source_slug ?? "unknown venue"}
                   </p>
+                  <div className="stamp-row stamp-row-inline">
+                    <span className={`stamp stamp-family stamp-family-${family}`}>
+                      {FAMILY_LABEL[family]}
+                    </span>
+                    <span className="stamp">{item.topics.length} topic label{item.topics.length === 1 ? "" : "s"}</span>
+                  </div>
                   {item.topics.length > 0 ? (
                     <div className="chip-row" aria-label="Top topics">
                       {item.topics.map((t) => (
@@ -563,6 +569,17 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   ) : (
                     <p className="result-breakdown">Signals: {formatSignals(item.signals)}</p>
                   )}
+                  <div className="action-row" aria-label="Related views">
+                    <Link className="action-link" href={`/papers/${encodeURIComponent(item.paper_id)}`}>
+                      Open dossier
+                    </Link>
+                    <Link className="action-link" href={`/evaluation?family=${family}`}>
+                      Compare in evaluation
+                    </Link>
+                    <Link className="action-link" href="/trends">
+                      Check topic momentum
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>

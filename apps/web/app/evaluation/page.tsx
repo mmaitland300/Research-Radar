@@ -206,6 +206,14 @@ function ArmColumn({ title, arm }: { title: string; arm: EvalArm }) {
                   ))}
                 </div>
               ) : null}
+              <div className="action-row" aria-label="Evaluation handoff">
+                <Link className="action-link" href={`/papers/${encodeURIComponent(item.paper_id)}`}>
+                  Open dossier
+                </Link>
+                <Link className="action-link" href="/trends">
+                  Topic momentum
+                </Link>
+              </div>
             </li>
           ))
         )}
