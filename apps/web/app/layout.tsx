@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
-import { ThemeToggle } from "./theme-toggle";
+import { SiteNav } from "./site-nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +17,24 @@ const navItems = [
   { href: "/trends", label: "Trends" },
   { href: "/evaluation", label: "Evaluation" }
 ];
+
+const displayFont = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "500", "600", "700"]
+});
+
+const uiFont = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-ui",
+  weight: ["400", "500", "600", "700"]
+});
+
+const monoFont = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "500", "600"]
+});
 
 const themeInitScript = `
   (() => {
@@ -42,22 +61,34 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${displayFont.variable} ${uiFont.variable} ${monoFont.variable}`}>
         <Script id="rr-theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>
         <div className="shell">
-          <nav className="nav" aria-label="Primary">
-            <div className="nav-links">
-              {navItems.map((item) => (
-                <Link key={item.href} href={item.href}>
-                  {item.label}
+          <header className="site-header">
+            <div className="masthead">
+              <div className="brand-block">
+                <Link className="brand-mark" href="/">
+                  <span className="brand-kicker">Research signal intelligence</span>
+                  <span className="brand-name">Research Radar</span>
                 </Link>
-              ))}
+                <p className="brand-copy">
+                  Detect emerging, bridge, and undercited papers inside a curated audio-ML slice,
+                  then expose the signals behind every recommendation.
+                </p>
+              </div>
+              <div className="status-cluster" aria-label="Product focus">
+                <span className="stamp">Curated corpus</span>
+                <span className="stamp">Explainable ranking</span>
+                <span className="stamp">Emerging and bridge papers</span>
+              </div>
             </div>
-            <ThemeToggle />
-          </nav>
-          {children}
+            <SiteNav items={navItems} />
+          </header>
+          <div className="shell-content">
+            {children}
+          </div>
         </div>
       </body>
     </html>

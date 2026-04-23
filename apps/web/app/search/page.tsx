@@ -45,10 +45,18 @@ export default async function SearchPage() {
 
   return (
     <main className="page">
-      <section className="panel">
-        <p className="accent-2">Search</p>
-        <h1>Query papers, authors, topics, and clusters.</h1>
-        <p>
+      <section className="panel page-hero">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow family-bridge">Search</p>
+            <h1>Query papers, authors, topics, and clusters.</h1>
+          </div>
+          <div className="stamp-row">
+            <span className="stamp">Lexical + embedding retrieval</span>
+            <span className="stamp">Curated slice first</span>
+          </div>
+        </div>
+        <p className="hero-lead">
           The first searchable surface will prioritize relevance and filter
           control over breadth. Users should be able to narrow by year, venue,
           cluster, and score family without feeling like they are browsing a
@@ -57,16 +65,16 @@ export default async function SearchPage() {
       </section>
 
       <section className="split">
-        <article className="panel">
+        <article className="panel instrument-panel">
           <h2>Primary filters</h2>
-          <ul>
+          <ul className="measure-list">
             <li>Year range</li>
             <li>Venue class and venue</li>
             <li>Cluster and topic labels</li>
             <li>Recommendation family</li>
           </ul>
         </article>
-        <article className="panel">
+        <article className="panel instrument-panel">
           <h2>Search contract</h2>
           <p>
             Search should use lexical matching plus embedding retrieval, then
@@ -76,23 +84,42 @@ export default async function SearchPage() {
         </article>
       </section>
 
-      <section className="panel">
-        <h2>Latest corpus papers (DB-backed)</h2>
+      <section className="panel section-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow eyebrow-muted">Corpus readout</p>
+            <h2>Latest corpus papers (DB-backed)</h2>
+          </div>
+          <div className="stamp-row">
+            <span className="stamp">Live API surface</span>
+            <span className="stamp">10-row sample</span>
+          </div>
+        </div>
         {error ? <p>{error}</p> : null}
         {!error && items.length === 0 ? <p>No included papers found yet.</p> : null}
         {items.length > 0 ? (
           <ul className="result-list">
             {items.map((paper) => (
-              <li key={paper.paper_id} className="result-item">
-                <p className="result-title">
-                  <Link href={`/papers/${encodeURIComponent(paper.paper_id)}`}>
-                    {paper.title}
-                  </Link>
-                </p>
+              <li key={paper.paper_id} className="result-item result-item-bridge">
+                <div className="result-heading">
+                  <p className="result-title">
+                    <Link href={`/papers/${encodeURIComponent(paper.paper_id)}`}>
+                      {paper.title}
+                    </Link>
+                  </p>
+                  <span className={`result-score ${paper.is_core_corpus ? "result-score-bridge" : "result-score-neutral"}`}>
+                    {paper.is_core_corpus ? "core" : "edge"}
+                  </span>
+                </div>
                 <p className="result-meta">
                   {paper.year} | cites: {paper.citation_count} |{" "}
-                  {paper.source_label ?? paper.source_slug ?? "unknown venue"} |{" "}
-                  {paper.is_core_corpus ? "core" : "edge"}
+                  {paper.source_label ?? paper.source_slug ?? "unknown venue"}
+                </p>
+                <p className="result-reason">
+                  <Link href={`/papers/${encodeURIComponent(paper.paper_id)}`}>
+                    Open detail view and move from retrieval into recommendation
+                    and similarity context.
+                  </Link>
                 </p>
                 {paper.topics.length > 0 ? (
                   <p className="chip-row" aria-label="Topics">

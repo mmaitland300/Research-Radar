@@ -9,6 +9,30 @@ const FAMILY_LABEL: Record<Family, string> = {
   undercited: "Under-cited"
 };
 
+const FAMILY_SUMMARY: Record<Family, string> = {
+  emerging: "Momentum-weighted papers gaining relevance inside your curated slice.",
+  bridge: "Papers that connect nearby but meaningfully distinct topic neighborhoods.",
+  undercited: "Low-cite candidates that appear stronger than their current attention level."
+};
+
+const FAMILY_NOTES: Record<Family, string[]> = {
+  emerging: [
+    "Topic-growth and citation-velocity signals should dominate the list.",
+    "Semantic fit remains in view so momentum does not drift off-slice.",
+    "The goal is early importance, not raw popularity."
+  ],
+  bridge: [
+    "Bridge papers should connect clusters without collapsing into generic survey work.",
+    "Cross-neighborhood relevance matters more than simple citation count.",
+    "Keep the feed legible even when the graph logic gets complex."
+  ],
+  undercited: [
+    "These rows are judged against a low-cite candidate pool, not the whole corpus.",
+    "The family should surface overlooked strength before attention catches up.",
+    "Snapshot scope matters because the pool is frozen to a corpus version."
+  ]
+};
+
 type RankedSignals = {
   semantic: number | null;
   citation_velocity: number | null;
@@ -355,51 +379,111 @@ type PageProps = {
 export default async function RecommendedPage({ searchParams }: PageProps) {
   const family = parseFamily(searchParams.family);
   const { data, error, status } = await fetchRanked(family);
+  const topScore = data?.items[0]?.final_score ?? null;
+  const surfacedWithTopics = data?.items.filter((item) => item.topics.length > 0).length ?? 0;
 
   return (
-    <main className="page">
-      <section className="panel">
-        <p className="accent">Recommended</p>
-        <h1>Ranked recommendations</h1>
-        <p>
-          Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code> per
-          family). The API derives plain-language explanations from the same weights stored on the run.
-          The <strong>undercited</strong> family only scores works in the frozen low-cite candidate pool (
-          <code>docs/candidate-pool-low-cite.md</code> v0), scoped to your corpus snapshot.
-        </p>
-        <nav className="tabs" aria-label="Recommendation family">
-          {FAMILIES.map((f) => (
-            <Link
-              key={f}
-              href={`/recommended?family=${f}`}
-              aria-current={f === family ? "page" : undefined}
-            >
-              {FAMILY_LABEL[f]}
-            </Link>
-          ))}
-        </nav>
-        {data ? (
-          <p className="muted-inline">
-            <strong>{data.ranking_version}</strong> | run{" "}
-            <code>{data.ranking_run_id}</code> | snapshot{" "}
-            <code>{data.corpus_snapshot_version}</code> | {data.total} paper
-            {data.total === 1 ? "" : "s"}
-          </p>
-        ) : null}
-        {RANKING_VERSION ? (
-          <p className="muted-inline">
-            Web is filtering runs with <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>.
-          </p>
-        ) : (
-          <p className="muted-inline">
-            Using the latest succeeded run for the corpus snapshot (set{" "}
-            <code>NEXT_PUBLIC_RANKING_VERSION</code> to pin a label).
-          </p>
-        )}
+    <main className={`page page-family page-family-${family}`}>
+      <section className={`panel page-hero family-hero family-hero-${family}`}>
+        <div className="family-hero-grid">
+          <div>
+            <div className="panel-header">
+              <div>
+                <p className={`eyebrow family-${family}`}>Recommended</p>
+                <h1>Ranked recommendations</h1>
+              </div>
+              <div className="stamp-row">
+                <span className={`stamp stamp-family stamp-family-${family}`}>
+                  {FAMILY_LABEL[family]} feed
+                </span>
+                <span className="stamp">Materialized ranking run</span>
+              </div>
+            </div>
+            <p className="hero-lead">{FAMILY_SUMMARY[family]}</p>
+            <p>
+              Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code> per
+              family). The API derives plain-language explanations from the same weights stored on the
+              run. The <strong>undercited</strong> family only scores works in the frozen low-cite
+              candidate pool (<code>docs/candidate-pool-low-cite.md</code> v0), scoped to your corpus
+              snapshot.
+            </p>
+            <nav className="tabs" aria-label="Recommendation family">
+              {FAMILIES.map((f) => (
+                <Link
+                  key={f}
+                  href={`/recommended?family=${f}`}
+                  aria-current={f === family ? "page" : undefined}
+                >
+                  {FAMILY_LABEL[f]}
+                </Link>
+              ))}
+            </nav>
+            {data ? (
+              <div className="hero-metrics" aria-label="Ranking run summary">
+                <article className="metric-card">
+                  <p className="metric-label">Run label</p>
+                  <p className="metric-value metric-value-mono">{data.ranking_version}</p>
+                </article>
+                <article className="metric-card">
+                  <p className="metric-label">Rows surfaced</p>
+                  <p className="metric-value">{data.total}</p>
+                </article>
+                <article className="metric-card">
+                  <p className="metric-label">Top score</p>
+                  <p className="metric-value">
+                    {topScore != null ? topScore.toFixed(3) : "n/a"}
+                  </p>
+                </article>
+                <article className="metric-card">
+                  <p className="metric-label">Rows with topic labels</p>
+                  <p className="metric-value">{surfacedWithTopics}</p>
+                </article>
+              </div>
+            ) : null}
+            {data ? (
+              <p className="muted-inline">
+                <strong>{data.ranking_version}</strong> | run{" "}
+                <code>{data.ranking_run_id}</code> | snapshot{" "}
+                <code>{data.corpus_snapshot_version}</code> | {data.total} paper
+                {data.total === 1 ? "" : "s"}
+              </p>
+            ) : null}
+            {RANKING_VERSION ? (
+              <p className="muted-inline">
+                Web is filtering runs with <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>.
+              </p>
+            ) : (
+              <p className="muted-inline">
+                Using the latest succeeded run for the corpus snapshot (set{" "}
+                <code>NEXT_PUBLIC_RANKING_VERSION</code> to pin a label).
+              </p>
+            )}
+          </div>
+          <aside className="family-brief">
+            <div className="family-brief-diagram" aria-hidden="true">
+              <span className="family-ring family-ring-a" />
+              <span className="family-ring family-ring-b" />
+              <span className="family-ring family-ring-c" />
+              <span className={`family-sweep family-sweep-${family}`} />
+              <span className={`family-node family-node-${family} family-node-1`} />
+              <span className={`family-node family-node-${family} family-node-2`} />
+              <span className={`family-node family-node-${family} family-node-3`} />
+            </div>
+            <div className="family-brief-copy">
+              <p className={`eyebrow family-${family}`}>Signal lens</p>
+              <h2>{FAMILY_LABEL[family]} reading guide</h2>
+              <ul className="measure-list">
+                {FAMILY_NOTES[family].map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+        </div>
       </section>
 
       {error ? (
-        <section className="panel">
+        <section className="panel instrument-panel">
           <p>{error}</p>
           {status === 404 ? (
             <p className="muted-inline">
@@ -411,12 +495,19 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
       ) : null}
 
       {data && !error ? (
-        <section className="panel">
-          <h2>{FAMILY_LABEL[family]} | live results</h2>
-          <p className="muted-inline">
-            Family: <strong>{data.family}</strong> | order by materialized{" "}
-            <code>final_score</code> descending
-          </p>
+        <section className="panel section-panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow eyebrow-muted">Live ranking surface</p>
+              <h2>{FAMILY_LABEL[family]} results</h2>
+            </div>
+            <div className="stamp-row">
+              <span className={`stamp stamp-family stamp-family-${family}`}>
+                Family: {data.family}
+              </span>
+              <span className="stamp">Order: final_score desc</span>
+            </div>
+          </div>
           {family === "emerging" ? (
             <EmergingHowPanel expl={data.list_explanation} rankingVersion={data.ranking_version} />
           ) : null}
@@ -425,16 +516,20 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           ) : (
             <ul className="result-list">
               {data.items.map((item) => (
-                <li key={item.paper_id} className="result-item">
-                  <p className="result-title">
-                    <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>
-                      {item.title}
-                    </Link>
-                  </p>
+                <li key={item.paper_id} className={`result-item result-item-${family}`}>
+                  <div className="result-heading">
+                    <p className="result-title">
+                      <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>
+                        {item.title}
+                      </Link>
+                    </p>
+                    <span className={`result-score result-score-${family}`}>
+                      {item.final_score.toFixed(3)}
+                    </span>
+                  </div>
                   <p className="result-meta">
                     {item.year} | cites: {item.citation_count} |{" "}
-                    {item.source_slug ?? "unknown venue"} | score:{" "}
-                    {item.final_score.toFixed(4)}
+                    {item.source_slug ?? "unknown venue"}
                   </p>
                   {item.topics.length > 0 ? (
                     <div className="chip-row" aria-label="Top topics">

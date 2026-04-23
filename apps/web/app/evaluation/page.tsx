@@ -154,25 +154,48 @@ function ArmProxyStats({ arm }: { arm: EvalArm }) {
 
 function ArmColumn({ title, arm }: { title: string; arm: EvalArm }) {
   return (
-    <article className="panel eval-arm">
-      <h2>{title}</h2>
+    <article className="panel eval-arm instrument-panel">
+      <div className="result-heading">
+        <h2>{title}</h2>
+        <span className="stamp">List size {arm.items.length}</span>
+      </div>
       <p className="muted-inline">{arm.arm_description}</p>
       <p className="muted-inline">
         <strong>Order:</strong> {arm.ordering_description}
       </p>
+      <div className="hero-metrics hero-metrics-compact" aria-label={`${title} proxy summary`}>
+        <article className="metric-card">
+          <p className="metric-label">Mean year</p>
+          <p className="metric-value">{fmtFixed(arm.recency.mean_year, 1)}</p>
+        </article>
+        <article className="metric-card">
+          <p className="metric-label">Median cites</p>
+          <p className="metric-value">{fmtFixed(arm.citations.median, 1)}</p>
+        </article>
+        <article className="metric-card">
+          <p className="metric-label">Unique topics</p>
+          <p className="metric-value">{arm.topics.unique_topic_labels}</p>
+        </article>
+      </div>
       <ArmProxyStats arm={arm} />
       <ul className="result-list">
         {arm.items.length === 0 ? (
           <li className="result-item">No papers in this slice.</li>
         ) : (
           arm.items.map((item) => (
-            <li key={item.paper_id} className="result-item">
-              <p className="result-title">
-                <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>{item.title}</Link>
-              </p>
+            <li key={item.paper_id} className="result-item result-item-bridge">
+              <div className="result-heading">
+                <p className="result-title">
+                  <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>{item.title}</Link>
+                </p>
+                {item.final_score != null ? (
+                  <span className="result-score result-score-bridge">
+                    {item.final_score.toFixed(3)}
+                  </span>
+                ) : null}
+              </div>
               <p className="result-meta">
                 {item.year} | cites: {item.citation_count} | {item.source_slug ?? "-"}
-                {item.final_score != null ? ` | score: ${item.final_score.toFixed(4)}` : null}
               </p>
               {item.topics.length > 0 ? (
                 <div className="chip-row" aria-label="Top topics">
@@ -200,16 +223,46 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
   const { data, error, status } = await fetchCompare(family);
 
   return (
-    <main className="page">
-      <section className="panel">
-        <p className="accent">Evaluation</p>
-        <h1>Evidence v0: ranked feed vs naive baselines</h1>
-        <p>
+    <main className={`page page-family page-family-${family}`}>
+      <section className="panel page-hero">
+        <div className="panel-header">
+          <div>
+            <p className={`eyebrow family-${family}`}>Evaluation</p>
+            <h1>Evidence v0: ranked feed vs naive baselines</h1>
+          </div>
+          <div className="stamp-row">
+            <span className={`stamp stamp-family stamp-family-${family}`}>
+              {FAMILY_LABEL[family]} family
+            </span>
+            <span className="stamp">Distributional checks only</span>
+          </div>
+        </div>
+        <p className="hero-lead">
           This page calls <code>GET /api/v1/evaluation/compare</code> so you can inspect the same
           candidate pool under three orderings: materialized ranking, citation-sorted, and
           date-sorted. Nothing here claims human relevance - only distributional checks on short
           lists.
         </p>
+        {data ? (
+          <div className="hero-metrics" aria-label="Evaluation summary">
+            <article className="metric-card">
+              <p className="metric-label">Pool size</p>
+              <p className="metric-value">{data.pool_size}</p>
+            </article>
+            <article className="metric-card">
+              <p className="metric-label">Run label</p>
+              <p className="metric-value metric-value-mono">{data.ranking_version}</p>
+            </article>
+            <article className="metric-card">
+              <p className="metric-label">Embedding</p>
+              <p className="metric-value metric-value-mono">{data.embedding_version}</p>
+            </article>
+            <article className="metric-card">
+              <p className="metric-label">Generated at</p>
+              <p className="metric-value metric-value-mono">{data.generated_at.slice(0, 10)}</p>
+            </article>
+          </div>
+        ) : null}
         <nav className="tabs" aria-label="Recommendation family">
           {FAMILIES.map((f) => (
             <Link
@@ -234,7 +287,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
       </section>
 
       {error ? (
-        <section className="panel">
+        <section className="panel instrument-panel">
           <h2>Compare unavailable</h2>
           <p>{error}</p>
           {status === 404 ? (
@@ -248,8 +301,13 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
 
       {data ? (
         <>
-          <section className="panel eval-disclaimer">
-            <h2>Disclaimer</h2>
+          <section className="panel eval-disclaimer section-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow eyebrow-muted">Interpretation guardrails</p>
+                <h2>Disclaimer</h2>
+              </div>
+            </div>
             <p className="result-title">{data.disclaimer.headline}</p>
             <ul>
               {data.disclaimer.bullets.map((b, i) => (
@@ -258,8 +316,13 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             </ul>
           </section>
 
-          <section className="panel">
-            <h2>Run and pool</h2>
+          <section className="panel section-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow eyebrow-muted">Run context</p>
+                <h2>Run and pool</h2>
+              </div>
+            </div>
             <p className="muted-inline">
               Run <code>{data.ranking_version}</code> |{" "}
               <code>{data.ranking_run_id}</code> | snapshot <code>{data.corpus_snapshot_version}</code>{" "}
@@ -275,8 +338,13 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             ) : null}
           </section>
 
-          <section className="panel">
-            <h2>Topic label overlap between lists</h2>
+          <section className="panel section-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow eyebrow-muted">List overlap</p>
+                <h2>Topic label overlap between lists</h2>
+              </div>
+            </div>
             <p className="muted-inline">{data.topic_overlap_note}</p>
             <dl className="eval-dl">
               <dt>Ranked vs citation baseline</dt>
