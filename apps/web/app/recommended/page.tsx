@@ -256,6 +256,23 @@ function barFillClass(role: RankedSignalExplanation["role"]): string {
   return "ranking-bar-fill ranking-bar-none";
 }
 
+function explanationSummary(explanations: RankedSignalExplanation[]): string {
+  const count = (role: RankedSignalExplanation["role"]) =>
+    explanations.filter((e) => e.role === role).length;
+  const parts: string[] = [];
+  const used = count("used");
+  const measured = count("measured");
+  const experimental = count("experimental");
+  const penalty = count("penalty");
+  const not_computed = count("not_computed");
+  if (used) parts.push(`${used} used`);
+  if (measured) parts.push(`${measured} measured`);
+  if (experimental) parts.push(`${experimental} experimental`);
+  if (penalty) parts.push(`${penalty} penalty`);
+  if (not_computed) parts.push(`${not_computed} not computed`);
+  return parts.length > 0 ? parts.join(" · ") : "No signal breakdown";
+}
+
 function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanation; rankingVersion: string }) {
   return (
     <div className="ranking-how-panel">
@@ -285,7 +302,7 @@ function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanatio
 function EmergingWhySurfaced({ explanations }: { explanations: RankedSignalExplanation[] }) {
   return (
     <details className="ranking-why-details">
-      <summary>Why this surfaced</summary>
+      <summary>Why this surfaced · {explanationSummary(explanations)}</summary>
       {explanations.map((e) => (
         <div key={e.key} className="ranking-signal-row">
           <div className="ranking-signal-label">
