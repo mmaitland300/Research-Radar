@@ -54,3 +54,7 @@ The query is read-only and reports:
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f docs/audit/semantic_run_distribution_compare.sql -o docs/audit/out/semantic_compare_baseline_vs_new.txt
 ```
+
+## `emerging_movers_between_runs.sql`
+
+Qualitative worksheet helper: top **25** emerging papers by **|Δ final_score|** (then **|Δ rank|**), with stable ordering tie-break on `work_id`. Edit both `params` CTEs to the runs you compare.

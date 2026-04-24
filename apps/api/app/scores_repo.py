@@ -280,7 +280,7 @@ def list_ranked_recommendations(
         ) topic_agg ON TRUE
         WHERE ps.ranking_run_id = %s
           AND ps.recommendation_family = %s
-{eligibility_sql}        ORDER BY ps.final_score DESC
+{eligibility_sql}        ORDER BY ps.final_score DESC, ps.work_id ASC
         LIMIT %s
     """
 

@@ -585,7 +585,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <span className={`stamp stamp-family stamp-family-${family}`}>
                 Family: {data.family}
               </span>
-              <span className="stamp">Order: final_score desc</span>
+              <span className="stamp">Order: final_score desc, work_id asc</span>
               <span className="stamp">Limit: {limit}</span>
             </div>
           </div>

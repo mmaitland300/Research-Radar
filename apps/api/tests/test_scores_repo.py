@@ -109,6 +109,7 @@ def test_list_ranked_recommendations_bridge_eligible_filter_sql(
     assert out is not None
     list_query = mock_conn.execute.call_args_list[1][0][0]
     assert "ps.bridge_eligible IS TRUE" in list_query
+    assert "ORDER BY ps.final_score DESC, ps.work_id ASC" in list_query
 
 
 @patch("app.scores_repo.database_url_from_env", return_value="postgresql://test")

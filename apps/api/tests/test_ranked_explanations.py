@@ -47,3 +47,26 @@ def test_emerging_list_explanation_headline() -> None:
     assert "Emerging" in le["headline"]
     assert "Recent attention" in le["used_in_ordering"]
     assert "Embedding slice fit (corpus centroid)" in le["measured_only"]
+    third = le["bullets"][2]
+    assert "not weighted in ordering for this run" in third
+    assert "Cross-cluster" in third
+
+
+def test_emerging_list_explanation_when_semantic_weighted() -> None:
+    cfg = {
+        "family_weights": {
+            "emerging": {
+                "semantic": 0.2,
+                "citation_velocity": 0.5,
+                "topic_growth": 0.3,
+                "bridge": 0.0,
+                "diversity_penalty": 0.05,
+            }
+        }
+    }
+    w = family_weights_from_config(cfg, "emerging")
+    le = build_list_ranking_explanation(family="emerging", weights=w)
+    assert "Embedding slice fit (corpus centroid)" in le["used_in_ordering"]
+    assert "Embedding slice fit (corpus centroid)" not in le["measured_only"]
+    third = le["bullets"][2]
+    assert "is weighted in ordering for this run" in third

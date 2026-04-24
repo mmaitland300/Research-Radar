@@ -1,4 +1,5 @@
 -- Distribution, correlation, top-N overlap, and bridge/undercited invariance between two materialized runs.
+-- Ranks and top-k use stable ordering: final_score DESC, work_id ASC.
 -- Keep baseline_run_id / new_run_id identical in every `params` CTE below (search/replace both ids).
 -- Edit baseline_run_id / new_run_id in params, then from repo root:
 --   psql --dbname="$env:DATABASE_URL" -v ON_ERROR_STOP=1 -f docs/audit/semantic_run_distribution_compare.sql
@@ -152,7 +153,7 @@ ranked AS (
         ps.work_id,
         row_number() OVER (
             PARTITION BY ps.ranking_run_id, ps.recommendation_family
-            ORDER BY ps.final_score DESC
+            ORDER BY ps.final_score DESC, ps.work_id ASC
         ) AS rk
     FROM paper_scores ps
     CROSS JOIN params p
@@ -203,7 +204,7 @@ ranked AS (
         ps.work_id,
         row_number() OVER (
             PARTITION BY ps.ranking_run_id, ps.recommendation_family
-            ORDER BY ps.final_score DESC
+            ORDER BY ps.final_score DESC, ps.work_id ASC
         ) AS rk
     FROM paper_scores ps
     CROSS JOIN params p
@@ -250,7 +251,7 @@ WITH params AS (
 r_old AS (
     SELECT
         work_id,
-        row_number() OVER (ORDER BY final_score DESC) AS rank_desc
+        row_number() OVER (ORDER BY final_score DESC, work_id ASC) AS rank_desc
     FROM paper_scores ps
     JOIN params p ON ps.ranking_run_id = p.baseline_run_id
     WHERE ps.recommendation_family = 'emerging'
@@ -258,7 +259,7 @@ r_old AS (
 r_new AS (
     SELECT
         work_id,
-        row_number() OVER (ORDER BY final_score DESC) AS rank_desc
+        row_number() OVER (ORDER BY final_score DESC, work_id ASC) AS rank_desc
     FROM paper_scores ps
     JOIN params p ON ps.ranking_run_id = p.new_run_id
     WHERE ps.recommendation_family = 'emerging'

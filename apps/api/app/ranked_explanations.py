@@ -240,10 +240,27 @@ def build_list_ranking_explanation(*, family: str, weights: dict[str, float]) ->
 
     if family == "emerging":
         headline = "How this Emerging list is ranked"
+        w_sem = weights["semantic"]
+        w_br = weights["bridge"]
+        if w_sem > 0:
+            sem_sentence = (
+                "Embedding slice fit (corpus centroid) is weighted in ordering for this run; "
+                "it measures fit to this corpus slice, not general semantic relevance."
+            )
+        else:
+            sem_sentence = (
+                "Embedding slice fit is shown when computed but is not weighted in ordering for this run."
+            )
+        if w_br > 0:
+            bridge_sentence = "Cross-cluster signal is weighted in ordering for this run."
+        else:
+            bridge_sentence = (
+                "Cross-cluster signal may appear on rows but is not weighted for Emerging in this run."
+            )
         bullets = [
             "Ordering uses recent attention and topic momentum from this corpus snapshot.",
             "Similarity penalty can reduce scores when topic mix is narrow (small weight for Emerging).",
-            "Semantic match and cross-cluster signal appear when present but are not used in ordering for this family.",
+            f"{sem_sentence} {bridge_sentence}",
         ]
     elif family == "undercited":
         headline = "How this Under-cited list is ranked"

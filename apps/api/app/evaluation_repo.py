@@ -401,7 +401,7 @@ def load_evaluation_compare(
         """
             ranked_params.extend([low_min, low_max])
         ranked_sql += """
-        ORDER BY ps.final_score DESC
+        ORDER BY ps.final_score DESC, ps.work_id ASC
         LIMIT %s
         """
         ranked_params.append(limit)
@@ -439,8 +439,11 @@ def load_evaluation_compare(
     ranked_arm = _arm_stats(
         ranked_items,
         arm_label="ranked_family",
-        arm_desc="Materialized ranking run: order by final_score descending (heuristic signals only in v0; semantic is not used).",
-        ordering_desc="final_score DESC",
+        arm_desc=(
+            "Materialized ranking run: order by final_score descending, then work_id (stable tie-break). "
+            "Blend and signals follow this run's persisted family_weights and paper_scores (semantic may be used for Emerging when configured)."
+        ),
+        ordering_desc="final_score DESC, work_id ASC",
     )
     cit_arm = _arm_stats(
         cit_items,
