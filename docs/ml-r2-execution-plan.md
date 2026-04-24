@@ -322,3 +322,30 @@ All subcommands: `python -m pipeline.cli --help`
 Per command: `python -m pipeline.cli <command> --help`
 
 Implemented in `services/pipeline/pipeline/cli.py`: `repair-works-text`, `embed-works`, `embedding-coverage`, `cluster-works`, `ranking-run`.
+
+---
+
+## 15. Semantic v1 coverage milestone (artifact-driven)
+
+**Branch:** `semantic-v1-coverage` (one milestone per branch; merge only when promotable).
+
+**Audit (reproducible):** Run `docs/audit/semantic_coverage_baseline.sql` after freezing a reference run. Instructions: `docs/audit/README.md`. Fill `docs/audit/semantic-v1-baseline-note.md` with the first tabular output (or attach a captured `.txt` in the ticket).
+
+**Freeze first:** Set `ref_ranking_run_id` in the SQL `params` CTE (or leave `NULL` for latest succeeded). Record `ranking_version`, `corpus_snapshot_version`, `embedding_version`, and any clustering / neighbor_mix artifact names from `ranking_runs.config_json` in the baseline note.
+
+### Acceptance criteria (draft — set numbers after baseline)
+
+Replace `TBD_*` using section 3–5 of the audit output. Criteria live **only** in this section until the milestone closes.
+
+| Gate | Rule |
+|------|------|
+| **Embedding inputs** | For the run’s `embedding_version`, included works in the run snapshot have embedding row coverage ≥ **TBD_embed_pct**% (section 4), unless documented exception. |
+| **Semantic signal** | For `recommendation_family = 'emerging'` (first slice), either **(A)** `semantic_score` non-null on ≥ **TBD_semantic_pct**% of `paper_scores` rows for that family in the **new** materialized run, **or** **(B)** semantic weight is **explicitly zero** in that run’s config and API explanations mark semantic as not used — **not** a mix of “weight > 0” and pervasive nulls. |
+| **Null meaning** | **Null `semantic_score`** = not computed or not applicable for that row/run; **non-null** = pipeline wrote a value. Do not treat silent zero as “real semantic” unless the pipeline and docs explicitly define zero. |
+| **Row vs input gap** | Section 5: track `emerging_semantic_null_and_no_embedding_row` vs `emerging_semantic_null_but_embedding_row_exists`. A **pass** run should drive the second bucket toward ~0 before blaming embeddings. |
+| **Pass / fail** | **Pass:** new succeeded `ranking_run_id` + `ranking_version` label like `…-semantic-v1-on-<short-label>`, green CI, audit re-run shows gates met. **Fail:** revert pin; do not merge to `main`. |
+| **Bridge / neighbor_mix** | **Out of scope** for this milestone unless a change is tiny and independently measured; follow with a **separate** branch/milestone after semantic v1 ships. |
+
+**Verify (delta, not vibes):** Re-run the audit SQL before/after; compare `semantic_nonnull_pct` and section 5 buckets; spot-check `GET /api/v1/recommendations/ranked` and `GET /api/v1/papers/{id}/ranking` for known `paper_id`s. No UI redesign required — existing dossier and Recommended surfaces should gain richer explanations when scores populate.
+
+**Promote:** After pass, add one short note (PR or `ranking_runs.notes`) stating what the new run **guarantees** for semantic coverage; pin product `NEXT_PUBLIC_RANKING_VERSION` only when ready.
