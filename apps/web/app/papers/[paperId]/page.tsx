@@ -213,11 +213,18 @@ function formatSignals(signals: RankedSignals | null): string {
   return entries.map(([k, v]) => `${k}=${Number(v).toFixed(4)}`).join(", ");
 }
 
-async function fetchPaperRanking(paperId: string): Promise<PaperRankingState> {
+async function fetchPaperRanking(
+  paperId: string,
+  options?: { rankingRunId?: string }
+): Promise<PaperRankingState> {
   const params = new URLSearchParams({
     top_n: "50"
   });
-  if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);
+  if (options?.rankingRunId) {
+    params.set("ranking_run_id", options.rankingRunId);
+  } else if (RANKING_VERSION) {
+    params.set("ranking_version", RANKING_VERSION);
+  }
 
   try {
     const response = await fetch(
@@ -278,6 +285,13 @@ function buildEvaluationHref(args: {
   return `/evaluation?${params.toString()}`;
 }
 
+function buildPaperHref(args: { paperId: string; rankingRunId?: string }): string {
+  const base = `/papers/${encodeURIComponent(args.paperId)}`;
+  if (!args.rankingRunId) return base;
+  const params = new URLSearchParams({ ranking_run_id: args.rankingRunId });
+  return `${base}?${params.toString()}`;
+}
+
 function formatRankScope(rankScope: string): string {
   return rankScope.replaceAll("_", " ");
 }
@@ -314,17 +328,26 @@ function PaperWhySurfaced({ explanations }: { explanations: RankedSignalExplanat
 }
 
 export default async function PaperDetailPage({
-  params
+  params,
+  searchParams
 }: {
   params: { paperId: string };
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
   const canonicalPaperId = decodeURIComponent(params.paperId);
+  const rankingRunIdParam = Array.isArray(searchParams?.ranking_run_id)
+    ? searchParams?.ranking_run_id[0]
+    : searchParams?.ranking_run_id;
   const { paper, error } = await fetchPaperDetail(canonicalPaperId);
 
   const similar: SimilarPapersState | null =
     paper && !error ? await fetchSimilarPapers(canonicalPaperId) : null;
   const ranking: PaperRankingState | null =
-    paper && !error ? await fetchPaperRanking(canonicalPaperId) : null;
+    paper && !error
+      ? await fetchPaperRanking(canonicalPaperId, {
+          rankingRunId: rankingRunIdParam?.trim() || undefined
+        })
+      : null;
   const similarCount = similar?.kind === "ok" ? similar.data.items.length : 0;
   const rankingPresentCount =
     ranking?.kind === "ok" ? ranking.data.families.filter((family) => family.present).length : 0;
@@ -705,7 +728,11 @@ export default async function PaperDetailPage({
                   <div className="result-heading">
                     <p className="result-title">
                       <Link
-                        href={`/papers/${encodeURIComponent(item.paper_id)}`}
+                        href={buildPaperHref({
+                          paperId: item.paper_id,
+                          rankingRunId:
+                            ranking?.kind === "ok" ? ranking.data.ranking_run_id : undefined
+                        })}
                       >
                         {item.title}
                       </Link>
@@ -728,10 +755,28 @@ export default async function PaperDetailPage({
                     </div>
                   ) : null}
                   <div className="action-row" aria-label="Neighbor handoff">
-                    <Link className="action-link" href={`/papers/${encodeURIComponent(item.paper_id)}`}>
+                    <Link
+                      className="action-link"
+                      href={buildPaperHref({
+                        paperId: item.paper_id,
+                        rankingRunId:
+                          ranking?.kind === "ok" ? ranking.data.ranking_run_id : undefined
+                      })}
+                    >
                       Open neighbor dossier
                     </Link>
-                    <Link className="action-link" href="/recommended?family=emerging">
+                    <Link
+                      className="action-link"
+                      href={
+                        ranking?.kind === "ok"
+                          ? buildRecommendedHref({
+                              family: "emerging",
+                              paperId: item.paper_id,
+                              rankingRunId: ranking.data.ranking_run_id
+                            })
+                          : "/recommended?family=emerging"
+                      }
+                    >
                       Compare in feed
                     </Link>
                   </div>

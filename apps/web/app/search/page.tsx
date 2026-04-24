@@ -289,6 +289,13 @@ function buildRankingViewHref(
   return `${pathname}?${params.toString()}`;
 }
 
+function buildPaperHref(paperId: string, resolvedRankingRunId?: string | null): string {
+  const base = `/papers/${encodeURIComponent(paperId)}`;
+  if (!resolvedRankingRunId) return base;
+  const params = new URLSearchParams({ ranking_run_id: resolvedRankingRunId });
+  return `${base}?${params.toString()}`;
+}
+
 function familyLabel(family: FamilyHint): string {
   if (family === "undercited") return "Under-cited";
   return family.charAt(0).toUpperCase() + family.slice(1);
@@ -340,7 +347,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const data = searchResult.data;
   const coreCount = data?.items.filter((paper) => paper.is_core_corpus).length ?? 0;
   const topicTaggedCount = data?.items.filter((paper) => paper.topics.length > 0).length ?? 0;
-  const visibleStart = data ? data.resolved_filters.offset + 1 : 0;
+  const visibleStart = data && data.total > 0 ? data.resolved_filters.offset + 1 : 0;
   const visibleEnd = data ? data.resolved_filters.offset + data.items.length : 0;
   const canPrev = Boolean(data && data.resolved_filters.offset > 0);
   const canNext = Boolean(data && visibleEnd < data.total);
@@ -414,6 +421,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 <li>Search title and abstract with deterministic lexical ordering.</li>
                 <li>Use filters to narrow the curated slice before ranking handoff.</li>
                 <li>Ranking family filtering resolves against one explicit succeeded run.</li>
+                <li>When both run fields are supplied, exact run id wins over version label.</li>
                 <li>Keep explanation honest: no hybrid claims until hybrid retrieval exists.</li>
               </ul>
             </div>
@@ -494,6 +502,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 Reset filters
               </Link>
             </div>
+            <p className="muted-inline">
+              If both <code>ranking_run_id</code> and <code>ranking_version</code> are set, the
+              exact run id takes precedence.
+            </p>
           </form>
         </article>
         <article className="panel instrument-panel">
@@ -626,7 +638,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
                   <li key={paper.paper_id} className="result-item result-item-bridge">
                     <div className="result-heading">
                       <p className="result-title">
-                        <Link href={`/papers/${encodeURIComponent(paper.paper_id)}`}>{paper.title}</Link>
+                        <Link href={buildPaperHref(paper.paper_id, resolvedRankingRunId)}>
+                          {paper.title}
+                        </Link>
                       </p>
                       <span className="result-score result-score-bridge">
                         lex {paper.match.lexical_rank.toFixed(3)}
@@ -660,7 +674,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
                       </div>
                     ) : null}
                     <div className="action-row" aria-label="Related views">
-                      <Link className="action-link" href={`/papers/${encodeURIComponent(paper.paper_id)}`}>
+                      <Link
+                        className="action-link"
+                        href={buildPaperHref(paper.paper_id, resolvedRankingRunId)}
+                      >
                         Open dossier
                       </Link>
                       <Link
