@@ -192,6 +192,48 @@ class PaperListResponse(BaseModel):
     items: list[PaperListItem]
 
 
+SearchIncludedScope = Literal["core", "all_included"]
+SearchFamilyHint = Literal["emerging", "bridge", "undercited"]
+
+
+class SearchMatchMetadata(BaseModel):
+    matched_fields: list[str]
+    highlight_fragments: list[str]
+    lexical_rank: float
+
+
+class SearchResultItem(BaseModel):
+    paper_id: str
+    title: str
+    year: int
+    citation_count: int
+    source_slug: str | None
+    source_label: str | None
+    is_core_corpus: bool
+    topics: list[str]
+    preview: str | None = None
+    match: SearchMatchMetadata
+
+
+class SearchResolvedFilters(BaseModel):
+    q: str
+    limit: int
+    offset: int
+    year_from: int | None = None
+    year_to: int | None = None
+    included_scope: SearchIncludedScope
+    source_slug: str | None = None
+    topic: str | None = None
+    family_hint: SearchFamilyHint | None = None
+
+
+class SearchResponse(BaseModel):
+    total: int
+    ordering: str
+    resolved_filters: SearchResolvedFilters
+    items: list[SearchResultItem]
+
+
 class UndercitedRecommendationItem(BaseModel):
     paper_id: str
     title: str

@@ -1,0 +1,75 @@
+# Search Retrieval v1
+
+**Branch:** `codex/search-retrieval-v1`  
+**Baseline commit from `main`:** `5052b2c` (`fix(api): honest Emerging list copy and stable ranking tie-breaks`)
+
+## Milestone goal
+
+Ship a real lexical search surface for Research Radar before adding semantic assist. This milestone is intentionally narrower than "final search":
+
+- dedicated `GET /api/v1/search`
+- lexical retrieval over `title + abstract`
+- deterministic ordering
+- practical filters
+- clean handoff into dossier, Recommended, and Evaluation
+
+## API contract
+
+### Request
+
+- `q`
+- `limit`
+- `offset`
+- `year_from`
+- `year_to`
+- `included_scope` = `core | all_included`
+- `source_slug`
+- `topic`
+- `family_hint`
+
+### Response
+
+- `paper_id`
+- `title`
+- `year`
+- `citation_count`
+- `source_slug`
+- `source_label`
+- `is_core_corpus`
+- `topics`
+- `preview`
+- `match` metadata:
+  - `matched_fields`
+  - `highlight_fragments`
+  - `lexical_rank`
+- `total`
+- `ordering`
+- `resolved_filters`
+
+`family_hint` in v1 is implemented as a real lexical filter on family membership in the latest succeeded ranking run for the work's corpus snapshot. It is not just a UI hint.
+
+## Scope guardrails
+
+### In for v1
+
+- title + abstract lexical retrieval
+- filterable narrowing
+- deterministic ordering
+- honest copy in the Search page
+- UI and API both allow up to `100` results per page in this branch
+
+### Out for v1
+
+- query-embedding-only retrieval
+- hybrid ranking formulas with opaque blending
+- cross-encoder reranking
+- graph-first browsing
+- scholar-clone breadth
+
+## Sequencing
+
+1. define API contract
+2. implement lexical retrieval
+3. wire the Search page to the new endpoint
+4. verify retrieval quality on known queries
+5. only then consider semantic assist behind explicit `embedding_version`

@@ -38,6 +38,10 @@ from app.contracts import (
     RankedSignals,
     RankingFamily,
     ReadinessResponse,
+    SearchMatchMetadata,
+    SearchResolvedFilters,
+    SearchResponse,
+    SearchResultItem,
     SimilarPaperItem,
     SimilarPapersResponse,
     TopicTrendItem,
@@ -52,6 +56,7 @@ from app.papers_repo import database_url_from_env
 from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
 from app.papers_repo import list_undercited_heuristic_v0
+from app.search_repo import search_papers
 from app.scores_repo import (
     fetch_latest_materialized_ranking_for_meta,
     get_paper_family_rankings,
@@ -692,5 +697,73 @@ def get_papers(
                 topics=paper.topics,
             )
             for paper in papers
+        ],
+    )
+
+
+@app.get("/api/v1/search", response_model=SearchResponse)
+def get_search(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(default=15, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    year_from: int | None = Query(default=None, ge=1900, le=2100),
+    year_to: int | None = Query(default=None, ge=1900, le=2100),
+    included_scope: Literal["core", "all_included"] = Query(default="all_included"),
+    source_slug: str | None = Query(default=None, min_length=1),
+    topic: str | None = Query(default=None, min_length=1),
+    family_hint: Literal["emerging", "bridge", "undercited"] | None = Query(default=None),
+) -> SearchResponse:
+    try:
+        payload = search_papers(
+            q=q,
+            limit=limit,
+            offset=offset,
+            year_from=year_from,
+            year_to=year_to,
+            included_scope=included_scope,
+            source_slug=source_slug,
+            topic=topic,
+            family_hint=family_hint,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database query failed. Confirm Postgres is running and search data exists.",
+        ) from exc
+
+    return SearchResponse(
+        total=payload.total,
+        ordering=payload.ordering,
+        resolved_filters=SearchResolvedFilters(
+            q=payload.resolved_filters.q,
+            limit=payload.resolved_filters.limit,
+            offset=payload.resolved_filters.offset,
+            year_from=payload.resolved_filters.year_from,
+            year_to=payload.resolved_filters.year_to,
+            included_scope=payload.resolved_filters.included_scope,
+            source_slug=payload.resolved_filters.source_slug,
+            topic=payload.resolved_filters.topic,
+            family_hint=payload.resolved_filters.family_hint,
+        ),
+        items=[
+            SearchResultItem(
+                paper_id=item.paper_id,
+                title=item.title,
+                year=item.year,
+                citation_count=item.citation_count,
+                source_slug=item.source_slug,
+                source_label=item.source_label,
+                is_core_corpus=item.is_core_corpus,
+                topics=item.topics,
+                preview=item.preview,
+                match=SearchMatchMetadata(
+                    matched_fields=item.matched_fields,
+                    highlight_fragments=item.highlight_fragments,
+                    lexical_rank=item.lexical_rank,
+                ),
+            )
+            for item in payload.items
         ],
     )
