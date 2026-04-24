@@ -225,6 +225,20 @@ class SearchResolvedFilters(BaseModel):
     source_slug: str | None = None
     topic: str | None = None
     family_hint: SearchFamilyHint | None = None
+    ranking_run_id: str | None = Field(
+        default=None,
+        description=(
+            "Normalized search query filter. Only present when family_hint made search depend on "
+            "ranking state and the caller supplied ranking_run_id."
+        ),
+    )
+    ranking_version: str | None = Field(
+        default=None,
+        description=(
+            "Normalized search query filter. Only present when family_hint made search depend on "
+            "ranking state and the caller supplied ranking_version."
+        ),
+    )
 
 
 class SearchResponse(BaseModel):
@@ -232,6 +246,27 @@ class SearchResponse(BaseModel):
     ordering: str
     resolved_filters: SearchResolvedFilters
     items: list[SearchResultItem]
+    resolved_ranking_run_id: str | None = Field(
+        default=None,
+        description=(
+            "Resolved succeeded ranking run used for family-filtered search. Omitted when search "
+            "was lexical-only and did not depend on ranking state."
+        ),
+    )
+    resolved_ranking_version: str | None = Field(
+        default=None,
+        description=(
+            "Resolved ranking_version used for family-filtered search. Omitted when search was "
+            "lexical-only and did not depend on ranking state."
+        ),
+    )
+    resolved_corpus_snapshot_version: str | None = Field(
+        default=None,
+        description=(
+            "Corpus snapshot version implied by the resolved ranking run. Omitted when search was "
+            "lexical-only and did not depend on ranking state."
+        ),
+    )
 
 
 class UndercitedRecommendationItem(BaseModel):

@@ -26,6 +26,8 @@ Ship a real lexical search surface for Research Radar before adding semantic ass
 - `source_slug`
 - `topic`
 - `family_hint`
+- `ranking_run_id` (optional; only meaningful when `family_hint` is set)
+- `ranking_version` (optional; only meaningful when `family_hint` is set)
 
 ### Response
 
@@ -45,8 +47,22 @@ Ship a real lexical search surface for Research Radar before adding semantic ass
 - `total`
 - `ordering`
 - `resolved_filters`
+- `resolved_ranking_run_id` (only when family-filtered search depended on ranking state)
+- `resolved_ranking_version` (only when family-filtered search depended on ranking state)
+- `resolved_corpus_snapshot_version` (only when family-filtered search depended on ranking state)
 
-`family_hint` in v1 is implemented as a real lexical filter on family membership in the latest succeeded ranking run for the work's corpus snapshot. It is not just a UI hint.
+`family_hint` in v1 is implemented as a real ranking-family filter, not just a UI hint.
+
+When `family_hint` is set, search returns lexical matches intersected with works present in one
+resolved succeeded ranking run for that family:
+
+- if `ranking_run_id` is provided, that exact run is used
+- else if `ranking_version` is provided, search resolves one succeeded run on the default snapshot
+- else search resolves one default succeeded run explicitly
+
+When family-filtered search depends on ranking state, the response emits the resolved run id,
+version, and corpus snapshot version used for filtering. When `family_hint` is unset, search stays
+lexical-only and does not emit ranking context.
 
 ## Scope guardrails
 

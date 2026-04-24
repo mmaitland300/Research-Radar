@@ -40,6 +40,8 @@ type SearchResolvedFilters = {
   source_slug: string | null;
   topic: string | null;
   family_hint: FamilyHint | null;
+  ranking_run_id?: string | null;
+  ranking_version?: string | null;
 };
 
 type SearchResponse = {
@@ -47,6 +49,9 @@ type SearchResponse = {
   ordering: string;
   resolved_filters: SearchResolvedFilters;
   items: SearchResultItem[];
+  resolved_ranking_run_id?: string | null;
+  resolved_ranking_version?: string | null;
+  resolved_corpus_snapshot_version?: string | null;
 };
 
 type PageProps = {
@@ -150,9 +155,21 @@ function normalizePayload(json: unknown): SearchResponse | null {
       family_hint:
         resolvedRaw.family_hint && FAMILIES.includes(String(resolvedRaw.family_hint) as FamilyHint)
           ? (String(resolvedRaw.family_hint) as FamilyHint)
-          : null
+          : null,
+      ranking_run_id:
+        resolvedRaw.ranking_run_id == null ? null : String(resolvedRaw.ranking_run_id),
+      ranking_version:
+        resolvedRaw.ranking_version == null ? null : String(resolvedRaw.ranking_version)
     },
-    items
+    items,
+    resolved_ranking_run_id:
+      raw.resolved_ranking_run_id == null ? null : String(raw.resolved_ranking_run_id),
+    resolved_ranking_version:
+      raw.resolved_ranking_version == null ? null : String(raw.resolved_ranking_version),
+    resolved_corpus_snapshot_version:
+      raw.resolved_corpus_snapshot_version == null
+        ? null
+        : String(raw.resolved_corpus_snapshot_version)
   };
 }
 
@@ -166,6 +183,8 @@ async function fetchSearch(params: {
   sourceSlug?: string;
   topic?: string;
   familyHint?: FamilyHint;
+  rankingRunId?: string;
+  rankingVersion?: string;
 }): Promise<{
   data: SearchResponse | null;
   error: string | null;
@@ -182,6 +201,10 @@ async function fetchSearch(params: {
   if (params.sourceSlug) query.set("source_slug", params.sourceSlug);
   if (params.topic) query.set("topic", params.topic);
   if (params.familyHint) query.set("family_hint", params.familyHint);
+  if (params.familyHint && params.rankingRunId) query.set("ranking_run_id", params.rankingRunId);
+  if (params.familyHint && params.rankingVersion) {
+    query.set("ranking_version", params.rankingVersion);
+  }
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/search?${query.toString()}`, {
@@ -230,6 +253,8 @@ type SearchState = {
   sourceSlug?: string;
   topic?: string;
   familyHint?: FamilyHint;
+  rankingRunId?: string;
+  rankingVersion?: string;
 };
 
 function buildSearchHref(state: SearchState, overrides: Partial<SearchState>): string {
@@ -247,7 +272,21 @@ function buildSearchHref(state: SearchState, overrides: Partial<SearchState>): s
   if (next.sourceSlug) params.set("source_slug", next.sourceSlug);
   if (next.topic) params.set("topic", next.topic);
   if (next.familyHint) params.set("family_hint", next.familyHint);
+  if (next.familyHint && next.rankingRunId) params.set("ranking_run_id", next.rankingRunId);
+  if (next.familyHint && next.rankingVersion) {
+    params.set("ranking_version", next.rankingVersion);
+  }
   return `/search?${params.toString()}`;
+}
+
+function buildRankingViewHref(
+  pathname: "/recommended" | "/evaluation",
+  family: FamilyHint,
+  resolvedRankingRunId?: string | null
+): string {
+  const params = new URLSearchParams({ family });
+  if (resolvedRankingRunId) params.set("ranking_run_id", resolvedRankingRunId);
+  return `${pathname}?${params.toString()}`;
 }
 
 function familyLabel(family: FamilyHint): string {
@@ -265,6 +304,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const sourceSlug = parseSingleParam(searchParams.source_slug);
   const topic = parseSingleParam(searchParams.topic);
   const familyHint = parseFamilyHint(searchParams.family_hint);
+  const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
+  const rankingVersion = parseSingleParam(searchParams.ranking_version);
 
   const currentState: SearchState = {
     q,
@@ -275,7 +316,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
     includedScope,
     sourceSlug,
     topic,
-    familyHint
+    familyHint,
+    rankingRunId: familyHint ? rankingRunId : undefined,
+    rankingVersion: familyHint ? rankingVersion : undefined
   };
 
   const searchResult = q
@@ -288,7 +331,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
         includedScope,
         sourceSlug,
         topic,
-        familyHint
+        familyHint,
+        rankingRunId: familyHint ? rankingRunId : undefined,
+        rankingVersion: familyHint ? rankingVersion : undefined
       })
     : { data: null, error: null, status: null };
 
@@ -299,7 +344,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const visibleEnd = data ? data.resolved_filters.offset + data.items.length : 0;
   const canPrev = Boolean(data && data.resolved_filters.offset > 0);
   const canNext = Boolean(data && visibleEnd < data.total);
-  const recommendedFamily = familyHint ?? "emerging";
+  const recommendedFamily = data?.resolved_filters.family_hint ?? familyHint ?? "emerging";
+  const resolvedRankingRunId = data?.resolved_ranking_run_id ?? null;
+  const resolvedRankingVersion = data?.resolved_ranking_version ?? null;
+  const resolvedSnapshotVersion = data?.resolved_corpus_snapshot_version ?? null;
 
   return (
     <main className="page">
@@ -345,7 +393,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
             ) : null}
             <p className="muted-inline">
               Search branch contract: dedicated <code>/api/v1/search</code>, lexical ordering, real
-              filters, and clean handoff into dossier and ranking views.
+              filters, and clean handoff into dossier and ranking views. When ranking family
+              filtering is active, the API resolves and returns one explicit run context.
             </p>
           </div>
           <aside className="family-brief">
@@ -364,6 +413,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <ul className="measure-list">
                 <li>Search title and abstract with deterministic lexical ordering.</li>
                 <li>Use filters to narrow the curated slice before ranking handoff.</li>
+                <li>Ranking family filtering resolves against one explicit succeeded run.</li>
                 <li>Keep explanation honest: no hybrid claims until hybrid retrieval exists.</li>
               </ul>
             </div>
@@ -414,13 +464,21 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 <input type="text" name="topic" defaultValue={topic ?? ""} />
               </label>
               <label className="search-field">
-                <span>Family hint</span>
+                <span>Ranking family filter</span>
                 <select name="family_hint" defaultValue={familyHint ?? ""}>
                   <option value="">None</option>
                   <option value="emerging">Emerging</option>
                   <option value="bridge">Bridge</option>
                   <option value="undercited">Under-cited</option>
                 </select>
+              </label>
+              <label className="search-field">
+                <span>Ranking version</span>
+                <input type="text" name="ranking_version" defaultValue={rankingVersion ?? ""} />
+              </label>
+              <label className="search-field">
+                <span>Ranking run id</span>
+                <input type="text" name="ranking_run_id" defaultValue={rankingRunId ?? ""} />
               </label>
               <label className="search-field">
                 <span>Limit</span>
@@ -442,9 +500,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <h2>What this branch ships</h2>
           <ul className="measure-list">
             <li>Lexical retrieval over <code>title + abstract</code>.</li>
-            <li>Filters for year, scope, venue/source, topic label, and family membership hint.</li>
+            <li>Filters for year, scope, venue/source, topic label, and ranking family filter.</li>
             <li>Stable ordering: lexical rank, then year, citations, and work id.</li>
-            <li>Result metadata that makes dossier and ranking handoff easier to trust.</li>
+            <li>Run metadata appears only when the search depended on ranking state.</li>
           </ul>
         </article>
       </section>
@@ -478,7 +536,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             <h3>Move into signals</h3>
             <p>
               Use Recommended and Evaluation to understand why a result matters now and how it sits
-              inside the currently pinned ranking run.
+              inside the exact resolved ranking run when family filtering is active.
             </p>
           </article>
         </div>
@@ -537,7 +595,25 @@ export default async function SearchPage({ searchParams }: PageProps) {
               {data.resolved_filters.family_hint ? (
                 <>
                   {" "}
-                  | family hint <code>{data.resolved_filters.family_hint}</code>
+                  | ranking family filter <code>{data.resolved_filters.family_hint}</code>
+                </>
+              ) : null}
+              {resolvedRankingRunId ? (
+                <>
+                  {" "}
+                  | run <code>{resolvedRankingRunId}</code>
+                </>
+              ) : null}
+              {resolvedRankingVersion ? (
+                <>
+                  {" "}
+                  | version <code>{resolvedRankingVersion}</code>
+                </>
+              ) : null}
+              {resolvedSnapshotVersion ? (
+                <>
+                  {" "}
+                  | snapshot <code>{resolvedSnapshotVersion}</code>
                 </>
               ) : null}
             </p>
@@ -587,10 +663,24 @@ export default async function SearchPage({ searchParams }: PageProps) {
                       <Link className="action-link" href={`/papers/${encodeURIComponent(paper.paper_id)}`}>
                         Open dossier
                       </Link>
-                      <Link className="action-link" href={`/recommended?family=${recommendedFamily}`}>
+                      <Link
+                        className="action-link"
+                        href={buildRankingViewHref(
+                          "/recommended",
+                          recommendedFamily,
+                          resolvedRankingRunId
+                        )}
+                      >
                         {familyLabel(recommendedFamily)} feed
                       </Link>
-                      <Link className="action-link" href={`/evaluation?family=${recommendedFamily}`}>
+                      <Link
+                        className="action-link"
+                        href={buildRankingViewHref(
+                          "/evaluation",
+                          recommendedFamily,
+                          resolvedRankingRunId
+                        )}
+                      >
                         Compare in evaluation
                       </Link>
                     </div>

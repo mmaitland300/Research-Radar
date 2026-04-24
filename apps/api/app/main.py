@@ -56,7 +56,7 @@ from app.papers_repo import database_url_from_env
 from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
 from app.papers_repo import list_undercited_heuristic_v0
-from app.search_repo import search_papers
+from app.search_repo import SearchRunContextNotFoundError, search_papers
 from app.scores_repo import (
     fetch_latest_materialized_ranking_for_meta,
     get_paper_family_rankings,
@@ -701,7 +701,11 @@ def get_papers(
     )
 
 
-@app.get("/api/v1/search", response_model=SearchResponse)
+@app.get(
+    "/api/v1/search",
+    response_model=SearchResponse,
+    response_model_exclude_none=True,
+)
 def get_search(
     q: str = Query(..., min_length=1),
     limit: int = Query(default=15, ge=1, le=100),
@@ -712,6 +716,8 @@ def get_search(
     source_slug: str | None = Query(default=None, min_length=1),
     topic: str | None = Query(default=None, min_length=1),
     family_hint: Literal["emerging", "bridge", "undercited"] | None = Query(default=None),
+    ranking_run_id: str | None = Query(default=None),
+    ranking_version: str | None = Query(default=None),
 ) -> SearchResponse:
     try:
         payload = search_papers(
@@ -724,9 +730,13 @@ def get_search(
             source_slug=source_slug,
             topic=topic,
             family_hint=family_hint,
+            ranking_run_id=ranking_run_id,
+            ranking_version=ranking_version,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except SearchRunContextNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=503,
@@ -746,6 +756,8 @@ def get_search(
             source_slug=payload.resolved_filters.source_slug,
             topic=payload.resolved_filters.topic,
             family_hint=payload.resolved_filters.family_hint,
+            ranking_run_id=payload.resolved_filters.ranking_run_id,
+            ranking_version=payload.resolved_filters.ranking_version,
         ),
         items=[
             SearchResultItem(
@@ -766,4 +778,7 @@ def get_search(
             )
             for item in payload.items
         ],
+        resolved_ranking_run_id=payload.resolved_ranking_run_id,
+        resolved_ranking_version=payload.resolved_ranking_version,
+        resolved_corpus_snapshot_version=payload.resolved_corpus_snapshot_version,
     )
