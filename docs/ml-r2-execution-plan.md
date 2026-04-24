@@ -329,13 +329,15 @@ Implemented in `services/pipeline/pipeline/cli.py`: `repair-works-text`, `embed-
 
 **Branch:** `semantic-v1-coverage` (one milestone per branch; merge only when promotable).
 
-**Audit (reproducible):** Run `docs/audit/semantic_coverage_baseline.sql` after freezing a reference run. Instructions: `docs/audit/README.md`. Fill `docs/audit/semantic-v1-baseline-note.md` with the first tabular output (or attach a captured `.txt` in the ticket).
+**Audit (reproducible):** Run `docs/audit/semantic_coverage_baseline.sql` against the pinned reference run. Instructions: `docs/audit/README.md`. Capture the first tabular output in `docs/audit/semantic-v1-baseline-note.md` (or attach a captured `.txt` in the ticket).
 
-**Freeze first:** Set `ref_ranking_run_id` in the SQL `params` CTE (or leave `NULL` for latest succeeded). Record `ranking_version`, `corpus_snapshot_version`, `embedding_version`, and any clustering / neighbor_mix artifact names from `ranking_runs.config_json` in the baseline note.
+**Frozen baseline:** `ranking_run_id = rank-d7f3d82d05`, `ranking_version = bridge-v2-nm1-zero-r2-k6-20260407`, `corpus_snapshot_version = source-snapshot-20260329-170012`, `embedding_version = v1-title-abstract-1536-cleantext-r2`.
 
 ### Acceptance criteria (draft — set numbers after baseline)
 
 Replace `TBD_*` using section 3–5 of the audit output. Criteria live **only** in this section until the milestone closes.
+
+The values below are set from the first baseline run and should change only if we intentionally widen or narrow semantic-v1 scope.
 
 | Gate | Rule |
 |------|------|
@@ -345,6 +347,14 @@ Replace `TBD_*` using section 3–5 of the audit output. Criteria live **only** 
 | **Row vs input gap** | Section 5: track `emerging_semantic_null_and_no_embedding_row` vs `emerging_semantic_null_but_embedding_row_exists`. A **pass** run should drive the second bucket toward ~0 before blaming embeddings. |
 | **Pass / fail** | **Pass:** new succeeded `ranking_run_id` + `ranking_version` label like `…-semantic-v1-on-<short-label>`, green CI, audit re-run shows gates met. **Fail:** revert pin; do not merge to `main`. |
 | **Bridge / neighbor_mix** | **Out of scope** for this milestone unless a change is tiny and independently measured; follow with a **separate** branch/milestone after semantic v1 ships. |
+
+**Resolved thresholds from the first baseline run**
+
+- Embedding baseline for the pinned run is `38 / 38` included works with an embedding row for `v1-title-abstract-1536-cleantext-r2` (`100.00%`).
+- New semantic-v1 candidate runs should alert or fail below `95%` embedding coverage for the intended semantic scope.
+- Semantic-v1 acceptance target for the first slice is `>= 95%` non-null `semantic_score` coverage on `emerging` rows when semantic weight is non-zero.
+- Current baseline semantic coverage is `0.00%` across `bridge`, `emerging`, and `undercited`.
+- For `emerging`, the semantic-null split is `0` rows missing embeddings and `38` rows with embeddings present but semantic still null, so the current gap is a pipeline-write gap rather than an embedding-ingest gap.
 
 **Verify (delta, not vibes):** Re-run the audit SQL before/after; compare `semantic_nonnull_pct` and section 5 buckets; spot-check `GET /api/v1/recommendations/ranked` and `GET /api/v1/papers/{id}/ranking` for known `paper_id`s. No UI redesign required — existing dossier and Recommended surfaces should gain richer explanations when scores populate.
 

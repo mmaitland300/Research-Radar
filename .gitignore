@@ -12,6 +12,7 @@ artifacts/
 .codex-pydeps/
 *.egg-info/
 .DS_Store
+docs/audit/out/
 
 # Cursor workspace rules (keep locally; not published on GitHub)
 .cursor/rules/*.mdc

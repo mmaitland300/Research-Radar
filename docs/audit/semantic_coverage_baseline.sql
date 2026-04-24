@@ -20,8 +20,8 @@ DROP TABLE IF EXISTS _semantic_audit_ref;
 
 CREATE TEMP TABLE _semantic_audit_ref AS
 WITH params AS (
-    SELECT NULL::text AS ref_ranking_run_id
-    -- ^ Replace NULL with 'your-ranking_run_id' to freeze a specific succeeded run.
+    SELECT 'rank-d7f3d82d05'::text AS ref_ranking_run_id
+    -- ^ Frozen baseline reference run for the semantic v1 milestone.
 ),
 picked AS (
     SELECT rr.ranking_run_id,
