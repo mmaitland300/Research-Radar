@@ -46,4 +46,4 @@ def test_emerging_list_explanation_headline() -> None:
     le = build_list_ranking_explanation(family="emerging", weights=w)
     assert "Emerging" in le["headline"]
     assert "Recent attention" in le["used_in_ordering"]
-    assert "Semantic match" in le["measured_only"]
+    assert "Embedding slice fit (corpus centroid)" in le["measured_only"]

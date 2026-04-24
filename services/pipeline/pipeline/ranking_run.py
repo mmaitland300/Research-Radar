@@ -36,6 +36,7 @@ from pipeline.clustering_persistence import (
     load_cluster_assignments,
     require_successful_clustering_run,
 )
+from pipeline.semantic_slice_fit import compute_semantic_slice_fit_by_work
 from pipeline.ranking_persistence import (
     insert_ranking_run_started,
     latest_corpus_snapshot_version_with_works,
@@ -75,6 +76,10 @@ def warn_embedding_gaps_if_any(
 
 EMERGING_REASON = (
     "Recent paper with citation momentum in active topics; semantic and bridge not yet modeled."
+)
+EMERGING_REASON_SEMANTIC_V1 = (
+    "Emerging: embedding slice fit vs included-corpus centroid (title+abstract), "
+    "plus citation velocity and topic growth; not universal relevance. Bridge signal not used here."
 )
 BRIDGE_REASON_LEGACY = (
     "Multi-topic paper in active topics; no cluster_version on this run so bridge_score was not computed."
@@ -130,10 +135,14 @@ def validate_bridge_weight_for_bridge_family(value: float) -> float:
     return w
 
 
-def resolved_family_weights(bridge_weight_for_bridge_family: float) -> dict[str, ScoreWeights]:
+def resolved_family_weights(
+    bridge_weight_for_bridge_family: float,
+    *,
+    emerging_semantic_slice_fit: bool = False,
+) -> dict[str, ScoreWeights]:
     """
-    Per-run weight map: emerging and undercited match checked-in defaults; bridge family uses the
-    resolved bridge weight (do not mutate FAMILY_WEIGHTS).
+    Per-run weight map: emerging and undercited match checked-in defaults unless semantic v1 is on;
+    bridge family uses the resolved bridge weight (do not mutate FAMILY_WEIGHTS).
     """
     bw = float(bridge_weight_for_bridge_family)
     base_b = FAMILY_WEIGHTS["bridge"]
@@ -144,8 +153,19 @@ def resolved_family_weights(bridge_weight_for_bridge_family: float) -> dict[str,
         bridge=bw,
         diversity_penalty=base_b.diversity_penalty,
     )
+    emerging = (
+        ScoreWeights(
+            semantic=0.2,
+            citation_velocity=0.5,
+            topic_growth=0.3,
+            bridge=0.0,
+            diversity_penalty=0.05,
+        )
+        if emerging_semantic_slice_fit
+        else FAMILY_WEIGHTS["emerging"]
+    )
     return {
-        "emerging": FAMILY_WEIGHTS["emerging"],
+        "emerging": emerging,
         "bridge": bridge_row,
         "undercited": FAMILY_WEIGHTS["undercited"],
     }
@@ -162,6 +182,7 @@ def _build_ranking_config(
     bridge_weight_for_bridge_family: float,
     family_weights_resolved: dict[str, ScoreWeights],
     neighbor_mix_k: int = NEIGHBOR_MIX_V1_DEFAULT_K,
+    emerging_semantic_slice_fit: bool = False,
 ) -> dict[str, Any]:
     bridge_policy = (
         "null_until_clusters_or_neighbor_features"
@@ -205,7 +226,11 @@ def _build_ranking_config(
             },
         },
         "signal_policies": {
-            "semantic_score": "null_until_embeddings",
+            "semantic_score": (
+                "emerging_slice_centroid_cosine_v1"
+                if emerging_semantic_slice_fit
+                else "null_until_embeddings"
+            ),
             "citation_velocity_score": "citations_per_year_normalized_within_run",
             "topic_growth_score": "mean_recent_topic_share_within_snapshot",
             "bridge_score": bridge_policy,
@@ -218,6 +243,7 @@ def _build_ranking_config(
         "thresholds": {
             "recent_topic_year_window": 2,
         },
+        "emerging_semantic_slice_fit_v1": emerging_semantic_slice_fit,
     }
 
 
@@ -309,12 +335,13 @@ def _make_score_row(
     diversity_penalty: float,
     reason_short: str,
     weights: ScoreWeights,
+    semantic: float | None = None,
     bridge_score: float | None = None,
     bridge_eligible: bool | None = None,
     bridge_signal_json: dict[str, Any] | None = None,
 ) -> PaperScoreRow:
     final = final_score_partial(
-        semantic=None,
+        semantic=semantic,
         citation_velocity=citation_velocity,
         topic_growth=topic_growth,
         bridge=bridge_score,
@@ -324,7 +351,7 @@ def _make_score_row(
     return PaperScoreRow(
         work_id=work_id,
         recommendation_family=family,
-        semantic_score=None,
+        semantic_score=_round_score(semantic),
         citation_velocity_score=_round_score(citation_velocity),
         topic_growth_score=_round_score(topic_growth),
         bridge_score=_round_score(bridge_score),
@@ -367,10 +394,14 @@ def build_step3_heuristic_score_rows(
     bridge_weight_for_bridge_family: float = 0.0,
     neighbor_mix_by_work: dict[int, NeighborMixV1Result] | None = None,
     neighbor_mix_k: int = NEIGHBOR_MIX_V1_DEFAULT_K,
+    emerging_semantic_slice_fit: bool = False,
+    semantic_by_work: dict[int, float] | None = None,
 ) -> list[PaperScoreRow]:
     """
     Build heuristic rows using available metadata only.
-    semantic_score stays null. bridge_score for the bridge family may be set when cluster_version
+    When ``semantic_by_work`` is set and ``emerging_semantic_slice_fit`` is true, emerging rows
+    get ``semantic_score`` (slice-fit v1); other families keep semantic null. Otherwise
+    semantic_score stays null for all families. bridge_score for the bridge family may be set when cluster_version
     and clustering assignments/embeddings support the cluster-boundary prototype (ML2-5a).
     bridge_weight_for_bridge_family defaults to 0 (ML2-5a: bridge signal persisted but not blended
     into final_score); set positive for isolated ML2-5b experiments via CLI override only.
@@ -383,7 +414,7 @@ def build_step3_heuristic_score_rows(
     payload.
     """
     bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
-    family_w = resolved_family_weights(bw)
+    family_w = resolved_family_weights(bw, emerging_semantic_slice_fit=emerging_semantic_slice_fit)
     citation_velocity_by_work = _citation_velocity_scores(candidates)
     topic_growth_by_work = _topic_growth_scores(candidates)
     topic_breadth_penalty_by_work = _topic_breadth_penalties(candidates)
@@ -415,6 +446,14 @@ def build_step3_heuristic_score_rows(
                 mix_bridge_eligible = False
                 mix_bridge_signal_json = neighbor_mix_v1_unsupported_payload(k=neighbor_mix_k)
 
+        emerging_semantic: float | None = None
+        if emerging_semantic_slice_fit and semantic_by_work is not None:
+            emerging_semantic = semantic_by_work.get(candidate.work_id)
+        emerging_reason = (
+            EMERGING_REASON_SEMANTIC_V1
+            if emerging_semantic_slice_fit and emerging_semantic is not None
+            else EMERGING_REASON
+        )
         rows.append(
             _make_score_row(
                 work_id=candidate.work_id,
@@ -422,8 +461,9 @@ def build_step3_heuristic_score_rows(
                 citation_velocity=citation_velocity,
                 topic_growth=topic_growth,
                 diversity_penalty=0.0,
-                reason_short=EMERGING_REASON,
+                reason_short=emerging_reason,
                 weights=family_w["emerging"],
+                semantic=emerging_semantic,
             )
         )
         rows.append(
@@ -504,27 +544,16 @@ def execute_ranking_run(
             )
 
         bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
-        family_resolved = resolved_family_weights(bw)
         nm_k = NEIGHBOR_MIX_V1_DEFAULT_K
-        config = _build_ranking_config(
-            corpus_snapshot_version=snapshot,
-            placeholder_policy=placeholder_policy,
-            low_cite_min_year=low_cite_min_year,
-            low_cite_max_citations=low_cite_max_citations,
-            cluster_version=cluster_version.strip() if cluster_version and cluster_version.strip() else None,
-            embedding_version=embedding_version,
-            bridge_weight_for_bridge_family=bw,
-            family_weights_resolved=family_resolved,
-            neighbor_mix_k=nm_k,
-        )
-        cluster_v = config.get("clustering_artifact")
-        cluster_key = (
-            cluster_v.get("cluster_version")
-            if isinstance(cluster_v, dict) and isinstance(cluster_v.get("cluster_version"), str)
-            else None
-        )
+
+        cluster_key = cluster_version.strip() if cluster_version and cluster_version.strip() else None
+        embedding_stripped = (embedding_version or "").strip()
+        wants_semantic_slice = bool(embedding_stripped and embedding_stripped != "none-v0")
+
         bridge_boundary_by_work: dict[int, float | None] | None = None
         neighbor_mix_by_work: dict[int, NeighborMixV1Result] | None = None
+        shared_summary = None
+
         if cluster_key:
             require_successful_clustering_run(
                 conn,
@@ -533,18 +562,45 @@ def execute_ranking_run(
                 embedding_version=embedding_version,
             )
             assignments = load_cluster_assignments(conn, cluster_version=cluster_key)
-            summary = list_clustering_inputs(
+            shared_summary = list_clustering_inputs(
                 conn, embedding_version=embedding_version, corpus_snapshot_version=snapshot
             )
-            bridge_boundary_by_work = compute_bridge_boundary_scores(summary.rows, assignments)
+            bridge_boundary_by_work = compute_bridge_boundary_scores(shared_summary.rows, assignments)
             neighbor_mix_by_work = compute_neighbor_mix_v1_by_work(
-                summary.rows, assignments, nm_k
+                shared_summary.rows, assignments, nm_k
             )
             warn_embedding_gaps_if_any(
                 conn,
                 corpus_snapshot_version=snapshot,
                 embedding_version=embedding_version,
             )
+        elif wants_semantic_slice:
+            shared_summary = list_clustering_inputs(
+                conn, embedding_version=embedding_version, corpus_snapshot_version=snapshot
+            )
+
+        semantic_by_work_for_run: dict[int, float] | None = None
+        emerging_semantic_slice_fit = False
+        if wants_semantic_slice and shared_summary is not None and shared_summary.rows:
+            semantic_by_work_for_run = compute_semantic_slice_fit_by_work(shared_summary.rows)
+            if semantic_by_work_for_run:
+                emerging_semantic_slice_fit = True
+
+        family_resolved = resolved_family_weights(
+            bw, emerging_semantic_slice_fit=emerging_semantic_slice_fit
+        )
+        config = _build_ranking_config(
+            corpus_snapshot_version=snapshot,
+            placeholder_policy=placeholder_policy,
+            low_cite_min_year=low_cite_min_year,
+            low_cite_max_citations=low_cite_max_citations,
+            cluster_version=cluster_key,
+            embedding_version=embedding_version,
+            bridge_weight_for_bridge_family=bw,
+            family_weights_resolved=family_resolved,
+            neighbor_mix_k=nm_k,
+            emerging_semantic_slice_fit=emerging_semantic_slice_fit,
+        )
         run = RankingRun.start(
             ranking_version=ranking_version,
             corpus_snapshot_version=snapshot,
@@ -571,6 +627,8 @@ def execute_ranking_run(
                 bridge_weight_for_bridge_family=bw,
                 neighbor_mix_by_work=neighbor_mix_by_work,
                 neighbor_mix_k=nm_k,
+                emerging_semantic_slice_fit=emerging_semantic_slice_fit,
+                semantic_by_work=semantic_by_work_for_run,
             )
             upsert_paper_scores(conn, run.ranking_run_id, score_rows)
             counts = _ranking_counts_from_rows(len(candidates), score_rows)

@@ -48,6 +48,8 @@ def _base_signal_label(key: str) -> str:
 
 
 def signal_display_label(family: str, key: str) -> str:
+    if key == "semantic" and family == "emerging":
+        return "Embedding slice fit (corpus centroid)"
     if key == "diversity_penalty":
         if family == "emerging":
             return "Similarity penalty"

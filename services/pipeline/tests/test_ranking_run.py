@@ -9,6 +9,7 @@ from pipeline.ranking_run import (
     BRIDGE_REASON_STRUCTURAL,
     BRIDGE_REASON_STRUCTURAL_WEIGHTED,
     BRIDGE_REASON_STRUCTURAL_ZERO_WEIGHT,
+    EMERGING_REASON_SEMANTIC_V1,
     RECOMMENDATION_FAMILIES,
     _build_ranking_config,
     _ranking_counts_from_rows,
@@ -189,6 +190,43 @@ def test_build_ranking_config_bridge_reason_mode_and_persisted_weight() -> None:
     }
     assert c0["family_weights"]["bridge"]["bridge"] == 0.0
     assert cw["family_weights"]["bridge"]["bridge"] == 0.12
+    assert c0["signal_policies"]["semantic_score"] == "null_until_embeddings"
+    assert c0.get("emerging_semantic_slice_fit_v1") is False
+
+
+def test_build_ranking_config_semantic_v1_policy_and_weights() -> None:
+    eff_sem = resolved_family_weights(0.0, emerging_semantic_slice_fit=True)
+    cfg = _build_ranking_config(
+        corpus_snapshot_version="snap",
+        placeholder_policy="p",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+        cluster_version=None,
+        embedding_version="ev1",
+        bridge_weight_for_bridge_family=0.0,
+        family_weights_resolved=eff_sem,
+        emerging_semantic_slice_fit=True,
+    )
+    assert cfg["signal_policies"]["semantic_score"] == "emerging_slice_centroid_cosine_v1"
+    assert cfg.get("emerging_semantic_slice_fit_v1") is True
+    assert cfg["family_weights"]["emerging"]["semantic"] == 0.2
+
+
+def test_emerging_gets_semantic_when_slice_map_provided() -> None:
+    candidates = [_pool_candidate(work_id=1), _pool_candidate(work_id=2)]
+    m = {1: 0.1, 2: 0.9}
+    rows = build_step3_heuristic_score_rows(
+        candidates,
+        emerging_semantic_slice_fit=True,
+        semantic_by_work=m,
+    )
+    e1 = next(r for r in rows if r.work_id == 1 and r.recommendation_family == "emerging")
+    e2 = next(r for r in rows if r.work_id == 2 and r.recommendation_family == "emerging")
+    assert e1.semantic_score == 0.1
+    assert e2.semantic_score == 0.9
+    assert e1.reason_short == EMERGING_REASON_SEMANTIC_V1
+    b1 = next(r for r in rows if r.work_id == 1 and r.recommendation_family == "bridge")
+    assert b1.semantic_score is None
 
 
 def test_bridge_family_persists_score_when_cluster_context_but_final_score_unchanged() -> None:
@@ -271,12 +309,14 @@ def test_structural_bridge_reason_always_has_bridge_score() -> None:
 
 def test_ranking_counts_from_rows() -> None:
     rows = build_step3_heuristic_score_rows(
-        [_pool_candidate(work_id=1, year=2026, citation_count=0, topic_ids=(1,))]
+        [_pool_candidate(work_id=1, year=2026, citation_count=0, topic_ids=(1,))],
+        emerging_semantic_slice_fit=True,
+        semantic_by_work={1: 0.75},
     )
     c = _ranking_counts_from_rows(1, rows)
     assert c.total_candidate_works == 1
     assert c.total_rows_written == 3
-    assert c.rows_null_semantic == 3
+    assert c.rows_null_semantic == 2
     assert c.rows_null_bridge == 3
     assert c.rows_by_family["emerging"] == 1
     assert c.rows_by_family["undercited"] == 1
