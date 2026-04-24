@@ -23,6 +23,13 @@ from pipeline.ranking import (
     final_score_partial,
     in_low_cite_candidate_pool,
 )
+from pipeline.bridge_neighbor_mix import (
+    NEIGHBOR_MIX_V1_DEFAULT_K,
+    NeighborMixV1Result,
+    compute_neighbor_mix_v1_by_work,
+    neighbor_mix_v1_json_payload,
+    neighbor_mix_v1_unsupported_payload,
+)
 from pipeline.clustering import compute_bridge_boundary_scores
 from pipeline.clustering_persistence import (
     list_clustering_inputs,
@@ -154,6 +161,7 @@ def _build_ranking_config(
     embedding_version: str,
     bridge_weight_for_bridge_family: float,
     family_weights_resolved: dict[str, ScoreWeights],
+    neighbor_mix_k: int = NEIGHBOR_MIX_V1_DEFAULT_K,
 ) -> dict[str, Any]:
     bridge_policy = (
         "null_until_clusters_or_neighbor_features"
@@ -179,6 +187,10 @@ def _build_ranking_config(
                 "bridge_score_mode": "cluster_boundary_ratio_v0",
                 "bridge_weight_in_final_score": bw,
                 "bridge_reason_mode": bridge_reason_mode,
+                "neighbor_mix_v1": {
+                    "signal_version": "neighbor_mix_v1",
+                    "k": int(neighbor_mix_k),
+                },
             }
         ),
         "selection_scope": {
@@ -298,6 +310,8 @@ def _make_score_row(
     reason_short: str,
     weights: ScoreWeights,
     bridge_score: float | None = None,
+    bridge_eligible: bool | None = None,
+    bridge_signal_json: dict[str, Any] | None = None,
 ) -> PaperScoreRow:
     final = final_score_partial(
         semantic=None,
@@ -317,6 +331,8 @@ def _make_score_row(
         diversity_penalty=_round_score(diversity_penalty),
         final_score=_round_score(final) or 0.0,
         reason_short=reason_short,
+        bridge_eligible=bridge_eligible,
+        bridge_signal_json=bridge_signal_json,
     )
 
 
@@ -349,6 +365,8 @@ def build_step3_heuristic_score_rows(
     cluster_version: str | None = None,
     bridge_boundary_by_work: dict[int, float | None] | None = None,
     bridge_weight_for_bridge_family: float = 0.0,
+    neighbor_mix_by_work: dict[int, NeighborMixV1Result] | None = None,
+    neighbor_mix_k: int = NEIGHBOR_MIX_V1_DEFAULT_K,
 ) -> list[PaperScoreRow]:
     """
     Build heuristic rows using available metadata only.
@@ -358,6 +376,11 @@ def build_step3_heuristic_score_rows(
     into final_score); set positive for isolated ML2-5b experiments via CLI override only.
     Emerging and bridge: one row per included work. Undercited: only works in the frozen
     low-cite pool (docs/candidate-pool-low-cite.md), so signals stay comparable to that definition.
+    neighbor_mix_v1 fields (bridge_eligible, bridge_signal_json) are written only on bridge-family
+    rows; other families keep them null. When a neighbor_mix map is supplied for the run, bridge
+    rows are always true or false (never null); null is reserved when neighbor_mix was not part of
+    the run (legacy). A work missing from the map is treated as ineligible (false) with a minimal
+    payload.
     """
     bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
     family_w = resolved_family_weights(bw)
@@ -377,6 +400,20 @@ def build_step3_heuristic_score_rows(
             bridge_boundary_by_work=bridge_boundary_by_work,
             structural_bridge_weight=bw,
         )
+        mix = (
+            neighbor_mix_by_work.get(candidate.work_id)
+            if neighbor_mix_by_work is not None
+            else None
+        )
+        mix_bridge_eligible: bool | None = None
+        mix_bridge_signal_json: dict[str, Any] | None = None
+        if neighbor_mix_by_work is not None:
+            if mix is not None:
+                mix_bridge_eligible = mix.eligible
+                mix_bridge_signal_json = neighbor_mix_v1_json_payload(mix, k=neighbor_mix_k)
+            else:
+                mix_bridge_eligible = False
+                mix_bridge_signal_json = neighbor_mix_v1_unsupported_payload(k=neighbor_mix_k)
 
         rows.append(
             _make_score_row(
@@ -399,6 +436,8 @@ def build_step3_heuristic_score_rows(
                 reason_short=bridge_reason,
                 bridge_score=bridge_score,
                 weights=family_w["bridge"],
+                bridge_eligible=mix_bridge_eligible,
+                bridge_signal_json=mix_bridge_signal_json,
             )
         )
         if in_low_cite_candidate_pool(
@@ -466,6 +505,7 @@ def execute_ranking_run(
 
         bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
         family_resolved = resolved_family_weights(bw)
+        nm_k = NEIGHBOR_MIX_V1_DEFAULT_K
         config = _build_ranking_config(
             corpus_snapshot_version=snapshot,
             placeholder_policy=placeholder_policy,
@@ -475,6 +515,7 @@ def execute_ranking_run(
             embedding_version=embedding_version,
             bridge_weight_for_bridge_family=bw,
             family_weights_resolved=family_resolved,
+            neighbor_mix_k=nm_k,
         )
         cluster_v = config.get("clustering_artifact")
         cluster_key = (
@@ -483,6 +524,7 @@ def execute_ranking_run(
             else None
         )
         bridge_boundary_by_work: dict[int, float | None] | None = None
+        neighbor_mix_by_work: dict[int, NeighborMixV1Result] | None = None
         if cluster_key:
             require_successful_clustering_run(
                 conn,
@@ -495,6 +537,9 @@ def execute_ranking_run(
                 conn, embedding_version=embedding_version, corpus_snapshot_version=snapshot
             )
             bridge_boundary_by_work = compute_bridge_boundary_scores(summary.rows, assignments)
+            neighbor_mix_by_work = compute_neighbor_mix_v1_by_work(
+                summary.rows, assignments, nm_k
+            )
             warn_embedding_gaps_if_any(
                 conn,
                 corpus_snapshot_version=snapshot,
@@ -524,6 +569,8 @@ def execute_ranking_run(
                 cluster_version=cluster_key,
                 bridge_boundary_by_work=bridge_boundary_by_work,
                 bridge_weight_for_bridge_family=bw,
+                neighbor_mix_by_work=neighbor_mix_by_work,
+                neighbor_mix_k=nm_k,
             )
             upsert_paper_scores(conn, run.ranking_run_id, score_rows)
             counts = _ranking_counts_from_rows(len(candidates), score_rows)

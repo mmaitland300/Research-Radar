@@ -167,14 +167,17 @@ def upsert_paper_scores(conn: psycopg.Connection, ranking_run_id: str, rows: Seq
             INSERT INTO paper_scores (
                 ranking_run_id, work_id, recommendation_family,
                 semantic_score, citation_velocity_score, topic_growth_score,
-                bridge_score, diversity_penalty, final_score, reason_short
+                bridge_score, bridge_eligible, bridge_signal_json,
+                diversity_penalty, final_score, reason_short
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s)
             ON CONFLICT (ranking_run_id, work_id, recommendation_family) DO UPDATE SET
                 semantic_score = EXCLUDED.semantic_score,
                 citation_velocity_score = EXCLUDED.citation_velocity_score,
                 topic_growth_score = EXCLUDED.topic_growth_score,
                 bridge_score = EXCLUDED.bridge_score,
+                bridge_eligible = EXCLUDED.bridge_eligible,
+                bridge_signal_json = EXCLUDED.bridge_signal_json,
                 diversity_penalty = EXCLUDED.diversity_penalty,
                 final_score = EXCLUDED.final_score,
                 reason_short = EXCLUDED.reason_short
@@ -187,6 +190,8 @@ def upsert_paper_scores(conn: psycopg.Connection, ranking_run_id: str, rows: Seq
                 r.citation_velocity_score,
                 r.topic_growth_score,
                 r.bridge_score,
+                r.bridge_eligible,
+                json.dumps(r.bridge_signal_json) if r.bridge_signal_json is not None else None,
                 r.diversity_penalty,
                 r.final_score,
                 r.reason_short,
@@ -202,7 +207,8 @@ def fetch_paper_scores_for_run(
         cur.execute(
             """
             SELECT work_id, recommendation_family, semantic_score, citation_velocity_score,
-                   topic_growth_score, bridge_score, diversity_penalty, final_score, reason_short
+                   topic_growth_score, bridge_score, bridge_eligible, bridge_signal_json,
+                   diversity_penalty, final_score, reason_short
             FROM paper_scores
             WHERE ranking_run_id = %s
             ORDER BY work_id, recommendation_family

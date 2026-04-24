@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -258,6 +258,15 @@ class RankedRecommendationItem(BaseModel):
     final_score: float
     reason_short: str
     signal_explanations: list[RankedSignalExplanation]
+    bridge_eligible: bool | None = Field(
+        default=None,
+        description=(
+            "neighbor_mix_v1 gate for bridge-family rows only. On runs that persist neighbor_mix_v1: "
+            "true when eligible, false when ineligible or when mix support is missing for that work "
+            "(e.g. not in clustering inputs). Null only for non-bridge families or legacy bridge rows "
+            "from runs that never wrote neighbor_mix eligibility."
+        ),
+    )
 
 
 class RankedRecommendationsResponse(BaseModel):
@@ -270,6 +279,34 @@ class RankedRecommendationsResponse(BaseModel):
     total: int
     list_explanation: RankedListExplanation
     items: list[RankedRecommendationItem]
+
+
+class PaperRankingFamilyItem(BaseModel):
+    family: str
+    present: bool
+    in_top_n: bool
+    rank: int | None = None
+    final_score: float | None = None
+    reason_short: str | None = None
+    signals: RankedSignals | None = None
+    signal_explanations: list[RankedSignalExplanation] = Field(default_factory=list)
+    bridge_eligible: bool | None = Field(
+        default=None,
+        description=(
+            "Same meaning as RankedRecommendationItem.bridge_eligible. Null for non-bridge families, "
+            "legacy bridge rows, or families with no materialized row for the paper."
+        ),
+    )
+
+
+class PaperRankingResponse(BaseModel):
+    paper_id: str
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    top_n: int
+    rank_scope: str
+    families: list[PaperRankingFamilyItem]
 
 
 class SimilarPaperItem(BaseModel):

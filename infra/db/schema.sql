@@ -176,6 +176,8 @@ CREATE TABLE IF NOT EXISTS paper_scores (
     citation_velocity_score DOUBLE PRECISION,
     topic_growth_score DOUBLE PRECISION,
     bridge_score DOUBLE PRECISION,
+    bridge_eligible BOOLEAN,
+    bridge_signal_json JSONB,
     diversity_penalty DOUBLE PRECISION,
     final_score DOUBLE PRECISION NOT NULL,
     reason_short TEXT NOT NULL,

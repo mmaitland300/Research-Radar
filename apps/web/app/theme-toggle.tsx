@@ -48,6 +48,9 @@ export function ThemeToggle() {
       aria-pressed={mounted ? theme === "dark" : false}
       title={mounted ? `Switch to ${nextTheme} mode` : "Toggle theme"}
     >
+      <span className="theme-toggle-icon" aria-hidden="true">
+        {mounted ? (theme === "dark" ? "☼" : "◐") : "◐"}
+      </span>
       <span className="theme-toggle-text">
         {mounted
           ? `${nextTheme[0].toUpperCase()}${nextTheme.slice(1)} mode`

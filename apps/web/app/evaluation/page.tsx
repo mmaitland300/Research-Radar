@@ -87,6 +87,43 @@ function parseFamily(raw: string | string[] | undefined): Family {
   return "emerging";
 }
 
+function parseSingleParam(raw: string | string[] | undefined): string | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function parseLimit(raw: string | string[] | undefined, fallback: number, max: number): number {
+  const value = parseSingleParam(raw);
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(1, Math.min(max, Math.trunc(parsed)));
+}
+
+function paperAnchorId(paperId: string): string {
+  return `paper-${encodeURIComponent(paperId)}`;
+}
+
+function armFocusRowId(armKey: string, paperId: string): string {
+  return `${armKey}-${paperAnchorId(paperId)}`;
+}
+
+function buildEvaluationFamilyHref(
+  family: Family,
+  options: {
+    focusPaperId?: string;
+    rankingRunId?: string;
+    limit?: number;
+  }
+): string {
+  const params = new URLSearchParams({ family });
+  if (options.focusPaperId) params.set("paper", options.focusPaperId);
+  if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
+  if (options.limit != null) params.set("limit", String(options.limit));
+  return `/evaluation?${params.toString()}`;
+}
+
 async function fetchCompare(family: Family): Promise<{
   data: EvalCompareResponse | null;
   error: string | null;
@@ -152,27 +189,75 @@ function ArmProxyStats({ arm }: { arm: EvalArm }) {
   );
 }
 
-function ArmColumn({ title, arm }: { title: string; arm: EvalArm }) {
+function ArmColumn({
+  title,
+  arm,
+  armKey,
+  focusedPaperId
+}: {
+  title: string;
+  arm: EvalArm;
+  armKey: string;
+  focusedPaperId?: string;
+}) {
+  const focusedItem = focusedPaperId
+    ? arm.items.find((item) => item.paper_id === focusedPaperId) ?? null
+    : null;
   return (
-    <article className="panel eval-arm">
-      <h2>{title}</h2>
+    <article className="panel eval-arm instrument-panel">
+      <div className="result-heading">
+        <h2>{title}</h2>
+        <span className="stamp">List size {arm.items.length}</span>
+      </div>
+      {focusedPaperId ? (
+        <p className="muted-inline">
+          Focus paper: <code>{focusedPaperId}</code>
+          {focusedItem ? " appears in this arm." : " is not visible in this arm."}
+        </p>
+      ) : null}
       <p className="muted-inline">{arm.arm_description}</p>
       <p className="muted-inline">
         <strong>Order:</strong> {arm.ordering_description}
       </p>
+      <div className="hero-metrics hero-metrics-compact" aria-label={`${title} proxy summary`}>
+        <article className="metric-card">
+          <p className="metric-label">Mean year</p>
+          <p className="metric-value">{fmtFixed(arm.recency.mean_year, 1)}</p>
+        </article>
+        <article className="metric-card">
+          <p className="metric-label">Median cites</p>
+          <p className="metric-value">{fmtFixed(arm.citations.median, 1)}</p>
+        </article>
+        <article className="metric-card">
+          <p className="metric-label">Unique topics</p>
+          <p className="metric-value">{arm.topics.unique_topic_labels}</p>
+        </article>
+      </div>
       <ArmProxyStats arm={arm} />
       <ul className="result-list">
         {arm.items.length === 0 ? (
           <li className="result-item">No papers in this slice.</li>
         ) : (
           arm.items.map((item) => (
-            <li key={item.paper_id} className="result-item">
-              <p className="result-title">
-                <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>{item.title}</Link>
-              </p>
+            <li
+              key={item.paper_id}
+              id={focusedPaperId === item.paper_id ? armFocusRowId(armKey, item.paper_id) : undefined}
+              className={`result-item result-item-bridge${
+                focusedPaperId === item.paper_id ? " result-item-focus" : ""
+              }`}
+            >
+              <div className="result-heading">
+                <p className="result-title">
+                  <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>{item.title}</Link>
+                </p>
+                {item.final_score != null ? (
+                  <span className="result-score result-score-bridge">
+                    {item.final_score.toFixed(3)}
+                  </span>
+                ) : null}
+              </div>
               <p className="result-meta">
                 {item.year} | cites: {item.citation_count} | {item.source_slug ?? "-"}
-                {item.final_score != null ? ` | score: ${item.final_score.toFixed(4)}` : null}
               </p>
               {item.topics.length > 0 ? (
                 <div className="chip-row" aria-label="Top topics">
@@ -183,6 +268,19 @@ function ArmColumn({ title, arm }: { title: string; arm: EvalArm }) {
                   ))}
                 </div>
               ) : null}
+              {focusedPaperId === item.paper_id ? (
+                <div className="stamp-row stamp-row-inline">
+                  <span className="stamp">Focus paper</span>
+                </div>
+              ) : null}
+              <div className="action-row" aria-label="Evaluation handoff">
+                <Link className="action-link" href={`/papers/${encodeURIComponent(item.paper_id)}`}>
+                  Open dossier
+                </Link>
+                <Link className="action-link" href="/trends">
+                  Topic momentum
+                </Link>
+              </div>
             </li>
           ))
         )}
@@ -197,24 +295,102 @@ type PageProps = {
 
 export default async function EvaluationPage({ searchParams }: PageProps) {
   const family = parseFamily(searchParams.family);
-  const { data, error, status } = await fetchCompare(family);
+  const focusPaperId = parseSingleParam(searchParams.paper);
+  const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
+  const limit = parseLimit(searchParams.limit, 12, 50);
+  const { data, error, status } = await (async () => {
+    const params = new URLSearchParams({ family, limit: String(limit) });
+    if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);
+    if (rankingRunId) params.set("ranking_run_id", rankingRunId);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/evaluation/compare?${params.toString()}`,
+        { cache: "no-store" }
+      );
+      if (response.status === 404) {
+        return {
+          data: null,
+          error:
+            "No succeeded ranking run found. Run the pipeline ranking job, or set NEXT_PUBLIC_RANKING_VERSION to match a run.",
+          status: 404
+        };
+      }
+      if (!response.ok) {
+        return {
+          data: null,
+          error: `API returned ${response.status} for /api/v1/evaluation/compare`,
+          status: response.status
+        };
+      }
+      const data = (await response.json()) as EvalCompareResponse;
+      return { data, error: null, status: 200 };
+    } catch (e) {
+      return {
+        data: null,
+        error: e instanceof Error ? e.message : "Unknown error",
+        status: null
+      };
+    }
+  })();
+  const focusPresence = data
+    ? {
+        ranked: data.ranked.items.some((item) => item.paper_id === focusPaperId),
+        citation: data.citation_baseline.items.some((item) => item.paper_id === focusPaperId),
+        date: data.date_baseline.items.some((item) => item.paper_id === focusPaperId)
+      }
+    : null;
 
   return (
-    <main className="page">
-      <section className="panel">
-        <p className="accent">Evaluation</p>
-        <h1>Evidence v0: ranked feed vs naive baselines</h1>
-        <p>
+    <main className={`page page-family page-family-${family}`}>
+      <section className="panel page-hero">
+        <div className="panel-header">
+          <div>
+            <p className={`eyebrow family-${family}`}>Evaluation</p>
+            <h1>Evidence v0: ranked feed vs naive baselines</h1>
+          </div>
+          <div className="stamp-row">
+            <span className={`stamp stamp-family stamp-family-${family}`}>
+              {FAMILY_LABEL[family]} family
+            </span>
+            <span className="stamp">Distributional checks only</span>
+          </div>
+        </div>
+        <p className="hero-lead">
           This page calls <code>GET /api/v1/evaluation/compare</code> so you can inspect the same
           candidate pool under three orderings: materialized ranking, citation-sorted, and
           date-sorted. Nothing here claims human relevance - only distributional checks on short
           lists.
         </p>
+        {data ? (
+          <div className="hero-metrics" aria-label="Evaluation summary">
+            <article className="metric-card">
+              <p className="metric-label">Pool size</p>
+              <p className="metric-value">{data.pool_size}</p>
+            </article>
+            <article className="metric-card">
+              <p className="metric-label">Run label</p>
+              <p className="metric-value metric-value-mono">{data.ranking_version}</p>
+            </article>
+            <article className="metric-card">
+              <p className="metric-label">Embedding</p>
+              <p className="metric-value metric-value-mono">{data.embedding_version}</p>
+            </article>
+            <article className="metric-card">
+              <p className="metric-label">Generated at</p>
+              <p className="metric-value metric-value-mono">{data.generated_at.slice(0, 10)}</p>
+            </article>
+          </div>
+        ) : null}
         <nav className="tabs" aria-label="Recommendation family">
           {FAMILIES.map((f) => (
             <Link
               key={f}
-              href={`/evaluation?family=${f}`}
+              href={buildEvaluationFamilyHref(f, {
+                focusPaperId,
+                rankingRunId,
+                limit
+              })}
               aria-current={f === family ? "page" : undefined}
             >
               {FAMILY_LABEL[f]}
@@ -231,10 +407,37 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             <code>NEXT_PUBLIC_RANKING_VERSION</code> to pin).
           </p>
         )}
+        {focusPaperId ? (
+          <p className="muted-inline">
+            Focus paper: <code>{focusPaperId}</code> | compare limit {limit}
+            {focusPresence ? (
+              <>
+                {" "}
+                {focusPresence.ranked || focusPresence.citation || focusPresence.date
+                  ? "Visible in:"
+                  : "Not visible in the current compare window."}{" "}
+                {focusPresence.ranked ? (
+                  <Link href={`#${armFocusRowId("ranked", focusPaperId)}`}>ranked</Link>
+                ) : null}
+                {focusPresence.ranked && (focusPresence.citation || focusPresence.date) ? ", " : null}
+                {focusPresence.citation ? (
+                  <Link href={`#${armFocusRowId("citation", focusPaperId)}`}>citation baseline</Link>
+                ) : null}
+                {focusPresence.citation && focusPresence.date ? ", " : null}
+                {focusPresence.date ? (
+                  <Link href={`#${armFocusRowId("date", focusPaperId)}`}>date baseline</Link>
+                ) : null}
+                {!focusPresence.ranked && !focusPresence.citation && !focusPresence.date
+                  ? " The run context is still pinned while you switch families."
+                  : "."}
+              </>
+            ) : null}
+          </p>
+        ) : null}
       </section>
 
       {error ? (
-        <section className="panel">
+        <section className="panel instrument-panel">
           <h2>Compare unavailable</h2>
           <p>{error}</p>
           {status === 404 ? (
@@ -248,8 +451,13 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
 
       {data ? (
         <>
-          <section className="panel eval-disclaimer">
-            <h2>Disclaimer</h2>
+          <section className="panel eval-disclaimer section-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow eyebrow-muted">Interpretation guardrails</p>
+                <h2>Disclaimer</h2>
+              </div>
+            </div>
             <p className="result-title">{data.disclaimer.headline}</p>
             <ul>
               {data.disclaimer.bullets.map((b, i) => (
@@ -258,8 +466,13 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             </ul>
           </section>
 
-          <section className="panel">
-            <h2>Run and pool</h2>
+          <section className="panel section-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow eyebrow-muted">Run context</p>
+                <h2>Run and pool</h2>
+              </div>
+            </div>
             <p className="muted-inline">
               Run <code>{data.ranking_version}</code> |{" "}
               <code>{data.ranking_run_id}</code> | snapshot <code>{data.corpus_snapshot_version}</code>{" "}
@@ -275,8 +488,13 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             ) : null}
           </section>
 
-          <section className="panel">
-            <h2>Topic label overlap between lists</h2>
+          <section className="panel section-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow eyebrow-muted">List overlap</p>
+                <h2>Topic label overlap between lists</h2>
+              </div>
+            </div>
             <p className="muted-inline">{data.topic_overlap_note}</p>
             <dl className="eval-dl">
               <dt>Ranked vs citation baseline</dt>
@@ -289,9 +507,24 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
           </section>
 
           <div className="eval-arms">
-            <ArmColumn title="Ranked (family)" arm={data.ranked} />
-            <ArmColumn title="Citation baseline" arm={data.citation_baseline} />
-            <ArmColumn title="Date baseline" arm={data.date_baseline} />
+            <ArmColumn
+              title="Ranked (family)"
+              arm={data.ranked}
+              armKey="ranked"
+              focusedPaperId={focusPaperId}
+            />
+            <ArmColumn
+              title="Citation baseline"
+              arm={data.citation_baseline}
+              armKey="citation"
+              focusedPaperId={focusPaperId}
+            />
+            <ArmColumn
+              title="Date baseline"
+              arm={data.date_baseline}
+              armKey="date"
+              focusedPaperId={focusPaperId}
+            />
           </div>
 
           <p className="muted-inline">
