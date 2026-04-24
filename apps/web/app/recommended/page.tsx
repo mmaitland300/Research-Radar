@@ -330,16 +330,23 @@ function EmergingWhySurfaced({ explanations }: { explanations: RankedSignalExpla
   );
 }
 
-async function fetchRanked(family: Family): Promise<{
+async function fetchRanked(
+  family: Family,
+  options: {
+    limit: number;
+    rankingRunId: string | undefined;
+  }
+): Promise<{
   data: RankedResponse | null;
   error: string | null;
   status: number | null;
 }> {
   const params = new URLSearchParams({
     family,
-    limit: "15"
+    limit: String(options.limit)
   });
   if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);
+  if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
 
   try {
     const response = await fetch(
@@ -393,11 +400,50 @@ type PageProps = {
   searchParams: Record<string, string | string[] | undefined>;
 };
 
+function parseSingleParam(raw: string | string[] | undefined): string | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function parseLimit(raw: string | string[] | undefined, fallback: number, max: number): number {
+  const value = parseSingleParam(raw);
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(1, Math.min(max, Math.trunc(parsed)));
+}
+
+function paperAnchorId(paperId: string): string {
+  return `paper-${encodeURIComponent(paperId)}`;
+}
+
+function buildRecommendedFamilyHref(
+  family: Family,
+  options: {
+    focusPaperId?: string;
+    rankingRunId?: string;
+    limit?: number;
+  }
+): string {
+  const params = new URLSearchParams({ family });
+  if (options.focusPaperId) params.set("paper", options.focusPaperId);
+  if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
+  if (options.limit != null) params.set("limit", String(options.limit));
+  return `/recommended?${params.toString()}`;
+}
+
 export default async function RecommendedPage({ searchParams }: PageProps) {
   const family = parseFamily(searchParams.family);
-  const { data, error, status } = await fetchRanked(family);
+  const focusPaperId = parseSingleParam(searchParams.paper);
+  const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
+  const limit = parseLimit(searchParams.limit, 15, 100);
+  const { data, error, status } = await fetchRanked(family, { limit, rankingRunId });
   const topScore = data?.items[0]?.final_score ?? null;
   const surfacedWithTopics = data?.items.filter((item) => item.topics.length > 0).length ?? 0;
+  const focusItem = focusPaperId
+    ? data?.items.find((item) => item.paper_id === focusPaperId) ?? null
+    : null;
 
   return (
     <main className={`page page-family page-family-${family}`}>
@@ -428,7 +474,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               {FAMILIES.map((f) => (
                 <Link
                   key={f}
-                  href={`/recommended?family=${f}`}
+                  href={buildRecommendedFamilyHref(f, {
+                    focusPaperId,
+                    rankingRunId,
+                    limit
+                  })}
                   aria-current={f === family ? "page" : undefined}
                 >
                   {FAMILY_LABEL[f]}
@@ -463,6 +513,19 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 <code>{data.ranking_run_id}</code> | snapshot{" "}
                 <code>{data.corpus_snapshot_version}</code> | {data.total} paper
                 {data.total === 1 ? "" : "s"}
+              </p>
+            ) : null}
+            {focusPaperId ? (
+              <p className="muted-inline">
+                Focus paper: <code>{focusPaperId}</code>
+                {focusItem
+                  ? (
+                    <>
+                      {` is visible in this ${FAMILY_LABEL[family].toLowerCase()} slice. `}
+                      <Link href={`#${paperAnchorId(focusPaperId)}`}>Jump to focused row</Link>.
+                    </>
+                  )
+                  : ` is not in the current top ${limit} rows for this slice, but the run context is still pinned while you switch families.`}
               </p>
             ) : null}
             {RANKING_VERSION ? (
@@ -523,6 +586,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 Family: {data.family}
               </span>
               <span className="stamp">Order: final_score desc</span>
+              <span className="stamp">Limit: {limit}</span>
             </div>
           </div>
           {family === "emerging" ? (
@@ -533,7 +597,13 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           ) : (
             <ul className="result-list">
               {data.items.map((item) => (
-                <li key={item.paper_id} className={`result-item result-item-${family}`}>
+                <li
+                  key={item.paper_id}
+                  id={focusPaperId === item.paper_id ? paperAnchorId(item.paper_id) : undefined}
+                  className={`result-item result-item-${family}${
+                    focusPaperId === item.paper_id ? " result-item-focus" : ""
+                  }`}
+                >
                   <div className="result-heading">
                     <p className="result-title">
                       <Link href={`/papers/${encodeURIComponent(item.paper_id)}`}>
@@ -552,6 +622,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     <span className={`stamp stamp-family stamp-family-${family}`}>
                       {FAMILY_LABEL[family]}
                     </span>
+                    {focusPaperId === item.paper_id ? <span className="stamp">Focus paper</span> : null}
                     <span className="stamp">{item.topics.length} topic label{item.topics.length === 1 ? "" : "s"}</span>
                   </div>
                   {item.topics.length > 0 ? (
