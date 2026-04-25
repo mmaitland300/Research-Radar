@@ -80,6 +80,8 @@ Done criteria:
 
 ### Day 5 - Ops runbook
 
+**Status:** `complete` (2026-04-25). Evidence: `docs/audit/week1-day5-ops-runbook-2026-04-25.md`.
+
 Deliverables:
 - Short runbook for:
   - ingest stuck/running repair
@@ -99,6 +101,8 @@ Done criteria:
 Question:
 - Is `59` included works sufficient for the next evaluation pass?
 - If not, expand sources first and cut a new snapshot.
+
+Current recommendation: `59` included works is acceptable for smoke/demo labels, but expand corpus before making strong ML-quality benchmark claims.
 
 Deliverables:
 - Written go/no-go decision with rationale.
