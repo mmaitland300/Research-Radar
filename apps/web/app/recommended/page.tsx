@@ -18,7 +18,7 @@ const FAMILY_SUMMARY: Record<Family, string> = {
 const FAMILY_NOTES: Record<Family, string[]> = {
   emerging: [
     "Topic-growth and citation-velocity signals should dominate the list.",
-    "Semantic fit remains in view so momentum does not drift off-slice.",
+    "Semantic fields are shown only when a run computes them; ordering should not imply semantic relevance unless marked as used.",
     "The goal is early importance, not raw popularity."
   ],
   bridge: [
@@ -662,8 +662,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <article className="card">
           <h2>Roadmap: embeddings</h2>
           <p>
-            ML milestone 1 fills <code>semantic_score</code> and retrieval; bridge-style scores follow
-            once clusters are available.
+            ML milestone 1 delivers retrieval for similar papers. <code>semantic_score</code> in ranked
+            families is deferred until a defined relevance target; bridge-style scores follow once
+            clusters are available.
           </p>
         </article>
         <article className="card">

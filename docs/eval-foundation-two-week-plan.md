@@ -49,15 +49,19 @@ Done criteria:
 
 ### Day 3 - Copy consistency pass
 
+**Status:** `complete` (2026-04-25). Evidence: `docs/audit/week1-day3-copy-consistency-2026-04-25.md`.
+
 Deliverables:
 - Ensure wording alignment across:
   - trends page
   - recommended page
+  - recommendation-family API descriptions
+  - product/meta endpoint language that summarizes ranking behavior
   - undercited API description
   - candidate pool definition doc
 
 Done criteria:
-- No contradictory copy about scope, candidate pools, or ranking semantics.
+- No contradictory copy about scope, candidate pools, ranking semantics, or signal usage claims.
 
 ### Day 4 - Regression guardrails
 

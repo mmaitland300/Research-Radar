@@ -326,9 +326,9 @@ def get_recommendations_ranked(
 @app.get("/api/v1/recommendations/families", response_model=list[RankingFamily])
 def get_recommendation_families() -> list[RankingFamily]:
     descriptions = {
-        "emerging": "High-growth, semantically relevant work before it becomes consensus canon.",
-        "bridge": "Work connecting nearby but distinct local clusters.",
-        "undercited": "Relevant work that beats popularity-only ranking baselines.",
+        "emerging": "High-growth work in the curated corpus, ordered by the selected materialized ranking run.",
+        "bridge": "Work intended to connect nearby but distinct corpus neighborhoods; bridge eligibility is run-dependent.",
+        "undercited": "Low-cite candidate-pool work surfaced by the selected materialized ranking run.",
     }
     return [
         RankingFamily(key=family, description=descriptions[family])

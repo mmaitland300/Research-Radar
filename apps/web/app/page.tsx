@@ -2,7 +2,7 @@ const cards = [
   {
     title: "Emerging Papers",
     body:
-      "Rank papers by semantic fit, citation velocity, and local topic growth instead of raw popularity alone."
+      "Rank papers by citation velocity and local topic growth, with semantic fields shown only when a selected run computes and uses them."
   },
   {
     title: "Bridge Detection",
