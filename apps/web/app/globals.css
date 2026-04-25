@@ -388,12 +388,14 @@ pre {
 }
 
 .family-hero {
+  position: relative;
   overflow: hidden;
 }
 
 .family-hero::after {
   content: "";
   position: absolute;
+  z-index: 0;
   inset: auto -5% -30% auto;
   width: 360px;
   height: 360px;
@@ -407,10 +409,23 @@ pre {
 }
 
 .family-hero-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
   gap: 22px;
   align-items: start;
+}
+
+.family-hero-grid > div:first-child {
+  min-width: 0;
+}
+
+.paper-dossier-hero-title {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.08;
 }
 
 .hero-copy {
@@ -696,6 +711,11 @@ pre {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 14px;
+}
+
+.panel-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 0;
 }
 
 .grid {

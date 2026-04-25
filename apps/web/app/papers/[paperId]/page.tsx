@@ -415,7 +415,7 @@ export default async function PaperDetailPage({
             <div className="panel-header">
               <div>
                 <p className="eyebrow family-emerging">Paper dossier</p>
-                <h1>{paper?.title ?? "Paper detail"}</h1>
+                <h1 className="paper-dossier-hero-title">{paper?.title ?? "Paper detail"}</h1>
               </div>
               <div className="stamp-row">
                 <span className="stamp">Detail view</span>
