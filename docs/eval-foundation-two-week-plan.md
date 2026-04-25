@@ -35,6 +35,8 @@ Done criteria:
 
 ### Day 2 - Production pin + deploy verification
 
+**Status:** `complete` (2026-04-25). Evidence: `docs/audit/week1-day2-production-pins-2026-04-25.md` and screenshot `docs/audit/screenshots/2026-04-25-baseline/railway-project-next-public-pins.png`.
+
 Deliverables:
 - Confirm production pins are set and aligned with baseline:
   - `NEXT_PUBLIC_EMBEDDING_VERSION`
