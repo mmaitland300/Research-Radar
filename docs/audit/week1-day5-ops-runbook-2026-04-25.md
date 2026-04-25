@@ -45,7 +45,7 @@ Expected promotion posture: `missing_embedding=0` for the intended scope.
 After embeddings are complete:
 
 ```bash
-python -m pipeline.cli cluster-works --embedding-version <EMBEDDING_VERSION> --cluster-version <CLUSTER_VERSION> --cluster-count <K>
+python -m pipeline.cli cluster-works --embedding-version <EMBEDDING_VERSION> --cluster-version <CLUSTER_VERSION> --corpus-snapshot-version <SNAPSHOT> --cluster-count <K>
 ```
 
 Then verify cluster coverage:
@@ -61,7 +61,7 @@ Expected promotion posture: `missing_cluster_assignment=0`.
 Run materialization:
 
 ```bash
-python -m pipeline.cli ranking-run --ranking-version <RANKING_VERSION> --corpus-snapshot-version <SNAPSHOT> --embedding-version <EMBEDDING_VERSION> --cluster-version <CLUSTER_VERSION>
+python -m pipeline.cli ranking-run --ranking-version <RANKING_VERSION> --corpus-snapshot-version <SNAPSHOT> --embedding-version <EMBEDDING_VERSION> --cluster-version <CLUSTER_VERSION> --bridge-weight-for-family-bridge 0
 ```
 
 Verify in DB:
