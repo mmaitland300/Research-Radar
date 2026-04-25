@@ -13,6 +13,7 @@ from app.evaluation_repo import (
     EvalTopicMixProxy,
     EvalTopicOverlap,
     _arm_stats,
+    _pool_cte_sql,
 )
 
 
@@ -92,6 +93,38 @@ def test_arm_stats_builds_ordering_description() -> None:
     )
     assert arm.ordering_description == "final_score DESC"
     assert arm.recency.mean_year == 2022.0
+
+
+def test_pool_sql_undercited_uses_low_cite_contract_filters() -> None:
+    sql, params = _pool_cte_sql(
+        family="undercited",
+        corpus_snapshot_version="snap",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+    )
+    assert "w.inclusion_status = 'included'" in sql
+    assert "w.corpus_snapshot_version = %s" in sql
+    assert "w.is_core_corpus = TRUE" in sql
+    assert "w.year >= %s" in sql
+    assert "w.citation_count <= %s" in sql
+    assert "length(trim(COALESCE(w.title, ''))) > 0" in sql
+    assert "length(trim(COALESCE(w.abstract, ''))) > 0" in sql
+    assert params == ("snap", 2019, 30)
+
+
+def test_pool_sql_non_undercited_uses_all_included_snapshot_works_only() -> None:
+    sql, params = _pool_cte_sql(
+        family="emerging",
+        corpus_snapshot_version="snap",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+    )
+    assert "w.inclusion_status = 'included'" in sql
+    assert "w.corpus_snapshot_version = %s" in sql
+    assert "w.is_core_corpus = TRUE" not in sql
+    assert "w.year >= %s" not in sql
+    assert "w.citation_count <= %s" not in sql
+    assert params == ("snap",)
 
 
 def test_evaluation_compare_smoke(monkeypatch) -> None:

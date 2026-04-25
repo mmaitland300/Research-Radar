@@ -65,6 +65,10 @@ Done criteria:
 
 ### Day 4 - Regression guardrails
 
+**Status:** `complete` (2026-04-25). Evidence: focused test set passed -
+`apps/api/tests/test_recommendations_ranked.py`, `apps/api/tests/test_evaluation_compare.py`,
+`apps/api/tests/test_scores_repo.py`, `services/pipeline/tests/test_ranking_run.py`.
+
 Deliverables:
 - Tests for:
   - evaluation compare same-pool behavior
