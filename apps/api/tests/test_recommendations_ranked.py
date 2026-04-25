@@ -307,3 +307,14 @@ def test_get_recommendations_ranked_db_error(monkeypatch) -> None:
     response = client.get("/api/v1/recommendations/ranked?family=bridge")
 
     assert response.status_code == 503
+
+
+def test_get_recommendation_families_descriptions_avoid_overclaiming_language() -> None:
+    response = client.get("/api/v1/recommendations/families")
+
+    assert response.status_code == 200
+    by_key = {item["key"]: item["description"] for item in response.json()}
+    assert "semantically relevant" not in by_key["emerging"].lower()
+    assert "consensus canon" not in by_key["emerging"].lower()
+    assert "beats popularity-only" not in by_key["undercited"].lower()
+    assert "low-cite candidate-pool work" in by_key["undercited"].lower()

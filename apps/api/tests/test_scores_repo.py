@@ -31,6 +31,28 @@ def test_latest_successful_ranking_run_id_uses_dict_row_shape() -> None:
         )
         == "rank-123"
     )
+    query = conn.execute.call_args[0][0]
+    params = conn.execute.call_args[0][1]
+    assert "status = 'succeeded'" in query
+    assert "ranking_version = %s" not in query
+    assert params == ("source-snapshot-1",)
+
+
+def test_latest_successful_ranking_run_id_with_version_filters_and_uses_succeeded() -> None:
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = {"ranking_run_id": "rank-999"}
+
+    out = _latest_successful_ranking_run_id(
+        conn,
+        corpus_snapshot_version="source-snapshot-2",
+        ranking_version="bridge-v2",
+    )
+    assert out == "rank-999"
+    query = conn.execute.call_args[0][0]
+    params = conn.execute.call_args[0][1]
+    assert "status = 'succeeded'" in query
+    assert "ranking_version = %s" in query
+    assert params == ("source-snapshot-2", "bridge-v2")
 
 
 def test_resolve_ranked_run_context_explicit_id_uses_dict_row_shape() -> None:
@@ -52,6 +74,29 @@ def test_resolve_ranked_run_context_explicit_id_uses_dict_row_shape() -> None:
     assert ctx.ranking_run_id == "rank-123"
     assert ctx.ranking_version == "v0-test"
     assert ctx.corpus_snapshot_version == "source-snapshot-1"
+
+
+def test_resolve_ranked_run_context_explicit_id_does_not_call_latest_snapshot_lookup() -> None:
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = {
+        "ranking_run_id": "rank-explicit",
+        "ranking_version": "v0-test",
+        "corpus_snapshot_version": "source-snapshot-1",
+    }
+
+    with patch(
+        "app.scores_repo.latest_corpus_snapshot_version_with_works",
+        side_effect=AssertionError("latest snapshot lookup should not be used for explicit id"),
+    ):
+        ctx = resolve_ranked_run_context(
+            conn,
+            ranking_run_id="rank-explicit",
+            corpus_snapshot_version=None,
+            ranking_version=None,
+        )
+
+    assert ctx is not None
+    assert ctx.ranking_run_id == "rank-explicit"
 
 
 def test_resolve_ranked_run_context_latest_run_uses_dict_row_shape() -> None:
