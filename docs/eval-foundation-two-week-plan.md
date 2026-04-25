@@ -98,6 +98,8 @@ Done criteria:
 
 ### Day 6 - Corpus decision gate
 
+**Status:** `complete` (2026-04-25). Evidence: `docs/audit/week2-day6-corpus-decision-2026-04-25.md`.
+
 Question:
 - Is `59` included works sufficient for the next evaluation pass?
 - If not, expand sources first and cut a new snapshot.
