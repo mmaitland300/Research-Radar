@@ -15,7 +15,7 @@ Purpose: move from a working prototype to an ML project with measurable outcomes
 
 ## Week 1 (Stabilize + Freeze)
 
-### Day 1 - Baseline freeze and provenance record
+### W1-M1 - Baseline freeze and provenance record
 
 Deliverables:
 - A single baseline record with:
@@ -33,7 +33,7 @@ Deliverables:
 Done criteria:
 - Anyone can reconstruct what "baseline" means without asking in chat.
 
-### Day 2 - Production pin + deploy verification
+### W1-M2 - Production pin + deploy verification
 
 **Status:** `complete` (2026-04-25). Evidence: `docs/audit/week1-day2-production-pins-2026-04-25.md` and screenshot `docs/audit/screenshots/2026-04-25-baseline/railway-project-next-public-pins.png`.
 
@@ -47,7 +47,7 @@ Deliverables:
 Done criteria:
 - Browser behavior matches pinned versions, not implicit latest defaults.
 
-### Day 3 - Copy consistency pass
+### W1-M3 - Copy consistency pass
 
 **Status:** `complete` (2026-04-25). Evidence: `docs/audit/week1-day3-copy-consistency-2026-04-25.md`.
 
@@ -63,7 +63,7 @@ Deliverables:
 Done criteria:
 - No contradictory copy about scope, candidate pools, ranking semantics, or signal usage claims.
 
-### Day 4 - Regression guardrails
+### W1-M4 - Regression guardrails
 
 **Status:** `complete` (2026-04-25). Evidence: focused test set passed -
 `apps/api/tests/test_recommendations_ranked.py`, `apps/api/tests/test_evaluation_compare.py`,
@@ -78,7 +78,7 @@ Deliverables:
 Done criteria:
 - Expected regressions fail tests before they reach main.
 
-### Day 5 - Ops runbook
+### W1-M5 - Ops runbook
 
 **Status:** `complete` (2026-04-25). Evidence: `docs/audit/week1-day5-ops-runbook-2026-04-25.md`.
 
@@ -96,7 +96,7 @@ Done criteria:
 
 ## Week 2 (ML Evaluation Foundation)
 
-### Day 6 - Corpus decision gate
+### W2-G1 - Corpus decision gate
 
 **Status:** `complete` (2026-04-25). Evidence: `docs/audit/week2-day6-corpus-decision-2026-04-25.md`.
 
@@ -112,7 +112,9 @@ Deliverables:
 Done criteria:
 - No ambiguity on whether labels are being collected on current or expanded corpus.
 
-### Day 7 - Retrieval benchmark set
+### W2-G2 - Retrieval benchmark set
+
+Day 6 gate note: benchmark-style retrieval prompts should be created after corpus expansion. If created before expansion, they are smoke/demo prompts only and must not be used for benchmark claims.
 
 Deliverables:
 - 20-50 canonical search/retrieval prompts.
@@ -121,7 +123,7 @@ Deliverables:
 Done criteria:
 - A stable benchmark file exists and can be rerun against new versions.
 
-### Day 8 - Recommendation judgment set
+### W2-G3 - Recommendation judgment set
 
 Deliverables:
 - Human labels for top results in each family (`emerging`, `bridge`, `undercited`):
@@ -134,7 +136,7 @@ Deliverables:
 Done criteria:
 - At least one complete labeled pass exists for the baseline run stack.
 
-### Day 9 - Experiment matrix (after labels exist)
+### W2-G4 - Experiment matrix (after labels exist)
 
 Deliverables:
 - Experiment table with explicit hypotheses:
@@ -147,7 +149,7 @@ Deliverables:
 Done criteria:
 - Every experiment has a measurable success/failure criterion.
 
-### Day 10 - Decision bundle
+### W2-G5 - Decision bundle
 
 Deliverables:
 - Package:
