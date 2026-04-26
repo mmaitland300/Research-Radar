@@ -35,9 +35,19 @@ V1 is intentionally scoped to `MIR + audio representation learning`, with `neura
 - Snapshot versions, ingest runs, and watermarks are first-class state.
 - Evaluation ships with the MVP instead of being postponed.
 
-## Current status
+## Current status - 2026-04
 
-The repository contains the initial product scaffold plus an API-bootstrap-ready corpus policy, snapshot/run manifests, raw-payload retention helpers, normalization helpers, and a starter schema for reproducible ingest.
+Research Radar is a deployed, product-shaped prototype. The current public slice includes:
+
+- lexical Search over title + abstract
+- materialized Recommended feeds for emerging, bridge, and undercited families
+- Paper Detail with metadata, topic labels, ranking placement, and embedding-backed neighbors when `NEXT_PUBLIC_EMBEDDING_VERSION` is pinned
+- Trends over the curated corpus (not OpenAlex-wide)
+- Evaluation comparing ranked output against citation/date baselines
+
+Current limits: corpus is intentionally narrow (currently TISMIR + JAES), evaluation is proxy-only, and bridge remains experimental.
+
+For a short reviewer-oriented proof map, see `docs/reviewer-brief.md`. The full planning log remains in `docs/roadmap.md`.
 
 **Bootstrap corpus (implemented):** OpenAlex ingest is wired for the venues in `services/pipeline/pipeline/policy.py` (currently **TISMIR** and **JAES**). The broader venue list in `docs/build-brief.md` is product intent; expand `policy.py` when adding sources.
 
@@ -52,7 +62,7 @@ Multiple rows in `embeddings` can coexist: each vector is keyed by `(work_id, em
 
 ## Quickstart vertical slice (works now)
 
-This repo already supports one complete path: bootstrap a small corpus, start the API, open the web search page, and see live papers served from Postgres.
+This repo supports a complete local path: bootstrap a small corpus, start the API/web apps, and inspect live Search + Recommended + Trends + Evaluation surfaces backed by Postgres.
 
 ### Fast path commands
 
