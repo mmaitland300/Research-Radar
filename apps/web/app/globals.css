@@ -1285,6 +1285,12 @@ ul {
   margin-top: 18px;
 }
 
+.search-sample-query-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 @media (max-width: 900px) {
   .masthead,
   .hero-grid,

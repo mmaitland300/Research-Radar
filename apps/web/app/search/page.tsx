@@ -8,6 +8,15 @@ const API_BASE_URL =
 const FAMILIES = ["emerging", "bridge", "undercited"] as const;
 type FamilyHint = (typeof FAMILIES)[number];
 
+/** Lexical sample queries for the empty state; MIR / audio-ML phrasing aligned with the curated corpus. */
+const REVIEWER_SAMPLE_QUERIES = [
+  "audio embeddings",
+  "music information retrieval",
+  "source separation",
+  "piano transcription",
+  "self-supervised audio"
+] as const;
+
 const INCLUDED_SCOPES = ["all_included", "core"] as const;
 type IncludedScope = (typeof INCLUDED_SCOPES)[number];
 
@@ -570,11 +579,31 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
         {searchResult.error ? <p>{searchResult.error}</p> : null}
         {!q ? (
-          <p>
-            Start with a concrete phrase from the literature, then narrow by topic or venue if the
-            first pass is too broad. Search v1 only claims lexical retrieval today, so the surfaced
-            rows should be interpretable from their text.
-          </p>
+          <>
+            <p>
+              Start with a concrete phrase from the literature, then narrow by topic or venue if
+              the first pass is too broad. Search v1 only claims lexical retrieval today, so the
+              surfaced rows should be interpretable from their text.
+            </p>
+            <p className="muted-inline">
+              Retrieval is <strong>lexical</strong> over each paper&apos;s stored{" "}
+              <strong>title and abstract</strong> (word/phrase match, deterministic ordering). It is
+              not semantic vector search, hybrid retrieval, or LLM-ranked results.
+            </p>
+            <p className="muted-inline">Try a sample query (same filters as the form above):</p>
+            <ul className="action-row search-sample-query-list" aria-label="Sample lexical searches">
+              {REVIEWER_SAMPLE_QUERIES.map((sample) => (
+                <li key={sample}>
+                  <Link
+                    className="action-link"
+                    href={buildSearchHref(currentState, { q: sample, offset: 0 })}
+                  >
+                    {sample}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : null}
         {data ? (
           <>
