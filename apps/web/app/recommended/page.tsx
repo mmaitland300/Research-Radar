@@ -511,8 +511,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <p className="muted-inline">
                 <strong>{data.ranking_version}</strong> | run{" "}
                 <code>{data.ranking_run_id}</code> | snapshot{" "}
-                <code>{data.corpus_snapshot_version}</code> | {data.total} paper
-                {data.total === 1 ? "" : "s"}
+                <code>{data.corpus_snapshot_version}</code> | {data.total}{" "}
+                {data.total === 1 ? "paper" : "papers"}
               </p>
             ) : null}
             {focusPaperId ? (

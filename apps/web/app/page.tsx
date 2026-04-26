@@ -87,7 +87,7 @@ export default function HomePage() {
           <div className="stamp-row">
             <span className="stamp">Curated slice only</span>
             <span className="stamp">Why surfaced matters</span>
-            <span className="stamp">Benchmark before breadth</span>
+            <span className="stamp">Evaluation before breadth</span>
           </div>
         </div>
         <div className="brief-grid">
