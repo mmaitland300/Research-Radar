@@ -7,7 +7,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Research Radar",
-  description: "Emerging and bridge papers in audio ML."
+  description:
+    "Emerging, bridge diagnostics, and undercited papers in a curated MIR + audio-ML slice."
 };
 
 const navItems = [
@@ -74,14 +75,14 @@ export default function RootLayout({
                   <span className="brand-name">Research Radar</span>
                 </Link>
                 <p className="brand-copy">
-                  Detect emerging, bridge, and undercited papers inside a curated audio-ML slice,
+                  Detect emerging, bridge-candidate, and undercited papers inside a curated audio-ML slice,
                   then expose the signals behind every recommendation.
                 </p>
               </div>
               <div className="status-cluster" aria-label="Product focus">
                 <span className="stamp">Curated corpus</span>
                 <span className="stamp">Explainable ranking</span>
-                <span className="stamp">Emerging and bridge papers</span>
+                <span className="stamp">Emerging, bridge diagnostics, and undercited papers</span>
               </div>
             </div>
             <SiteNav items={navItems} />

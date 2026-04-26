@@ -1,10 +1,10 @@
 # Research Radar
 
-Research Radar is a ranking and explainability product for emerging and bridge papers in audio ML.
+Research Radar is a product-shaped prototype for ranking and explaining papers in a curated MIR + audio-ML slice, with bridge signal currently exposed as diagnostics rather than a validated recommender family.
 
 The V1 thesis is:
 
-> Find emerging and bridge papers in audio ML before they become default citations.
+> Find emerging and undercited papers in audio ML, while exposing bridge-candidate diagnostics until weighting and evaluation justify stronger recommender claims.
 
 V1 is intentionally scoped to `MIR + audio representation learning`, with `neural audio effects` and `music/audio generation` deferred to a controlled edge slice in `V1.1` unless a paper clearly connects back to the core corpus.
 
@@ -40,7 +40,7 @@ V1 is intentionally scoped to `MIR + audio representation learning`, with `neura
 Research Radar is a deployed, product-shaped prototype. The current public slice includes:
 
 - lexical Search over title + abstract
-- materialized Recommended feeds for emerging, bridge, and undercited families
+- materialized Recommended feeds for emerging and undercited families, plus a bridge preview/diagnostics surface
 - Paper Detail with metadata, topic labels, ranking placement, and embedding-backed neighbors when `NEXT_PUBLIC_EMBEDDING_VERSION` is pinned
 - Trends over the curated corpus (not OpenAlex-wide)
 - Evaluation comparing ranked output against citation/date baselines

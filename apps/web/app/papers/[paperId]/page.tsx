@@ -458,7 +458,7 @@ export default async function PaperDetailPage({
                     Check emerging feed
                   </Link>
                   <Link className="action-link" href={bridgeFocusHref}>
-                    Check bridge feed
+                    Check bridge preview
                   </Link>
                   <Link className="action-link" href="/trends">
                     Inspect topic momentum
@@ -799,15 +799,16 @@ export default async function PaperDetailPage({
             <p className="workflow-step">01</p>
             <h3>Check recommendation families</h3>
             <p>
-              Use Recommended to see whether this paper behaves like an emerging, bridge, or
-              undercited signal in the current ranked feed.
+              Use Recommended to see whether this paper behaves like an emerging or undercited
+              signal in the current ranked feed, or how it appears on the bridge preview /
+              diagnostics surface.
             </p>
             <div className="action-row">
               <Link className="action-link" href={emergingFocusHref}>
                 Emerging
               </Link>
               <Link className="action-link" href={bridgeFocusHref}>
-                Bridge
+                Bridge preview
               </Link>
               <Link className="action-link" href={undercitedFocusHref}>
                 Under-cited

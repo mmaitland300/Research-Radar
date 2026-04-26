@@ -677,7 +677,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
 
       <section className="grid">
         <article className="card">
-          <h2>Roadmap: embeddings</h2>
+          <h2>Current ML boundary</h2>
           <p>
             ML milestone 1 delivers retrieval for similar papers. Writing{" "}
             <code>semantic_score</code> into ranked families stays gated until a defined relevance target;

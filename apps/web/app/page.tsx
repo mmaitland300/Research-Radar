@@ -32,7 +32,8 @@ const signalCards = [
     tone: "bridge",
     label: "Bridge",
     value: "Cross-cluster links",
-    body: "Surface works that connect nearby but distinct research neighborhoods without falling back to a graph toy."
+    body:
+      "Inspect candidate works that may connect nearby but distinct research neighborhoods, with bridge signal kept diagnostic until weighting and evaluation justify stronger claims."
   },
   {
     tone: "undercited",
@@ -56,8 +57,8 @@ export default function HomePage() {
           <p className="eyebrow">Research signal intelligence</p>
           <h1>Detect what matters next in audio ML.</h1>
           <p className="hero-lead">
-            Research Radar is a ranking and explainability product for{" "}
-            <strong>MIR + audio representation learning</strong>. It favors
+            Research Radar is a product-shaped prototype for ranking and explaining{" "}
+            <strong>MIR + audio representation learning</strong> papers. It favors
             curated scope, signal quality, and transparent reasoning over raw
             popularity or graph novelty.
           </p>
