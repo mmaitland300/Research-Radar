@@ -5,9 +5,9 @@ const cards = [
       "Rank papers by citation velocity and local topic growth, with semantic fields shown only when a selected run computes and uses them."
   },
   {
-    title: "Bridge Detection",
+    title: "Bridge preview",
     body:
-      "Surface work connecting nearby but distinct audio-ML clusters without turning the product into a graph toy."
+      "Inspect cross-cluster candidates with measured bridge signal. Weighting into final_score is gated until the evaluation story matches the label."
   },
   {
     title: "Explainable Ranking",
@@ -17,7 +17,7 @@ const cards = [
   {
     title: "Evaluation First",
     body:
-      "Ship benchmark, diversity, and temporal backtest pages as part of MVP rather than as an afterthought."
+      "Ship proxy evaluation and baseline comparison with the MVP so ranking behavior can be inspected before stronger quality claims are made."
   }
 ];
 
@@ -45,7 +45,7 @@ const signalCards = [
 const operatingPrinciples = [
   "Curate the corpus first so ranking operates on a coherent technical slice.",
   "Treat explanation as part of the product, not documentation after the fact.",
-  "Measure with benchmark and baseline views before broadening the surface area."
+  "Compare ranking runs against simple citation/date baselines before broadening the surface area."
 ];
 
 export default function HomePage() {
@@ -138,8 +138,8 @@ export default function HomePage() {
           <article className="brief-card">
             <h3>Not another graph toy</h3>
             <p>
-              Bridge detection stays useful because the product explains how a
-              paper connects clusters instead of expecting the graph to do the
+              Bridge stays a diagnostics surface because the product explains how
+              a paper connects clusters instead of expecting the graph to do the
               storytelling for us.
             </p>
           </article>

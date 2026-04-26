@@ -11,20 +11,21 @@ const FAMILY_LABEL: Record<Family, string> = {
 
 const FAMILY_SUMMARY: Record<Family, string> = {
   emerging: "Momentum-weighted papers gaining relevance inside your curated slice.",
-  bridge: "Papers that connect nearby but meaningfully distinct topic neighborhoods.",
+  bridge:
+    "Candidate bridge papers with measured cross-cluster signal. In this public run, bridge signal is visible for inspection but is not weighted into final_score yet.",
   undercited: "Low-cite candidates that appear stronger than their current attention level."
 };
 
 const FAMILY_NOTES: Record<Family, string[]> = {
   emerging: [
     "Topic-growth and citation-velocity signals should dominate the list.",
-    "Semantic fields are shown only when a run computes them; ordering should not imply semantic relevance unless marked as used.",
+    "General semantic relevance is not treated as a default quality score. Some pinned runs use embedding slice-fit as one bounded ranking feature, and the UI labels when that feature is used.",
     "The goal is early importance, not raw popularity."
   ],
   bridge: [
-    "Bridge papers should connect clusters without collapsing into generic survey work.",
-    "Cross-neighborhood relevance matters more than simple citation count.",
-    "Keep the feed legible even when the graph logic gets complex."
+    "Bridge signal is currently measured for inspection, not weighted into final_score.",
+    "Use this page as a diagnostics surface for cross-cluster candidates, not a validated bridge recommender.",
+    "Bridge should get first-class recommender framing only after the weighting and evaluation story match the label."
   ],
   undercited: [
     "These rows are judged against a low-cite candidate pool, not the whole corpus.",
@@ -457,12 +458,20 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               </div>
               <div className="stamp-row">
                 <span className={`stamp stamp-family stamp-family-${family}`}>
-                  {FAMILY_LABEL[family]} feed
+                  {family === "bridge" ? "Bridge preview" : `${FAMILY_LABEL[family]} feed`}
                 </span>
                 <span className="stamp">Materialized ranking run</span>
               </div>
             </div>
             <p className="hero-lead">{FAMILY_SUMMARY[family]}</p>
+            {family === "bridge" ? (
+              <p className="muted-inline">
+                <strong>Diagnostics:</strong> bridge signal is <strong>measured</strong> and visible in this
+                run for inspection. In the current public configuration it is <strong>not</strong> weighted
+                into <code>final_score</code>, so this page is a <strong>preview / diagnostics</strong>{" "}
+                surface—not a validated bridge recommender.
+              </p>
+            ) : null}
             <p>
               Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code> per
               family). The API derives plain-language explanations from the same weights stored on the
@@ -551,7 +560,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             </div>
             <div className="family-brief-copy">
               <p className={`eyebrow family-${family}`}>Signal lens</p>
-              <h2>{FAMILY_LABEL[family]} reading guide</h2>
+              <h2>
+                {family === "bridge"
+                  ? "Bridge preview reading guide"
+                  : `${FAMILY_LABEL[family]} reading guide`}
+              </h2>
               <ul className="measure-list">
                 {FAMILY_NOTES[family].map((note) => (
                   <li key={note}>{note}</li>
@@ -579,7 +592,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           <div className="panel-header">
             <div>
               <p className="eyebrow eyebrow-muted">Live ranking surface</p>
-              <h2>{FAMILY_LABEL[family]} results</h2>
+              <h2>
+                {family === "bridge"
+                  ? "Bridge preview results"
+                  : `${FAMILY_LABEL[family]} results`}
+              </h2>
             </div>
             <div className="stamp-row">
               <span className={`stamp stamp-family stamp-family-${family}`}>
@@ -662,9 +679,10 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <article className="card">
           <h2>Roadmap: embeddings</h2>
           <p>
-            ML milestone 1 delivers retrieval for similar papers. <code>semantic_score</code> in ranked
-            families is deferred until a defined relevance target; bridge-style scores follow once
-            clusters are available.
+            ML milestone 1 delivers retrieval for similar papers. Writing{" "}
+            <code>semantic_score</code> into ranked families stays gated until a defined relevance target;
+            bridge-style scores remain diagnostics until weighting and proxy evaluation justify recommender
+            framing.
           </p>
         </article>
         <article className="card">

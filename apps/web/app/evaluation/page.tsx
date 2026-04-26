@@ -528,8 +528,9 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
           </div>
 
           <p className="muted-inline">
-            Generated at {data.generated_at} | Later work: labeled benchmarks, P@k, freeze-at-T
-            backtests - see product checklist in API <code>/api/v1/evaluation/summary</code>.
+            Generated at {data.generated_at} | Current view: proxy evaluation and citation/date baseline
+            comparison. Later work could add labeled sets, P@k, or freeze-at-T studies if/when labels exist—see
+            product checklist in API <code>/api/v1/evaluation/summary</code>.
           </p>
         </>
       ) : null}
