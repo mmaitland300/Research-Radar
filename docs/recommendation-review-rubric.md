@@ -34,7 +34,7 @@ python -m pipeline.cli recommendation-review-summary \
 ```
 
 - **Default behavior:** if any label is blank or not in the allowed set, the command prints which **data row** (1-based, after the header), **`paper_id`**, and **column** failed, and exits with code **2**. No output JSON is written.
-- **`--allow-incomplete`:** still writes JSON with `is_complete: false`, includes a **warnings** entry, and is only for triage — **do not** treat metrics as a clean score until you fix labels and re-run without this flag. In triage mode, `bridge_like_yes_or_partial_share` still applies the usual denominator rule over **all** rows (any value other than `not_applicable` counts), so blank or invalid `bridge_like_label` cells can skew that metric until labels are fixed.
+- **`--allow-incomplete`:** still writes JSON with `is_complete: false`, includes a **warnings** entry, and is only for triage — **do not** treat metrics as a clean score until you fix labels and re-run without this flag. Triage-mode metrics are informational only and may be skewed by blank or invalid labels; strict complete mode should be used for any comparison. In triage mode, `bridge_like_yes_or_partial_share` still applies the usual denominator rule over **all** rows (any value other than `not_applicable` counts), so blank or invalid `bridge_like_label` cells can skew that metric until labels are fixed.
 - **`--markdown-output PATH`:** optional short Markdown alongside the JSON.
 
 **What the JSON metrics mean (all numerators use the filled worksheet only):**
@@ -70,6 +70,8 @@ Leave all four **blank** until a reviewer has assigned labels (the generator sta
 The CSV repeats **provenance** on every row: `ranking_run_id`, `ranking_version`, `corpus_snapshot_version`, `embedding_version`, `cluster_version` (from `ranking_runs.config_json.clustering_artifact.cluster_version` when present; otherwise **blank**), `family`, and list **`rank`**.
 
 `bridge_signal_json` is **not** exported; only precomputed **scores and eligibility** appear.
+
+When the summary warns about **multiple** `embedding_version` or `cluster_version` values, the listed values are **non-blank** cells only (blank worksheet cells are omitted from that distinct list, same as for other provenance fields).
 
 ## `bridge_like_label` scope
 

@@ -158,6 +158,16 @@ def build_recommendation_review_summary(
     fams = _unique_values(rows, "family")
     if len(fams) > 1:
         warnings.append("multiple family values observed: " + ", ".join(fams))
+    embs = _unique_values(rows, "embedding_version")
+    if len(embs) > 1:
+        warnings.append(
+            "multiple embedding_version values observed: " + ", ".join(embs)
+        )
+    clusts = _unique_values(rows, "cluster_version")
+    if len(clusts) > 1:
+        warnings.append(
+            "multiple cluster_version values observed: " + ", ".join(clusts)
+        )
 
     row_count = len(rows)
 

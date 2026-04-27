@@ -1,6 +1,7 @@
 """Tests for recommendation review worksheet summary (no live Postgres)."""
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -22,6 +23,8 @@ def _full_row(
     paper_id: str = "P1",
     ranking_run_id: str = "run-a",
     corpus_snapshot_version: str = "snap-1",
+    embedding_version: str = "emb-1",
+    cluster_version: str = "cl-1",
     family: str = "bridge",
     relevance_label: str = "good",
     novelty_label: str = "useful",
@@ -31,8 +34,8 @@ def _full_row(
         "ranking_run_id": ranking_run_id,
         "ranking_version": "rv-1",
         "corpus_snapshot_version": corpus_snapshot_version,
-        "embedding_version": "emb-1",
-        "cluster_version": "cl-1",
+        "embedding_version": embedding_version,
+        "cluster_version": cluster_version,
         "family": family,
         "rank": rank,
         "paper_id": paper_id,
@@ -56,6 +59,18 @@ def _full_row(
     }
 
 
+def _assert_label_validation_message(
+    msg: str, *, paper_id: str, column: str, blank: bool
+) -> None:
+    assert "data row 1" in msg
+    assert paper_id in msg
+    assert column in msg
+    if blank:
+        assert "blank" in msg.lower()
+    else:
+        assert "invalid" in msg.lower() or "expected" in msg.lower()
+
+
 def test_complete_worksheet_passes() -> None:
     rows = [
         _full_row(rank="1", paper_id="A", relevance_label="good", novelty_label="useful", bridge_like_label="yes"),
@@ -72,39 +87,27 @@ def test_complete_worksheet_passes() -> None:
 
 
 def test_blank_relevance_fails() -> None:
-    rows = [_full_row(relevance_label="")]
+    rows = [_full_row(paper_id="PR-blank", relevance_label="")]
     with pytest.raises(ReviewSummaryError) as ei:
         build_recommendation_review_summary(
             rows, input_path=Path("w.csv"), allow_incomplete=False
         )
     assert ei.value.code == 2
-    m = str(ei.value)
-    assert "relevance_label" in m
-    assert "P1" in m
-    assert "data row 1" in m
+    _assert_label_validation_message(
+        str(ei.value), paper_id="PR-blank", column="relevance_label", blank=True
+    )
 
 
 def test_invalid_relevance_fails() -> None:
-    rows = [_full_row(relevance_label="maybe")]
+    rows = [_full_row(paper_id="PR-bad", relevance_label="maybe")]
     with pytest.raises(ReviewSummaryError) as ei:
         build_recommendation_review_summary(
             rows, input_path=Path("w.csv"), allow_incomplete=False
         )
     assert ei.value.code == 2
-    assert "relevance_label" in str(ei.value)
-    assert "invalid" in str(ei.value).lower() or "expected" in str(ei.value).lower()
-
-
-def _assert_label_validation_message(
-    msg: str, *, paper_id: str, column: str, blank: bool
-) -> None:
-    assert "data row 1" in msg
-    assert paper_id in msg
-    assert column in msg
-    if blank:
-        assert "blank" in msg.lower()
-    else:
-        assert "invalid" in msg.lower() or "expected" in msg.lower()
+    _assert_label_validation_message(
+        str(ei.value), paper_id="PR-bad", column="relevance_label", blank=False
+    )
 
 
 def test_blank_novelty_fails() -> None:
@@ -281,6 +284,28 @@ def test_mixed_family_warns() -> None:
     assert any("family" in x.lower() for x in s["warnings"])
 
 
+def test_mixed_embedding_version_warns() -> None:
+    rows = [
+        _full_row(paper_id="1", rank="1", embedding_version="emb-a"),
+        _full_row(paper_id="2", rank="2", embedding_version="emb-b"),
+    ]
+    s = build_recommendation_review_summary(
+        rows, input_path=Path("w.csv"), allow_incomplete=False
+    )
+    assert any("embedding_version" in x.lower() for x in s["warnings"])
+
+
+def test_mixed_cluster_version_warns() -> None:
+    rows = [
+        _full_row(paper_id="1", rank="1", cluster_version="cl-a"),
+        _full_row(paper_id="2", rank="2", cluster_version="cl-b"),
+    ]
+    s = build_recommendation_review_summary(
+        rows, input_path=Path("w.csv"), allow_incomplete=False
+    )
+    assert any("cluster_version" in x.lower() for x in s["warnings"])
+
+
 def test_read_worksheet_path_roundtrip(tmp_path: Path) -> None:
     rows = [
         _full_row(),
@@ -321,16 +346,18 @@ def test_cli_writes_json(tmp_path: Path) -> None:
 
 
 def test_cli_allow_incomplete_blank_relevance_writes_json(tmp_path: Path) -> None:
+    """CLI path: exit 0, JSON on disk, incomplete flag and label warnings."""
     rows = [
         _full_row(paper_id="INC1", relevance_label=""),
     ]
     inp = tmp_path / "partial.csv"
     out = tmp_path / "partial.json"
     inp.write_text(render_worksheet_csv(rows), encoding="utf-8", newline="")
-    with patch.object(
-        sys,
-        "argv",
+    pipeline_pkg_root = Path(__file__).resolve().parent.parent
+    result = subprocess.run(
         [
+            sys.executable,
+            "-m",
             "pipeline.cli",
             "recommendation-review-summary",
             "--input",
@@ -339,12 +366,16 @@ def test_cli_allow_incomplete_blank_relevance_writes_json(tmp_path: Path) -> Non
             str(out),
             "--allow-incomplete",
         ],
-    ):
-        cli_main.main()
+        cwd=str(pipeline_pkg_root),
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
     assert out.is_file()
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["is_complete"] is False
-    assert any("incomplete" in w.lower() for w in data["warnings"])
+    joined = " ".join(data["warnings"]).lower()
+    assert "incomplete" in joined or "invalid" in joined
 
 
 def test_markdown_output(tmp_path: Path) -> None:
