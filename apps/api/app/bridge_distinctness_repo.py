@@ -109,6 +109,11 @@ def _parse_config_json(raw: Any) -> dict[str, Any]:
 def _top_family_ids(
     conn: psycopg.Connection, *, ranking_run_id: str, family: str, k: int, bridge_eligible_true_only: bool
 ) -> list[str]:
+    if bridge_eligible_true_only and family != "bridge":
+        raise ValueError(
+            "bridge_eligible_true_only applies only to recommendation_family='bridge'; "
+            f"got {family!r}"
+        )
     elig = "          AND ps.bridge_eligible IS TRUE\n" if bridge_eligible_true_only else ""
     sql = f"""
         SELECT w.openalex_id

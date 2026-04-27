@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app import main
 from app.bridge_distinctness_repo import (
     BridgeDistinctnessPayload,
+    _top_family_ids,
     cluster_version_from_config,
     compute_decision_support,
     load_bridge_distinctness_report,
@@ -69,6 +70,70 @@ def test_compute_decision_support_eligible_not_distinct() -> None:
     )
     assert step == "eligible_filter_not_distinct_enough"
     assert ed is False
+
+
+def test_compute_decision_support_inspect_cluster_quality_first_cluster_missing() -> None:
+    """Distinct eligible head but no cluster_version pin -> inspect before experiments."""
+    ed, el, step = compute_decision_support(
+        full_bridge_top_k_ids=["a", "b"],
+        eligible_bridge_top_k_ids=["b"],
+        emerging_top_k_ids=["c"],
+        cluster_version=None,
+        bridge_family_row_count=5,
+        bridge_signal_json_present_count=5,
+        full_vs_eligible_jaccard=0.5,
+    )
+    assert step == "inspect_cluster_quality_first"
+    assert ed is True
+
+
+def test_compute_decision_support_inspect_cluster_quality_first_not_less_emerging_like() -> None:
+    """Eligible head differs but Jaccard vs emerging is not strictly below full vs emerging."""
+    ed, el, step = compute_decision_support(
+        full_bridge_top_k_ids=["F1", "F2"],
+        eligible_bridge_top_k_ids=["F1"],
+        emerging_top_k_ids=["E1"],
+        cluster_version="cv",
+        bridge_family_row_count=5,
+        bridge_signal_json_present_count=5,
+        full_vs_eligible_jaccard=0.5,
+    )
+    assert el is False
+    assert step == "inspect_cluster_quality_first"
+
+
+def test_compute_decision_support_candidate_for_small_weight_experiment() -> None:
+    ed, el, step = compute_decision_support(
+        full_bridge_top_k_ids=["A", "B", "C"],
+        eligible_bridge_top_k_ids=["D"],
+        emerging_top_k_ids=["A", "B"],
+        cluster_version="kmeans-v1",
+        bridge_family_row_count=5,
+        bridge_signal_json_present_count=5,
+        full_vs_eligible_jaccard=0.25,
+    )
+    assert el is True
+    assert step == "candidate_for_small_weight_experiment"
+
+
+def test_openapi_bridge_distinctness_ranking_run_id_required() -> None:
+    schema = client.app.openapi()
+    path_item = schema["paths"]["/api/v1/evaluation/bridge-distinctness"]["get"]
+    params = {p["name"]: p for p in path_item.get("parameters", []) if p.get("in") == "query"}
+    assert params["ranking_run_id"].get("required") is True
+
+
+def test_top_family_ids_rejects_eligible_filter_on_non_bridge_family() -> None:
+    conn = MagicMock()
+    with pytest.raises(ValueError, match="bridge_eligible_true_only"):
+        _top_family_ids(
+            conn,
+            ranking_run_id="run-1",
+            family="emerging",
+            k=5,
+            bridge_eligible_true_only=True,
+        )
+    conn.execute.assert_not_called()
 
 
 def test_bridge_distinctness_ranking_run_id_required() -> None:

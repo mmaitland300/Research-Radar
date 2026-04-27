@@ -412,9 +412,10 @@ def get_evaluation_compare(
 
 @app.get("/api/v1/evaluation/bridge-distinctness", response_model=BridgeDistinctnessResponse)
 def get_bridge_distinctness(
-    ranking_run_id: str | None = Query(
-        default=None,
-        description="Required succeeded materialized run id; no latest or ranking_version fallback.",
+    ranking_run_id: str = Query(
+        ...,
+        min_length=1,
+        description="Succeeded materialized run id (required). No latest or ranking_version fallback.",
     ),
     k: int = Query(default=10, ge=1, le=50),
 ) -> BridgeDistinctnessResponse:
@@ -422,7 +423,7 @@ def get_bridge_distinctness(
     Read-only comparison of full bridge, eligible-only bridge, and emerging top-k for one pinned run.
     Decision fields are engineering hints only, not validation of bridge quality.
     """
-    if ranking_run_id is None or not ranking_run_id.strip():
+    if not ranking_run_id.strip():
         raise HTTPException(
             status_code=422,
             detail="ranking_run_id is required and must not be blank.",
@@ -434,6 +435,8 @@ def get_bridge_distinctness(
             ranking_run_id=rid,
             k=k,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=503,
