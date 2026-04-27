@@ -1,0 +1,655 @@
+{
+  "generated_at": "2026-04-27T17:15:21.910940+00:00",
+  "provenance": {
+    "ranking_run_id": "rank-3904fec89d",
+    "ranking_version": "bridge-v2-nm1-zero-r3-k6-20260424",
+    "corpus_snapshot_version": "source-snapshot-20260425-044015",
+    "embedding_version": "v1-title-abstract-1536-cleantext-r3",
+    "cluster_version": "kmeans-l2-v0-cleantext-r3-k6",
+    "k": 20
+  },
+  "bridge_row_coverage": {
+    "bridge_family_row_count": 59,
+    "bridge_score_nonnull_count": 59,
+    "bridge_score_null_count": 0,
+    "bridge_eligible_true_count": 59,
+    "bridge_eligible_false_count": 0,
+    "bridge_eligible_null_count": 0,
+    "bridge_signal_json_present_count": 59,
+    "bridge_signal_json_missing_count": 0
+  },
+  "head_eligibility": {
+    "full_bridge_top_k_eligible_true_count": 20,
+    "full_bridge_top_k_eligible_false_count": 0,
+    "full_bridge_top_k_eligible_null_count": 0,
+    "eligible_only_bridge_top_k_count": 20,
+    "full_bridge_equals_eligible_only_bridge_top_k": true
+  },
+  "score_distribution": {
+    "all_bridge_rows": {
+      "min_bridge_score": 0.482677,
+      "max_bridge_score": 0.982759,
+      "mean_bridge_score": 0.70637078,
+      "median_bridge_score": 0.705923,
+      "unique_bridge_score_count": 59,
+      "null_bridge_score_count": 0
+    },
+    "bridge_top_k": {
+      "min_bridge_score": 0.498669,
+      "max_bridge_score": 0.982759,
+      "mean_bridge_score": 0.6908185,
+      "median_bridge_score": 0.7047829999999999,
+      "unique_bridge_score_count": 20,
+      "null_bridge_score_count": 0
+    }
+  },
+  "bridge_top_k_rows": [
+    {
+      "rank": 1,
+      "work_id": 733,
+      "paper_id": "https://openalex.org/W2890376498",
+      "title": "Ethical Dimensions of Music Information Retrieval Technology",
+      "final_score": 0.540577,
+      "semantic_score": null,
+      "citation_velocity_score": 0.963719,
+      "topic_growth_score": 0.312732,
+      "bridge_score": 0.504015,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.5333333333333333,
+        "foreign_neighbor_count": 8,
+        "anchor_cluster_id": "c002",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 2,
+      "work_id": 71,
+      "paper_id": "https://openalex.org/W3093121331",
+      "title": "GiantMIDI-Piano: A Large-Scale MIDI Dataset for Classical Piano Music",
+      "final_score": 0.536609,
+      "semantic_score": null,
+      "citation_velocity_score": 1.0,
+      "topic_growth_score": 0.287091,
+      "bridge_score": 0.498669,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.4666666666666667,
+        "foreign_neighbor_count": 7,
+        "anchor_cluster_id": "c005",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 3,
+      "work_id": 37,
+      "paper_id": "https://openalex.org/W4394916053",
+      "title": "The Sound Demixing Challenge 2023 - Music Demixing Track",
+      "final_score": 0.412592,
+      "semantic_score": null,
+      "citation_velocity_score": 0.782313,
+      "topic_growth_score": 0.213512,
+      "bridge_score": 0.654061,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6666666666666666,
+        "foreign_neighbor_count": 10,
+        "anchor_cluster_id": "c004",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 4,
+      "work_id": 85,
+      "paper_id": "https://openalex.org/W3215381343",
+      "title": "On Evaluation of Inter- and Intra-Rater Agreement in Music Recommendation",
+      "final_score": 0.38308,
+      "semantic_score": null,
+      "citation_velocity_score": 0.680272,
+      "topic_growth_score": 0.223053,
+      "bridge_score": 0.739483,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6666666666666666,
+        "foreign_neighbor_count": 10,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 5,
+      "work_id": 89,
+      "paper_id": "https://openalex.org/W3209617794",
+      "title": "Diversity by Design in Music Recommender Systems",
+      "final_score": 0.377085,
+      "semantic_score": null,
+      "citation_velocity_score": 0.544218,
+      "topic_growth_score": 0.287091,
+      "bridge_score": 0.616061,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c002",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 6,
+      "work_id": 5,
+      "paper_id": "https://openalex.org/W4415947443",
+      "title": "Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship",
+      "final_score": 0.359477,
+      "semantic_score": null,
+      "citation_velocity_score": 0.0,
+      "topic_growth_score": 0.553042,
+      "bridge_score": 0.668711,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": false,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.5333333333333333,
+        "foreign_neighbor_count": 8,
+        "anchor_cluster_id": "c002",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 7,
+      "work_id": 52,
+      "paper_id": "https://openalex.org/W4387375972",
+      "title": "Perceptual and automated estimates of infringement in 40 music copyright cases",
+      "final_score": 0.346133,
+      "semantic_score": null,
+      "citation_velocity_score": 0.408163,
+      "topic_growth_score": 0.312732,
+      "bridge_score": 0.708855,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 8,
+      "work_id": 1,
+      "paper_id": "https://openalex.org/W7119099299",
+      "title": "Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music",
+      "final_score": 0.336609,
+      "semantic_score": null,
+      "citation_velocity_score": 0.0,
+      "topic_growth_score": 0.51786,
+      "bridge_score": 0.751551,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": false,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6666666666666666,
+        "foreign_neighbor_count": 10,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 9,
+      "work_id": 23,
+      "paper_id": "https://openalex.org/W4410033452",
+      "title": "Cross‑Modal Approaches to Beat Tracking: A Case Study on Chopin Mazurkas",
+      "final_score": 0.336609,
+      "semantic_score": null,
+      "citation_velocity_score": 0.0,
+      "topic_growth_score": 0.51786,
+      "bridge_score": 0.601351,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": false,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c003",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 10,
+      "work_id": 1137,
+      "paper_id": "https://openalex.org/W7133229896",
+      "title": "Predicting Perceived Semantic Expression of Functional Sounds Using Unsupervised Feature Extraction and Ensemble Learning",
+      "final_score": 0.336609,
+      "semantic_score": null,
+      "citation_velocity_score": 0.0,
+      "topic_growth_score": 0.51786,
+      "bridge_score": 0.75554,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": false,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.4666666666666667,
+        "foreign_neighbor_count": 7,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 11,
+      "work_id": 55,
+      "paper_id": "https://openalex.org/W4386773472",
+      "title": "PiJAMA: Piano Jazz with Automatic MIDI Annotations",
+      "final_score": 0.319347,
+      "semantic_score": null,
+      "citation_velocity_score": 0.331633,
+      "topic_growth_score": 0.312732,
+      "bridge_score": 0.503339,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.5333333333333333,
+        "foreign_neighbor_count": 8,
+        "anchor_cluster_id": "c005",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 12,
+      "work_id": 709,
+      "paper_id": "https://openalex.org/W3092976109",
+      "title": "Intelligent User Interfaces for Music Discovery",
+      "final_score": 0.31416,
+      "semantic_score": null,
+      "citation_velocity_score": 0.364431,
+      "topic_growth_score": 0.287091,
+      "bridge_score": 0.54726,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.5333333333333333,
+        "foreign_neighbor_count": 8,
+        "anchor_cluster_id": "c002",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 13,
+      "work_id": 718,
+      "paper_id": "https://openalex.org/W3036517071",
+      "title": "Unveiling the Hierarchical Structure of Music by Multi-Resolution Community Detection",
+      "final_score": 0.294602,
+      "semantic_score": null,
+      "citation_velocity_score": 0.189504,
+      "topic_growth_score": 0.351193,
+      "bridge_score": 0.809784,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6666666666666666,
+        "foreign_neighbor_count": 10,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 14,
+      "work_id": 19,
+      "paper_id": "https://openalex.org/W4408772031",
+      "title": "CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research",
+      "final_score": 0.292562,
+      "semantic_score": null,
+      "citation_velocity_score": 0.255102,
+      "topic_growth_score": 0.312732,
+      "bridge_score": 0.700711,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c001",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 15,
+      "work_id": 16,
+      "paper_id": "https://openalex.org/W4410091503",
+      "title": "Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data",
+      "final_score": 0.286858,
+      "semantic_score": null,
+      "citation_velocity_score": 0.102041,
+      "topic_growth_score": 0.386375,
+      "bridge_score": 0.830831,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6666666666666666,
+        "foreign_neighbor_count": 10,
+        "anchor_cluster_id": "c001",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 16,
+      "work_id": 15,
+      "paper_id": "https://openalex.org/W4409967775",
+      "title": "ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research",
+      "final_score": 0.281847,
+      "semantic_score": null,
+      "citation_velocity_score": 0.153061,
+      "topic_growth_score": 0.351193,
+      "bridge_score": 0.747436,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.7333333333333333,
+        "foreign_neighbor_count": 11,
+        "anchor_cluster_id": "c001",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 17,
+      "work_id": 53,
+      "paper_id": "https://openalex.org/W4387943290",
+      "title": "Wagner Ring Dataset: A Complex Opera Scenario for Music Processing and Computational Musicology",
+      "final_score": 0.266966,
+      "semantic_score": null,
+      "citation_velocity_score": 0.229592,
+      "topic_growth_score": 0.287091,
+      "bridge_score": 0.77308,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c001",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 18,
+      "work_id": 708,
+      "paper_id": "https://openalex.org/W3016069856",
+      "title": "Erkomaishvili Dataset: A Curated Corpus of Traditional Georgian Vocal Music for Computational Musicology",
+      "final_score": 0.266334,
+      "semantic_score": null,
+      "citation_velocity_score": 0.364431,
+      "topic_growth_score": 0.213512,
+      "bridge_score": 0.982759,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.9333333333333333,
+        "foreign_neighbor_count": 14,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 19,
+      "work_id": 73,
+      "paper_id": "https://openalex.org/W4312805589",
+      "title": "JSD: A Dataset for Structure Analysis in Jazz Music",
+      "final_score": 0.265181,
+      "semantic_score": null,
+      "citation_velocity_score": 0.22449,
+      "topic_growth_score": 0.287091,
+      "bridge_score": 0.658677,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c005",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 20,
+      "work_id": 91,
+      "paper_id": "https://openalex.org/W3129917041",
+      "title": "Attend to Chords: Improving Harmonic Analysis of Symbolic Music Using Transformer-Based Models",
+      "final_score": 0.25783,
+      "semantic_score": null,
+      "citation_velocity_score": 0.340136,
+      "topic_growth_score": 0.213512,
+      "bridge_score": 0.764196,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.5333333333333333,
+        "foreign_neighbor_count": 8,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    }
+  ],
+  "overlap_detail": {
+    "bridge_vs_emerging_jaccard": 0.666667,
+    "bridge_top_k_overlap_with_emerging_count": 16,
+    "bridge_top_k_only_count": 4,
+    "emerging_top_k_only_count": 4,
+    "bridge_only_work_ids": [
+      1,
+      5,
+      23,
+      1137
+    ],
+    "emerging_only_work_ids": [
+      40,
+      87,
+      702,
+      713
+    ],
+    "shared_bridge_emerging_work_ids": [
+      15,
+      16,
+      19,
+      37,
+      52,
+      53,
+      55,
+      71,
+      73,
+      85,
+      89,
+      91,
+      708,
+      709,
+      718,
+      733
+    ]
+  },
+  "cluster_signal_diagnostics": {
+    "distinct_anchor_cluster_count_in_bridge_top_k": 6,
+    "distinct_neighbor_cluster_count_in_bridge_top_k": 6,
+    "top_cluster_pairs": [
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c000",
+        "count": 37
+      },
+      {
+        "source_cluster": "c002",
+        "target_cluster": "c002",
+        "count": 27
+      },
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c001",
+        "count": 22
+      },
+      {
+        "source_cluster": "c005",
+        "target_cluster": "c005",
+        "count": 21
+      },
+      {
+        "source_cluster": "c001",
+        "target_cluster": "c001",
+        "count": 21
+      },
+      {
+        "source_cluster": "c002",
+        "target_cluster": "c001",
+        "count": 20
+      },
+      {
+        "source_cluster": "c001",
+        "target_cluster": "c002",
+        "count": 16
+      },
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c002",
+        "count": 15
+      },
+      {
+        "source_cluster": "c001",
+        "target_cluster": "c005",
+        "count": 14
+      },
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c004",
+        "count": 13
+      },
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c005",
+        "count": 13
+      },
+      {
+        "source_cluster": "c005",
+        "target_cluster": "c001",
+        "count": 10
+      },
+      {
+        "source_cluster": "c002",
+        "target_cluster": "c000",
+        "count": 8
+      },
+      {
+        "source_cluster": "c005",
+        "target_cluster": "c000",
+        "count": 8
+      },
+      {
+        "source_cluster": "c003",
+        "target_cluster": "c003",
+        "count": 6
+      }
+    ],
+    "rows_missing_cluster_or_signal_details": 0,
+    "warnings": []
+  },
+  "diagnosis": {
+    "eligibility_filter_not_selective_at_head": true,
+    "bridge_score_has_low_variance": false,
+    "bridge_head_emerging_overlap_high": true,
+    "bridge_signal_details_missing_or_sparse": false
+  },
+  "suggested_next_step": "tighten_bridge_eligibility_thresholds",
+  "warnings": []
+}
