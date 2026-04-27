@@ -20,6 +20,10 @@ from pipeline.ranking_run import (
     execute_ranking_run,
     validate_bridge_weight_for_bridge_family,
 )
+from pipeline.recommendation_review_worksheet import (
+    WorksheetError,
+    write_recommendation_review_worksheet,
+)
 from pipeline.work_text_repair import run_work_text_repair_cli
 from pipeline.jobs import (
     create_bootstrap_bundle,
@@ -267,7 +271,60 @@ def main() -> None:
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    worksheet_parser = subparsers.add_parser(
+        "recommendation-review-worksheet",
+        help="Write a CSV of top recommendations for one succeeded ranking run (manual review scaffold)",
+    )
+    worksheet_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Succeeded materialized ranking run id (required; no default or latest resolution)",
+    )
+    worksheet_parser.add_argument(
+        "--family",
+        required=True,
+        choices=sorted(["emerging", "bridge", "undercited"]),
+        help="Recommendation family column to export",
+    )
+    worksheet_parser.add_argument(
+        "--limit",
+        type=int,
+        required=True,
+        help="Max rows (ordered by final_score desc, work_id asc)",
+    )
+    worksheet_parser.add_argument(
+        "--output",
+        required=True,
+        help="Output CSV path (e.g. docs/audit/manual-review/bridge_run.csv)",
+    )
+    worksheet_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     args = parser.parse_args()
+
+    if args.command == "recommendation-review-worksheet":
+        if args.limit < 1 or args.limit > 200:
+            parser.error("--limit must be between 1 and 200")
+        rrid = (args.ranking_run_id or "").strip()
+        if not rrid:
+            parser.error("--ranking-run-id is required and must not be blank")
+        try:
+            write_recommendation_review_worksheet(
+                output_path=Path(args.output),
+                database_url=args.database_url,
+                ranking_run_id=rrid,
+                family=args.family,
+                limit=int(args.limit),
+            )
+        except WorksheetError as e:
+            print(f"recommendation-review-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        return
+
     policy = CorpusPolicy()
 
     if args.command == "print-policy":
