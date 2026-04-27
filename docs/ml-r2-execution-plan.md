@@ -321,7 +321,7 @@ Repeat with **`$elig.items`** instead of **`$full.items`** if you want **eligibl
 All subcommands: `python -m pipeline.cli --help`  
 Per command: `python -m pipeline.cli <command> --help`
 
-Implemented in `services/pipeline/pipeline/cli.py`: `repair-works-text`, `embed-works`, `embedding-coverage`, `cluster-works`, `ranking-run`.
+Implemented in `services/pipeline/pipeline/cli.py`: `repair-works-text`, `embed-works`, `embedding-coverage`, `cluster-works`, `ranking-run`, `recommendation-review-worksheet`, `recommendation-review-summary`.
 
 ---
 

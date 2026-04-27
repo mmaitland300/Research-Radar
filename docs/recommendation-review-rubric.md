@@ -22,6 +22,32 @@ python -m pipeline.cli recommendation-review-worksheet \
 
 Optional: `--database-url` to override the DSN. The run must be **`succeeded`**; failed or missing runs are rejected. See `docs/audit/manual-review/.gitkeep` for where checked-in examples may live (optional; paths are your choice).
 
+## Summarizing a completed worksheet (labels only)
+
+After every data row has valid `relevance_label`, `novelty_label`, and `bridge_like_label` (see table below), validate and write a JSON summary (human labels and simple row-level metrics only; no model inference):
+
+```bash
+cd services/pipeline
+python -m pipeline.cli recommendation-review-summary \
+  --input docs/audit/manual-review/bridge_RUN.csv \
+  --output docs/audit/manual-review/bridge_RUN_summary.json
+```
+
+- **Default behavior:** if any label is blank or not in the allowed set, the command prints which **data row** (1-based, after the header), **`paper_id`**, and **column** failed, and exits with code **2**. No output JSON is written.
+- **`--allow-incomplete`:** still writes JSON with `is_complete: false`, includes a **warnings** entry, and is only for triage — **do not** treat metrics as a clean score until you fix labels and re-run without this flag.
+- **`--markdown-output PATH`:** optional short Markdown alongside the JSON.
+
+**What the JSON metrics mean (all numerators use the filled worksheet only):**
+
+| Field | Definition |
+|-------|------------|
+| `precision_at_k_good_only` | `count(relevance_label == good) / row_count` |
+| `precision_at_k_good_or_acceptable` | `count(relevance_label in {good, acceptable}) / row_count` |
+| `bridge_like_yes_or_partial_share` | `count(bridge_like_label in {yes, partial})` divided by rows with `bridge_like_label != not_applicable`; if that denominator is 0, the value is JSON **`null`**. |
+| `surprising_or_useful_share` | `count(novelty_label in {surprising, useful}) / row_count` |
+
+**Meaning and limits:** these numbers are **only** meaningful for analysis after a **complete** labeled pass on a **single** review intent (and ideally one pinned run and snapshot). They are **not** a benchmark or proof of production retrieval quality until the **review protocol**, **corpus scope**, and **k** are fixed and documented. Smoke or demo label sets should not be cited as validation of ML ranking or bridge behavior.
+
 ## `bridge_eligible` in the CSV (normative)
 
 - PostgreSQL `TRUE` → `true` (lowercase)  
