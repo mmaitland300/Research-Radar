@@ -36,6 +36,10 @@ from pipeline.bridge_experiment_readiness import (
     BridgeExperimentReadinessError,
     run_bridge_experiment_readiness,
 )
+from pipeline.bridge_signal_diagnostics import (
+    BridgeSignalDiagnosticsError,
+    run_bridge_signal_diagnostics,
+)
 from pipeline.work_text_repair import run_work_text_repair_cli
 from pipeline.jobs import (
     create_bootstrap_bundle,
@@ -396,6 +400,37 @@ def main() -> None:
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    bridge_diag_parser = subparsers.add_parser(
+        "bridge-signal-diagnostics",
+        help="Read-only bridge signal diagnostics for one explicit ranking_run_id (paper_scores + ranking_runs)",
+    )
+    bridge_diag_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id (no latest fallback)",
+    )
+    bridge_diag_parser.add_argument(
+        "--k",
+        type=int,
+        default=20,
+        help="Top-k size from paper_scores (default 20)",
+    )
+    bridge_diag_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write diagnostics JSON",
+    )
+    bridge_diag_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write diagnostics Markdown",
+    )
+    bridge_diag_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     args = parser.parse_args()
 
     if args.command == "recommendation-review-worksheet":
@@ -469,6 +504,28 @@ def main() -> None:
             )
         except BridgeExperimentReadinessError as e:
             print(f"bridge-experiment-readiness: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+
+    if args.command == "bridge-signal-diagnostics":
+        if args.k < 1 or args.k > 200:
+            parser.error("--k must be between 1 and 200")
+        rrid = (args.ranking_run_id or "").strip()
+        if not rrid:
+            parser.error("--ranking-run-id is required and must not be blank")
+        try:
+            run_bridge_signal_diagnostics(
+                ranking_run_id=rrid,
+                k=int(args.k),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+                database_url=args.database_url,
+            )
+        except BridgeSignalDiagnosticsError as e:
+            print(f"bridge-signal-diagnostics: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
