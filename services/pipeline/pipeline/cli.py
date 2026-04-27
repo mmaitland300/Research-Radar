@@ -28,6 +28,10 @@ from pipeline.recommendation_review_summary import (
     ReviewSummaryError,
     run_recommendation_review_summary,
 )
+from pipeline.recommendation_review_rollup import (
+    ReviewRollupError,
+    run_recommendation_review_rollup,
+)
 from pipeline.work_text_repair import run_work_text_repair_cli
 from pipeline.jobs import (
     create_bootstrap_bundle,
@@ -331,6 +335,26 @@ def main() -> None:
         default=None,
         help="Optional path to write a short human-readable Markdown summary",
     )
+    rollup_parser = subparsers.add_parser(
+        "recommendation-review-rollup",
+        help="Combine completed family review summaries into one run-level evaluation artifact",
+    )
+    rollup_parser.add_argument(
+        "--summary",
+        action="append",
+        required=True,
+        help="Path to family summary JSON (repeat for each family)",
+    )
+    rollup_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write rollup JSON (e.g. docs/audit/manual-review/rank_x_rollup.json)",
+    )
+    rollup_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write rollup Markdown",
+    )
 
     args = parser.parse_args()
 
@@ -366,6 +390,22 @@ def main() -> None:
             )
         except ReviewSummaryError as e:
             print(f"recommendation-review-summary: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "recommendation-review-rollup":
+        try:
+            run_recommendation_review_rollup(
+                summary_paths=[Path(x) for x in args.summary],
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output)
+                if args.markdown_output
+                else None,
+            )
+        except ReviewRollupError as e:
+            print(f"recommendation-review-rollup: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
