@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-04-27T16:31:53.396001+00:00",
+  "provenance": {
+    "ranking_run_id": "rank-3904fec89d",
+    "ranking_version": "bridge-v2-nm1-zero-r3-k6-20260424",
+    "corpus_snapshot_version": "source-snapshot-20260425-044015",
+    "embedding_version": "v1-title-abstract-1536-cleantext-r3",
+    "cluster_version": "kmeans-l2-v0-cleantext-r3-k6"
+  },
+  "family_count": 3,
+  "families_present": [
+    "bridge",
+    "emerging",
+    "undercited"
+  ],
+  "per_family": {
+    "bridge": {
+      "input_path": "C:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_rank-3904fec89d_top20_labeled.csv",
+      "row_count": 20,
+      "is_complete": true,
+      "metrics": {
+        "precision_at_k_good_only": 0.9,
+        "precision_at_k_good_or_acceptable": 1.0,
+        "bridge_like_yes_or_partial_share": 1.0,
+        "surprising_or_useful_share": 1.0
+      },
+      "label_counts": {
+        "relevance_label": {
+          "acceptable": 2,
+          "good": 18,
+          "irrelevant": 0,
+          "miss": 0
+        },
+        "novelty_label": {
+          "not_useful": 0,
+          "obvious": 0,
+          "surprising": 6,
+          "useful": 14
+        },
+        "bridge_like_label": {
+          "no": 0,
+          "not_applicable": 0,
+          "partial": 10,
+          "yes": 10
+        }
+      },
+      "warnings": []
+    },
+    "emerging": {
+      "input_path": "C:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\emerging_rank-3904fec89d_top20_labeled.csv",
+      "row_count": 20,
+      "is_complete": true,
+      "metrics": {
+        "precision_at_k_good_only": 1.0,
+        "precision_at_k_good_or_acceptable": 1.0,
+        "bridge_like_yes_or_partial_share": null,
+        "surprising_or_useful_share": 1.0
+      },
+      "label_counts": {
+        "relevance_label": {
+          "acceptable": 0,
+          "good": 20,
+          "irrelevant": 0,
+          "miss": 0
+        },
+        "novelty_label": {
+          "not_useful": 0,
+          "obvious": 0,
+          "surprising": 7,
+          "useful": 13
+        },
+        "bridge_like_label": {
+          "no": 0,
+          "not_applicable": 20,
+          "partial": 0,
+          "yes": 0
+        }
+      },
+      "warnings": []
+    },
+    "undercited": {
+      "input_path": "C:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\undercited_rank-3904fec89d_top20_labeled.csv",
+      "row_count": 20,
+      "is_complete": true,
+      "metrics": {
+        "precision_at_k_good_only": 0.7,
+        "precision_at_k_good_or_acceptable": 1.0,
+        "bridge_like_yes_or_partial_share": null,
+        "surprising_or_useful_share": 1.0
+      },
+      "label_counts": {
+        "relevance_label": {
+          "acceptable": 6,
+          "good": 14,
+          "irrelevant": 0,
+          "miss": 0
+        },
+        "novelty_label": {
+          "not_useful": 0,
+          "obvious": 0,
+          "surprising": 9,
+          "useful": 11
+        },
+        "bridge_like_label": {
+          "no": 0,
+          "not_applicable": 20,
+          "partial": 0,
+          "yes": 0
+        }
+      },
+      "warnings": []
+    }
+  },
+  "cross_family_metric_deltas": {
+    "precision_at_k_good_only": {
+      "bridge_minus_emerging": -0.09999999999999998,
+      "bridge_minus_undercited": 0.20000000000000007,
+      "emerging_minus_undercited": 0.30000000000000004
+    },
+    "precision_at_k_good_or_acceptable": {
+      "bridge_minus_emerging": 0.0,
+      "bridge_minus_undercited": 0.0,
+      "emerging_minus_undercited": 0.0
+    },
+    "bridge_like_yes_or_partial_share": {
+      "bridge_minus_emerging": null,
+      "bridge_minus_undercited": null,
+      "emerging_minus_undercited": null
+    },
+    "surprising_or_useful_share": {
+      "bridge_minus_emerging": 0.0,
+      "bridge_minus_undercited": 0.0,
+      "emerging_minus_undercited": 0.0
+    }
+  },
+  "best_good_only_family": "emerging",
+  "weakest_good_only_family": "undercited",
+  "bridge_specific": {
+    "bridge_like_yes_or_partial_share": 1.0,
+    "bridge_good_only_precision": 0.9
+  },
+  "warnings": [],
+  "readiness": {
+    "ready_for_distinctness_analysis": true,
+    "ready_for_weight_experiment": true,
+    "suggested_next_step": "candidate signal only (not validation): join this rollup with bridge distinctness and top-k overlap before any small weight experiment"
+  }
+}
