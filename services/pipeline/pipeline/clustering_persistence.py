@@ -170,6 +170,13 @@ def count_included_missing_cluster_assignment(
     return int(row[0] or 0) if row is not None else 0
 
 
+def _work_id_cluster_id_from_row(row: Any) -> tuple[int, str]:
+    """Support both sequence rows and dict_row (psycopg `row_factory=dict_row`)."""
+    if isinstance(row, dict):
+        return int(row["work_id"]), str(row["cluster_id"])
+    return int(row[0]), str(row[1])
+
+
 def load_cluster_assignments(
     conn: psycopg.Connection, *, cluster_version: str
 ) -> dict[int, str]:
@@ -182,7 +189,7 @@ def load_cluster_assignments(
         """,
         (cluster_version,),
     ).fetchall()
-    return {int(row[0]): str(row[1]) for row in rows}
+    return {wid: cid for row in rows for wid, cid in (_work_id_cluster_id_from_row(row),)}
 
 
 def require_successful_clustering_run(
