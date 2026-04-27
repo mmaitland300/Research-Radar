@@ -404,6 +404,36 @@ def main() -> None:
         "bridge-signal-diagnostics",
         help="Read-only bridge signal diagnostics for one explicit ranking_run_id (paper_scores + ranking_runs)",
     )
+    corpus_expansion_parser = subparsers.add_parser(
+        "corpus-expansion-preview",
+        help="OpenAlex read-only: bucket strategies, sample works, and expansion recommendations (no DB or snapshot)",
+    )
+    corpus_expansion_parser.add_argument(
+        "--output",
+        required=True,
+        help="JSON output path (e.g. docs/audit/corpus-expansion-preview-YYYYMMDD.json)",
+    )
+    corpus_expansion_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Markdown output path (e.g. docs/audit/corpus-expansion-preview-YYYYMMDD.md)",
+    )
+    corpus_expansion_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Contact for OpenAlex User-Agent (default: OPENALEX_MAILTO env)",
+    )
+    corpus_expansion_parser.add_argument(
+        "--per-bucket-sample",
+        type=int,
+        default=20,
+        help="Works per bucket for preview list (10–25; default 20)",
+    )
+    corpus_expansion_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Offline: no live OpenAlex calls; empty samples and zero counts (tests/CI)",
+    )
     bridge_diag_parser.add_argument(
         "--ranking-run-id",
         required=True,
@@ -432,6 +462,22 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    if args.command == "corpus-expansion-preview":
+        from pipeline.corpus_expansion_preview import run_corpus_expansion_preview_from_cli
+
+        if args.per_bucket_sample < 10 or args.per_bucket_sample > 25:
+            parser.error("--per-bucket-sample must be between 10 and 25")
+        run_corpus_expansion_preview_from_cli(
+            output=Path(args.output),
+            markdown_output=Path(args.markdown_output),
+            mailto=(args.mailto or "").strip(),
+            per_bucket_sample=int(args.per_bucket_sample),
+            mock_openalex=bool(args.mock_openalex),
+        )
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
 
     if args.command == "recommendation-review-worksheet":
         if args.limit < 1 or args.limit > 200:
