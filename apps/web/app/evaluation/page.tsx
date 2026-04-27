@@ -71,6 +71,53 @@ type EvalCompareResponse = {
   generated_at: string;
 };
 
+type BridgeDistinctnessNextStep =
+  | "inspect_cluster_quality_first"
+  | "eligible_filter_not_distinct_enough"
+  | "candidate_for_small_weight_experiment"
+  | "insufficient_bridge_signal_coverage";
+
+type BridgeDistinctnessOverlapMetrics = {
+  overlap_count: number;
+  jaccard: number;
+};
+
+type BridgeDistinctnessDecisionSupport = {
+  eligible_head_differs_from_full: boolean;
+  eligible_head_less_emerging_like_than_full: boolean;
+  suggested_next_step: BridgeDistinctnessNextStep;
+};
+
+/** Response from GET /api/v1/evaluation/bridge-distinctness */
+type BridgeDistinctnessResponse = {
+  ranking_run_id: string;
+  ranking_version: string;
+  corpus_snapshot_version: string;
+  embedding_version: string;
+  cluster_version: string | null;
+  k: number;
+  full_bridge_top_k_ids: string[];
+  eligible_bridge_top_k_ids: string[];
+  emerging_top_k_ids: string[];
+  full_bridge_vs_eligible_bridge: BridgeDistinctnessOverlapMetrics;
+  full_bridge_vs_emerging: BridgeDistinctnessOverlapMetrics;
+  eligible_bridge_vs_emerging: BridgeDistinctnessOverlapMetrics;
+  bridge_family_row_count: number;
+  bridge_score_nonnull_count: number;
+  bridge_score_null_count: number;
+  bridge_eligible_true_count: number;
+  bridge_eligible_false_count: number;
+  bridge_eligible_null_count: number;
+  bridge_signal_json_present_count: number;
+  bridge_signal_json_missing_count: number;
+  decision_support: BridgeDistinctnessDecisionSupport;
+  generated_at: string;
+};
+
+type BridgeDistinctnessFetchResult =
+  | { kind: "ok"; data: BridgeDistinctnessResponse }
+  | { kind: "error"; message: string; status: number | null; detail: string | null };
+
 function fmtFixed(value: number, digits: number): string {
   return value.toFixed(digits);
 }
@@ -161,6 +208,65 @@ async function fetchCompare(family: Family): Promise<{
       status: null
     };
   }
+}
+
+async function parseResponseErrorDetail(response: Response): Promise<string | null> {
+  try {
+    const text = await response.text();
+    if (!text) return null;
+    const j = JSON.parse(text) as { detail?: unknown };
+    if (typeof j.detail === "string") return j.detail;
+    if (Array.isArray(j.detail)) {
+      return j.detail
+        .map((x: { msg?: string } | string) => (typeof x === "object" && x && "msg" in x ? x.msg : String(x)))
+        .filter(Boolean)
+        .join("; ");
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/**
+ * Pinned to a concrete ranking_run_id only. Do not call with ranking_version or env-only resolution.
+ */
+async function fetchBridgeDistinctness(
+  rankingRunId: string,
+  k: number
+): Promise<BridgeDistinctnessFetchResult> {
+  const params = new URLSearchParams({
+    ranking_run_id: rankingRunId,
+    k: String(k)
+  });
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/evaluation/bridge-distinctness?${params.toString()}`,
+      { cache: "no-store" }
+    );
+    if (!response.ok) {
+      const detail = await parseResponseErrorDetail(response);
+      return {
+        kind: "error",
+        message: `API returned ${response.status} for /api/v1/evaluation/bridge-distinctness`,
+        status: response.status,
+        detail
+      };
+    }
+    const payload = (await response.json()) as BridgeDistinctnessResponse;
+    return { kind: "ok", data: payload };
+  } catch (e) {
+    return {
+      kind: "error",
+      message: e instanceof Error ? e.message : "Unknown error",
+      status: null,
+      detail: null
+    };
+  }
+}
+
+function boolLabel(v: boolean): string {
+  return v ? "Yes" : "No";
 }
 
 function ArmProxyStats({ arm }: { arm: EvalArm }) {
@@ -333,6 +439,12 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
       };
     }
   })();
+
+  const bridgeDistinctness: BridgeDistinctnessFetchResult | null =
+    data && family === "bridge"
+      ? await fetchBridgeDistinctness(data.ranking_run_id, limit)
+      : null;
+
   const focusPresence = data
     ? {
         ranked: data.ranked.items.some((item) => item.paper_id === focusPaperId),
@@ -487,6 +599,141 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
               </p>
             ) : null}
           </section>
+
+          {family === "bridge" && bridgeDistinctness ? (
+            <section className="panel section-panel instrument-panel eval-bridge-distinctness">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow eyebrow-muted">Bridge family</p>
+                  <h2>Bridge distinctness diagnostics</h2>
+                </div>
+              </div>
+              <ul className="eval-bridge-guardrails muted-inline" aria-label="Bridge diagnostics scope">
+                <li>
+                  <strong>Diagnostic only.</strong>
+                </li>
+                <li>Not a human relevance benchmark.</li>
+                <li>Used to decide whether bridge weighting is worth testing.</li>
+                <li>Bridge remains unvalidated until judged improvements exist.</li>
+              </ul>
+              {bridgeDistinctness.kind === "error" ? (
+                <div className="eval-bridge-distinctness-error">
+                  <p className="result-title">Bridge diagnostics unavailable for this resolved run.</p>
+                  <p className="muted-inline">
+                    {bridgeDistinctness.message}
+                    {bridgeDistinctness.status != null ? ` (HTTP ${bridgeDistinctness.status})` : ""}
+                    {bridgeDistinctness.detail ? (
+                      <>
+                        {" "}
+                        <span className="metric-value-mono">— {bridgeDistinctness.detail}</span>
+                      </>
+                    ) : null}
+                  </p>
+                  <p className="muted-inline">
+                    Suggested operator action: run a bridge-v2 zero-weight ranking with neighbor_mix_v1, then
+                    reload this page.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="muted-inline">
+                    Pinned to the same <code>ranking_run_id</code> as the compare response above. Overlap and
+                    coverage are structural checks on short heads — still not a relevance judgment.
+                  </p>
+                  <h3 className="eval-proxy-title">Head overlap (Jaccard)</h3>
+                  <dl className="eval-dl">
+                    <dt>Full bridge vs eligible-only bridge</dt>
+                    <dd>
+                      overlap {bridgeDistinctness.data.full_bridge_vs_eligible_bridge.overlap_count}; Jaccard{" "}
+                      {fmtFixed(bridgeDistinctness.data.full_bridge_vs_eligible_bridge.jaccard, 4)}
+                    </dd>
+                    <dt>Full bridge vs emerging</dt>
+                    <dd>
+                      overlap {bridgeDistinctness.data.full_bridge_vs_emerging.overlap_count}; Jaccard{" "}
+                      {fmtFixed(bridgeDistinctness.data.full_bridge_vs_emerging.jaccard, 4)}
+                    </dd>
+                    <dt>Eligible-only bridge vs emerging</dt>
+                    <dd>
+                      overlap {bridgeDistinctness.data.eligible_bridge_vs_emerging.overlap_count}; Jaccard{" "}
+                      {fmtFixed(bridgeDistinctness.data.eligible_bridge_vs_emerging.jaccard, 4)}
+                    </dd>
+                  </dl>
+                  <h3 className="eval-proxy-title">Eligibility (bridge rows)</h3>
+                  <dl className="eval-dl">
+                    <dt>True / false / null</dt>
+                    <dd>
+                      {bridgeDistinctness.data.bridge_eligible_true_count} /{" "}
+                      {bridgeDistinctness.data.bridge_eligible_false_count} /{" "}
+                      {bridgeDistinctness.data.bridge_eligible_null_count}
+                    </dd>
+                  </dl>
+                  <h3 className="eval-proxy-title">Score and signal coverage</h3>
+                  <dl className="eval-dl">
+                    <dt>Bridge score (non-null / null)</dt>
+                    <dd>
+                      {bridgeDistinctness.data.bridge_score_nonnull_count} /{" "}
+                      {bridgeDistinctness.data.bridge_score_null_count}
+                    </dd>
+                    <dt>bridge_signal_json (present / missing)</dt>
+                    <dd>
+                      {bridgeDistinctness.data.bridge_signal_json_present_count} /{" "}
+                      {bridgeDistinctness.data.bridge_signal_json_missing_count}
+                    </dd>
+                    <dt>Bridge family row count</dt>
+                    <dd>{bridgeDistinctness.data.bridge_family_row_count}</dd>
+                  </dl>
+                  <h3 className="eval-proxy-title">Decision support (heuristic)</h3>
+                  <dl className="eval-dl">
+                    <dt>suggested_next_step</dt>
+                    <dd>
+                      <code>{bridgeDistinctness.data.decision_support.suggested_next_step}</code>
+                    </dd>
+                    <dt>eligible_head_differs_from_full</dt>
+                    <dd>
+                      {boolLabel(bridgeDistinctness.data.decision_support.eligible_head_differs_from_full)}
+                    </dd>
+                    <dt>eligible_head_less_emerging_like_than_full</dt>
+                    <dd>
+                      {boolLabel(
+                        bridgeDistinctness.data.decision_support.eligible_head_less_emerging_like_than_full
+                      )}
+                    </dd>
+                  </dl>
+                  <h3 className="eval-proxy-title">Provenance</h3>
+                  <dl className="eval-dl">
+                    <dt>ranking_run_id</dt>
+                    <dd>
+                      <code>{bridgeDistinctness.data.ranking_run_id}</code>
+                    </dd>
+                    <dt>ranking_version</dt>
+                    <dd>
+                      <code>{bridgeDistinctness.data.ranking_version}</code>
+                    </dd>
+                    <dt>corpus_snapshot_version</dt>
+                    <dd>
+                      <code>{bridgeDistinctness.data.corpus_snapshot_version}</code>
+                    </dd>
+                    <dt>embedding_version</dt>
+                    <dd>
+                      <code>{bridgeDistinctness.data.embedding_version}</code>
+                    </dd>
+                    <dt>cluster_version</dt>
+                    <dd>
+                      {bridgeDistinctness.data.cluster_version != null ? (
+                        <code>{bridgeDistinctness.data.cluster_version}</code>
+                      ) : (
+                        <>not recorded</>
+                      )}
+                    </dd>
+                    <dt>k</dt>
+                    <dd>{bridgeDistinctness.data.k}</dd>
+                    <dt>generated_at</dt>
+                    <dd className="metric-value-mono">{bridgeDistinctness.data.generated_at}</dd>
+                  </dl>
+                </>
+              )}
+            </section>
+          ) : null}
 
           <section className="panel section-panel">
             <div className="panel-header">

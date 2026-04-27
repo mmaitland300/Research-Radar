@@ -1153,6 +1153,22 @@ ul {
   font-weight: 600;
 }
 
+.eval-bridge-guardrails {
+  list-style: disc;
+  margin: 0 0 16px 1.1em;
+  padding: 0;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.eval-bridge-guardrails strong {
+  color: var(--text);
+}
+
+.eval-bridge-distinctness-error {
+  margin-top: 4px;
+}
+
 .ranking-how-panel ul {
   margin: 0 0 10px;
   padding-left: 18px;
