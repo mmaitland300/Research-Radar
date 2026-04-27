@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-04-27T16:52:42.808059+00:00",
+  "provenance": {
+    "ranking_run_id": "rank-3904fec89d",
+    "ranking_version": "bridge-v2-nm1-zero-r3-k6-20260424",
+    "corpus_snapshot_version": "source-snapshot-20260425-044015",
+    "embedding_version": "v1-title-abstract-1536-cleantext-r3",
+    "cluster_version": "kmeans-l2-v0-cleantext-r3-k6",
+    "k": 20
+  },
+  "top_k_ids": {
+    "full_bridge": [
+      733,
+      71,
+      37,
+      85,
+      89,
+      5,
+      52,
+      1,
+      23,
+      1137,
+      55,
+      709,
+      718,
+      19,
+      16,
+      15,
+      53,
+      708,
+      73,
+      91
+    ],
+    "eligible_only_bridge": [
+      733,
+      71,
+      37,
+      85,
+      89,
+      5,
+      52,
+      1,
+      23,
+      1137,
+      55,
+      709,
+      718,
+      19,
+      16,
+      15,
+      53,
+      708,
+      73,
+      91
+    ],
+    "emerging": [
+      71,
+      733,
+      37,
+      85,
+      89,
+      52,
+      709,
+      55,
+      708,
+      91,
+      19,
+      713,
+      718,
+      73,
+      53,
+      15,
+      87,
+      702,
+      16,
+      40
+    ],
+    "undercited": [
+      5,
+      1,
+      23,
+      1137,
+      2,
+      22,
+      887,
+      16,
+      8,
+      13,
+      26,
+      51,
+      15,
+      14,
+      19,
+      142,
+      65,
+      37,
+      52,
+      55
+    ]
+  },
+  "overlaps": {
+    "full_bridge_vs_emerging": {
+      "overlap_count": 16,
+      "union_count": 24,
+      "jaccard": 0.666667
+    },
+    "full_bridge_vs_undercited": {
+      "overlap_count": 10,
+      "union_count": 30,
+      "jaccard": 0.333333
+    },
+    "emerging_vs_undercited": {
+      "overlap_count": 6,
+      "union_count": 34,
+      "jaccard": 0.176471
+    },
+    "full_bridge_vs_eligible_only_bridge": {
+      "overlap_count": 20,
+      "union_count": 20,
+      "jaccard": 1.0
+    },
+    "eligible_only_bridge_vs_emerging": {
+      "overlap_count": 16,
+      "union_count": 24,
+      "jaccard": 0.666667
+    }
+  },
+  "overlap_thresholds": {
+    "emerging_overlap_delta": 0.0,
+    "materially_lower_emerging_overlap": false,
+    "required_delta": 0.1,
+    "eligible_only_bridge_differs_from_full_bridge": false
+  },
+  "label_metrics": {
+    "bridge_good_only_precision": 0.9,
+    "bridge_good_or_acceptable_precision": 1.0,
+    "bridge_like_yes_or_partial_share": 1.0,
+    "emerging_good_only_precision": 1.0,
+    "undercited_good_only_precision": 0.7
+  },
+  "readiness": {
+    "label_quality_ready": true,
+    "distinctness_ready": false,
+    "ready_for_small_bridge_weight_experiment": false,
+    "suggested_next_step": "Bridge labels are promising, but distinctness is not yet strong enough for a weight experiment."
+  },
+  "warnings": []
+}
