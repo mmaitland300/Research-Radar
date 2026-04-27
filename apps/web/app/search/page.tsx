@@ -364,6 +364,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const resolvedRankingRunId = data?.resolved_ranking_run_id ?? null;
   const resolvedRankingVersion = data?.resolved_ranking_version ?? null;
   const resolvedSnapshotVersion = data?.resolved_corpus_snapshot_version ?? null;
+  const rankingVersionControlValue = rankingVersion ?? resolvedRankingVersion ?? "";
+  const rankingRunIdControlValue = rankingRunId ?? resolvedRankingRunId ?? "";
   const controlsKey = [
     q ?? "",
     includedScope,
@@ -372,8 +374,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
     sourceSlug ?? "",
     topic ?? "",
     familyHint ?? "",
-    rankingVersion ?? "",
-    rankingRunId ?? "",
+    rankingVersionControlValue,
+    rankingRunIdControlValue,
     limit,
   ].join("|");
 
@@ -504,11 +506,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
               </label>
               <label className="search-field">
                 <span>Ranking version</span>
-                <input type="text" name="ranking_version" defaultValue={rankingVersion ?? ""} />
+                <input type="text" name="ranking_version" defaultValue={rankingVersionControlValue} />
               </label>
               <label className="search-field">
                 <span>Ranking run id</span>
-                <input type="text" name="ranking_run_id" defaultValue={rankingRunId ?? ""} />
+                <input type="text" name="ranking_run_id" defaultValue={rankingRunIdControlValue} />
               </label>
               <label className="search-field">
                 <span>Limit</span>
@@ -528,6 +530,19 @@ export default async function SearchPage({ searchParams }: PageProps) {
               If both <code>ranking_run_id</code> and <code>ranking_version</code> are set, the
               exact run id takes precedence.
             </p>
+            <p className="muted-inline">Quick sample queries (same filters as this form):</p>
+            <ul className="action-row search-sample-query-list" aria-label="Sample lexical searches">
+              {REVIEWER_SAMPLE_QUERIES.map((sample) => (
+                <li key={sample}>
+                  <Link
+                    className="action-link"
+                    href={buildSearchHref(currentState, { q: sample, offset: 0 })}
+                  >
+                    {sample}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </form>
         </article>
         <article className="panel instrument-panel">
@@ -603,19 +618,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <strong>title and abstract</strong> (word/phrase match, deterministic ordering). It is
               not semantic vector search, hybrid retrieval, or LLM-ranked results.
             </p>
-            <p className="muted-inline">Try a sample query (same filters as the form above):</p>
-            <ul className="action-row search-sample-query-list" aria-label="Sample lexical searches">
-              {REVIEWER_SAMPLE_QUERIES.map((sample) => (
-                <li key={sample}>
-                  <Link
-                    className="action-link"
-                    href={buildSearchHref(currentState, { q: sample, offset: 0 })}
-                  >
-                    {sample}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </>
         ) : null}
         {data ? (
