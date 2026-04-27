@@ -364,6 +364,18 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const resolvedRankingRunId = data?.resolved_ranking_run_id ?? null;
   const resolvedRankingVersion = data?.resolved_ranking_version ?? null;
   const resolvedSnapshotVersion = data?.resolved_corpus_snapshot_version ?? null;
+  const controlsKey = [
+    q ?? "",
+    includedScope,
+    yearFrom ?? "",
+    yearTo ?? "",
+    sourceSlug ?? "",
+    topic ?? "",
+    familyHint ?? "",
+    rankingVersion ?? "",
+    rankingRunId ?? "",
+    limit,
+  ].join("|");
 
   return (
     <main className="page">
@@ -446,11 +458,12 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <h2>Search controls</h2>
             </div>
           </div>
-          <form className="search-form" method="get">
+          <form key={controlsKey} className="search-form" method="get">
             <div className="search-filter-grid">
               <label className="search-field">
                 <span>Query</span>
                 <input
+                  key={`query-${q ?? "empty"}`}
                   type="text"
                   name="q"
                   defaultValue={q ?? ""}
