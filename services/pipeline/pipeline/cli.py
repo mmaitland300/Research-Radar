@@ -421,7 +421,10 @@ def main() -> None:
     corpus_expansion_parser.add_argument(
         "--mailto",
         default=None,
-        help="Contact for OpenAlex User-Agent (default: OPENALEX_MAILTO env)",
+        help=(
+            "Contact for OpenAlex User-Agent. Live mode: required via this flag or OPENALEX_MAILTO. "
+            "Mock mode: optional; falls back to OPENALEX_MAILTO or a placeholder if unset."
+        ),
     )
     corpus_expansion_parser.add_argument(
         "--per-bucket-sample",

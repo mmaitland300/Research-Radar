@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -534,6 +535,20 @@ def render_corpus_expansion_markdown(preview: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def resolve_corpus_expansion_preview_mailto(*, mailto: str, mock_openalex: bool) -> str:
+    """
+    User-Agent contact for OpenAlex. Live mode requires a real address via --mailto or
+    OPENALEX_MAILTO; mock mode may use a placeholder if neither is set.
+    """
+    cli = (mailto or "").strip()
+    env = (os.environ.get("OPENALEX_MAILTO") or "").strip()
+    if mock_openalex:
+        return cli or env or "research-radar-dev@local.invalid"
+    if not cli and not env:
+        raise ValueError("live_corpus_expansion_preview_requires_mailto")
+    return cli or env
+
+
 def write_corpus_expansion_artifacts(
     preview: Mapping[str, Any],
     *,
@@ -560,9 +575,15 @@ def run_corpus_expansion_preview_from_cli(
 ) -> None:
     policy = CorpusPolicy()
     mode = "mock" if mock_openalex else "live"
-    m = (mailto or os.environ.get("OPENALEX_MAILTO") or "research-radar-dev@local.invalid").strip()
-    if not m:
-        raise SystemExit(2)
+    try:
+        m = resolve_corpus_expansion_preview_mailto(mailto=mailto, mock_openalex=mock_openalex)
+    except ValueError:
+        print(
+            "corpus-expansion-preview: live mode requires a real contact: pass --mailto or set "
+            "OPENALEX_MAILTO in the environment (identifies you to OpenAlex in the User-Agent).",
+            file=sys.stderr,
+        )
+        raise SystemExit(2) from None
     out = run_corpus_expansion_preview(
         policy=policy,
         mailto=m,

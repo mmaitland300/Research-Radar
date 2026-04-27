@@ -13,6 +13,7 @@ from pipeline.corpus_expansion_preview import (
     REQUIRED_PREVIEW_TOP_LEVEL_KEYS,
     REQUIRED_SAMPLE_WORK_KEYS,
     expansion_bucket_definitions,
+    resolve_corpus_expansion_preview_mailto,
     run_corpus_expansion_preview,
     run_corpus_expansion_preview_from_cli,
     work_to_sample_row,
@@ -178,6 +179,71 @@ def test_markdown_scientific_validation_disclaimer() -> None:
     md = render_corpus_expansion_markdown(prev)
     assert "scientific validation" in md
     assert "benchmark result" in md  # disclaimed, not claimed
+
+
+def test_resolve_mailto_mock_allows_placeholder() -> None:
+    assert resolve_corpus_expansion_preview_mailto(mailto="", mock_openalex=True) == "research-radar-dev@local.invalid"
+
+
+def test_resolve_mailto_mock_prefers_cli_over_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENALEX_MAILTO", "env@example.com")
+    assert resolve_corpus_expansion_preview_mailto(mailto="cli@example.com", mock_openalex=True) == "cli@example.com"
+
+
+def test_resolve_mailto_live_requires_contact(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    with pytest.raises(ValueError, match="live_corpus_expansion_preview_requires_mailto"):
+        resolve_corpus_expansion_preview_mailto(mailto="", mock_openalex=False)
+
+
+def test_resolve_mailto_live_accepts_env_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENALEX_MAILTO", " u@openalex.test ")
+    assert resolve_corpus_expansion_preview_mailto(mailto="", mock_openalex=False) == "u@openalex.test"
+
+
+def test_resolve_mailto_live_accepts_cli_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    assert resolve_corpus_expansion_preview_mailto(mailto="  only@cli.test ", mock_openalex=False) == "only@cli.test"
+
+
+@patch("pipeline.corpus_expansion_preview.write_corpus_expansion_artifacts", lambda *a, **k: None)
+def test_from_cli_live_exits_without_mailto_or_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    with pytest.raises(SystemExit) as exc:
+        run_corpus_expansion_preview_from_cli(
+            output=tmp_path / "a.json",
+            markdown_output=tmp_path / "b.md",
+            mailto="",
+            per_bucket_sample=10,
+            mock_openalex=False,
+        )
+    assert exc.value.code == 2
+
+
+@patch("pipeline.cli.psycopg.connect")
+def test_corpus_expansion_cli_live_exits_without_contact(
+    _connect: MagicMock,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    with patch.object(
+        cli_main.sys,
+        "argv",
+        [
+            "pipeline.cli",
+            "corpus-expansion-preview",
+            "--output",
+            str(tmp_path / "x.json"),
+            "--markdown-output",
+            str(tmp_path / "x.md"),
+            "--per-bucket-sample",
+            "10",
+        ],
+    ):
+        with pytest.raises(SystemExit) as exc:
+            cli_main.main()
+    assert exc.value.code == 2
 
 
 def test_corpus_expansion_includes_suggested_range_in_markdown() -> None:
