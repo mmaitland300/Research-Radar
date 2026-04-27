@@ -171,45 +171,6 @@ function buildEvaluationFamilyHref(
   return `/evaluation?${params.toString()}`;
 }
 
-async function fetchCompare(family: Family): Promise<{
-  data: EvalCompareResponse | null;
-  error: string | null;
-  status: number | null;
-}> {
-  const params = new URLSearchParams({ family, limit: "12" });
-  if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);
-
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/v1/evaluation/compare?${params.toString()}`,
-      { cache: "no-store" }
-    );
-    if (response.status === 404) {
-      return {
-        data: null,
-        error:
-          "No succeeded ranking run found. Run the pipeline ranking job, or set NEXT_PUBLIC_RANKING_VERSION to match a run.",
-        status: 404
-      };
-    }
-    if (!response.ok) {
-      return {
-        data: null,
-        error: `API returned ${response.status} for /api/v1/evaluation/compare`,
-        status: response.status
-      };
-    }
-    const data = (await response.json()) as EvalCompareResponse;
-    return { data, error: null, status: 200 };
-  } catch (e) {
-    return {
-      data: null,
-      error: e instanceof Error ? e.message : "Unknown error",
-      status: null
-    };
-  }
-}
-
 async function parseResponseErrorDetail(response: Response): Promise<string | null> {
   try {
     const text = await response.text();
