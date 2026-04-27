@@ -11,6 +11,9 @@ from app.ranked_explanations import (
     family_weights_from_config,
 )
 from app.contracts import (
+    BridgeDistinctnessDecisionSupport,
+    BridgeDistinctnessOverlapMetrics,
+    BridgeDistinctnessResponse,
     ClusterGroupItem,
     ClusterInspectionResponse,
     ClusterSamplePaperItem,
@@ -51,6 +54,7 @@ from app.contracts import (
     utc_now,
 )
 from app.clusters_repo import load_cluster_inspection
+from app.bridge_distinctness_repo import load_bridge_distinctness_report
 from app.evaluation_repo import EvalListArm, load_evaluation_compare
 from app.papers_repo import database_url_from_env
 from app.papers_repo import get_paper_detail as get_paper_detail_row
@@ -401,6 +405,81 @@ def get_evaluation_compare(
             jaccard_ranked_vs_citation_baseline=payload.topic_overlap.jaccard_ranked_vs_citation_baseline,
             jaccard_ranked_vs_date_baseline=payload.topic_overlap.jaccard_ranked_vs_date_baseline,
             jaccard_citation_vs_date_baseline=payload.topic_overlap.jaccard_citation_vs_date_baseline,
+        ),
+        generated_at=utc_now(),
+    )
+
+
+@app.get("/api/v1/evaluation/bridge-distinctness", response_model=BridgeDistinctnessResponse)
+def get_bridge_distinctness(
+    ranking_run_id: str | None = Query(
+        default=None,
+        description="Required succeeded materialized run id; no latest or ranking_version fallback.",
+    ),
+    k: int = Query(default=10, ge=1, le=50),
+) -> BridgeDistinctnessResponse:
+    """
+    Read-only comparison of full bridge, eligible-only bridge, and emerging top-k for one pinned run.
+    Decision fields are engineering hints only, not validation of bridge quality.
+    """
+    if ranking_run_id is None or not ranking_run_id.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="ranking_run_id is required and must not be blank.",
+        )
+    rid = ranking_run_id.strip()
+    try:
+        payload = load_bridge_distinctness_report(
+            database_url=database_url_from_env(),
+            ranking_run_id=rid,
+            k=k,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database query failed. Confirm Postgres is running and ranking data exists.",
+        ) from exc
+
+    if payload is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ranking run not found or not in succeeded status.",
+        )
+
+    return BridgeDistinctnessResponse(
+        ranking_run_id=payload.ranking_run_id,
+        ranking_version=payload.ranking_version,
+        corpus_snapshot_version=payload.corpus_snapshot_version,
+        embedding_version=payload.embedding_version,
+        cluster_version=payload.cluster_version,
+        k=payload.k,
+        full_bridge_top_k_ids=payload.full_bridge_top_k_ids,
+        eligible_bridge_top_k_ids=payload.eligible_bridge_top_k_ids,
+        emerging_top_k_ids=payload.emerging_top_k_ids,
+        full_bridge_vs_eligible_bridge=BridgeDistinctnessOverlapMetrics(
+            overlap_count=payload.full_bridge_vs_eligible_bridge_overlap_count,
+            jaccard=payload.full_bridge_vs_eligible_bridge_jaccard,
+        ),
+        full_bridge_vs_emerging=BridgeDistinctnessOverlapMetrics(
+            overlap_count=payload.full_bridge_vs_emerging_overlap_count,
+            jaccard=payload.full_bridge_vs_emerging_jaccard,
+        ),
+        eligible_bridge_vs_emerging=BridgeDistinctnessOverlapMetrics(
+            overlap_count=payload.eligible_bridge_vs_emerging_overlap_count,
+            jaccard=payload.eligible_bridge_vs_emerging_jaccard,
+        ),
+        bridge_family_row_count=payload.bridge_family_row_count,
+        bridge_score_nonnull_count=payload.bridge_score_nonnull_count,
+        bridge_score_null_count=payload.bridge_score_null_count,
+        bridge_eligible_true_count=payload.bridge_eligible_true_count,
+        bridge_eligible_false_count=payload.bridge_eligible_false_count,
+        bridge_eligible_null_count=payload.bridge_eligible_null_count,
+        bridge_signal_json_present_count=payload.bridge_signal_json_present_count,
+        bridge_signal_json_missing_count=payload.bridge_signal_json_missing_count,
+        decision_support=BridgeDistinctnessDecisionSupport(
+            eligible_head_differs_from_full=payload.eligible_head_differs_from_full,
+            eligible_head_less_emerging_like_than_full=payload.eligible_head_less_emerging_like_than_full,
+            suggested_next_step=payload.suggested_next_step,
         ),
         generated_at=utc_now(),
     )

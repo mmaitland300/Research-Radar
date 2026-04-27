@@ -87,6 +87,54 @@ class EvaluationCompareResponse(BaseModel):
     generated_at: datetime
 
 
+BridgeDistinctnessNextStep = Literal[
+    "inspect_cluster_quality_first",
+    "eligible_filter_not_distinct_enough",
+    "candidate_for_small_weight_experiment",
+    "insufficient_bridge_signal_coverage",
+]
+
+
+class BridgeDistinctnessOverlapMetrics(BaseModel):
+    overlap_count: int
+    jaccard: float
+
+
+class BridgeDistinctnessDecisionSupport(BaseModel):
+    """Heuristic only; does not validate bridge ranking or end-user relevance."""
+
+    eligible_head_differs_from_full: bool
+    eligible_head_less_emerging_like_than_full: bool
+    suggested_next_step: BridgeDistinctnessNextStep
+
+
+class BridgeDistinctnessResponse(BaseModel):
+    """Pinned-run structural comparison of bridge heads vs emerging; diagnostics only."""
+
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    embedding_version: str
+    cluster_version: str | None = None
+    k: int
+    full_bridge_top_k_ids: list[str]
+    eligible_bridge_top_k_ids: list[str]
+    emerging_top_k_ids: list[str]
+    full_bridge_vs_eligible_bridge: BridgeDistinctnessOverlapMetrics
+    full_bridge_vs_emerging: BridgeDistinctnessOverlapMetrics
+    eligible_bridge_vs_emerging: BridgeDistinctnessOverlapMetrics
+    bridge_family_row_count: int
+    bridge_score_nonnull_count: int
+    bridge_score_null_count: int
+    bridge_eligible_true_count: int
+    bridge_eligible_false_count: int
+    bridge_eligible_null_count: int
+    bridge_signal_json_present_count: int
+    bridge_signal_json_missing_count: int
+    decision_support: BridgeDistinctnessDecisionSupport
+    generated_at: datetime
+
+
 class MaterializedRankingMeta(BaseModel):
     """Latest succeeded ranking run on the default corpus snapshot (for transparency)."""
 
