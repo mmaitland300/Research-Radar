@@ -32,6 +32,10 @@ from pipeline.recommendation_review_rollup import (
     ReviewRollupError,
     run_recommendation_review_rollup,
 )
+from pipeline.bridge_experiment_readiness import (
+    BridgeExperimentReadinessError,
+    run_bridge_experiment_readiness,
+)
 from pipeline.work_text_repair import run_work_text_repair_cli
 from pipeline.jobs import (
     create_bootstrap_bundle,
@@ -356,6 +360,42 @@ def main() -> None:
         help="Optional path to write rollup Markdown",
     )
 
+    bridge_readiness_parser = subparsers.add_parser(
+        "bridge-experiment-readiness",
+        help="Join recommendation review rollup with paper_scores top-k overlap for bridge weight go/no-go",
+    )
+    bridge_readiness_parser.add_argument(
+        "--rollup",
+        required=True,
+        help="Path to rank-level recommendation review rollup JSON",
+    )
+    bridge_readiness_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id (must match rollup provenance and ranking_runs row)",
+    )
+    bridge_readiness_parser.add_argument(
+        "--k",
+        type=int,
+        default=20,
+        help="Top-k size from paper_scores (default 20)",
+    )
+    bridge_readiness_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write readiness JSON",
+    )
+    bridge_readiness_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write readiness Markdown",
+    )
+    bridge_readiness_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     args = parser.parse_args()
 
     if args.command == "recommendation-review-worksheet":
@@ -406,6 +446,29 @@ def main() -> None:
             )
         except ReviewRollupError as e:
             print(f"recommendation-review-rollup: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+
+    if args.command == "bridge-experiment-readiness":
+        if args.k < 1 or args.k > 200:
+            parser.error("--k must be between 1 and 200")
+        rrid = (args.ranking_run_id or "").strip()
+        if not rrid:
+            parser.error("--ranking-run-id is required and must not be blank")
+        try:
+            run_bridge_experiment_readiness(
+                rollup_path=Path(args.rollup),
+                ranking_run_id=rrid,
+                k=int(args.k),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+                database_url=args.database_url,
+            )
+        except BridgeExperimentReadinessError as e:
+            print(f"bridge-experiment-readiness: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
