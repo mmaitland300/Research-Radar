@@ -13,7 +13,6 @@ from pipeline.recommendation_review_summary import (
     ReviewSummaryError,
     build_recommendation_review_summary,
     read_worksheet_path,
-    run_recommendation_review_summary,
 )
 
 
@@ -94,6 +93,66 @@ def test_invalid_relevance_fails() -> None:
     assert ei.value.code == 2
     assert "relevance_label" in str(ei.value)
     assert "invalid" in str(ei.value).lower() or "expected" in str(ei.value).lower()
+
+
+def _assert_label_validation_message(
+    msg: str, *, paper_id: str, column: str, blank: bool
+) -> None:
+    assert "data row 1" in msg
+    assert paper_id in msg
+    assert column in msg
+    if blank:
+        assert "blank" in msg.lower()
+    else:
+        assert "invalid" in msg.lower() or "expected" in msg.lower()
+
+
+def test_blank_novelty_fails() -> None:
+    rows = [_full_row(paper_id="PN-blank", novelty_label="")]
+    with pytest.raises(ReviewSummaryError) as ei:
+        build_recommendation_review_summary(
+            rows, input_path=Path("w.csv"), allow_incomplete=False
+        )
+    assert ei.value.code == 2
+    _assert_label_validation_message(
+        str(ei.value), paper_id="PN-blank", column="novelty_label", blank=True
+    )
+
+
+def test_blank_bridge_like_fails() -> None:
+    rows = [_full_row(paper_id="PB-blank", bridge_like_label="")]
+    with pytest.raises(ReviewSummaryError) as ei:
+        build_recommendation_review_summary(
+            rows, input_path=Path("w.csv"), allow_incomplete=False
+        )
+    assert ei.value.code == 2
+    _assert_label_validation_message(
+        str(ei.value), paper_id="PB-blank", column="bridge_like_label", blank=True
+    )
+
+
+def test_invalid_novelty_fails() -> None:
+    rows = [_full_row(paper_id="PN-bad", novelty_label="novelty_typo")]
+    with pytest.raises(ReviewSummaryError) as ei:
+        build_recommendation_review_summary(
+            rows, input_path=Path("w.csv"), allow_incomplete=False
+        )
+    assert ei.value.code == 2
+    _assert_label_validation_message(
+        str(ei.value), paper_id="PN-bad", column="novelty_label", blank=False
+    )
+
+
+def test_invalid_bridge_like_fails() -> None:
+    rows = [_full_row(paper_id="PB-bad", bridge_like_label="maybe")]
+    with pytest.raises(ReviewSummaryError) as ei:
+        build_recommendation_review_summary(
+            rows, input_path=Path("w.csv"), allow_incomplete=False
+        )
+    assert ei.value.code == 2
+    _assert_label_validation_message(
+        str(ei.value), paper_id="PB-bad", column="bridge_like_label", blank=False
+    )
 
 
 def test_allow_incomplete_sets_incomplete() -> None:
@@ -259,6 +318,33 @@ def test_cli_writes_json(tmp_path: Path) -> None:
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["is_complete"] is True
     assert data["row_count"] == 1
+
+
+def test_cli_allow_incomplete_blank_relevance_writes_json(tmp_path: Path) -> None:
+    rows = [
+        _full_row(paper_id="INC1", relevance_label=""),
+    ]
+    inp = tmp_path / "partial.csv"
+    out = tmp_path / "partial.json"
+    inp.write_text(render_worksheet_csv(rows), encoding="utf-8", newline="")
+    with patch.object(
+        sys,
+        "argv",
+        [
+            "pipeline.cli",
+            "recommendation-review-summary",
+            "--input",
+            str(inp),
+            "--output",
+            str(out),
+            "--allow-incomplete",
+        ],
+    ):
+        cli_main.main()
+    assert out.is_file()
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["is_complete"] is False
+    assert any("incomplete" in w.lower() for w in data["warnings"])
 
 
 def test_markdown_output(tmp_path: Path) -> None:

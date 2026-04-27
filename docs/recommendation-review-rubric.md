@@ -34,7 +34,7 @@ python -m pipeline.cli recommendation-review-summary \
 ```
 
 - **Default behavior:** if any label is blank or not in the allowed set, the command prints which **data row** (1-based, after the header), **`paper_id`**, and **column** failed, and exits with code **2**. No output JSON is written.
-- **`--allow-incomplete`:** still writes JSON with `is_complete: false`, includes a **warnings** entry, and is only for triage — **do not** treat metrics as a clean score until you fix labels and re-run without this flag.
+- **`--allow-incomplete`:** still writes JSON with `is_complete: false`, includes a **warnings** entry, and is only for triage — **do not** treat metrics as a clean score until you fix labels and re-run without this flag. In triage mode, `bridge_like_yes_or_partial_share` still applies the usual denominator rule over **all** rows (any value other than `not_applicable` counts), so blank or invalid `bridge_like_label` cells can skew that metric until labels are fixed.
 - **`--markdown-output PATH`:** optional short Markdown alongside the JSON.
 
 **What the JSON metrics mean (all numerators use the filled worksheet only):**
