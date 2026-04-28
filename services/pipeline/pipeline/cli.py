@@ -484,6 +484,36 @@ def main() -> None:
         help="Offline: no live OpenAlex calls; empty plan (tests/CI)",
     )
 
+    corpus_v2_ingest_parser = subparsers.add_parser(
+        "corpus-v2-ingest-from-plan",
+        help="Postgres import: approved corpus-v2 candidate plan to explicit source snapshot",
+    )
+    corpus_v2_ingest_parser.add_argument(
+        "--candidate-plan",
+        required=True,
+        help="Approved corpus-v2 candidate-plan JSON path",
+    )
+    corpus_v2_ingest_parser.add_argument(
+        "--snapshot-version",
+        required=True,
+        help="Explicit source_snapshot_versions.source_snapshot_version to create",
+    )
+    corpus_v2_ingest_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write JSON ingest summary",
+    )
+    corpus_v2_ingest_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write Markdown ingest summary",
+    )
+    corpus_v2_ingest_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     bridge_diag_parser.add_argument(
         "--ranking-run-id",
         required=True,
@@ -547,6 +577,26 @@ def main() -> None:
         )
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+
+    if args.command == "corpus-v2-ingest-from-plan":
+        from pipeline.corpus_v2_ingest_from_plan import CorpusV2IngestError, run_corpus_v2_ingest_from_plan
+
+        try:
+            summary = run_corpus_v2_ingest_from_plan(
+                candidate_plan_path=Path(args.candidate_plan),
+                snapshot_version=args.snapshot_version,
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                database_url=args.database_url,
+            )
+        except CorpusV2IngestError as e:
+            print(f"corpus-v2-ingest-from-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(summary["snapshot_version"])
+        print(summary["ingest_run_id"])
         return
 
     if args.command == "recommendation-review-worksheet":
