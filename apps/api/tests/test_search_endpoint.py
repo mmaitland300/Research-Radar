@@ -34,7 +34,7 @@ def test_get_search_smoke(monkeypatch) -> None:
         assert year_to == 2024
         assert included_scope == "core"
         assert source_slug == "ismir"
-        assert topic == "audio embeddings"
+        assert topic == "music information retrieval"
         assert family_hint == "emerging"
         assert ranking_run_id is None
         assert ranking_version == "semantic-v1"
@@ -77,7 +77,7 @@ def test_get_search_smoke(monkeypatch) -> None:
 
     monkeypatch.setattr(main, "search_papers", fake_search_papers)
     response = client.get(
-        "/api/v1/search?q=music%20retrieval&limit=5&offset=10&year_from=2020&year_to=2024&included_scope=core&source_slug=ismir&topic=audio%20embeddings&family_hint=emerging&ranking_version=semantic-v1"
+        "/api/v1/search?q=music%20retrieval&limit=5&offset=10&year_from=2020&year_to=2024&included_scope=core&source_slug=ismir&topic=music%20information%20retrieval&family_hint=emerging&ranking_version=semantic-v1"
     )
 
     assert response.status_code == 200
