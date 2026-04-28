@@ -14,7 +14,9 @@ Diagnostic only: this report does **not** validate bridge ranking and does **not
 ## Key blocker summary
 
 - **Full bridge top-k equals eligible-only top-k:** `False` (eligibility filter not selective at head when true).
-- **Bridge vs emerging Jaccard (top-k work_id sets):** `0.73913`
+- **Full bridge vs emerging Jaccard (top-k work_id sets):** `0.73913`
+- **Eligible-only bridge vs emerging Jaccard (top-k work_id sets):** `0.212121`
+- **Emerging overlap delta (full - eligible):** `0.527009`
 - **High emerging overlap (Jaccard ≥ 0.50):** `True`
 - **Low bridge_score variance in top-k:** `False`
 - **Signal details missing or sparse:** `False`
@@ -46,7 +48,13 @@ Diagnostic only: this report does **not** validate bridge ranking and does **not
 
 ## Overlap detail (top-k)
 
-- **Overlap count (bridge ∩ emerging):** `17`
+- **Full bridge overlap count (bridge ∩ emerging):** `17`
+- **Full bridge vs emerging Jaccard:** `0.73913`
+- **Eligible-only bridge overlap count (bridge_eligible=true ∩ emerging):** `7`
+- **Eligible-only bridge vs emerging Jaccard:** `0.212121`
+- **Full vs eligible bridge overlap count:** `9`
+- **Full vs eligible bridge Jaccard:** `0.290323`
+- **Emerging overlap delta (full - eligible):** `0.527009`
 - **Bridge-only count:** `3`
 - **Emerging-only count:** `3`
 
@@ -107,6 +115,9 @@ Titles omitted from the table width; see JSON `bridge_top_k_rows` for `paper_id`
 - **bridge_score_has_low_variance:** `False`
 - **bridge_head_emerging_overlap_high:** `True`
 - **bridge_signal_details_missing_or_sparse:** `False`
+- **eligible_head_differs_from_full:** `True`
+- **eligible_head_less_emerging_like_than_full:** `True`
+- **eligible_distinctness_improves_by_threshold (delta >= 0.10):** `True`
 
 ## Suggested next step
 

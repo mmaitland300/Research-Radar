@@ -187,8 +187,13 @@ def test_build_payload_flags_and_overlap_booleans(monkeypatch: pytest.MonkeyPatc
     assert p["head_eligibility"]["full_bridge_equals_eligible_only_bridge_top_k"] is True
     assert p["diagnosis"]["eligibility_filter_not_selective_at_head"] is True
     assert p["overlap_detail"]["bridge_vs_emerging_jaccard"] >= 0.50
+    assert p["overlap_detail"]["eligible_bridge_vs_emerging_jaccard"] >= 0.50
+    assert p["overlap_detail"]["emerging_overlap_delta_from_full_to_eligible"] == 0.0
     assert p["diagnosis"]["bridge_head_emerging_overlap_high"] is True
     assert p["diagnosis"]["bridge_score_has_low_variance"] is True  # unique 1 value in top-k
+    assert p["diagnosis"]["eligible_head_differs_from_full"] is False
+    assert p["diagnosis"]["eligible_head_less_emerging_like_than_full"] is False
+    assert p["diagnosis"]["eligible_distinctness_improves_by_threshold"] is False
 
     rows = p["bridge_top_k_rows"]
     assert rows[0]["in_emerging_top_k"] is True
@@ -261,6 +266,73 @@ def test_missing_bridge_signal_json_triggers_warning_and_sparse_flag(monkeypatch
     assert p["diagnosis"]["bridge_signal_details_missing_or_sparse"] is True
     assert any("NULL bridge_signal_json" in w for w in p["warnings"])
     assert p["suggested_next_step"] == "repair_bridge_signal_generation"
+    assert not any(
+        ("INSERT " in q.upper()) or ("UPDATE " in q.upper()) or ("DELETE " in q.upper())
+        for q, _ in conn.queries
+    )
+
+
+def test_eligible_only_overlap_metrics_and_threshold_delta() -> None:
+    run_row = {
+        "ranking_run_id": "rank-1",
+        "ranking_version": "rv",
+        "corpus_snapshot_version": "snap",
+        "embedding_version": "emb",
+        "config_json": {},
+        "status": "succeeded",
+    }
+    coverage = {
+        "bridge_family_row_count": 10,
+        "bridge_score_nonnull_count": 10,
+        "bridge_score_null_count": 0,
+        "bridge_eligible_true_count": 5,
+        "bridge_eligible_false_count": 5,
+        "bridge_eligible_null_count": 0,
+        "bridge_signal_json_present_count": 10,
+        "bridge_signal_json_missing_count": 0,
+    }
+    # full vs emerging: 5/15 => 0.333333 ; eligible vs emerging: 2/18 => 0.111111 ; delta 0.222222
+    topk_map = {
+        ("bridge", False): [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        ("bridge", True): [1, 2, 11, 12, 13, 14, 15, 16, 17, 18],
+        ("emerging", False): [1, 2, 3, 4, 5, 101, 102, 103, 104, 105],
+        ("undercited", False): [200, 201, 202],
+    }
+    detail = [
+        {
+            "work_id": wid,
+            "paper_id": f"W{wid}",
+            "title": f"t{wid}",
+            "final_score": 1.0 - (i * 0.01),
+            "semantic_score": 0.5,
+            "citation_velocity_score": 0.5,
+            "topic_growth_score": 0.5,
+            "bridge_score": float(i),
+            "diversity_penalty": 0.0,
+            "bridge_eligible": wid in {1, 2, 11, 12, 13, 14, 15, 16, 17, 18},
+            "bridge_signal_json": _nm1_json(eligible=True, anchor="a", neighbors=[10], mix=0.5),
+        }
+        for i, wid in enumerate(topk_map[("bridge", False)])
+    ]
+    conn = _FakeConn(
+        run_row=run_row,
+        coverage_row=coverage,
+        all_bridge_scores=[float(i) for i in range(10)],
+        topk_map=topk_map,
+        bridge_topk_detail_rows=detail,
+    )
+    p = build_bridge_signal_diagnostics_payload(conn, ranking_run_id="rank-1", k=10)
+
+    assert p["overlap_detail"]["eligible_bridge_top_k_ids"] == topk_map[("bridge", True)]
+    assert p["overlap_detail"]["bridge_vs_emerging_jaccard"] == pytest.approx(0.333333, abs=1e-6)
+    assert p["overlap_detail"]["eligible_bridge_vs_emerging_jaccard"] == pytest.approx(0.111111, abs=1e-6)
+    assert p["overlap_detail"]["eligible_bridge_vs_emerging_overlap_count"] == 2
+    assert p["overlap_detail"]["full_bridge_vs_eligible_bridge_overlap_count"] == 2
+    assert p["overlap_detail"]["full_bridge_vs_eligible_bridge_jaccard"] == pytest.approx(0.111111, abs=1e-6)
+    assert p["overlap_detail"]["emerging_overlap_delta_from_full_to_eligible"] == pytest.approx(0.222222, abs=1e-6)
+    assert p["diagnosis"]["eligible_head_differs_from_full"] is True
+    assert p["diagnosis"]["eligible_head_less_emerging_like_than_full"] is True
+    assert p["diagnosis"]["eligible_distinctness_improves_by_threshold"] is True
 
 
 def test_markdown_no_neighbor_id_lists_and_no_validation_claims() -> None:
@@ -320,6 +392,7 @@ def test_markdown_no_neighbor_id_lists_and_no_validation_claims() -> None:
     low = md.lower()
     assert "is validated" not in low
     assert "does **not** validate" in md or "diagnostic only" in low
+    assert "Eligible-only bridge vs emerging Jaccard" in md
 
 
 def test_cli_writes_json_and_md(tmp_path: Path) -> None:

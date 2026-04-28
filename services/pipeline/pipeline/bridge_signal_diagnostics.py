@@ -247,6 +247,7 @@ def build_bridge_signal_diagnostics_payload(
     top_k_scores = [float(r["bridge_score"]) if r.get("bridge_score") is not None else None for r in raw_rows]
 
     set_full = set(full_top_ids)
+    set_eligible = set(eligible_top_ids)
     set_em = set(emerging_top_ids)
     set_under = set(under_top_ids)
 
@@ -255,6 +256,12 @@ def build_bridge_signal_diagnostics_payload(
     emerging_only = sorted(set_em - set_full)
     overlap_count = len(inter_be)
     _o, _u, jaccard_be = overlap_count_and_jaccard(full_top_ids, emerging_top_ids)
+    eligible_inter_be = set_eligible & set_em
+    eligible_overlap_count = len(eligible_inter_be)
+    _eo, _eu, eligible_jaccard_be = overlap_count_and_jaccard(eligible_top_ids, emerging_top_ids)
+    full_vs_eligible_overlap = len(set_full & set_eligible)
+    _fo, _fu, full_vs_eligible_jaccard = overlap_count_and_jaccard(full_top_ids, eligible_top_ids)
+    overlap_delta = round(float(jaccard_be) - float(eligible_jaccard_be), 6)
 
     warnings: list[str] = []
     if coverage["bridge_signal_json_missing_count"] > 0:
@@ -340,12 +347,17 @@ def build_bridge_signal_diagnostics_payload(
     full_equals_eligible = full_top_ids == eligible_top_ids
     eligibility_not_selective = bool(full_equals_eligible)
     overlap_high = jaccard_be >= 0.50
+    eligible_less_emerging_like = eligible_jaccard_be < jaccard_be
+    eligible_distinctness_improves = overlap_delta >= 0.10
 
     diagnosis_flags = {
         "eligibility_filter_not_selective_at_head": eligibility_not_selective,
         "bridge_score_has_low_variance": low_variance,
         "bridge_head_emerging_overlap_high": overlap_high,
         "bridge_signal_details_missing_or_sparse": bridge_signal_sparse,
+        "eligible_head_differs_from_full": not full_equals_eligible,
+        "eligible_head_less_emerging_like_than_full": eligible_less_emerging_like,
+        "eligible_distinctness_improves_by_threshold": eligible_distinctness_improves,
     }
 
     if cluster_diag_warnings:
@@ -413,6 +425,12 @@ def build_bridge_signal_diagnostics_payload(
             "bridge_only_work_ids": bridge_only,
             "emerging_only_work_ids": emerging_only,
             "shared_bridge_emerging_work_ids": sorted(inter_be),
+            "eligible_bridge_top_k_ids": eligible_top_ids,
+            "eligible_bridge_vs_emerging_overlap_count": eligible_overlap_count,
+            "eligible_bridge_vs_emerging_jaccard": eligible_jaccard_be,
+            "full_bridge_vs_eligible_bridge_overlap_count": full_vs_eligible_overlap,
+            "full_bridge_vs_eligible_bridge_jaccard": full_vs_eligible_jaccard,
+            "emerging_overlap_delta_from_full_to_eligible": overlap_delta,
         },
         "cluster_signal_diagnostics": {
             "distinct_anchor_cluster_count_in_bridge_top_k": len(anchor_clusters_top_k),
@@ -453,7 +471,10 @@ def markdown_from_diagnostics(payload: dict[str, Any]) -> str:
         "",
         f"- **Full bridge top-k equals eligible-only top-k:** `{head.get('full_bridge_equals_eligible_only_bridge_top_k')}` "
         f"(eligibility filter not selective at head when true).",
-        f"- **Bridge vs emerging Jaccard (top-k work_id sets):** `{ov.get('bridge_vs_emerging_jaccard')}`",
+        f"- **Full bridge vs emerging Jaccard (top-k work_id sets):** `{ov.get('bridge_vs_emerging_jaccard')}`",
+        f"- **Eligible-only bridge vs emerging Jaccard (top-k work_id sets):** "
+        f"`{ov.get('eligible_bridge_vs_emerging_jaccard')}`",
+        f"- **Emerging overlap delta (full - eligible):** `{ov.get('emerging_overlap_delta_from_full_to_eligible')}`",
         f"- **High emerging overlap (Jaccard ≥ 0.50):** `{diag.get('bridge_head_emerging_overlap_high')}`",
         f"- **Low bridge_score variance in top-k:** `{diag.get('bridge_score_has_low_variance')}`",
         f"- **Signal details missing or sparse:** `{diag.get('bridge_signal_details_missing_or_sparse')}`",
@@ -496,7 +517,14 @@ def markdown_from_diagnostics(payload: dict[str, Any]) -> str:
             "",
             "## Overlap detail (top-k)",
             "",
-            f"- **Overlap count (bridge ∩ emerging):** `{ov.get('bridge_top_k_overlap_with_emerging_count')}`",
+            f"- **Full bridge overlap count (bridge ∩ emerging):** `{ov.get('bridge_top_k_overlap_with_emerging_count')}`",
+            f"- **Full bridge vs emerging Jaccard:** `{ov.get('bridge_vs_emerging_jaccard')}`",
+            f"- **Eligible-only bridge overlap count (bridge_eligible=true ∩ emerging):** "
+            f"`{ov.get('eligible_bridge_vs_emerging_overlap_count')}`",
+            f"- **Eligible-only bridge vs emerging Jaccard:** `{ov.get('eligible_bridge_vs_emerging_jaccard')}`",
+            f"- **Full vs eligible bridge overlap count:** `{ov.get('full_bridge_vs_eligible_bridge_overlap_count')}`",
+            f"- **Full vs eligible bridge Jaccard:** `{ov.get('full_bridge_vs_eligible_bridge_jaccard')}`",
+            f"- **Emerging overlap delta (full - eligible):** `{ov.get('emerging_overlap_delta_from_full_to_eligible')}`",
             f"- **Bridge-only count:** `{ov.get('bridge_top_k_only_count')}`",
             f"- **Emerging-only count:** `{ov.get('emerging_top_k_only_count')}`",
             "",
@@ -554,6 +582,11 @@ def markdown_from_diagnostics(payload: dict[str, Any]) -> str:
             f"- **bridge_score_has_low_variance:** `{diag.get('bridge_score_has_low_variance')}`",
             f"- **bridge_head_emerging_overlap_high:** `{diag.get('bridge_head_emerging_overlap_high')}`",
             f"- **bridge_signal_details_missing_or_sparse:** `{diag.get('bridge_signal_details_missing_or_sparse')}`",
+            f"- **eligible_head_differs_from_full:** `{diag.get('eligible_head_differs_from_full')}`",
+            f"- **eligible_head_less_emerging_like_than_full:** "
+            f"`{diag.get('eligible_head_less_emerging_like_than_full')}`",
+            f"- **eligible_distinctness_improves_by_threshold (delta >= 0.10):** "
+            f"`{diag.get('eligible_distinctness_improves_by_threshold')}`",
             "",
             "## Suggested next step",
             "",
