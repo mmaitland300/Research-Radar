@@ -163,8 +163,41 @@ class RankingFamily(BaseModel):
 
 
 class EvaluationSummary(BaseModel):
-    benchmark_target_size: str
-    primary_metrics: list[str]
+    current_evaluation_type: str = Field(
+        ...,
+        description=(
+            "What the product reports today: proxy / corpus metrics vs baselines, "
+            "not a human-judged relevance P@k benchmark."
+        ),
+    )
+    is_human_labeled_benchmark_current: bool = Field(
+        ...,
+        description=(
+            "True only if human labels are in use to compute the metrics below. "
+            "V0 is False; see planned_labeled_benchmark for roadmap targets only."
+        ),
+    )
+    planned_labeled_benchmark: dict[str, str | list[str]] = Field(
+        ...,
+        description=(
+            "Intended *future* labeled set (not current measurements): corpus size and "
+            "P@k-style metrics to run when a gold set exists."
+        ),
+    )
+    benchmark_target_size: str = Field(
+        ...,
+        description=(
+            "Same roadmap target as planned_labeled_benchmark[corpus] (legacy key; not a current benchmark result). "
+            "Use is_human_labeled_benchmark_current to interpret."
+        ),
+    )
+    primary_metrics: list[str] = Field(
+        ...,
+        description=(
+            "Planned metrics for a future human-labeled evaluation (legacy key; not current reported P@k). "
+            "Use is_human_labeled_benchmark_current to interpret."
+        ),
+    )
     checks: list[str]
     generated_at: datetime
 

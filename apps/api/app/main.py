@@ -342,8 +342,15 @@ def get_recommendation_families() -> list[RankingFamily]:
 
 @app.get("/api/v1/evaluation/summary", response_model=EvaluationSummary)
 def get_evaluation_summary() -> EvaluationSummary:
+    planned = {
+        "corpus": "100-200 papers (target for a future human-labeled pass, not a current result)",
+        "metrics": ["precision@10", "precision@20"],
+    }
     return EvaluationSummary(
-        benchmark_target_size="100-200 papers",
+        current_evaluation_type="proxy_ranked_vs_citation_and_date_baselines",
+        is_human_labeled_benchmark_current=False,
+        planned_labeled_benchmark=planned,
+        benchmark_target_size="100-200 papers (planned labeled set; not a current benchmark)",
         primary_metrics=["precision@10", "precision@20"],
         checks=list(settings.evaluation_checks),
         generated_at=utc_now(),

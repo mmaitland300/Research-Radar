@@ -8,13 +8,13 @@ const API_BASE_URL =
 const FAMILIES = ["emerging", "bridge", "undercited"] as const;
 type FamilyHint = (typeof FAMILIES)[number];
 
-/** Lexical sample queries for the empty state; MIR / audio-ML phrasing aligned with the curated corpus. */
+/** Lexical sample queries for the empty state; phrasing that matches title/abstract text in the corpus (lexical search only). */
 const REVIEWER_SAMPLE_QUERIES = [
-  "audio embeddings",
   "music information retrieval",
   "source separation",
   "piano transcription",
-  "self-supervised audio"
+  "singing voice",
+  "beat tracking"
 ] as const;
 
 const INCLUDED_SCOPES = ["all_included", "core"] as const;
@@ -469,7 +469,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                   type="text"
                   name="q"
                   defaultValue={q ?? ""}
-                  placeholder="audio embeddings, music retrieval, MIR surveys"
+                  placeholder="MIR, source separation, singing voice, beat tracking"
                 />
               </label>
               <label className="search-field">
