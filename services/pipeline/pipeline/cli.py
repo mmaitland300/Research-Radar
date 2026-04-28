@@ -376,8 +376,33 @@ def main() -> None:
     rollup_parser.add_argument(
         "--summary",
         action="append",
-        required=True,
+        required=False,
         help="Path to family summary JSON (repeat for each family)",
+    )
+    rollup_parser.add_argument(
+        "--bridge-summary",
+        default=None,
+        help="Explicit bridge family summary JSON path",
+    )
+    rollup_parser.add_argument(
+        "--emerging-summary",
+        default=None,
+        help="Explicit emerging family summary JSON path",
+    )
+    rollup_parser.add_argument(
+        "--undercited-summary",
+        default=None,
+        help="Explicit undercited family summary JSON path",
+    )
+    rollup_parser.add_argument(
+        "--bridge-diagnostics",
+        default=None,
+        help="Optional bridge signal diagnostics JSON for eligible-only distinctness evidence",
+    )
+    rollup_parser.add_argument(
+        "--bridge-worksheet",
+        default=None,
+        help="Optional bridge worksheet CSV used to validate bridge_eligible_only review pool",
     )
     rollup_parser.add_argument(
         "--output",
@@ -866,12 +891,36 @@ def main() -> None:
             print(Path(args.markdown_output).resolve(), file=sys.stderr)
         return
     if args.command == "recommendation-review-rollup":
+        summary_paths: list[Path]
+        explicit = [args.bridge_summary, args.emerging_summary, args.undercited_summary]
+        if any(explicit):
+            if not all(explicit):
+                parser.error(
+                    "--bridge-summary, --emerging-summary, and --undercited-summary must be provided together"
+                )
+            summary_paths = [
+                Path(args.bridge_summary),
+                Path(args.emerging_summary),
+                Path(args.undercited_summary),
+            ]
+            if args.summary:
+                parser.error("Use either repeated --summary or explicit family summary flags, not both")
+        else:
+            if not args.summary:
+                parser.error("Provide at least one --summary or explicit family summary flags")
+            summary_paths = [Path(x) for x in args.summary]
         try:
             run_recommendation_review_rollup(
-                summary_paths=[Path(x) for x in args.summary],
+                summary_paths=summary_paths,
                 output_path=Path(args.output),
                 markdown_path=Path(args.markdown_output)
                 if args.markdown_output
+                else None,
+                bridge_diagnostics_path=Path(args.bridge_diagnostics)
+                if args.bridge_diagnostics
+                else None,
+                bridge_worksheet_path=Path(args.bridge_worksheet)
+                if args.bridge_worksheet
                 else None,
             )
         except ReviewRollupError as e:

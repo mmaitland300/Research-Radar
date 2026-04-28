@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import csv
+import io
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,6 +37,13 @@ _METRIC_KEYS = (
     "precision_at_k_good_or_acceptable",
     "bridge_like_yes_or_partial_share",
     "surprising_or_useful_share",
+)
+
+
+_DISTINCTNESS_KEYS = (
+    "bridge_vs_emerging_jaccard",
+    "eligible_bridge_vs_emerging_jaccard",
+    "emerging_overlap_delta_from_full_to_eligible",
 )
 
 
@@ -75,6 +84,93 @@ def _load_one(path: Path, data: dict[str, Any]) -> _LoadedSummary:
     return _LoadedSummary(path=path, data=data, family=fam)
 
 
+def _validate_expected_families(by_family: dict[str, dict[str, Any]]) -> None:
+    expected = {"bridge", "emerging", "undercited"}
+    got = set(by_family.keys())
+    if got != expected:
+        raise ReviewRollupError(
+            f"Expected exactly families {sorted(expected)}, got {sorted(got)}.",
+            code=2,
+        )
+
+
+def _read_worksheet_rows(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        raise ReviewRollupError(f"Bridge worksheet not found: {path}", code=2)
+    text = path.read_text(encoding="utf-8")
+    reader = csv.DictReader(io.StringIO(text))
+    if reader.fieldnames is None:
+        raise ReviewRollupError(f"Bridge worksheet has no header: {path}", code=2)
+    rows: list[dict[str, str]] = []
+    for row in reader:
+        if row is None:
+            continue
+        rows.append({str(k or "").strip(): str(v or "").strip() for k, v in row.items()})
+    if not rows:
+        raise ReviewRollupError("Bridge worksheet has no data rows.", code=2)
+    return rows
+
+
+def _validate_bridge_worksheet(
+    *,
+    worksheet_rows: list[dict[str, str]],
+    expected_ranking_run_id: str,
+) -> dict[str, Any]:
+    variants = {r.get("review_pool_variant", "") for r in worksheet_rows}
+    if variants != {"bridge_eligible_only"}:
+        raise ReviewRollupError(
+            f"Bridge worksheet review_pool_variant must be bridge_eligible_only for all rows; got {sorted(variants)}",
+            code=2,
+        )
+    bad_family = {r.get("family", "") for r in worksheet_rows if r.get("family", "") != "bridge"}
+    if bad_family:
+        raise ReviewRollupError("Bridge worksheet includes non-bridge family rows.", code=2)
+    bad_run = {r.get("ranking_run_id", "") for r in worksheet_rows if r.get("ranking_run_id", "") != expected_ranking_run_id}
+    if bad_run:
+        raise ReviewRollupError(
+            f"Bridge worksheet includes rows not matching ranking_run_id={expected_ranking_run_id!r}.",
+            code=2,
+        )
+    invalid_eligible = [r.get("bridge_eligible", "") for r in worksheet_rows if r.get("bridge_eligible", "") != "true"]
+    if invalid_eligible:
+        raise ReviewRollupError(
+            "Bridge worksheet contains bridge_eligible values that are not true; eligible-only pool is invalid.",
+            code=2,
+        )
+    return {
+        "row_count": len(worksheet_rows),
+        "review_pool_variant": "bridge_eligible_only",
+        "all_bridge_rows_are_bridge_eligible_true": True,
+    }
+
+
+def _extract_distinctness(diagnostics: dict[str, Any]) -> dict[str, Any]:
+    ov = diagnostics.get("overlap_detail")
+    diag = diagnostics.get("diagnosis")
+    if not isinstance(ov, dict):
+        raise ReviewRollupError("Bridge diagnostics missing overlap_detail.", code=2)
+    if not isinstance(diag, dict):
+        raise ReviewRollupError("Bridge diagnostics missing diagnosis.", code=2)
+    for key in _DISTINCTNESS_KEYS:
+        if key not in ov:
+            raise ReviewRollupError(f"Bridge diagnostics missing overlap_detail.{key}.", code=2)
+    for key in (
+        "eligible_head_differs_from_full",
+        "eligible_head_less_emerging_like_than_full",
+        "eligible_distinctness_improves_by_threshold",
+    ):
+        if key not in diag:
+            raise ReviewRollupError(f"Bridge diagnostics missing diagnosis.{key}.", code=2)
+    return {
+        "full_bridge_vs_emerging_jaccard": float(ov["bridge_vs_emerging_jaccard"]),
+        "eligible_bridge_vs_emerging_jaccard": float(ov["eligible_bridge_vs_emerging_jaccard"]),
+        "emerging_overlap_delta_from_full_to_eligible": float(ov["emerging_overlap_delta_from_full_to_eligible"]),
+        "eligible_head_differs_from_full": bool(diag["eligible_head_differs_from_full"]),
+        "eligible_head_less_emerging_like_than_full": bool(diag["eligible_head_less_emerging_like_than_full"]),
+        "eligible_distinctness_improves_by_threshold": bool(diag["eligible_distinctness_improves_by_threshold"]),
+    }
+
+
 def _pairwise_deltas(
     by_family: dict[str, dict[str, Any]],
 ) -> dict[str, dict[str, float | None]]:
@@ -100,6 +196,8 @@ def build_recommendation_review_rollup(
     summaries: list[dict[str, Any]],
     *,
     source_paths: list[Path],
+    bridge_diagnostics: dict[str, Any] | None = None,
+    bridge_worksheet_rows: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     if len(summaries) != len(source_paths):
         raise ReviewRollupError("Internal error: source_paths length mismatch.", code=2)
@@ -120,6 +218,8 @@ def build_recommendation_review_rollup(
                 code=2,
             )
         by_family[x.family] = x.data
+
+    _validate_expected_families(by_family)
 
     first = loaded[0]
     for key in _PROVENANCE_KEYS:
@@ -167,25 +267,37 @@ def build_recommendation_review_rollup(
         if isinstance(bm.get("precision_at_k_good_or_acceptable"), (int, float)):
             bridge_good_or_acc = float(bm["precision_at_k_good_or_acceptable"])
 
-    ready_for_distinctness_analysis = (
-        "bridge" in by_family and "emerging" in by_family
+    family_quality_context_ready = bool(
+        set(families_present) == {"bridge", "emerging", "undercited"}
+        and all(bool(by_family[f].get("is_complete")) for f in ("bridge", "emerging", "undercited"))
     )
+    label_quality_ready = bool(bridge_good_or_acc is not None and bridge_good_or_acc >= 0.80)
+    bridge_like_ready = bool(bridge_share is not None and bridge_share >= 0.50)
+    distinctness: dict[str, Any] | None = None
+    if bridge_diagnostics is not None:
+        distinctness = _extract_distinctness(bridge_diagnostics)
+    distinctness_ready = False
+    if distinctness is not None:
+        distinctness_ready = bool(
+            distinctness["eligible_bridge_vs_emerging_jaccard"]
+            <= (distinctness["full_bridge_vs_emerging_jaccard"] - 0.10)
+        )
     ready_for_weight_experiment = bool(
-        bridge_good_or_acc is not None
-        and bridge_good_or_acc >= 0.8
-        and bridge_share is not None
-        and bridge_share >= 0.5
+        label_quality_ready and bridge_like_ready and distinctness_ready and family_quality_context_ready
     )
+    failed_gates: list[str] = []
+    if not label_quality_ready:
+        failed_gates.append("label_quality_ready")
+    if not bridge_like_ready:
+        failed_gates.append("bridge_like_ready")
+    if not distinctness_ready:
+        failed_gates.append("distinctness_ready")
+    if not family_quality_context_ready:
+        failed_gates.append("family_quality_context_ready")
     if ready_for_weight_experiment:
-        suggested = (
-            "candidate signal only (not validation): join this rollup with bridge distinctness and top-k overlap before any small weight experiment"
-        )
-    elif ready_for_distinctness_analysis:
-        suggested = (
-            "run distinctness and overlap analysis first; defer positive bridge weight until separation evidence is explicit"
-        )
+        suggested = "Candidate for a small gated bridge-weight experiment; not validation."
     else:
-        suggested = "complete missing family summaries before distinctness or weight decisions"
+        suggested = "Not ready for bridge-weight experiment; failed gates: " + ", ".join(failed_gates)
 
     per_family: dict[str, Any] = {}
     for fam in families_present:
@@ -203,7 +315,7 @@ def build_recommendation_review_rollup(
         key: _single_str_list(first.data.get(key), field=key, source=first.path)
         for key in _PROVENANCE_KEYS
     }
-    return {
+    out: dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "provenance": provenance,
         "family_count": len(families_present),
@@ -218,11 +330,25 @@ def build_recommendation_review_rollup(
         },
         "warnings": warnings,
         "readiness": {
-            "ready_for_distinctness_analysis": ready_for_distinctness_analysis,
+            "ready_for_distinctness_analysis": distinctness is not None,
             "ready_for_weight_experiment": ready_for_weight_experiment,
+            "label_quality_ready": label_quality_ready,
+            "bridge_like_ready": bridge_like_ready,
+            "distinctness_ready": distinctness_ready,
+            "family_quality_context_ready": family_quality_context_ready,
+            "ready_for_small_bridge_weight_experiment": ready_for_weight_experiment,
+            "failed_gates": failed_gates,
             "suggested_next_step": suggested,
         },
     }
+    if distinctness is not None:
+        out["bridge_distinctness"] = distinctness
+    if bridge_worksheet_rows is not None:
+        out["bridge_review_pool_validation"] = _validate_bridge_worksheet(
+            worksheet_rows=bridge_worksheet_rows,
+            expected_ranking_run_id=provenance["ranking_run_id"],
+        )
+    return out
 
 
 def _fmt_num(v: Any) -> str:
@@ -264,6 +390,20 @@ def markdown_from_rollup(rollup: dict[str, Any]) -> str:
             f"- Ready for distinctness analysis: **{rollup.get('readiness', {}).get('ready_for_distinctness_analysis')}**",
             f"- Ready for weight experiment: **{rollup.get('readiness', {}).get('ready_for_weight_experiment')}**",
             "",
+            "## Readiness gates",
+            "",
+            f"- label_quality_ready: **{rollup.get('readiness', {}).get('label_quality_ready')}**",
+            f"- bridge_like_ready: **{rollup.get('readiness', {}).get('bridge_like_ready')}**",
+            f"- distinctness_ready: **{rollup.get('readiness', {}).get('distinctness_ready')}**",
+            f"- family_quality_context_ready: **{rollup.get('readiness', {}).get('family_quality_context_ready')}**",
+            f"- ready_for_small_bridge_weight_experiment: **{rollup.get('readiness', {}).get('ready_for_small_bridge_weight_experiment')}**",
+            "",
+            "## Evidence caveat",
+            "",
+            "- Single-reviewer, top-20, offline evidence.",
+            "- This rollup does not prove bridge ranking superiority.",
+            "- This rollup is not validation; it is a conservative gating artifact.",
+            "",
             "## Limitations",
             "",
             "- Single-reviewer labels can be noisy; treat as directional evidence.",
@@ -276,6 +416,21 @@ def markdown_from_rollup(rollup: dict[str, Any]) -> str:
             "",
         ]
     )
+    bd = rollup.get("bridge_distinctness")
+    if isinstance(bd, dict):
+        lines.extend(
+            [
+                "## Bridge distinctness",
+                "",
+                f"- full_bridge_vs_emerging_jaccard: `{bd.get('full_bridge_vs_emerging_jaccard')}`",
+                f"- eligible_bridge_vs_emerging_jaccard: `{bd.get('eligible_bridge_vs_emerging_jaccard')}`",
+                f"- emerging_overlap_delta_from_full_to_eligible: `{bd.get('emerging_overlap_delta_from_full_to_eligible')}`",
+                f"- eligible_head_differs_from_full: `{bd.get('eligible_head_differs_from_full')}`",
+                f"- eligible_head_less_emerging_like_than_full: `{bd.get('eligible_head_less_emerging_like_than_full')}`",
+                f"- eligible_distinctness_improves_by_threshold: `{bd.get('eligible_distinctness_improves_by_threshold')}`",
+                "",
+            ]
+        )
     for w in rollup.get("warnings") or []:
         lines.append(f"- Warning: {w}")
     return "\n".join(lines).rstrip() + "\n"
@@ -286,9 +441,18 @@ def run_recommendation_review_rollup(
     summary_paths: list[Path],
     output_path: Path,
     markdown_path: Path | None,
+    bridge_diagnostics_path: Path | None = None,
+    bridge_worksheet_path: Path | None = None,
 ) -> None:
     loaded_data = [_read_json(p) for p in summary_paths]
-    rollup = build_recommendation_review_rollup(loaded_data, source_paths=summary_paths)
+    bridge_diagnostics = _read_json(bridge_diagnostics_path) if bridge_diagnostics_path else None
+    bridge_worksheet_rows = _read_worksheet_rows(bridge_worksheet_path) if bridge_worksheet_path else None
+    rollup = build_recommendation_review_rollup(
+        loaded_data,
+        source_paths=summary_paths,
+        bridge_diagnostics=bridge_diagnostics,
+        bridge_worksheet_rows=bridge_worksheet_rows,
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(rollup, indent=2, ensure_ascii=False) + "\n",
