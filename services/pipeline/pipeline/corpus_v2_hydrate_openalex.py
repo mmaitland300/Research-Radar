@@ -336,7 +336,7 @@ def _fetch_openalex_work_by_id(openalex_id: str, *, mock_openalex: bool) -> Mapp
                 "ids",
                 "publication_year",
                 "cited_by_count",
-                "host_venue",
+                "primary_location",
             )
         )
     )

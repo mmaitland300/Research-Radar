@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
 import pytest
 
-from pipeline.corpus_v2_hydrate_openalex import CorpusV2HydrateError, run_corpus_v2_hydrate_openalex
+from pipeline.corpus_v2_hydrate_openalex import (
+    CorpusV2HydrateError,
+    _fetch_openalex_work_by_id,
+    run_corpus_v2_hydrate_openalex,
+)
 from pipeline.openalex_client import OPENALEX_API_KEY_ENV
 
 
@@ -309,3 +314,43 @@ def test_snapshot_version_filtering_and_no_other_tables(monkeypatch: pytest.Monk
     assert "ranking_runs" not in executed
     assert "paper_scores" not in executed
     assert "bridge_weight" not in executed
+
+
+def test_fetch_select_fields_exclude_removed_host_venue(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(OPENALEX_API_KEY_ENV, "x")
+    captured: dict[str, str] = {}
+
+    def _fake_fetch(url: str, timeout_sec: float = 90.0) -> dict:
+        captured["url"] = url
+        captured["timeout"] = str(timeout_sec)
+        return {"id": "https://openalex.org/W1"}
+
+    with patch("pipeline.corpus_v2_hydrate_openalex.fetch_openalex_json", side_effect=_fake_fetch):
+        payload = _fetch_openalex_work_by_id("https://openalex.org/W1", mock_openalex=False)
+
+    assert payload is not None
+    assert "url" in captured
+    parsed = urlparse(captured["url"])
+    select_values = parse_qs(parsed.query).get("select", [""])[0].split(",")
+    assert "host_venue" not in select_values
+    assert "alternate_host_venues" not in select_values
+    assert "primary_location" in select_values
+
+
+def test_primary_location_source_preserved_in_raw_payload(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv(OPENALEX_API_KEY_ENV, "x")
+    conn = _FakeConn()
+    payload = {
+        "id": "https://openalex.org/W1",
+        "title": "Hydrated venue payload",
+        "type": "article",
+        "language": "en",
+        "primary_location": {
+            "source": {
+                "display_name": "Journal of OpenAlex Compatibility",
+            }
+        },
+    }
+    _run(tmp_path, conn, fetch_work=lambda _oid: payload, mock_openalex=False)
+    first_payload = conn.raw_openalex_works[0]["payload"]
+    assert first_payload["primary_location"]["source"]["display_name"] == "Journal of OpenAlex Compatibility"
