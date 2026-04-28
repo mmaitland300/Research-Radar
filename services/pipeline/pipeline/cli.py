@@ -513,6 +513,35 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    corpus_v2_hydrate_parser = subparsers.add_parser(
+        "corpus-v2-hydrate-openalex",
+        help="Hydrate one corpus-v2 snapshot with OpenAlex metadata/text (no embeddings/clustering/ranking)",
+    )
+    corpus_v2_hydrate_parser.add_argument(
+        "--snapshot-version",
+        required=True,
+        help="Explicit source_snapshot_versions.source_snapshot_version to hydrate",
+    )
+    corpus_v2_hydrate_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write JSON hydration summary",
+    )
+    corpus_v2_hydrate_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write Markdown hydration summary",
+    )
+    corpus_v2_hydrate_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+    corpus_v2_hydrate_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Offline mode for tests/CI: skip live OpenAlex calls and keep works unchanged unless mocked in tests",
+    )
 
     bridge_diag_parser.add_argument(
         "--ranking-run-id",
@@ -597,6 +626,26 @@ def main() -> None:
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
         print(summary["snapshot_version"])
         print(summary["ingest_run_id"])
+        return
+
+    if args.command == "corpus-v2-hydrate-openalex":
+        from pipeline.corpus_v2_hydrate_openalex import CorpusV2HydrateError, run_corpus_v2_hydrate_openalex
+
+        try:
+            summary = run_corpus_v2_hydrate_openalex(
+                snapshot_version=args.snapshot_version,
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                database_url=args.database_url,
+                mock_openalex=bool(args.mock_openalex),
+            )
+        except CorpusV2HydrateError as e:
+            print(f"corpus-v2-hydrate-openalex: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(summary["snapshot_version"])
+        print(summary["hydration_run_id"])
         return
 
     if args.command == "recommendation-review-worksheet":

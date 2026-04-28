@@ -244,7 +244,8 @@ def test_module_has_no_psycopg_import() -> None:
     assert "psycopg" not in text
 
 
-def test_artifacts_do_not_contain_raw_mailto() -> None:
+def test_artifacts_do_not_contain_raw_mailto(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(OPENALEX_API_KEY_ENV, raising=False)
     secret = "secret-operator-mailbox-7f3c@example.invalid"
     w = _w(
         wid="https://openalex.org/W99",
