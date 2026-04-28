@@ -17,6 +17,7 @@ from pipeline.corpus_v2_candidate_plan import (
     render_corpus_v2_plan_markdown,
     run_corpus_v2_candidate_plan,
 )
+from pipeline.openalex_client import OPENALEX_API_KEY_ENV
 from pipeline.policy import CorpusPolicy
 
 
@@ -273,6 +274,38 @@ def test_artifacts_do_not_contain_raw_mailto() -> None:
     assert secret not in md_text
     assert plan.get("contact_mode") == "cli"
     assert plan.get("contact_provided") is True
+    assert plan.get("auth_mode") == "no_key"
+    assert plan.get("api_key_provided") is False
+
+
+def test_artifacts_do_not_contain_openalex_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(OPENALEX_API_KEY_ENV, "oa-secret-never-serialize-999")
+    w = _w(
+        wid="https://openalex.org/W98",
+        title="ISMIR retrieval",
+        abstract="music information retrieval ismir",
+    )
+
+    def fetch(_url: str) -> dict:
+        return {"meta": {"next_cursor": None}, "results": [w]}
+
+    with patch.object(cv2, "V2_BUCKET_ORDER", ("ismir_proceedings_or_mir_conference",)):
+        with patch.object(cv2, "V2_BUCKET_CAPS", {"ismir_proceedings_or_mir_conference": 5}):
+            plan = cv2.run_corpus_v2_candidate_plan(
+                policy=CorpusPolicy(),
+                mailto="x@y.z",
+                contact_mode="cli",
+                contact_provided=True,
+                per_bucket_limit=5,
+                target_min=1,
+                target_max=50,
+                fetch=fetch,
+                mock_openalex=False,
+            )
+    blob = json.dumps(plan, ensure_ascii=False) + render_corpus_v2_plan_markdown(plan)
+    assert "oa-secret-never-serialize-999" not in blob
+    assert plan.get("auth_mode") == "api_key"
+    assert plan.get("api_key_provided") is True
 
 
 def test_markdown_caveats_not_validation() -> None:
@@ -286,6 +319,8 @@ def test_markdown_caveats_not_validation() -> None:
         target_max=500,
         mock_openalex=True,
     )
+    assert plan.get("auth_mode") == "mock"
+    assert plan.get("api_key_provided") is False
     md = render_corpus_v2_plan_markdown(plan)
     low = md.lower()
     assert "benchmark" in low or "planning" in low
@@ -322,21 +357,25 @@ def test_cli_corpus_v2_mock(tmp_path: Path) -> None:
     assert payload["selected_total"] == 0
     assert payload["contact_mode"] == "mock"
     assert payload["contact_provided"] is True
+    assert payload["auth_mode"] == "mock"
+    assert payload["api_key_provided"] is False
 
 
-def test_compute_contact_provenance_cli_env_mock() -> None:
+def test_compute_contact_provenance_cli_env_mock(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(OPENALEX_API_KEY_ENV, raising=False)
     assert compute_contact_provenance(mailto_cli="  u@v.w  ", mock_openalex=False) == ("cli", True)
-    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z"}, clear=False):
+    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z", OPENALEX_API_KEY_ENV: ""}, clear=False):
         assert compute_contact_provenance(mailto_cli="", mock_openalex=False) == ("env", True)
-    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z"}, clear=False):
+    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z", OPENALEX_API_KEY_ENV: ""}, clear=False):
         assert compute_contact_provenance(mailto_cli="cli@x.z", mock_openalex=False) == ("cli", True)
     assert compute_contact_provenance(mailto_cli="", mock_openalex=True) == ("mock", False)
-    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z"}, clear=False):
+    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z", OPENALEX_API_KEY_ENV: ""}, clear=False):
         assert compute_contact_provenance(mailto_cli="", mock_openalex=True) == ("mock", True)
 
 
-def test_plan_contact_mode_env_in_artifact() -> None:
+def test_plan_contact_mode_env_in_artifact(monkeypatch: pytest.MonkeyPatch) -> None:
     """Simulated live path: resolved mailto from env only; artifact reports env, no raw address."""
+    monkeypatch.delenv(OPENALEX_API_KEY_ENV, raising=False)
     policy = CorpusPolicy()
     w = _w(
         wid="https://openalex.org/W200",
@@ -363,4 +402,5 @@ def test_plan_contact_mode_env_in_artifact() -> None:
             )
     blob = json.dumps(plan, ensure_ascii=False) + render_corpus_v2_plan_markdown(plan)
     assert plan["contact_mode"] == "env"
+    assert plan["auth_mode"] == "no_key"
     assert secret not in blob

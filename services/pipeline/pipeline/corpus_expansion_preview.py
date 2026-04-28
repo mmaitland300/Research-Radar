@@ -10,7 +10,12 @@ from typing import Any, Callable, Mapping, Sequence
 from urllib.parse import urlencode
 
 from pipeline.openalex import DEFAULT_PER_PAGE, DEFAULT_SELECT_FIELDS, OPENALEX_WORKS_URL
-from pipeline.openalex_client import fetch_openalex_json
+from pipeline.openalex_client import (
+    compute_contact_provenance,
+    compute_openalex_auth_artifact_fields,
+    fetch_openalex_json,
+    openalex_api_key_from_env,
+)
 from pipeline.openalex_text import abstract_plain_text
 from pipeline.policy import CorpusPolicy
 
@@ -19,7 +24,10 @@ PreviewFetch = Callable[[str], Mapping[str, Any]]
 # Schema surfaces for tests
 REQUIRED_PREVIEW_TOP_LEVEL_KEYS: tuple[str, ...] = (
     "generated_at",
-    "mailto",
+    "contact_provided",
+    "contact_mode",
+    "api_key_provided",
+    "auth_mode",
     "policy_reference",
     "buckets",
     "recommendation",
@@ -349,18 +357,27 @@ def run_corpus_expansion_preview(
     fetch: PreviewFetch | None = None,
     openalex_mode: str = "live",
     include_abstract_in_select: bool = True,
+    mailto_cli: str | None = None,
 ) -> dict[str, Any]:
     """
     OpenAlex read-only preview: one small request per bucket, no database.
 
     `fetch` defaults to `fetch_openalex_json` from the pipeline client (mailto + retries).
     `openalex_mode` is "live" | "mock" for documentation and tests.
+    `mailto_cli` — pass explicit CLI `--mailto` string (possibly empty for env-only runs); if None, contact provenance uses `mailto`.
     """
     if not (10 <= per_bucket_sample <= 25):
         raise ValueError("per_bucket_sample must be between 10 and 25")
+    mock = openalex_mode == "mock"
+    if mailto_cli is not None:
+        prov_cli = mailto_cli
+    else:
+        prov_cli = mailto or ""
+    contact_mode, contact_provided = compute_contact_provenance(mailto_cli=prov_cli, mock_openalex=mock)
+    api_key_provided, auth_mode = compute_openalex_auth_artifact_fields(mock_openalex=mock)
     if fetch is not None:
         fetch_fn = fetch
-    elif openalex_mode == "mock":
+    elif mock:
         fetch_fn = _mock_fetch_zero
     else:
         fetch_fn = lambda u: fetch_openalex_json(u, mailto=mailto, timeout_sec=60.0)
@@ -406,7 +423,6 @@ def run_corpus_expansion_preview(
             "likely_risks_noise_sources": list(spec.likely_risks_noise_sources),
             "api_request": {
                 "works_url": url,
-                "mailto_user_agent": mailto,
                 "uses_openalex_search_parameter": spec.uses_search,
             },
         }
@@ -451,7 +467,10 @@ def run_corpus_expansion_preview(
 
     return {
         "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-        "mailto": mailto,
+        "contact_provided": contact_provided,
+        "contact_mode": contact_mode,
+        "api_key_provided": api_key_provided,
+        "auth_mode": auth_mode,
         "policy_reference": {
             "name": policy.name,
             "policy_hash": policy.policy_hash,
@@ -477,6 +496,14 @@ def render_corpus_expansion_markdown(preview: Mapping[str, Any]) -> str:
     lines.append("")
     lines.append(f"Generated: `{preview.get('generated_at')}`")
     lines.append(f"OpenAlex mode: **{preview.get('openalex_mode')}**  ")
+    lines.append(
+        f"auth_mode: **{preview.get('auth_mode')}** · api_key_provided: **{preview.get('api_key_provided')}** "
+        "(secrets not stored)  "
+    )
+    lines.append(
+        f"contact_mode: **{preview.get('contact_mode')}** · contact_provided: **{preview.get('contact_provided')}** "
+        "(raw mailto not stored)  "
+    )
     lines.append(
         f"**Suggested target size (works):** {preview.get('recommendation', {}).get('suggested_target_corpus_size_range', [])}  "
     )
@@ -537,14 +564,18 @@ def render_corpus_expansion_markdown(preview: Mapping[str, Any]) -> str:
 
 def resolve_corpus_expansion_preview_mailto(*, mailto: str, mock_openalex: bool) -> str:
     """
-    User-Agent contact for OpenAlex. Live mode requires a real address via --mailto or
-    OPENALEX_MAILTO; mock mode may use a placeholder if neither is set.
+    User-Agent contact string for OpenAlex (metadata only; prefer OPENALEX_API_KEY for auth).
+
+    Live mode: requires --mailto, OPENALEX_MAILTO, or OPENALEX_API_KEY.
+    Mock mode may use a placeholder if neither mailto nor env contact is set.
     """
     cli = (mailto or "").strip()
     env = (os.environ.get("OPENALEX_MAILTO") or "").strip()
     if mock_openalex:
         return cli or env or "research-radar-dev@local.invalid"
     if not cli and not env:
+        if openalex_api_key_from_env():
+            return "research-radar-dev@local.invalid"
         raise ValueError("live_corpus_expansion_preview_requires_mailto")
     return cli or env
 
@@ -575,12 +606,13 @@ def run_corpus_expansion_preview_from_cli(
 ) -> None:
     policy = CorpusPolicy()
     mode = "mock" if mock_openalex else "live"
+    mailto_cli = (mailto or "").strip()
     try:
         m = resolve_corpus_expansion_preview_mailto(mailto=mailto, mock_openalex=mock_openalex)
     except ValueError:
         print(
-            "corpus-expansion-preview: live mode requires a real contact: pass --mailto or set "
-            "OPENALEX_MAILTO in the environment (identifies you to OpenAlex in the User-Agent).",
+            "corpus-expansion-preview: live mode requires OPENALEX_API_KEY and/or contact: "
+            "set OPENALEX_API_KEY, or pass --mailto, or set OPENALEX_MAILTO.",
             file=sys.stderr,
         )
         raise SystemExit(2) from None
@@ -589,6 +621,7 @@ def run_corpus_expansion_preview_from_cli(
         mailto=m,
         per_bucket_sample=per_bucket_sample,
         openalex_mode=mode,
+        mailto_cli=mailto_cli,
     )
     for k in REQUIRED_PREVIEW_TOP_LEVEL_KEYS:
         if k not in out:

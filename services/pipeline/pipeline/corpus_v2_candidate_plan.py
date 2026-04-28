@@ -17,31 +17,16 @@ from pipeline.corpus_expansion_preview import (
     resolve_corpus_expansion_preview_mailto,
 )
 from pipeline.openalex import DEFAULT_SELECT_FIELDS
-from pipeline.openalex_client import fetch_openalex_json
+from pipeline.openalex_client import (
+    compute_contact_provenance,
+    compute_openalex_auth_artifact_fields,
+    fetch_openalex_json,
+    openalex_api_key_from_env,
+)
 from pipeline.openalex_text import abstract_plain_text
 from pipeline.policy import CorpusPolicy
 
 PreviewFetch = Callable[[str], Mapping[str, Any]]
-
-
-def compute_contact_provenance(*, mailto_cli: str, mock_openalex: bool) -> tuple[str, bool]:
-    """
-    Provenance for artifacts only (never stores raw mailto).
-
-    - mock: --mock-openalex (may still pass mailto for placeholder resolution).
-    - cli: non-empty --mailto (wins over OPENALEX_MAILTO when both set).
-    - env: OPENALEX_MAILTO only.
-    - none: live mode but no contact (should not occur after CLI validation).
-    """
-    cli = (mailto_cli or "").strip()
-    env = (os.environ.get("OPENALEX_MAILTO") or "").strip()
-    if mock_openalex:
-        return "mock", bool(cli or env)
-    if cli:
-        return "cli", True
-    if env:
-        return "env", True
-    return "none", False
 
 
 # First-pass selection caps (per bucket) — aligned with expansion preview bucket ids.
@@ -593,10 +578,14 @@ def run_corpus_v2_candidate_plan(
         "before any bridge-weight tuning."
     )
 
+    api_key_provided, auth_mode = compute_openalex_auth_artifact_fields(mock_openalex=mock_openalex)
+
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "contact_provided": contact_provided,
         "contact_mode": contact_mode,
+        "api_key_provided": api_key_provided,
+        "auth_mode": auth_mode,
         "policy_reference": {"name": policy.name, "policy_hash": policy.policy_hash},
         "target_min": target_min,
         "target_max": target_max,
@@ -628,6 +617,7 @@ def render_corpus_v2_plan_markdown(plan: Mapping[str, Any]) -> str:
         "",
         f"- **selected_total:** `{plan.get('selected_total')}` (target range `{plan.get('target_min')}`–`{plan.get('target_max')}`)",
         f"- **contact_mode:** `{plan.get('contact_mode')}` (raw mailto is not stored in this file)",
+        f"- **auth_mode:** `{plan.get('auth_mode')}` · **api_key_provided:** `{plan.get('api_key_provided')}` (secrets are not stored)",
         "",
         "## Selected by bucket",
         "",
@@ -698,9 +688,11 @@ def run_corpus_v2_candidate_plan_from_cli(
 ) -> None:
     policy = CorpusPolicy()
     mailto_raw = (mailto or "").strip()
-    if not mock_openalex and not mailto_raw and not (os.environ.get("OPENALEX_MAILTO") or "").strip():
+    has_env_mailto = bool((os.environ.get("OPENALEX_MAILTO") or "").strip())
+    if not mock_openalex and not mailto_raw and not has_env_mailto and not openalex_api_key_from_env():
         print(
-            "corpus-v2-candidate-plan: live mode requires contact: pass --mailto or set OPENALEX_MAILTO",
+            "corpus-v2-candidate-plan: live mode requires OPENALEX_API_KEY and/or contact: "
+            "set OPENALEX_API_KEY, or pass --mailto, or set OPENALEX_MAILTO",
             file=sys.stderr,
         )
         raise SystemExit(2)

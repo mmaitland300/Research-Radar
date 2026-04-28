@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -13,11 +14,13 @@ from pipeline.corpus_expansion_preview import (
     REQUIRED_PREVIEW_TOP_LEVEL_KEYS,
     REQUIRED_SAMPLE_WORK_KEYS,
     expansion_bucket_definitions,
+    render_corpus_expansion_markdown,
     resolve_corpus_expansion_preview_mailto,
     run_corpus_expansion_preview,
     run_corpus_expansion_preview_from_cli,
     work_to_sample_row,
 )
+from pipeline.openalex_client import OPENALEX_API_KEY_ENV
 from pipeline.policy import CorpusPolicy
 
 EXPECTED_BUCKET_IDS: tuple[str, ...] = (
@@ -30,6 +33,20 @@ EXPECTED_BUCKET_IDS: tuple[str, ...] = (
     "symbolic_music_and_harmony",
     "source_separation_benchmarks",
 )
+
+
+def test_expansion_preview_mock_never_serializes_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(OPENALEX_API_KEY_ENV, "never-in-expansion-preview-json")
+    out = run_corpus_expansion_preview(
+        policy=CorpusPolicy(),
+        mailto="p@test.invalid",
+        per_bucket_sample=10,
+        openalex_mode="mock",
+    )
+    blob = json.dumps(out, ensure_ascii=False) + render_corpus_expansion_markdown(out)
+    assert "never-in-expansion-preview-json" not in blob
+    assert out["auth_mode"] == "mock"
+    assert out["api_key_provided"] is False
 
 
 def test_expansion_bucket_definitions_exist() -> None:
@@ -192,8 +209,15 @@ def test_resolve_mailto_mock_prefers_cli_over_env(monkeypatch: pytest.MonkeyPatc
 
 def test_resolve_mailto_live_requires_contact(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    monkeypatch.delenv(OPENALEX_API_KEY_ENV, raising=False)
     with pytest.raises(ValueError, match="live_corpus_expansion_preview_requires_mailto"):
         resolve_corpus_expansion_preview_mailto(mailto="", mock_openalex=False)
+
+
+def test_resolve_mailto_live_accepts_api_key_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    monkeypatch.setenv(OPENALEX_API_KEY_ENV, "openalex-key-test")
+    assert resolve_corpus_expansion_preview_mailto(mailto="", mock_openalex=False) == "research-radar-dev@local.invalid"
 
 
 def test_resolve_mailto_live_accepts_env_only(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -209,6 +233,7 @@ def test_resolve_mailto_live_accepts_cli_only(monkeypatch: pytest.MonkeyPatch) -
 @patch("pipeline.corpus_expansion_preview.write_corpus_expansion_artifacts", lambda *a, **k: None)
 def test_from_cli_live_exits_without_mailto_or_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    monkeypatch.delenv(OPENALEX_API_KEY_ENV, raising=False)
     with pytest.raises(SystemExit) as exc:
         run_corpus_expansion_preview_from_cli(
             output=tmp_path / "a.json",
@@ -227,6 +252,7 @@ def test_corpus_expansion_cli_live_exits_without_contact(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
+    monkeypatch.delenv(OPENALEX_API_KEY_ENV, raising=False)
     with patch.object(
         cli_main.sys,
         "argv",

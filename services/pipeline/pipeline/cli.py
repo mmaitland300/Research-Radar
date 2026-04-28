@@ -422,8 +422,8 @@ def main() -> None:
         "--mailto",
         default=None,
         help=(
-            "Contact for OpenAlex User-Agent. Live mode: required via this flag or OPENALEX_MAILTO. "
-            "Mock mode: optional; falls back to OPENALEX_MAILTO or a placeholder if unset."
+            "Optional contact for User-Agent metadata (never stored in artifacts). Live mode: also set "
+            "OPENALEX_API_KEY (preferred) and/or OPENALEX_MAILTO / this flag."
         ),
     )
     corpus_expansion_parser.add_argument(
@@ -455,7 +455,10 @@ def main() -> None:
     corpus_v2_plan_parser.add_argument(
         "--mailto",
         default=None,
-        help="Contact for OpenAlex User-Agent. Live mode: pass this or set OPENALEX_MAILTO (never stored in artifacts).",
+        help=(
+            "Optional contact for User-Agent metadata (never stored in artifacts). Live mode: set OPENALEX_API_KEY "
+            "(preferred) and/or pass this or OPENALEX_MAILTO."
+        ),
     )
     corpus_v2_plan_parser.add_argument(
         "--per-bucket-limit",
