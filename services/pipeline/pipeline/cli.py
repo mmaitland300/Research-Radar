@@ -16,8 +16,11 @@ from pipeline.embedding_persistence import (
 )
 from pipeline.embedding_run import execute_embedding_run
 from pipeline.ranking_run import (
+    BRIDGE_ELIGIBILITY_MODE_CURRENT,
+    SUPPORTED_BRIDGE_ELIGIBILITY_MODES,
     MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY,
     execute_ranking_run,
+    validate_bridge_eligibility_mode,
     validate_bridge_weight_for_bridge_family,
 )
 from pipeline.recommendation_review_worksheet import (
@@ -199,6 +202,16 @@ def main() -> None:
         help=(
             "Bridge family only: weight on cluster-boundary bridge_score in final_score (ML2-5b). "
             f"Default 0.0 (ML2-5a). Range [0.0, {MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY}]."
+        ),
+    )
+    ranking_parser.add_argument(
+        "--bridge-eligibility-mode",
+        type=lambda s: validate_bridge_eligibility_mode(s),
+        default=BRIDGE_ELIGIBILITY_MODE_CURRENT,
+        choices=sorted(SUPPORTED_BRIDGE_ELIGIBILITY_MODES),
+        help=(
+            "Bridge eligibility policy for bridge-family rows. "
+            "Default current behavior; use top50_cross_cluster_gte_0_40 for stricter threshold sweep mode."
         ),
     )
     ranking_parser.add_argument(
@@ -1016,6 +1029,7 @@ def main() -> None:
             embedding_version=args.embedding_version,
             cluster_version=args.cluster_version,
             bridge_weight_for_bridge_family=args.bridge_weight_for_family_bridge,
+            bridge_eligibility_mode=args.bridge_eligibility_mode,
             note=args.note,
             low_cite_min_year=args.low_cite_min_year,
             low_cite_max_citations=args.low_cite_max_citations,

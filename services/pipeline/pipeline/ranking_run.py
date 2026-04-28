@@ -46,6 +46,12 @@ from pipeline.ranking_persistence import (
 )
 
 RECOMMENDATION_FAMILIES: tuple[str, ...] = ("emerging", "bridge", "undercited")
+BRIDGE_ELIGIBILITY_MODE_CURRENT = "current"
+BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040 = "top50_cross_cluster_gte_0_40"
+SUPPORTED_BRIDGE_ELIGIBILITY_MODES: tuple[str, ...] = (
+    BRIDGE_ELIGIBILITY_MODE_CURRENT,
+    BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
+)
 
 # Upper bound for --bridge-weight-for-family-bridge (ML2-5b experiments); keeps fat-finger runs bounded.
 MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY = 0.25
@@ -135,6 +141,16 @@ def validate_bridge_weight_for_bridge_family(value: float) -> float:
     return w
 
 
+def validate_bridge_eligibility_mode(value: str) -> str:
+    mode = str(value or "").strip()
+    if mode not in SUPPORTED_BRIDGE_ELIGIBILITY_MODES:
+        raise ValueError(
+            "bridge_eligibility_mode must be one of "
+            f"{SUPPORTED_BRIDGE_ELIGIBILITY_MODES}, got {mode!r}"
+        )
+    return mode
+
+
 def resolved_family_weights(
     bridge_weight_for_bridge_family: float,
     *,
@@ -181,6 +197,7 @@ def _build_ranking_config(
     embedding_version: str,
     bridge_weight_for_bridge_family: float,
     family_weights_resolved: dict[str, ScoreWeights],
+    bridge_eligibility_mode: str = BRIDGE_ELIGIBILITY_MODE_CURRENT,
     neighbor_mix_k: int = NEIGHBOR_MIX_V1_DEFAULT_K,
     emerging_semantic_slice_fit: bool = False,
 ) -> dict[str, Any]:
@@ -193,6 +210,12 @@ def _build_ranking_config(
     bridge_reason_mode: str | None = None
     if cluster_version is not None:
         bridge_reason_mode = "structural_zero_weight" if bw <= 0.0 else "structural_weighted"
+    bridge_eligibility_mode = validate_bridge_eligibility_mode(bridge_eligibility_mode)
+    bridge_score_percentile_threshold: str | None = None
+    cross_cluster_neighbor_share_min: float | None = None
+    if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+        bridge_score_percentile_threshold = "top50"
+        cross_cluster_neighbor_share_min = 0.40
     return {
         "default_weights": asdict(ScoreWeights()),
         "family_weights": {family: asdict(weights) for family, weights in family_weights_resolved.items()},
@@ -208,6 +231,9 @@ def _build_ranking_config(
                 "bridge_score_mode": "cluster_boundary_ratio_v0",
                 "bridge_weight_in_final_score": bw,
                 "bridge_reason_mode": bridge_reason_mode,
+                "bridge_eligibility_mode": bridge_eligibility_mode,
+                "bridge_score_percentile_threshold": bridge_score_percentile_threshold,
+                "cross_cluster_neighbor_share_min": cross_cluster_neighbor_share_min,
                 "neighbor_mix_v1": {
                     "signal_version": "neighbor_mix_v1",
                     "k": int(neighbor_mix_k),
@@ -244,6 +270,9 @@ def _build_ranking_config(
             "recent_topic_year_window": 2,
         },
         "emerging_semantic_slice_fit_v1": emerging_semantic_slice_fit,
+        "bridge_eligibility_mode": bridge_eligibility_mode,
+        "bridge_score_percentile_threshold": bridge_score_percentile_threshold,
+        "cross_cluster_neighbor_share_min": cross_cluster_neighbor_share_min,
     }
 
 
@@ -392,6 +421,7 @@ def build_step3_heuristic_score_rows(
     cluster_version: str | None = None,
     bridge_boundary_by_work: dict[int, float | None] | None = None,
     bridge_weight_for_bridge_family: float = 0.0,
+    bridge_eligibility_mode: str = BRIDGE_ELIGIBILITY_MODE_CURRENT,
     neighbor_mix_by_work: dict[int, NeighborMixV1Result] | None = None,
     neighbor_mix_k: int = NEIGHBOR_MIX_V1_DEFAULT_K,
     emerging_semantic_slice_fit: bool = False,
@@ -414,12 +444,27 @@ def build_step3_heuristic_score_rows(
     payload.
     """
     bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
+    bridge_eligibility_mode = validate_bridge_eligibility_mode(bridge_eligibility_mode)
     family_w = resolved_family_weights(bw, emerging_semantic_slice_fit=emerging_semantic_slice_fit)
     citation_velocity_by_work = _citation_velocity_scores(candidates)
     topic_growth_by_work = _topic_growth_scores(candidates)
     topic_breadth_penalty_by_work = _topic_breadth_penalties(candidates)
     pool_members = [c for c in candidates if in_low_cite_candidate_pool(c, min_year=low_cite_min_year, max_citations=low_cite_max_citations)]
     citation_popularity_penalty_by_work = _citation_popularity_penalties(pool_members)
+
+    bridge_score_cutoff_top50: float | None = None
+    if (
+        bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
+        and cluster_version is not None
+        and bridge_boundary_by_work is not None
+    ):
+        all_bridge_scores = sorted(
+            [float(v) for v in bridge_boundary_by_work.values() if isinstance(v, (int, float))],
+            reverse=True,
+        )
+        if all_bridge_scores:
+            idx = max(0, (len(all_bridge_scores) + 1) // 2 - 1)
+            bridge_score_cutoff_top50 = all_bridge_scores[idx]
 
     rows: list[PaperScoreRow] = []
     for candidate in candidates:
@@ -440,11 +485,31 @@ def build_step3_heuristic_score_rows(
         mix_bridge_signal_json: dict[str, Any] | None = None
         if neighbor_mix_by_work is not None:
             if mix is not None:
-                mix_bridge_eligible = mix.eligible
+                if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+                    cross_cluster_share = mix.mix_score
+                    passes_threshold = bool(
+                        mix.eligible
+                        and bridge_score is not None
+                        and bridge_score_cutoff_top50 is not None
+                        and bridge_score >= bridge_score_cutoff_top50
+                        and cross_cluster_share is not None
+                        and cross_cluster_share >= 0.40
+                    )
+                    mix_bridge_eligible = passes_threshold
+                else:
+                    mix_bridge_eligible = mix.eligible
                 mix_bridge_signal_json = neighbor_mix_v1_json_payload(mix, k=neighbor_mix_k)
+                mix_bridge_signal_json["eligible"] = mix_bridge_eligible
+                if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+                    mix_bridge_signal_json["eligibility_mode"] = bridge_eligibility_mode
+                    mix_bridge_signal_json["bridge_score_percentile_threshold"] = "top50"
+                    mix_bridge_signal_json["cross_cluster_neighbor_share_min"] = 0.40
+                    mix_bridge_signal_json["bridge_score_top50_cutoff"] = bridge_score_cutoff_top50
             else:
                 mix_bridge_eligible = False
                 mix_bridge_signal_json = neighbor_mix_v1_unsupported_payload(k=neighbor_mix_k)
+                if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+                    mix_bridge_signal_json["eligibility_mode"] = bridge_eligibility_mode
 
         emerging_semantic: float | None = None
         if emerging_semantic_slice_fit and semantic_by_work is not None:
@@ -524,6 +589,7 @@ def execute_ranking_run(
     embedding_version: str = "none-v0",
     cluster_version: str | None = None,
     bridge_weight_for_bridge_family: float = 0.0,
+    bridge_eligibility_mode: str = BRIDGE_ELIGIBILITY_MODE_CURRENT,
     note: str | None = None,
     placeholder_policy: str = "semantic_and_bridge_null_until_embeddings_and_clusters",
     low_cite_min_year: int = DEFAULT_LOW_CITE_MIN_YEAR,
@@ -544,6 +610,7 @@ def execute_ranking_run(
             )
 
         bw = validate_bridge_weight_for_bridge_family(bridge_weight_for_bridge_family)
+        bridge_eligibility_mode = validate_bridge_eligibility_mode(bridge_eligibility_mode)
         nm_k = NEIGHBOR_MIX_V1_DEFAULT_K
 
         cluster_key = cluster_version.strip() if cluster_version and cluster_version.strip() else None
@@ -598,6 +665,7 @@ def execute_ranking_run(
             embedding_version=embedding_version,
             bridge_weight_for_bridge_family=bw,
             family_weights_resolved=family_resolved,
+            bridge_eligibility_mode=bridge_eligibility_mode,
             neighbor_mix_k=nm_k,
             emerging_semantic_slice_fit=emerging_semantic_slice_fit,
         )
@@ -625,6 +693,7 @@ def execute_ranking_run(
                 cluster_version=cluster_key,
                 bridge_boundary_by_work=bridge_boundary_by_work,
                 bridge_weight_for_bridge_family=bw,
+                bridge_eligibility_mode=bridge_eligibility_mode,
                 neighbor_mix_by_work=neighbor_mix_by_work,
                 neighbor_mix_k=nm_k,
                 emerging_semantic_slice_fit=emerging_semantic_slice_fit,

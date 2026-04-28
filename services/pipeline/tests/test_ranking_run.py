@@ -4,6 +4,8 @@ from pipeline.ranking import RankingCandidate
 import pytest
 
 from pipeline.ranking_run import (
+    BRIDGE_ELIGIBILITY_MODE_CURRENT,
+    BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
     BRIDGE_REASON_LEGACY,
     BRIDGE_REASON_NO_CLUSTER,
     BRIDGE_REASON_STRUCTURAL,
@@ -16,6 +18,7 @@ from pipeline.ranking_run import (
     build_step3_heuristic_score_rows,
     resolved_family_weights,
     validate_bridge_weight_for_bridge_family,
+    validate_bridge_eligibility_mode,
 )
 
 
@@ -190,6 +193,9 @@ def test_build_ranking_config_bridge_reason_mode_and_persisted_weight() -> None:
     }
     assert c0["family_weights"]["bridge"]["bridge"] == 0.0
     assert cw["family_weights"]["bridge"]["bridge"] == 0.12
+    assert c0["bridge_eligibility_mode"] == BRIDGE_ELIGIBILITY_MODE_CURRENT
+    assert c0["bridge_score_percentile_threshold"] is None
+    assert c0["cross_cluster_neighbor_share_min"] is None
     assert c0["signal_policies"]["semantic_score"] == "null_until_embeddings"
     assert c0.get("emerging_semantic_slice_fit_v1") is False
 
@@ -402,3 +408,54 @@ def test_neighbor_mix_bridge_eligible_null_when_neighbor_mix_map_not_used() -> N
     b = next(r for r in rows if r.recommendation_family == "bridge")
     assert b.bridge_eligible is None
     assert b.bridge_signal_json is None
+
+
+def test_bridge_eligibility_mode_top50_cross040_changes_bridge_eligible() -> None:
+    cands = [
+        _pool_candidate(work_id=1, topic_ids=(1,)),
+        _pool_candidate(work_id=2, topic_ids=(1,)),
+        _pool_candidate(work_id=3, topic_ids=(1,)),
+        _pool_candidate(work_id=4, topic_ids=(1,)),
+    ]
+    bridge_scores = {1: 0.9, 2: 0.8, 3: 0.2, 4: 0.1}
+    mix_map = {
+        1: NeighborMixV1Result(True, 0.50, (10, 11), "c1", 5),
+        2: NeighborMixV1Result(True, 0.30, (10, 11), "c1", 3),
+        3: NeighborMixV1Result(True, 0.60, (10, 11), "c1", 6),
+        4: NeighborMixV1Result(True, 0.70, (10, 11), "c1", 7),
+    }
+    rows = build_step3_heuristic_score_rows(
+        cands,
+        cluster_version="cv",
+        bridge_boundary_by_work=bridge_scores,
+        bridge_eligibility_mode=BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
+        neighbor_mix_by_work=mix_map,
+    )
+    bridge = {r.work_id: r for r in rows if r.recommendation_family == "bridge"}
+    assert bridge[1].bridge_eligible is True  # top50 score + cross>=0.40
+    assert bridge[2].bridge_eligible is False  # top50 score but cross<0.40
+    assert bridge[3].bridge_eligible is False  # cross ok but below top50 score cutoff
+    assert bridge[4].bridge_eligible is False
+    assert bridge[1].bridge_signal_json is not None
+    assert bridge[1].bridge_signal_json["eligibility_mode"] == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
+
+
+def test_validate_bridge_eligibility_mode_and_config_top50() -> None:
+    assert validate_bridge_eligibility_mode(BRIDGE_ELIGIBILITY_MODE_CURRENT) == BRIDGE_ELIGIBILITY_MODE_CURRENT
+    assert validate_bridge_eligibility_mode(BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040) == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
+    with pytest.raises(ValueError):
+        validate_bridge_eligibility_mode("bad")
+    cfg = _build_ranking_config(
+        corpus_snapshot_version="snap",
+        placeholder_policy="p",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+        cluster_version="k1",
+        embedding_version="ev",
+        bridge_weight_for_bridge_family=0.0,
+        family_weights_resolved=resolved_family_weights(0.0),
+        bridge_eligibility_mode=BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
+    )
+    assert cfg["bridge_eligibility_mode"] == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
+    assert cfg["bridge_score_percentile_threshold"] == "top50"
+    assert cfg["cross_cluster_neighbor_share_min"] == 0.40
