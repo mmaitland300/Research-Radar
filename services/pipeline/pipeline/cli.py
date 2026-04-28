@@ -40,6 +40,10 @@ from pipeline.bridge_signal_diagnostics import (
     BridgeSignalDiagnosticsError,
     run_bridge_signal_diagnostics,
 )
+from pipeline.cluster_inspection import (
+    ClusterInspectionError,
+    run_cluster_inspection,
+)
 from pipeline.work_text_repair import run_work_text_repair_cli
 from pipeline.jobs import (
     create_bootstrap_bundle,
@@ -587,6 +591,40 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    cluster_inspection_parser = subparsers.add_parser(
+        "cluster-inspection",
+        help="Read-only cluster coherence/provenance inspection for one explicit snapshot + embedding + cluster identity",
+    )
+    cluster_inspection_parser.add_argument(
+        "--corpus-snapshot-version",
+        required=True,
+        help="Explicit source_snapshot_versions.source_snapshot_version to inspect",
+    )
+    cluster_inspection_parser.add_argument(
+        "--embedding-version",
+        required=True,
+        help="Explicit embedding artifact version to verify/inspect",
+    )
+    cluster_inspection_parser.add_argument(
+        "--cluster-version",
+        required=True,
+        help="Explicit succeeded clustering_runs.cluster_version to inspect",
+    )
+    cluster_inspection_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write JSON inspection artifact",
+    )
+    cluster_inspection_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write Markdown inspection artifact",
+    )
+    cluster_inspection_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     bridge_diag_parser.add_argument(
         "--ranking-run-id",
@@ -715,6 +753,24 @@ def main() -> None:
         print(summary["snapshot_version"])
         print(summary["embedding_version"])
         print(summary["embedded_count"])
+        return
+    if args.command == "cluster-inspection":
+        try:
+            payload = run_cluster_inspection(
+                corpus_snapshot_version=args.corpus_snapshot_version,
+                embedding_version=args.embedding_version,
+                cluster_version=args.cluster_version,
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                database_url=args.database_url,
+            )
+        except ClusterInspectionError as e:
+            print(f"cluster-inspection: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(payload["provenance"]["corpus_snapshot_version"])
+        print(payload["provenance"]["cluster_version"])
         return
 
     if args.command == "recommendation-review-worksheet":
