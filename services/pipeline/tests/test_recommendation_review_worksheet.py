@@ -237,6 +237,7 @@ def test_provenance_repeated_and_cluster_version() -> None:
     assert r0["ranking_run_id"] == "rr-pin"
     assert r0["corpus_snapshot_version"] == "ssv-1"
     assert r0["cluster_version"] == "cv-99"
+    assert r0["review_pool_variant"] == "full_family_top_k"
     for col in (
         "ranking_run_id",
         "ranking_version",
@@ -354,6 +355,41 @@ def test_bridge_eligible_variants() -> None:
     assert out[2]["bridge_eligible"] == ""
 
 
+def test_bridge_eligible_only_rejected_for_non_bridge_family() -> None:
+    conn = _mock_conn_succeeded()
+    with pytest.raises(WorksheetError, match="only valid with --family bridge"):
+        build_worksheet_rows(
+            conn,
+            ranking_run_id="run-xyz",
+            family="emerging",
+            limit=10,
+            bridge_eligible_only=True,
+        )
+
+
+def test_bridge_eligible_only_query_filter_and_variant_provenance() -> None:
+    conn = _mock_conn_succeeded()
+    out = build_worksheet_rows(
+        conn,
+        ranking_run_id="run-xyz",
+        family="bridge",
+        limit=10,
+        bridge_eligible_only=True,
+    )
+    assert out[0]["review_pool_variant"] == "bridge_eligible_only"
+    # second execute call is scored-row query
+    q = conn.execute.call_args_list[1].args[0]
+    assert "AND ps.bridge_eligible IS TRUE" in q
+
+
+def test_default_bridge_does_not_add_eligible_only_filter() -> None:
+    conn = _mock_conn_succeeded()
+    out = build_worksheet_rows(conn, ranking_run_id="run-xyz", family="bridge", limit=10)
+    assert out[0]["review_pool_variant"] == "full_family_top_k"
+    q = conn.execute.call_args_list[1].args[0]
+    assert "AND ps.bridge_eligible IS TRUE" not in q
+
+
 def test_worksheet_header_columns() -> None:
     row = {c: _run_row().get(c, "") for c in WORKSHEET_COLUMNS}
     out = render_worksheet_csv([row])
@@ -378,6 +414,7 @@ def test_write_uses_path(mock_connect: MagicMock, tmp_path: Path) -> None:
     text = outp.read_text(encoding="utf-8")
     assert "run-xyz" in text
     assert "relevance_label" in text
+    assert "review_pool_variant" in text
     assert outp.is_file()
 
 
@@ -407,6 +444,55 @@ def test_cli_invokes_worksheet(
     assert k["ranking_run_id"] == "RUN1"
     assert k["family"] == "bridge"
     assert k["limit"] == 20
+    assert k["bridge_eligible_only"] is False
     p = k["output_path"]
     assert isinstance(p, Path)
     assert p.name == "out.csv"
+
+
+@patch("pipeline.cli.write_recommendation_review_worksheet")
+def test_cli_bridge_eligible_only_passthrough(
+    mock_write: MagicMock,
+) -> None:
+    with patch.object(
+        sys,
+        "argv",
+        [
+            "pipeline.cli",
+            "recommendation-review-worksheet",
+            "--ranking-run-id",
+            "RUN1",
+            "--family",
+            "bridge",
+            "--bridge-eligible-only",
+            "--limit",
+            "20",
+            "--output",
+            "out.csv",
+        ],
+    ):
+        cli_main.main()
+    k = mock_write.call_args.kwargs
+    assert k["bridge_eligible_only"] is True
+
+
+def test_cli_rejects_bridge_eligible_only_for_non_bridge() -> None:
+    with patch.object(
+        sys,
+        "argv",
+        [
+            "pipeline.cli",
+            "recommendation-review-worksheet",
+            "--ranking-run-id",
+            "RUN1",
+            "--family",
+            "emerging",
+            "--bridge-eligible-only",
+            "--limit",
+            "20",
+            "--output",
+            "out.csv",
+        ],
+    ):
+        with pytest.raises(SystemExit):
+            cli_main.main()

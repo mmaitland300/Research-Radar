@@ -335,6 +335,11 @@ def main() -> None:
         help="Output CSV path (e.g. docs/audit/manual-review/bridge_run.csv)",
     )
     worksheet_parser.add_argument(
+        "--bridge-eligible-only",
+        action="store_true",
+        help="Bridge family only: filter worksheet rows to bridge_eligible IS TRUE.",
+    )
+    worksheet_parser.add_argument(
         "--database-url",
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
@@ -826,6 +831,8 @@ def main() -> None:
         rrid = (args.ranking_run_id or "").strip()
         if not rrid:
             parser.error("--ranking-run-id is required and must not be blank")
+        if bool(args.bridge_eligible_only) and args.family != "bridge":
+            parser.error("--bridge-eligible-only is only valid with --family bridge")
         try:
             write_recommendation_review_worksheet(
                 output_path=Path(args.output),
@@ -833,6 +840,7 @@ def main() -> None:
                 ranking_run_id=rrid,
                 family=args.family,
                 limit=int(args.limit),
+                bridge_eligible_only=bool(args.bridge_eligible_only),
             )
         except WorksheetError as e:
             print(f"recommendation-review-worksheet: {e}", file=sys.stderr)

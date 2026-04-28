@@ -104,9 +104,13 @@ def _fetch_scored_rows(
     ranking_run_id: str,
     family: str,
     limit: int,
+    bridge_eligible_only: bool,
 ) -> list[dict[str, Any]]:
     # Raw per-row signal JSON is not selected (not exported in this worksheet)
-    query = """
+    eligible_clause = ""
+    if bridge_eligible_only:
+        eligible_clause = "AND ps.bridge_eligible IS TRUE"
+    query = f"""
         SELECT
             ROW_NUMBER() OVER (ORDER BY ps.final_score DESC, ps.work_id ASC) AS rank,
             w.openalex_id AS paper_id,
@@ -138,6 +142,7 @@ def _fetch_scored_rows(
         ) topic_agg ON TRUE
         WHERE ps.ranking_run_id = %s
           AND ps.recommendation_family = %s
+          {eligible_clause}
         ORDER BY ps.final_score DESC, ps.work_id ASC
         LIMIT %s
     """
@@ -150,6 +155,7 @@ WORKSHEET_COLUMNS: tuple[str, ...] = (
     "corpus_snapshot_version",
     "embedding_version",
     "cluster_version",
+    "review_pool_variant",
     "family",
     "rank",
     "paper_id",
@@ -185,6 +191,7 @@ def build_worksheet_rows(
     ranking_run_id: str,
     family: str,
     limit: int,
+    bridge_eligible_only: bool = False,
 ) -> list[dict[str, str]]:
     """
     Provenance is repeated on every data row. Reviewer columns are empty strings.
@@ -199,21 +206,31 @@ def build_worksheet_rows(
         )
     if limit < 1 or limit > 200:
         raise WorksheetError("--limit must be between 1 and 200", code=2)
+    if bridge_eligible_only and family != "bridge":
+        raise WorksheetError("--bridge-eligible-only is only valid with --family bridge", code=2)
 
     run = _assert_succeeded_run(conn, ranking_run_id=rid)
     cfg = _parse_config_json(run.get("config_json"))
     cluster_ver = cluster_version_from_config(cfg) or ""
 
+    review_pool_variant = "bridge_eligible_only" if bridge_eligible_only else "full_family_top_k"
     prov = {
         "ranking_run_id": str(run["ranking_run_id"]),
         "ranking_version": str(run["ranking_version"]),
         "corpus_snapshot_version": str(run["corpus_snapshot_version"]),
         "embedding_version": str(run["embedding_version"]),
         "cluster_version": cluster_ver,
+        "review_pool_variant": review_pool_variant,
         "family": family,
     }
 
-    raw_rows = _fetch_scored_rows(conn, ranking_run_id=rid, family=family, limit=limit)
+    raw_rows = _fetch_scored_rows(
+        conn,
+        ranking_run_id=rid,
+        family=family,
+        limit=limit,
+        bridge_eligible_only=bridge_eligible_only,
+    )
     out: list[dict[str, str]] = []
     for row in raw_rows:
         topics_list = _topic_names_from_json(row.get("topics"))
@@ -280,12 +297,17 @@ def write_recommendation_review_worksheet(
     ranking_run_id: str,
     family: str,
     limit: int,
+    bridge_eligible_only: bool = False,
 ) -> None:
     dsn = database_url or database_url_from_env()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with psycopg.connect(dsn, row_factory=dict_row) as conn:
         data_rows = build_worksheet_rows(
-            conn, ranking_run_id=ranking_run_id, family=family, limit=limit
+            conn,
+            ranking_run_id=ranking_run_id,
+            family=family,
+            limit=limit,
+            bridge_eligible_only=bridge_eligible_only,
         )
     text = render_worksheet_csv(data_rows)
     output_path.write_text(text, encoding="utf-8", newline="")

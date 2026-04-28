@@ -16,11 +16,13 @@ From the pipeline package directory (or with `PYTHONPATH` set to the pipeline pa
 python -m pipeline.cli recommendation-review-worksheet \
   --ranking-run-id <RUN_ID> \
   --family <emerging|bridge|undercited> \
+  [--bridge-eligible-only] \
   --limit 20 \
   --output docs/audit/manual-review/<name>.csv
 ```
 
 Optional: `--database-url` to override the DSN. The run must be **`succeeded`**; failed or missing runs are rejected. See `docs/audit/manual-review/.gitkeep` for where checked-in examples may live (optional; paths are your choice).
+`--bridge-eligible-only` is valid only with `--family bridge` and filters rows to `bridge_eligible IS TRUE`.
 
 ## Summarizing a completed worksheet (labels only)
 
@@ -67,7 +69,7 @@ Leave all four **blank** until a reviewer has assigned labels (the generator sta
 
 ## Provenance (materialized fields)
 
-The CSV repeats **provenance** on every row: `ranking_run_id`, `ranking_version`, `corpus_snapshot_version`, `embedding_version`, `cluster_version` (from `ranking_runs.config_json.clustering_artifact.cluster_version` when present; otherwise **blank**), `family`, and list **`rank`**.
+The CSV repeats **provenance** on every row: `ranking_run_id`, `ranking_version`, `corpus_snapshot_version`, `embedding_version`, `cluster_version` (from `ranking_runs.config_json.clustering_artifact.cluster_version` when present; otherwise **blank**), `review_pool_variant` (`full_family_top_k` or `bridge_eligible_only`), `family`, and list **`rank`**.
 
 `bridge_signal_json` is **not** exported; only precomputed **scores and eligibility** appear.
 

@@ -51,7 +51,9 @@ def _load_rows(path: Path) -> list[dict[str, str]]:
     if reader.fieldnames is None:
         raise ReviewSummaryError("CSV has no header row.", code=2)
     header = [h.strip() if h else "" for h in reader.fieldnames]
-    missing = [c for c in WORKSHEET_COLUMNS if c not in header]
+    # Backward compatibility: older worksheets may not include review_pool_variant.
+    required_columns = [c for c in WORKSHEET_COLUMNS if c != "review_pool_variant"]
+    missing = [c for c in required_columns if c not in header]
     if missing:
         raise ReviewSummaryError(
             f"Worksheet is missing required columns: {', '.join(missing)}",
