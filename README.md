@@ -107,6 +107,14 @@ Use a **distinct** `--embedding-version` string for each comparable retrieval ex
 - Pipeline unit tests run in CI
 - Web build runs in CI
 
+### Pre-merge checks (local)
+
+From the repo root, with Node and (for Python) the same interpreter CI uses:
+
+- `npm run validate:web` — `lint:web` and `build:web`
+- `npm run validate:py` — `python -m pytest services/pipeline/tests apps/api/tests -q` (same paths as `.github/workflows/ci.yml`)
+- `npm run validate` — both of the above (skips or fails the Python step if `python` is not on `PATH`; run the two commands separately in that case)
+
 ### If it fails, check
 
 - `artifacts/bootstrap-preflight-failure.json`
