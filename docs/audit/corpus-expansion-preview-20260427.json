@@ -1,0 +1,1481 @@
+{
+  "generated_at": "2026-04-28T03:37:49Z",
+  "mailto": "mmaitland300@gmail.com",
+  "policy_reference": {
+    "name": "research-radar-v1",
+    "policy_hash": "7817736d2c16",
+    "min_year": 2016,
+    "not_mutated": true
+  },
+  "buckets": [
+    {
+      "bucket_id": "core_mir_existing_sources",
+      "rationale": "Extend coverage within venues already in policy (TISMIR, JAES) before adding new sources. Increases depth in established MIR and audio-ML core neighborhoods.",
+      "expected_role_in_bridge_discovery": "Refines the stable core and emerging head; gives bridge scoring more between-cluster contrast if peripheral venues are added later, without first diluting the core.",
+      "openalex_query_filter_strategy": "Filter: from_publication_date, language, document types, is_retracted:false, has_abstract:true, primary_location.source.id: OR of policy core sources (pipe-separated). No search. Sort: publication_date:desc. Aligns with existing bootstrap_work_plans in openalex.py.",
+      "openalex_uses_search_parameter": false,
+      "estimated_candidate_count": 576,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7147047272",
+          "title": "Evaluation and Prediction of Perceived Naturalness for Source Directivity With a Visible Virtual Source",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7147215911",
+          "title": "Continuous and Overall Evaluation of Spatial Audio Reproduction Systems With Spatially Dynamic Content",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7147440360",
+          "title": "A Low-Dimensional Projection of Sound Absorption Coefficients for a Scattering Delay Network Reverberator",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7134122976",
+          "title": "3D Microphone Array Comparison Part 2: Elicitation of Salient Perceptual Attributes",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7133229896",
+          "title": "Predicting Perceived Semantic Expression of Functional Sounds Using Unsupervised Feature Extraction and Ensemble Learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7128586572",
+          "title": "The Influence of Visual Cues on the Sound Externalization of Virtual Loudspeaker Setups",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7128595024",
+          "title": "High-Resolution Directivity Measurements of an Artificial Head and Mouth Shaped to Three Vowels",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7128600794",
+          "title": "Objective Analysis and Perceptual Evaluation of LA-2A Compressors and Vocal Recordings",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415316343",
+          "title": "A Lightweight Two‑Branch Architecture for Multi‑Instrument Transcription via Note‑Level Contrastive Clustering",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7119099299",
+          "title": "Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7128803784",
+          "title": "RWC Revisited: Towards a Community-Driven MIR Corpus",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7131681001",
+          "title": "Inferring Communities of Medieval Music Manuscripts Using Stochastic Block Models",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7134965261",
+          "title": "Investigating Auditory–Visual Perception Using Multi-Modal Neural Networks with the SoundActions Dataset",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415947443",
+          "title": "Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship",
+          "year": 2025,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414799845",
+          "title": "On the Lack of a Perceptually Motivated Evaluation Metric for Packet Loss Concealment in Networked Music Performances",
+          "year": 2025,
+          "citation_count": 3,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414799687",
+          "title": "Improved Real-Time Six-Degrees-of-Freedom Dynamic Auralization Through Nonuniformly Partitioned Convolution",
+          "year": 2025,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414799717",
+          "title": "An Automatic Mixing Speech Enhancement System for Information Integrity",
+          "year": 2025,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414799719",
+          "title": "Evaluating Reverberation Models for Augmented Reality",
+          "year": 2025,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414799828",
+          "title": "Perceptual Evaluation of Dynamic Sound Zones, Part 1: Audio Quality of Experience in a Simulated Home Environment",
+          "year": 2025,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414799851",
+          "title": "Joint Estimation of Sound Source Position and Room Boundaries Using a Multitask Deep Neural Network Model",
+          "year": 2025,
+          "citation_count": 0,
+          "source_display_name": "Journal of the Audio Engineering Society",
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "Papers in-scope for venue but weak MIR relevance if topic gating is relaxed in a future policy.",
+        "Duplicate or near-duplicate across venues if DOI dedup is not enforced at ingest."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue%2Cprimary_location.source.id%3Ahttps%3A%2F%2Fopenalex.org%2FS4210180030%7Chttps%3A%2F%2Fopenalex.org%2FS62507282&per-page=20&sort=publication_date%3Adesc&cursor=%2A&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": false
+      }
+    },
+    {
+      "bucket_id": "ismir_proceedings_or_mir_conference",
+      "rationale": "Conference-proceedings expansion via ISMIR and related venues, where much MIR work is published. Complements journal-heavy core with timely methods papers.",
+      "expected_role_in_bridge_discovery": "Adds a distinct *proceedings* mass that often sits between year cohorts and topic clusters, increasing the chance of boundary-like works that separate emerging from the MIR mainstream.",
+      "openalex_query_filter_strategy": "Search: short query targeting ISMIR / 'music information retrieval' in title+abstract. Filter: same base as policy (years, en, types, has_abstract, not retracted). Optional: cited_by_count floor only if the pool is huge (not applied in default preview).",
+      "openalex_uses_search_parameter": true,
+      "estimated_candidate_count": 3688,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7155372642",
+          "title": "Automated detection of stereotyped animal sounds using data augmentation and transfer learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4406890357",
+          "title": "Separate this, and all of these Things Around It: Music Source Separation Via Hyperellipsoidal Queries",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415315857",
+          "title": "BACHI: Boundary-Aware Symbolic Chord Recognition Through Masked Iterative Decoding on POP and Classical Music",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415337516",
+          "title": "Sparse Autoencoders Make Audio Foundation Models More Explainable",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4416383433",
+          "title": "Leveraging Whisper Embeddings For Audio-Based Lyrics Matching",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4417103318",
+          "title": "Automatic Music Sample Identification with Multi-Track Contrastive Learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4417301638",
+          "title": "Text2midi-InferAlign: Improving Symbolic Music Generation with Inference-Time Alignment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154481466",
+          "title": "Ontology-Guided Multimodal Framework for Explainable Music Similarity and Recommendation",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Big Data and Cognitive Computing",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154260406",
+          "title": "A Multidimensional MIR Analysis of Acoustic, Linguistic and Cultural Gaps Between Maskandi and Western Music Genres",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Applied Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7153448625",
+          "title": "Comparative Analysis of SVM, k-NN and Logistic Regression Methods in Classifying Turkish Music Genres",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Innovative Science and Engineering (JISE)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7153329879",
+          "title": "A multimodal graph-based music auto-tagging framework: integrating social and content intelligence",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Information Technology and Management",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140282278",
+          "title": "FGIM: a Fast Graph-based Indexes Merging Framework for Approximate Nearest Neighbor Search",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Proceedings of the ACM on Management of Data",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7150384823",
+          "title": "Transkripcija kitarskih tablatur z globokimi transformerskimi modeli",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Repository of the University of Ljubljana (University of Ljubljana)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7143719133",
+          "title": "The Hi-Audio online platform for recording and distributing multi-track music datasets",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal on Audio Speech and Music Processing",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7147055129",
+          "title": "Constructing Composite Features for Interpretable Music-Tagging",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Open Access at Essex (University of Essex)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7141979206",
+          "title": "Recommender systems, representativeness, and online music: a psychosocial analysis of Italian listeners",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Humanities and Social Sciences Communications",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140187162",
+          "title": "Bridging Cold Start and Continuation Challenges in Music Systems using Quantum Techniques",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Springer Link (Chiba Institute of Technology)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7137335018",
+          "title": "The influence of musicality on expressive fable reading: adult- and child-directed perspectives",
+          "year": 2026,
+          "citation_count": 1,
+          "source_display_name": "Frontiers in Psychology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7134183499",
+          "title": "The sound of emotions: an artificial intelligence approach to predicting emotions from musical selections",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Multimedia Systems",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7133339644",
+          "title": "Benchmarking an Integrated Deep Learning Pipeline for Robust Detection and Individual Counting of the Greater Caribbean Manatee",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Applied Sciences",
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "Tutorials, panels, and short papers with thin abstracts.",
+        "Non-English metadata marked en.",
+        "Version noise (preprint + proceedings duplicate) if not merged."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue&per-page=20&sort=publication_date%3Adesc&cursor=%2A&search=ISMIR+music+information+retrieval&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": true
+      }
+    },
+    {
+      "bucket_id": "audio_ml_signal_processing",
+      "rationale": "Papers in audio representation, separation front-ends, SSL audio, and DSP+learning at signal-processing venues that still intersect MIR-relevant methods.",
+      "expected_role_in_bridge_discovery": "Pulls embedding- and metric-space structure toward audio physics and separation; can separate MIR-pure topic clusters from audio-ML neighborhoods for clearer bridge vs emerging heads.",
+      "openalex_query_filter_strategy": "Search: 'audio representation' OR 'self-supervised audio' OR 'audio signal' combined in one search string. Filter: base policy filters; cited_by_count optional (e.g. :>0) to drop uncited noise if needed in ingest.",
+      "openalex_uses_search_parameter": true,
+      "estimated_candidate_count": 11833,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7155655395",
+          "title": "Understanding How Teachers Define and Employ Civics Education in Non-Elective Social Studies Classrooms",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Seton Hall University eRepository (Seton Hall University)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7134469035",
+          "title": "English to Central Kurdish Speech Translation: Corpus Creation, Evaluation, and Orthographic Standardization",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "SPIRE - Sciences Po Institutional REpository",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7153680773",
+          "title": "Perceptions of Effective Co-Teaching Partnerships in High School Inclusive Classrooms",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Digital Commons - East Tennessee State University (East Tennessee State University)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155606518",
+          "title": "Coupled cross-sectional and longitudinal non-negative matrix factorization reveals dominant brain aging trajectories in 48,949 individuals",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Nature Communications",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155620296",
+          "title": "DBAN-Net: a dual-branch attention network for acoustic fault detection in electrical power equipment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Engineering and Applied Science",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155486285",
+          "title": "Automatic chick cough detection system based on improved audio spectrogram convolutional transformer neural network",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Veterinary Science",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155511553",
+          "title": "Leveraging artificial intelligence in bioacoustics for animal health monitoring and early diagnosis in veterinary medicine",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Veterinary Science",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155353250",
+          "title": "Empowering pre-service teachers with generative AI: a GenAI-TPACK-based approach to digital storytelling",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Education and Information Technologies",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155372642",
+          "title": "Automated detection of stereotyped animal sounds using data augmentation and transfer learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155380334",
+          "title": "Impact of a large-scale interactive and immersive science pop-up shop about infection and hygiene on visitors and volunteers",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Public Health",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155391647",
+          "title": "A Focused Survey of Generative AI-Based Music Therapy Systems: Recent Progress and Open Challenges",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Applied Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155404271",
+          "title": "Experimental Music Workshop Facilitating Participant Transformation: Characteristics and Significance of Imus Music",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Cureus",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155211128",
+          "title": "Conducting Evaluations in the Context of Tertiary Prevention of Youth Crime: Reflections from the Youth Endowment Fund",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Behavioral Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155226694",
+          "title": "Contactless Cardiac Health Monitoring with Millimeter-Wave Radar Based on PMG-SATNet",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Sensors",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414750846",
+          "title": "Benchmarking Humans And Machines On Complex Multilingual Speech Understanding Tasks",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414819135",
+          "title": "SingMOS-Pro: An Comprehensive Benchmark For Singing Quality Assessment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414971177",
+          "title": "Probing Whisper for Dysarthric Speech in Detection and Assessment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414982507",
+          "title": "Tokenchain: A Discrete Speech Chain via Semantic Token Modeling",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415273624",
+          "title": "Gelina: Unified Speech and Gesture Synthesis Via Interleaved Token Prediction",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415315857",
+          "title": "BACHI: Boundary-Aware Symbolic Chord Recognition Through Masked Iterative Decoding on POP and Classical Music",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "Generic speech ASR and speaker ID unless exclusion terms in policy are applied at ingest.",
+        "Medical/biomed audio if not excluded by policy."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue&per-page=20&sort=publication_date%3Adesc&cursor=%2A&search=self-supervised+audio+music+representation&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": true
+      }
+    },
+    {
+      "bucket_id": "music_recommender_systems",
+      "rationale": "Music recommendation, playlist modeling, and session-aware learning — adjacent to core MIR and often well cited; supports user-facing evaluation narratives.",
+      "expected_role_in_bridge_discovery": "Creates a *systems / ranking* neighborhood distinct from 'audio content' work; strong candidate for cluster separation between application track and method-centric papers.",
+      "openalex_query_filter_strategy": "Search: 'music recommendation' OR 'playlist' with base filters. cited_by_count and publication_year can bound era (e.g. 2016–) via from_publication_date (already) or extra publication_year: range if the API is used in later tooling.",
+      "openalex_uses_search_parameter": true,
+      "estimated_candidate_count": 3379,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7154844529",
+          "title": "Comparison between Pulmonary Rehabilitation and Dance in Patients with Chronic Obstructive Pulmonary Disease: A Randomized Controlled Clinical Trial.",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "PubMed",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154726525",
+          "title": "Engagement-based curation and the evolution of taste",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Cultural Economics",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154620733",
+          "title": "Practice makes perfect sense to me: a retrospective analysis of recommending independent skills practice in music therapy for military-connected individuals",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Neurology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154689616",
+          "title": "Wrap your head around it: algorithmic self-making and performances of taste on Spotify Wrapped",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Information Communication & Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154481466",
+          "title": "Ontology-Guided Multimodal Framework for Explainable Music Similarity and Recommendation",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Big Data and Cognitive Computing",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7152673806",
+          "title": "CACA guidelines for music-based interventions in oncology",
+          "year": 2026,
+          "citation_count": 1,
+          "source_display_name": "Holistic Integrative Oncology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7153329879",
+          "title": "A multimodal graph-based music auto-tagging framework: integrating social and content intelligence",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Information Technology and Management",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7152625278",
+          "title": "The digital infrastructures of music scenes: Perspectives from the Global South",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "DIY Alternative Cultures & Society",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7152579252",
+          "title": "Manx language for all: community, cooperation and creativity in the 21st century",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "International Journal of the Sociology of Language",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7151268703",
+          "title": "Why Not Her? Gender, power, and gatekeeping in Irish and UK radio and festival programming",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Communication",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7151594998",
+          "title": "Cultural Diversity in Music Education: An Agenda for the Second Quarter of the 21st Century",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Education Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7147050952",
+          "title": "Music as an Intervention for Pain Relief in Orthopedic Bedside Care",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Pain Management Nursing",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7147706620",
+          "title": "Writing as Myself",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Current Issues in Education",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7153498313",
+          "title": "Cultural Tourism Through Girl Idol Groups: A Case Study of BNK48 and CGM48 in Thailand",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Asian Humanities at Kyushu University",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154514453",
+          "title": "Regulating Data Monetization",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Texas A&M Law Review",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7144357812",
+          "title": "Effects of Music Choice on Performance and Psychophysiological Responses to Exercise—A Scoping Review",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Functional Morphology and Kinesiology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7141979206",
+          "title": "Recommender systems, representativeness, and online music: a psychosocial analysis of Italian listeners",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Humanities and Social Sciences Communications",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7142281766",
+          "title": "The use of background music in educational settings",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Uluslararası Türk Eğitim Bilimleri Dergisi",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140674078",
+          "title": "TECHNOLOGY FOR SELECTING MUSICAL GENRES TAKING INTO ACCOUNT HUMAN MENTAL HEALTH BASED ON MACHINE LEARNING",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Computer Systems and Information Technologies",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140279653",
+          "title": "Implementing video-based group music therapy during cancer treatment: insights from a mixed-methods study",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Supportive Care in Cancer",
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "E-commerce and generic recsys without music focus.",
+        "Cold-start papers that are mostly industry narratives."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue&per-page=20&sort=publication_date%3Adesc&cursor=%2A&search=music+recommendation+playlist&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": true
+      }
+    },
+    {
+      "bucket_id": "cultural_computational_musicology",
+      "rationale": "Computational musicology, digital humanities, corpora, and style analysis; diversifies the qualitative and symbolic side of the corpus for cultural bridge discovery.",
+      "expected_role_in_bridge_discovery": "Adds non-audio-ML but structured-MIR and humanities-adjacent clusters; can separate 'culture/history' from pure content models — useful for stricter bridge eligibility that rewards cross-cluster position.",
+      "openalex_query_filter_strategy": "Search: 'computational musicology' OR 'digital musicology' with base filters. publication_date / publication_year filters already aligned via from_publication_date in base.",
+      "openalex_uses_search_parameter": true,
+      "estimated_candidate_count": 1337,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7155391705",
+          "title": "Decoding the evolution of melodic and harmonic structure of Western music through the lens of network science",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4417301638",
+          "title": "Text2midi-InferAlign: Improving Symbolic Music Generation with Inference-Time Alignment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154260406",
+          "title": "A Multidimensional MIR Analysis of Acoustic, Linguistic and Cultural Gaps Between Maskandi and Western Music Genres",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Applied Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7152974055",
+          "title": "Editorial: Advancing vocal biomarkers and voice AI in healthcare: multidisciplinary focus on responsible and effective development and use",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Digital Health",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7152673480",
+          "title": "Explaining cultural emotion in Chinese pop music with multimodal AI: educational and socio-emotional implications",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Psychology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7153248478",
+          "title": "Franco-German Cultural Transfers: An Analysis of Research Data Through the LaCAS Platform",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Preservation Digital Technology & Culture",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7143719133",
+          "title": "The Hi-Audio online platform for recording and distributing multi-track music datasets",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal on Audio Speech and Music Processing",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140477846",
+          "title": "Arab music improvisation corpus for research (AMICOR): development and machine translation experiments",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Language Resources and Evaluation",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7127546292",
+          "title": "Where Graphs Meet Fuzzy Logic — A DBMS-Centered Engine for Polyphonic Music Matching in Score Databases",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "SPIRE - Sciences Po Institutional REpository",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7142575012",
+          "title": "Where Graphs Meet Fuzzy Logic — A DBMS-Centered Engine for Polyphonic Music Matching in Score Databases (Best demo Award)",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "SPIRE - Sciences Po Institutional REpository",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7134956367",
+          "title": "Selecting AI-enabled music learning technologies in higher education using AHP and TOPSIS",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7133537911",
+          "title": "Tonal modulation influences on musical sight-reading",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Psychology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7128807849",
+          "title": "Application of Visual Information in Music Education Digital Technologies: A Scoping Review",
+          "year": 2026,
+          "citation_count": 1,
+          "source_display_name": "Education Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7128741623",
+          "title": "Melodies of the forest: Nature as an improvisational space for shared creative embodiment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "People and Nature",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7128738648",
+          "title": "Hot Topics and Frontier Evolution in Music Research within the Multimodal Art Context: A Bibliometric Analysis Based on CiteSpace",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "The Korean Society of Science & Art",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7125983108",
+          "title": "Analysis model for microtonal variations in ethnic music integrating the self-supervised PESTO algorithm",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Discover Computing",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7126054839",
+          "title": "Chasing Meaning and/or Insight? A Survey on Evaluation Practices at the Intersection of Visualization and the Humanities",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Research Portal (King's College London)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7119508815",
+          "title": "Inverse and indirect mappings in embodied AI systems in everyday environments",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Computer Science",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7119511988",
+          "title": "End-to-End Full-Page Optical Music Recognition for Pianoform Sheet Music",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "International Journal of Computer Vision",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7119099299",
+          "title": "Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Transactions of the International Society for Music Information Retrieval",
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "Purely historical non-computational work if search is too broad.",
+        "Non-English even with language filter misfires."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue&per-page=20&sort=publication_date%3Adesc&cursor=%2A&search=computational+musicology+digital&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": true
+      }
+    },
+    {
+      "bucket_id": "ethics_law_fairness_user_studies",
+      "rationale": "MIR and audio-ML with fairness, dataset governance, user studies, or legal/ethical framing — rare in small corpora but important for review diversity.",
+      "expected_role_in_bridge_discovery": "May form sparse bridge-like clusters between policy/social and technical MIR; high leverage for distinct top-k in bridge if eligibility tightens, but can overlap emerging if the pool is too small.",
+      "openalex_query_filter_strategy": "Search: 'music' AND (fairness OR 'user study' OR dataset) combined in one string. Filter: base; has_abstract true for human-review quality.",
+      "openalex_uses_search_parameter": true,
+      "estimated_candidate_count": 11719,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7117442860",
+          "title": "Generative machine learning in professional work and professional service firms : a research agenda",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Lancaster EPrints (Lancaster University)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4404570405",
+          "title": "Bias in Large Language Models: Origin, Evaluation, and Mitigation",
+          "year": 2026,
+          "citation_count": 14,
+          "source_display_name": "Electronics",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155499410",
+          "title": "Pretty or practical? The role of gender stereotypes in shaping design concepts",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Research in Engineering Design",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155556613",
+          "title": "The intersection of music, physical education, and psychology: enhancing college students’ motivation and performance through student-curated playlists",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Humanities and Social Sciences Communications",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155353250",
+          "title": "Empowering pre-service teachers with generative AI: a GenAI-TPACK-based approach to digital storytelling",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Education and Information Technologies",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155383525",
+          "title": "When the Source Is Artificial: Negative Emotions, Intergroup Anxiety, and Threat Responses to <scp>AI</scp> ‐Generated Video Content",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Community & Applied Social Psychology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155419605",
+          "title": "Advancing remote photoplethysmography (rPPG) to facilitate cardiac monitoring in naturalistic settings using webcam technology",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Behavior Research Methods",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155192300",
+          "title": "Audio-Based Characterization of Gait Parameters in Mangalarga Marchador, Campolina, and Piquira Horses Using Deep Learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Animals",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415273624",
+          "title": "Gelina: Unified Speech and Gesture Synthesis Via Interleaved Token Prediction",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4417464813",
+          "title": "BiCoRec: Bias-mitigated context-aware sequential recommendation model",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Neural Computing and Applications",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155085986",
+          "title": "A novel decision making approach based on Picture Hesitant Fuzzy Environment for optimizing art education strategies",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154901729",
+          "title": "Blockchain-integrated machine learning framework for transparent smart contract vulnerability detection",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Blockchain",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154996759",
+          "title": "Novel Ensemble Models for Enhanced Accuracy in Time Series Classification: Application to Multimodal Emotion Detection",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Computers",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154949042",
+          "title": "Robust and Adaptive Dual-Defense Framework Against Data Poisoning Attacks in Recommendation Systems",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Electronics",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154832037",
+          "title": "OntoChat Assistant for User Story Generation in Ontology Engineering",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "ACM Transactions on Intelligent Systems and Technology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154836653",
+          "title": "A deep generative approach to personalized super mario level design",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154749113",
+          "title": "Examining the infographic design instructional process in terms of prospective mathematics teachers’ infographic design proficiency, self‑efficacy, and abilities in evaluating student errors: A model proposal",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "PLoS ONE",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154593592",
+          "title": "M-GNN: A Topology-Enhanced Multi-Modal Graph Neural Network for Cancer Driver Gene Prediction",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Metabolites",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154455376",
+          "title": "Decoding immunotherapy response through computational modeling",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Nature Communications",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154481466",
+          "title": "Ontology-Guided Multimodal Framework for Explainable Music Similarity and Recommendation",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Big Data and Cognitive Computing",
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "General 'AI ethics' with no music hook.",
+        "User studies in speech, not music."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue&per-page=20&sort=publication_date%3Adesc&cursor=%2A&search=music+fairness+user+study+dataset&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": true
+      }
+    },
+    {
+      "bucket_id": "symbolic_music_and_harmony",
+      "rationale": "Symbolically oriented work: harmony, counterpoint, score, MusicXML, pitch spelling — reduces acoustic-embedding dominance in the corpus.",
+      "expected_role_in_bridge_discovery": "Pushes one cluster away from 'waveform/embedding' geometry; if separated in embedding space, improves interpretability of bridge as cross-modal or cross-representation.",
+      "openalex_query_filter_strategy": "Search: 'music' AND (harmony OR counterpoint OR 'symbolic' OR 'score' OR 'MusicXML') with base filters. ",
+      "openalex_uses_search_parameter": true,
+      "estimated_candidate_count": 4161,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7155391647",
+          "title": "A Focused Survey of Generative AI-Based Music Therapy Systems: Recent Progress and Open Challenges",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Applied Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155515923",
+          "title": "Moralized Parental Violence and the Ethics of Reconciliation in Sinophone Family Cinema",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Humanities",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415315857",
+          "title": "BACHI: Boundary-Aware Symbolic Chord Recognition Through Masked Iterative Decoding on POP and Classical Music",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154978457",
+          "title": "The Ethnographer as Detective: Indiciary Paradigm and Abduction",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Sociologica",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154260406",
+          "title": "A Multidimensional MIR Analysis of Acoustic, Linguistic and Cultural Gaps Between Maskandi and Western Music Genres",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Applied Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154318936",
+          "title": "Enhancing long-term structure in symbolic music generation via a cascaded Skeleton-to-texture framework",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7153448625",
+          "title": "Comparative Analysis of SVM, k-NN and Logistic Regression Methods in Classifying Turkish Music Genres",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Innovative Science and Engineering (JISE)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7151958866",
+          "title": "The aesthetic triad and traditional Chinese art symbols: a theoretical framework",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Psychology",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7152641673",
+          "title": "Multimodal rhetorical strategies of Asep Sunandar Sunarya’s <i>Wayang Golek</i> performances: multimodality-based genre analysis",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Multimodal Communication",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414449694",
+          "title": "Looking Beyond the Obvious: A Survey on Abstract Concept Recognition for Video Understanding",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "International Journal of Computer Vision",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7150800119",
+          "title": "Machine Learning in Electromechanical Sound Art",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Organised Sound",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7150806375",
+          "title": "Praat Audiotools: An offline analysis-resynthesis toolkit for experimental composition",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Organised Sound",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7151270093",
+          "title": "Singing-Oriented Language and Music Education (SOLME)",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Encyclopedia",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7148532601",
+          "title": "TOWARDS UNDERSTANDING AND PREDICTING INDIVIDUALIZED AESTHETIC RESPONSES TO ECOLOGICALLY VALID VISUAL STIMULI",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "eCommons (Cornell University)",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140477846",
+          "title": "Arab music improvisation corpus for research (AMICOR): development and machine translation experiments",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Language Resources and Evaluation",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140227345",
+          "title": "Seismic Pre-stack Inversion Using Iterative, Nonlinear Quasi-Second-Order Optimization Techniques",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Mathematical Geosciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140324163",
+          "title": "Applications of Artificial Intelligence in Developing Sustainable Design Solutions for Temporary Exhibitions That Reflect the Cultural and Touristic Identity of Al-Qatt Al-Asiri Art",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Sustainability",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140080638",
+          "title": "Collective Emotions and Electronic Music in Young People with (And Without) Adjustment Disorders: A Biosocial Study at a Steve Aoki Concert",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Education Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7144768299",
+          "title": "CollabScore, a collaborative system for OMR validation and correction",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "SPIRE - Sciences Po Institutional REpository",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7140061446",
+          "title": "Tuning Immersion and Performance with Adaptive Generative Music in VR",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "University of Birmingham Research Portal (University of Birmingham)",
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "Computer vision for sheet images without audio relevance if policy topic gate is too loose.",
+        "Education or small datasets with minimal novelty."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue&per-page=20&sort=publication_date%3Adesc&cursor=%2A&search=music+harmony+symbolic+score&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": true
+      }
+    },
+    {
+      "bucket_id": "source_separation_benchmarks",
+      "rationale": "Source separation, demixing, and benchmark papers (MUSDB, SISEC-style) to anchor a separation-heavy neighborhood and evaluation references.",
+      "expected_role_in_bridge_discovery": "Tends to sit between classic SP and learning-based MIR; useful for disambiguating 'emerging' separation from generic emerging methods if the cluster count is high enough.",
+      "openalex_query_filter_strategy": "Search: 'source separation' AND music OR benchmark. Filter: base; optional cited_by_count:>5 in a stricter pass to emphasize established baselines. For this preview, use search + base only.",
+      "openalex_uses_search_parameter": true,
+      "estimated_candidate_count": 4950,
+      "sample_works": [
+        {
+          "openalex_id": "https://openalex.org/W7155620296",
+          "title": "DBAN-Net: a dual-branch attention network for acoustic fault detection in electrical power equipment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Journal of Engineering and Applied Science",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155497153",
+          "title": "Facial emotion-based movie recommendation system using optimized compound scaling neural network with polynomial and RBF kernels",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155518048",
+          "title": "Computational approaches to controversy detection: a systematic review",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Frontiers in Communication",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155525074",
+          "title": "Integrating Frequency Guidance into Multi-Source Domain Generalization for Acoustic-Based Fault Diagnosis in Industrial Systems",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Sensors",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155541772",
+          "title": "Effects of Cognitive Style and Evaluation Context on Hedonic and Sensory Perception of Café Latte: A Comparison of Sensory Booth, Real-Life, and Mixed Reality Environments",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Foods",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155372642",
+          "title": "Automated detection of stereotyped animal sounds using data augmentation and transfer learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Scientific Reports",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155391647",
+          "title": "A Focused Survey of Generative AI-Based Music Therapy Systems: Recent Progress and Open Challenges",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Applied Sciences",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155419605",
+          "title": "Advancing remote photoplethysmography (rPPG) to facilitate cardiac monitoring in naturalistic settings using webcam technology",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Behavior Research Methods",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155192300",
+          "title": "Audio-Based Characterization of Gait Parameters in Mangalarga Marchador, Campolina, and Piquira Horses Using Deep Learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Animals",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414750846",
+          "title": "Benchmarking Humans And Machines On Complex Multilingual Speech Understanding Tasks",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414809122",
+          "title": "Universr: Unified and Versatile Audio Super-Resolution Via Vocoder-Free Flow Matching",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4414819135",
+          "title": "SingMOS-Pro: An Comprehensive Benchmark For Singing Quality Assessment",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4415270286",
+          "title": "Deepaq: A Perceptual Audio Quality Metric Based on Foundational Models and Weakly Supervised Learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4416255669",
+          "title": "AnyAccomp: Generalizable Accompaniment Generation Via Quantized Melodic Bottleneck",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4416383433",
+          "title": "Leveraging Whisper Embeddings For Audio-Based Lyrics Matching",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4417103318",
+          "title": "Automatic Music Sample Identification with Multi-Track Contrastive Learning",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W4417119751",
+          "title": "MMAudioSep: Taming Video-to-Audio Generative Model Towards Video/Text-Queried Sound Separation",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": null,
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7155083536",
+          "title": "Recent Progress in Exosome-Derived Nanocarriers for Breast Cancer Therapy: Advances, Translational Barriers, and Scale-Up Considerations",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Pharmaceutical Research",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154996759",
+          "title": "Novel Ensemble Models for Enhanced Accuracy in Time Series Classification: Application to Multimodal Emotion Detection",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Computers",
+          "abstract_present": true
+        },
+        {
+          "openalex_id": "https://openalex.org/W7154976177",
+          "title": "Evaluating CLAP and MERT for Fine-Grained Cymbal Classification: A Multi-Stage Representation Analysis",
+          "year": 2026,
+          "citation_count": 0,
+          "source_display_name": "Electronics",
+          "abstract_present": true
+        }
+      ],
+      "likely_risks_noise_sources": [
+        "Speech-only separation unless exclusion policy catches it in text.",
+        "Dereverberation without musical context."
+      ],
+      "api_request": {
+        "works_url": "https://api.openalex.org/works?filter=from_publication_date%3A2016-01-01%2Clanguage%3Aen%2Ctype%3Aarticle%7Cproceedings-article%7Cpreprint%2Cis_retracted%3Afalse%2Chas_abstract%3Atrue&per-page=20&sort=publication_date%3Adesc&cursor=%2A&search=music+source+separation+benchmark&select=id%2Cdoi%2Ctitle%2Ctype%2Clanguage%2Cpublication_year%2Cpublication_date%2Ccited_by_count%2Cis_retracted%2Cprimary_location%2Cauthorships%2Ctopics%2Creferenced_works%2Cupdated_date%2Cabstract_inverted_index",
+        "mailto_user_agent": "mmaitland300@gmail.com",
+        "uses_openalex_search_parameter": true
+      }
+    }
+  ],
+  "recommendation": {
+    "keep_current_corpus_for_smoke_only": true,
+    "expand_before_next_bridge_weight_experiment": true,
+    "suggested_target_corpus_size_range": [
+      200,
+      500
+    ],
+    "recommended_first_pass_bucket_ids": [
+      "core_mir_existing_sources",
+      "ismir_proceedings_or_mir_conference",
+      "audio_ml_signal_processing",
+      "music_recommender_systems"
+    ],
+    "buckets_likely_defer_due_to_noise": [
+      "ethics_law_fairness_user_studies",
+      "cultural_computational_musicology"
+    ],
+    "stricter_bridge_eligibility_recommended_for_next_zero_weight_run": true
+  },
+  "versioning_implications": {
+    "new_corpus_snapshot_version": "Ingesting an expanded source set or policy will produce a new source_snapshot_version and corpus identity for downstream steps.",
+    "repaired_work_text_artifact": "If text repair runs, corrected title/abstract text is tied to the snapshot; label embedding inputs accordingly.",
+    "new_embedding_version": "New embedding_version label after text change or model change; required before clustering and ranking on the new pool.",
+    "new_cluster_version": "New cluster_version after re-embed; bridge_score depends on cluster boundary definitions.",
+    "new_zero_bridge_ranking_version": "A zero–bridge-weight ranking run should be the baseline before any bridge weight experiment on the new pool.",
+    "fresh_review_worksheets_and_summaries": "Manual review CSVs, family summaries, and rollups are invalid across corpus pools; regenerate after a new snapshot."
+  },
+  "caveats": [
+    "The current ~59-work corpus is suitable for smoke, plumbing, and demo evidence only, not for strong ML-quality generalization claims.",
+    "Expanding the corpus changes candidate pools and label distributions; do not treat metrics from the old 59-work pool and a new pool as same-pool performance.",
+    "A serious expansion is followed (in order) by text repair, embedding coverage checks, clustering, a zero–bridge-weight ranking run, bridge diagnostics, and fresh labels before comparing bridge head distinctness.",
+    "This preview is not an ingest or policy decision by itself; apply topic gates, exclusions, and source policy from CorpusPolicy in code before committing a snapshot.",
+    "Preview counts and samples are from OpenAlex list endpoints; deduplication, retraction, and final inclusion rules may reduce realized corpus size."
+  ],
+  "openalex_mode": "live",
+  "per_bucket_sample_size": 20
+}
