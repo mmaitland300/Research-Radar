@@ -40,6 +40,10 @@ from pipeline.bridge_signal_diagnostics import (
     BridgeSignalDiagnosticsError,
     run_bridge_signal_diagnostics,
 )
+from pipeline.bridge_eligibility_sensitivity import (
+    BridgeEligibilitySensitivityError,
+    run_bridge_eligibility_sensitivity,
+)
 from pipeline.cluster_inspection import (
     ClusterInspectionError,
     run_cluster_inspection,
@@ -408,6 +412,10 @@ def main() -> None:
         "bridge-signal-diagnostics",
         help="Read-only bridge signal diagnostics for one explicit ranking_run_id (paper_scores + ranking_runs)",
     )
+    bridge_sensitivity_parser = subparsers.add_parser(
+        "bridge-eligibility-sensitivity",
+        help="Read-only threshold sweep for bridge eligibility distinctness on one explicit ranking_run_id",
+    )
     corpus_expansion_parser = subparsers.add_parser(
         "corpus-expansion-preview",
         help="OpenAlex read-only: bucket strategies, sample works, and expansion recommendations (no DB or snapshot)",
@@ -652,6 +660,32 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    bridge_sensitivity_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id (no latest fallback)",
+    )
+    bridge_sensitivity_parser.add_argument(
+        "--k",
+        type=int,
+        default=20,
+        help="Top-k size used for overlap diagnostics (default 20)",
+    )
+    bridge_sensitivity_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write sensitivity JSON",
+    )
+    bridge_sensitivity_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write sensitivity Markdown",
+    )
+    bridge_sensitivity_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
 
@@ -866,6 +900,27 @@ def main() -> None:
             )
         except BridgeSignalDiagnosticsError as e:
             print(f"bridge-signal-diagnostics: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "bridge-eligibility-sensitivity":
+        if args.k < 1 or args.k > 200:
+            parser.error("--k must be between 1 and 200")
+        rrid = (args.ranking_run_id or "").strip()
+        if not rrid:
+            parser.error("--ranking-run-id is required and must not be blank")
+        try:
+            run_bridge_eligibility_sensitivity(
+                ranking_run_id=rrid,
+                k=int(args.k),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+                database_url=args.database_url,
+            )
+        except BridgeEligibilitySensitivityError as e:
+            print(f"bridge-eligibility-sensitivity: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
