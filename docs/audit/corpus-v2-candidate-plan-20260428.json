@@ -1,7 +1,9 @@
 {
-  "generated_at": "2026-04-28T04:18:14.551191+00:00",
-  "contact_provided": true,
-  "contact_mode": "cli",
+  "generated_at": "2026-04-28T06:10:21.286614+00:00",
+  "contact_provided": false,
+  "contact_mode": "none",
+  "api_key_provided": true,
+  "auth_mode": "api_key",
   "policy_reference": {
     "name": "research-radar-v1",
     "policy_hash": "7817736d2c16"

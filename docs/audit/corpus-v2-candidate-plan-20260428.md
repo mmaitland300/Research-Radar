@@ -5,7 +5,8 @@ This document is **planning output only**. It does **not** validate benchmarks, 
 ## Totals
 
 - **selected_total:** `217` (target range `200`–`500`)
-- **contact_mode:** `cli` (raw mailto is not stored in this file)
+- **contact_mode:** `none` (raw mailto is not stored in this file)
+- **auth_mode:** `api_key` · **api_key_provided:** `True` (secrets are not stored)
 
 ## Selected by bucket
 
