@@ -1,0 +1,654 @@
+{
+  "generated_at": "2026-04-28T14:51:21.352150+00:00",
+  "provenance": {
+    "ranking_run_id": "rank-ed3f090ad7",
+    "ranking_version": "bridge-v2-nm1-zero-corpusv2-r1-k12-20260428",
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+    "k": 20
+  },
+  "bridge_row_coverage": {
+    "bridge_family_row_count": 217,
+    "bridge_score_nonnull_count": 217,
+    "bridge_score_null_count": 0,
+    "bridge_eligible_true_count": 217,
+    "bridge_eligible_false_count": 0,
+    "bridge_eligible_null_count": 0,
+    "bridge_signal_json_present_count": 217,
+    "bridge_signal_json_missing_count": 0
+  },
+  "head_eligibility": {
+    "full_bridge_top_k_eligible_true_count": 20,
+    "full_bridge_top_k_eligible_false_count": 0,
+    "full_bridge_top_k_eligible_null_count": 0,
+    "eligible_only_bridge_top_k_count": 20,
+    "full_bridge_equals_eligible_only_bridge_top_k": true
+  },
+  "score_distribution": {
+    "all_bridge_rows": {
+      "min_bridge_score": 0.0,
+      "max_bridge_score": 0.996747,
+      "mean_bridge_score": 0.825239659,
+      "median_bridge_score": 0.833216,
+      "unique_bridge_score_count": 217,
+      "null_bridge_score_count": 0
+    },
+    "bridge_top_k": {
+      "min_bridge_score": 0.648657,
+      "max_bridge_score": 0.986613,
+      "mean_bridge_score": 0.8347659,
+      "median_bridge_score": 0.8411375,
+      "unique_bridge_score_count": 20,
+      "null_bridge_score_count": 0
+    }
+  },
+  "bridge_top_k_rows": [
+    {
+      "rank": 1,
+      "work_id": 136,
+      "paper_id": "https://openalex.org/W4409215215",
+      "title": "Issues and Challenges of Audio Technologies for the Musical Metaverse",
+      "final_score": 0.866667,
+      "semantic_score": null,
+      "citation_velocity_score": 1.0,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.889527,
+      "diversity_penalty": 0.666667,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": true,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.3333333333333333,
+        "foreign_neighbor_count": 5,
+        "anchor_cluster_id": "c010",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 2,
+      "work_id": 19,
+      "paper_id": "https://openalex.org/W4408772031",
+      "title": "CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research",
+      "final_score": 0.809091,
+      "semantic_score": null,
+      "citation_velocity_score": 0.454545,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.672552,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.7333333333333333,
+        "foreign_neighbor_count": 11,
+        "anchor_cluster_id": "c001",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 3,
+      "work_id": 21,
+      "paper_id": "https://openalex.org/W4414199528",
+      "title": "PESTO: Real‑Time Pitch Estimation with Self‑Supervised Transposition‑Equivariant Objective",
+      "final_score": 0.809091,
+      "semantic_score": null,
+      "citation_velocity_score": 0.454545,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.876733,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.4666666666666667,
+        "foreign_neighbor_count": 7,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 4,
+      "work_id": 15,
+      "paper_id": "https://openalex.org/W4409967775",
+      "title": "ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research",
+      "final_score": 0.745454,
+      "semantic_score": null,
+      "citation_velocity_score": 0.272727,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.766523,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.7333333333333333,
+        "foreign_neighbor_count": 11,
+        "anchor_cluster_id": "c001",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 5,
+      "work_id": 20,
+      "paper_id": "https://openalex.org/W4412900768",
+      "title": "STAR Drums: A Dataset for Automatic Drum Transcription",
+      "final_score": 0.745454,
+      "semantic_score": null,
+      "citation_velocity_score": 0.272727,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.763029,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.3333333333333333,
+        "foreign_neighbor_count": 5,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 6,
+      "work_id": 104,
+      "paper_id": "https://openalex.org/W4414799845",
+      "title": "On the Lack of a Perceptually Motivated Evaluation Metric for Packet Loss Concealment in Networked Music Performances",
+      "final_score": 0.745454,
+      "semantic_score": null,
+      "citation_velocity_score": 0.272727,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.886925,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.8666666666666667,
+        "foreign_neighbor_count": 13,
+        "anchor_cluster_id": "c006",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 7,
+      "work_id": 11,
+      "paper_id": "https://openalex.org/W4411649085",
+      "title": "The AI Music Arms Race: On the Detection of AI-Generated Music",
+      "final_score": 0.713636,
+      "semantic_score": null,
+      "citation_velocity_score": 0.181818,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.801144,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.3333333333333333,
+        "foreign_neighbor_count": 5,
+        "anchor_cluster_id": "c010",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 8,
+      "work_id": 14,
+      "paper_id": "https://openalex.org/W4407236737",
+      "title": "The GigaMIDI Dataset with Features for Expressive Music Performance Detection",
+      "final_score": 0.713636,
+      "semantic_score": null,
+      "citation_velocity_score": 0.181818,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.900149,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.8,
+        "foreign_neighbor_count": 12,
+        "anchor_cluster_id": "c000",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 9,
+      "work_id": 16,
+      "paper_id": "https://openalex.org/W4410091503",
+      "title": "Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data",
+      "final_score": 0.713636,
+      "semantic_score": null,
+      "citation_velocity_score": 0.181818,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.648657,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.8666666666666667,
+        "foreign_neighbor_count": 13,
+        "anchor_cluster_id": "c001",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 10,
+      "work_id": 9,
+      "paper_id": "https://openalex.org/W4412780451",
+      "title": "MusiQAl: A Dataset for Music Question-Answering through Audio-Video Fusion",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.796375,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c008",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 11,
+      "work_id": 10,
+      "paper_id": "https://openalex.org/W4412696666",
+      "title": "Style-Based Composer Identification and Attribution of Symbolic Music Scores: A Systematic Survey",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.942087,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 1.0,
+        "foreign_neighbor_count": 15,
+        "anchor_cluster_id": "c009",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 12,
+      "work_id": 12,
+      "paper_id": "https://openalex.org/W4411489043",
+      "title": "The Potential of Unsupervised Induction of Harmonic Syntax for Jazz",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.659645,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c011",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 13,
+      "work_id": 30,
+      "paper_id": "https://openalex.org/W7116976483",
+      "title": "Multimodal Datasets for Studying Expert Performances of Musical Scores",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.777947,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.9333333333333333,
+        "foreign_neighbor_count": 14,
+        "anchor_cluster_id": "c007",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 14,
+      "work_id": 125,
+      "paper_id": "https://openalex.org/W4411141659",
+      "title": "Distilling DDSP: Exploring Real-Time Audio Generation on Embedded Systems",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.986613,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6,
+        "foreign_neighbor_count": 9,
+        "anchor_cluster_id": "c010",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 15,
+      "work_id": 126,
+      "paper_id": "https://openalex.org/W4411141874",
+      "title": "Physical Modeling of a Spring Reverb Tank Incorporating Helix Angle, Damping, and Magnetic Bead Coupling",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.856039,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": false,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.8,
+        "foreign_neighbor_count": 12,
+        "anchor_cluster_id": "c006",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 16,
+      "work_id": 131,
+      "paper_id": "https://openalex.org/W4410025413",
+      "title": "Methods for Pitch Analysis in Contemporary Popular Music: Deviations From 12-Tone Equal Temperament in Vitalic's Work",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.96734,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.8666666666666667,
+        "foreign_neighbor_count": 13,
+        "anchor_cluster_id": "c009",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 17,
+      "work_id": 143,
+      "paper_id": "https://openalex.org/W4406354632",
+      "title": "Producer vs. Rapper: Who Dominates the Hip Hop Sound?",
+      "final_score": 0.681818,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.959798,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": false,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.8666666666666667,
+        "foreign_neighbor_count": 13,
+        "anchor_cluster_id": "c009",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 18,
+      "work_id": 138,
+      "paper_id": "https://openalex.org/W4409215217",
+      "title": "Modeling Time-Variant Responses of Optical Compressors With Selective State Space Models",
+      "final_score": 0.678788,
+      "semantic_score": null,
+      "citation_velocity_score": 0.272727,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.972509,
+      "diversity_penalty": 0.333333,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.6666666666666666,
+        "foreign_neighbor_count": 10,
+        "anchor_cluster_id": "c003",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 19,
+      "work_id": 137,
+      "paper_id": "https://openalex.org/W4409215261",
+      "title": "Toward an Improved Auditory Model for Predicting Binaural Coloration",
+      "final_score": 0.675757,
+      "semantic_score": null,
+      "citation_velocity_score": 0.454545,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.826236,
+      "diversity_penalty": 0.666667,
+      "bridge_eligible": true,
+      "in_emerging_top_k": true,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.13333333333333333,
+        "foreign_neighbor_count": 2,
+        "anchor_cluster_id": "c003",
+        "neighbor_work_id_count": 15
+      }
+    },
+    {
+      "rank": 20,
+      "work_id": 110,
+      "paper_id": "https://openalex.org/W4414012206",
+      "title": "Investigation on a Crosstalk Cancellation Algorithm for Binaural Audio Headrest",
+      "final_score": 0.654735,
+      "semantic_score": null,
+      "citation_velocity_score": 0.090909,
+      "topic_growth_score": 0.958333,
+      "bridge_score": 0.74549,
+      "diversity_penalty": 0.0,
+      "bridge_eligible": true,
+      "in_emerging_top_k": false,
+      "in_undercited_top_k": false,
+      "bridge_signal_summary": {
+        "signal_version": "neighbor_mix_v1",
+        "eligible": true,
+        "k": 15,
+        "mix_score": 0.06666666666666667,
+        "foreign_neighbor_count": 1,
+        "anchor_cluster_id": "c003",
+        "neighbor_work_id_count": 15
+      }
+    }
+  ],
+  "overlap_detail": {
+    "bridge_vs_emerging_jaccard": 0.73913,
+    "bridge_top_k_overlap_with_emerging_count": 17,
+    "bridge_top_k_only_count": 3,
+    "emerging_top_k_only_count": 3,
+    "bridge_only_work_ids": [
+      110,
+      126,
+      143
+    ],
+    "emerging_only_work_ids": [
+      18,
+      116,
+      128
+    ],
+    "shared_bridge_emerging_work_ids": [
+      9,
+      10,
+      11,
+      12,
+      14,
+      15,
+      16,
+      19,
+      20,
+      21,
+      30,
+      104,
+      125,
+      131,
+      136,
+      137,
+      138
+    ]
+  },
+  "cluster_signal_diagnostics": {
+    "distinct_anchor_cluster_count_in_bridge_top_k": 9,
+    "distinct_neighbor_cluster_count_in_bridge_top_k": 12,
+    "top_cluster_pairs": [
+      {
+        "source_cluster": "c003",
+        "target_cluster": "c003",
+        "count": 32
+      },
+      {
+        "source_cluster": "c010",
+        "target_cluster": "c010",
+        "count": 26
+      },
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c000",
+        "count": 21
+      },
+      {
+        "source_cluster": "c006",
+        "target_cluster": "c003",
+        "count": 15
+      },
+      {
+        "source_cluster": "c001",
+        "target_cluster": "c008",
+        "count": 11
+      },
+      {
+        "source_cluster": "c009",
+        "target_cluster": "c010",
+        "count": 11
+      },
+      {
+        "source_cluster": "c001",
+        "target_cluster": "c001",
+        "count": 10
+      },
+      {
+        "source_cluster": "c001",
+        "target_cluster": "c010",
+        "count": 9
+      },
+      {
+        "source_cluster": "c010",
+        "target_cluster": "c003",
+        "count": 6
+      },
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c010",
+        "count": 6
+      },
+      {
+        "source_cluster": "c008",
+        "target_cluster": "c008",
+        "count": 6
+      },
+      {
+        "source_cluster": "c011",
+        "target_cluster": "c011",
+        "count": 6
+      },
+      {
+        "source_cluster": "c000",
+        "target_cluster": "c007",
+        "count": 5
+      },
+      {
+        "source_cluster": "c006",
+        "target_cluster": "c006",
+        "count": 5
+      },
+      {
+        "source_cluster": "c008",
+        "target_cluster": "c010",
+        "count": 5
+      }
+    ],
+    "rows_missing_cluster_or_signal_details": 0,
+    "warnings": []
+  },
+  "diagnosis": {
+    "eligibility_filter_not_selective_at_head": true,
+    "bridge_score_has_low_variance": false,
+    "bridge_head_emerging_overlap_high": true,
+    "bridge_signal_details_missing_or_sparse": false
+  },
+  "suggested_next_step": "tighten_bridge_eligibility_thresholds",
+  "warnings": []
+}
