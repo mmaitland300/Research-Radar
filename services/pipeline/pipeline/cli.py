@@ -43,6 +43,10 @@ from pipeline.bridge_signal_diagnostics import (
     BridgeSignalDiagnosticsError,
     run_bridge_signal_diagnostics,
 )
+from pipeline.bridge_weight_experiment_compare import (
+    BridgeWeightExperimentCompareError,
+    run_bridge_weight_experiment_compare,
+)
 from pipeline.bridge_eligibility_sensitivity import (
     BridgeEligibilitySensitivityError,
     run_bridge_eligibility_sensitivity,
@@ -455,6 +459,10 @@ def main() -> None:
         "bridge-signal-diagnostics",
         help="Read-only bridge signal diagnostics for one explicit ranking_run_id (paper_scores + ranking_runs)",
     )
+    bridge_weight_compare_parser = subparsers.add_parser(
+        "bridge-weight-experiment-compare",
+        help="Read-only baseline vs experiment comparison for a small bridge-weight run",
+    )
     bridge_sensitivity_parser = subparsers.add_parser(
         "bridge-eligibility-sensitivity",
         help="Read-only threshold sweep for bridge eligibility distinctness on one explicit ranking_run_id",
@@ -729,6 +737,45 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    bridge_weight_compare_parser.add_argument(
+        "--baseline-ranking-run-id",
+        required=True,
+        help="Baseline ranking_run_id (typically zero bridge weight)",
+    )
+    bridge_weight_compare_parser.add_argument(
+        "--experiment-ranking-run-id",
+        required=True,
+        help="Experiment ranking_run_id (small positive bridge weight)",
+    )
+    bridge_weight_compare_parser.add_argument(
+        "--k",
+        type=int,
+        default=20,
+        help="Top-k size from paper_scores (default 20)",
+    )
+    bridge_weight_compare_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write comparison JSON",
+    )
+    bridge_weight_compare_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write comparison Markdown",
+    )
+    bridge_weight_compare_parser.add_argument(
+        "--baseline-bridge-worksheet",
+        default=None,
+        help=(
+            "Optional baseline labeled bridge worksheet CSV path. "
+            "Default: docs/audit/manual-review/bridge_eligible_<baseline_run_id>_top20.csv"
+        ),
+    )
+    bridge_weight_compare_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
 
@@ -991,6 +1038,34 @@ def main() -> None:
             )
         except BridgeEligibilitySensitivityError as e:
             print(f"bridge-eligibility-sensitivity: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "bridge-weight-experiment-compare":
+        if args.k < 1 or args.k > 200:
+            parser.error("--k must be between 1 and 200")
+        baseline_rrid = (args.baseline_ranking_run_id or "").strip()
+        experiment_rrid = (args.experiment_ranking_run_id or "").strip()
+        if not baseline_rrid:
+            parser.error("--baseline-ranking-run-id is required and must not be blank")
+        if not experiment_rrid:
+            parser.error("--experiment-ranking-run-id is required and must not be blank")
+        try:
+            run_bridge_weight_experiment_compare(
+                baseline_ranking_run_id=baseline_rrid,
+                experiment_ranking_run_id=experiment_rrid,
+                k=int(args.k),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+                database_url=args.database_url,
+                baseline_bridge_worksheet_path=Path(args.baseline_bridge_worksheet)
+                if args.baseline_bridge_worksheet
+                else None,
+            )
+        except BridgeWeightExperimentCompareError as e:
+            print(f"bridge-weight-experiment-compare: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
