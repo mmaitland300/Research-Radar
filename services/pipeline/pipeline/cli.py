@@ -542,6 +542,51 @@ def main() -> None:
         action="store_true",
         help="Offline mode for tests/CI: skip live OpenAlex calls and keep works unchanged unless mocked in tests",
     )
+    corpus_v2_embed_parser = subparsers.add_parser(
+        "corpus-v2-embed",
+        help="Generate versioned title+abstract embeddings for one hydrated corpus-v2 snapshot",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--snapshot-version",
+        required=True,
+        help="Explicit source_snapshot_versions.source_snapshot_version to embed",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--embedding-version",
+        required=True,
+        help="New explicit embedding artifact label (do not reuse v1)",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write JSON embedding coverage summary",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write Markdown embedding coverage summary",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--model",
+        default="text-embedding-3-small",
+        help="Embedding model label for the provider request (default: text-embedding-3-small)",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Texts per embedding request batch",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="Delete and regenerate existing rows for this snapshot/version",
+    )
+    corpus_v2_embed_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     bridge_diag_parser.add_argument(
         "--ranking-run-id",
@@ -646,6 +691,30 @@ def main() -> None:
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
         print(summary["snapshot_version"])
         print(summary["hydration_run_id"])
+        return
+
+    if args.command == "corpus-v2-embed":
+        from pipeline.corpus_v2_embed import CorpusV2EmbedError, run_corpus_v2_embed
+
+        try:
+            summary = run_corpus_v2_embed(
+                snapshot_version=args.snapshot_version,
+                embedding_version=args.embedding_version,
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                database_url=args.database_url,
+                model=args.model,
+                batch_size=int(args.batch_size),
+                replace=bool(args.replace),
+            )
+        except CorpusV2EmbedError as e:
+            print(f"corpus-v2-embed: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(summary["snapshot_version"])
+        print(summary["embedding_version"])
+        print(summary["embedded_count"])
         return
 
     if args.command == "recommendation-review-worksheet":
