@@ -437,6 +437,50 @@ def main() -> None:
         action="store_true",
         help="Offline: no live OpenAlex calls; empty samples and zero counts (tests/CI)",
     )
+
+    corpus_v2_plan_parser = subparsers.add_parser(
+        "corpus-v2-candidate-plan",
+        help="OpenAlex dry-run: filtered, deduped corpus-v2 candidate plan (no DB, no snapshot, no policy change)",
+    )
+    corpus_v2_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="JSON output path (e.g. docs/audit/corpus-v2-candidate-plan-YYYYMMDD.json)",
+    )
+    corpus_v2_plan_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Markdown output path (e.g. docs/audit/corpus-v2-candidate-plan-YYYYMMDD.md)",
+    )
+    corpus_v2_plan_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Contact for OpenAlex User-Agent. Live mode: pass this or set OPENALEX_MAILTO (never stored in artifacts).",
+    )
+    corpus_v2_plan_parser.add_argument(
+        "--per-bucket-limit",
+        type=int,
+        default=100,
+        help="Max raw works fetched per expansion bucket (default 100)",
+    )
+    corpus_v2_plan_parser.add_argument(
+        "--target-min",
+        type=int,
+        default=200,
+        help="Soft minimum selected candidates (caveat if below; default 200)",
+    )
+    corpus_v2_plan_parser.add_argument(
+        "--target-max",
+        type=int,
+        default=500,
+        help="Hard cap on total selected candidates after dedup (default 500)",
+    )
+    corpus_v2_plan_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Offline: no live OpenAlex calls; empty plan (tests/CI)",
+    )
+
     bridge_diag_parser.add_argument(
         "--ranking-run-id",
         required=True,
@@ -476,6 +520,26 @@ def main() -> None:
             markdown_output=Path(args.markdown_output),
             mailto=(args.mailto or "").strip(),
             per_bucket_sample=int(args.per_bucket_sample),
+            mock_openalex=bool(args.mock_openalex),
+        )
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+
+    if args.command == "corpus-v2-candidate-plan":
+        from pipeline.corpus_v2_candidate_plan import run_corpus_v2_candidate_plan_from_cli
+
+        if args.target_max < args.target_min:
+            parser.error("--target-max must be >= --target-min")
+        if args.per_bucket_limit < 1 or args.per_bucket_limit > 500:
+            parser.error("--per-bucket-limit must be between 1 and 500")
+        run_corpus_v2_candidate_plan_from_cli(
+            output=Path(args.output),
+            markdown_output=Path(args.markdown_output),
+            mailto=(args.mailto or "").strip(),
+            per_bucket_limit=int(args.per_bucket_limit),
+            target_min=int(args.target_min),
+            target_max=int(args.target_max),
             mock_openalex=bool(args.mock_openalex),
         )
         print(Path(args.output).resolve(), file=sys.stderr)
