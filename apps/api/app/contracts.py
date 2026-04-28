@@ -195,7 +195,14 @@ class EvaluationSummary(BaseModel):
         ...,
         description=(
             "Planned metrics for a future human-labeled evaluation (legacy key; not current reported P@k). "
-            "Use is_human_labeled_benchmark_current to interpret."
+            "Use is_human_labeled_benchmark_current to interpret. Values in JSON are suffixed to stay self-explanatory in raw clients."
+        ),
+    )
+    legacy_note: str = Field(
+        ...,
+        description=(
+            "Explains that benchmark_target_size and primary_metrics exist only for backward compatibility; "
+            "roadmap numbers live under planned_labeled_benchmark."
         ),
     )
     checks: list[str]

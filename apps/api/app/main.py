@@ -343,15 +343,23 @@ def get_recommendation_families() -> list[RankingFamily]:
 @app.get("/api/v1/evaluation/summary", response_model=EvaluationSummary)
 def get_evaluation_summary() -> EvaluationSummary:
     planned = {
-        "corpus": "100-200 papers (target for a future human-labeled pass, not a current result)",
+        "corpus": "100-200 papers",
         "metrics": ["precision@10", "precision@20"],
     }
     return EvaluationSummary(
         current_evaluation_type="proxy_ranked_vs_citation_and_date_baselines",
         is_human_labeled_benchmark_current=False,
         planned_labeled_benchmark=planned,
-        benchmark_target_size="100-200 papers (planned labeled set; not a current benchmark)",
-        primary_metrics=["precision@10", "precision@20"],
+        # Legacy keys: string values are explicit in raw JSON for clients that skip schema/notes.
+        benchmark_target_size="100-200 papers (roadmap; not a current human benchmark result)",
+        primary_metrics=[
+            "precision@10 (roadmap; not a current P@k score)",
+            "precision@20 (roadmap; not a current P@k score)",
+        ],
+        legacy_note=(
+            "benchmark_target_size and primary_metrics are roadmap-only compatibility fields; "
+            "see is_human_labeled_benchmark_current and planned_labeled_benchmark for meaning."
+        ),
         checks=list(settings.evaluation_checks),
         generated_at=utc_now(),
     )
