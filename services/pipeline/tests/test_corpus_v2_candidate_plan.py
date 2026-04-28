@@ -12,10 +12,10 @@ import pytest
 import pipeline.cli as cli_main
 import pipeline.corpus_v2_candidate_plan as cv2
 from pipeline.corpus_v2_candidate_plan import (
+    compute_contact_provenance,
     evaluate_v2_candidate,
     render_corpus_v2_plan_markdown,
     run_corpus_v2_candidate_plan,
-    run_corpus_v2_candidate_plan_from_cli,
 )
 from pipeline.policy import CorpusPolicy
 
@@ -126,6 +126,8 @@ def test_dedup_by_openalex_id() -> None:
             plan = cv2.run_corpus_v2_candidate_plan(
                 policy=policy,
                 mailto="x@y.z",
+                contact_mode="cli",
+                contact_provided=True,
                 per_bucket_limit=5,
                 target_min=1,
                 target_max=50,
@@ -166,6 +168,8 @@ def test_dedup_by_doi() -> None:
             plan = cv2.run_corpus_v2_candidate_plan(
                 policy=policy,
                 mailto="x@y.z",
+                contact_mode="cli",
+                contact_provided=True,
                 per_bucket_limit=10,
                 target_min=1,
                 target_max=50,
@@ -190,6 +194,8 @@ def test_dedup_by_normalized_title() -> None:
             plan = cv2.run_corpus_v2_candidate_plan(
                 policy=policy,
                 mailto="x@y.z",
+                contact_mode="cli",
+                contact_provided=True,
                 per_bucket_limit=10,
                 target_min=1,
                 target_max=50,
@@ -219,6 +225,8 @@ def test_per_bucket_cap_enforced() -> None:
             plan = cv2.run_corpus_v2_candidate_plan(
                 policy=policy,
                 mailto="x@y.z",
+                contact_mode="cli",
+                contact_provided=True,
                 per_bucket_limit=50,
                 target_min=1,
                 target_max=500,
@@ -251,6 +259,8 @@ def test_artifacts_do_not_contain_raw_mailto() -> None:
             plan = cv2.run_corpus_v2_candidate_plan(
                 policy=CorpusPolicy(),
                 mailto=secret,
+                contact_mode="cli",
+                contact_provided=True,
                 per_bucket_limit=5,
                 target_min=1,
                 target_max=50,
@@ -269,6 +279,8 @@ def test_markdown_caveats_not_validation() -> None:
     plan = run_corpus_v2_candidate_plan(
         policy=CorpusPolicy(),
         mailto="a@b.c",
+        contact_mode="mock",
+        contact_provided=True,
         per_bucket_limit=1,
         target_min=500,
         target_max=500,
@@ -306,4 +318,49 @@ def test_cli_corpus_v2_mock(tmp_path: Path) -> None:
     ):
         cli_main.main()
     assert out.is_file()
-    assert json.loads(out.read_text(encoding="utf-8"))["selected_total"] == 0
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["selected_total"] == 0
+    assert payload["contact_mode"] == "mock"
+    assert payload["contact_provided"] is True
+
+
+def test_compute_contact_provenance_cli_env_mock() -> None:
+    assert compute_contact_provenance(mailto_cli="  u@v.w  ", mock_openalex=False) == ("cli", True)
+    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z"}, clear=False):
+        assert compute_contact_provenance(mailto_cli="", mock_openalex=False) == ("env", True)
+    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z"}, clear=False):
+        assert compute_contact_provenance(mailto_cli="cli@x.z", mock_openalex=False) == ("cli", True)
+    assert compute_contact_provenance(mailto_cli="", mock_openalex=True) == ("mock", False)
+    with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z"}, clear=False):
+        assert compute_contact_provenance(mailto_cli="", mock_openalex=True) == ("mock", True)
+
+
+def test_plan_contact_mode_env_in_artifact() -> None:
+    """Simulated live path: resolved mailto from env only; artifact reports env, no raw address."""
+    policy = CorpusPolicy()
+    w = _w(
+        wid="https://openalex.org/W200",
+        title="ISMIR retrieval",
+        abstract="music information retrieval ismir",
+    )
+
+    def fetch(_url: str) -> dict:
+        return {"meta": {"next_cursor": None}, "results": [w]}
+
+    secret = "only-in-env@secret.invalid"
+    with patch.object(cv2, "V2_BUCKET_ORDER", ("ismir_proceedings_or_mir_conference",)):
+        with patch.object(cv2, "V2_BUCKET_CAPS", {"ismir_proceedings_or_mir_conference": 5}):
+            plan = cv2.run_corpus_v2_candidate_plan(
+                policy=policy,
+                mailto=secret,
+                contact_mode="env",
+                contact_provided=True,
+                per_bucket_limit=5,
+                target_min=1,
+                target_max=50,
+                fetch=fetch,
+                mock_openalex=False,
+            )
+    blob = json.dumps(plan, ensure_ascii=False) + render_corpus_v2_plan_markdown(plan)
+    assert plan["contact_mode"] == "env"
+    assert secret not in blob

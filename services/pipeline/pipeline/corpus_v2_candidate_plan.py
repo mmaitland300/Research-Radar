@@ -23,6 +23,27 @@ from pipeline.policy import CorpusPolicy
 
 PreviewFetch = Callable[[str], Mapping[str, Any]]
 
+
+def compute_contact_provenance(*, mailto_cli: str, mock_openalex: bool) -> tuple[str, bool]:
+    """
+    Provenance for artifacts only (never stores raw mailto).
+
+    - mock: --mock-openalex (may still pass mailto for placeholder resolution).
+    - cli: non-empty --mailto (wins over OPENALEX_MAILTO when both set).
+    - env: OPENALEX_MAILTO only.
+    - none: live mode but no contact (should not occur after CLI validation).
+    """
+    cli = (mailto_cli or "").strip()
+    env = (os.environ.get("OPENALEX_MAILTO") or "").strip()
+    if mock_openalex:
+        return "mock", bool(cli or env)
+    if cli:
+        return "cli", True
+    if env:
+        return "env", True
+    return "none", False
+
+
 # First-pass selection caps (per bucket) — aligned with expansion preview bucket ids.
 V2_BUCKET_CAPS: dict[str, int] = {
     "core_mir_existing_sources": 80,
@@ -441,6 +462,8 @@ def run_corpus_v2_candidate_plan(
     *,
     policy: CorpusPolicy,
     mailto: str,
+    contact_mode: str,
+    contact_provided: bool,
     per_bucket_limit: int,
     target_min: int,
     target_max: int,
@@ -457,21 +480,6 @@ def run_corpus_v2_candidate_plan(
         fetch_fn = lambda _u: {"meta": {"count": 0, "next_cursor": None}, "results": []}
     else:
         fetch_fn = lambda u: fetch_openalex_json(u, mailto=mailto, timeout_sec=90.0)
-
-    cli_mail = (mailto or "").strip()
-    env_mail = (os.environ.get("OPENALEX_MAILTO") or "").strip()
-    if mock_openalex:
-        contact_mode = "mock"
-        contact_provided = bool(cli_mail or env_mail)
-    elif cli_mail:
-        contact_mode = "cli"
-        contact_provided = True
-    elif env_mail:
-        contact_mode = "env"
-        contact_provided = True
-    else:
-        contact_mode = "none"
-        contact_provided = False
 
     specs = {s.bucket_id: s for s in expansion_bucket_definitions()}
     bucket_summaries: list[dict[str, Any]] = []
@@ -689,16 +697,22 @@ def run_corpus_v2_candidate_plan_from_cli(
     mock_openalex: bool,
 ) -> None:
     policy = CorpusPolicy()
-    m = resolve_corpus_expansion_preview_mailto(mailto=mailto, mock_openalex=mock_openalex)
-    if not mock_openalex and not (mailto or "").strip() and not (os.environ.get("OPENALEX_MAILTO") or "").strip():
+    mailto_raw = (mailto or "").strip()
+    if not mock_openalex and not mailto_raw and not (os.environ.get("OPENALEX_MAILTO") or "").strip():
         print(
             "corpus-v2-candidate-plan: live mode requires contact: pass --mailto or set OPENALEX_MAILTO",
             file=sys.stderr,
         )
         raise SystemExit(2)
+    contact_mode, contact_provided = compute_contact_provenance(
+        mailto_cli=mailto or "", mock_openalex=mock_openalex
+    )
+    m = resolve_corpus_expansion_preview_mailto(mailto=mailto, mock_openalex=mock_openalex)
     plan = run_corpus_v2_candidate_plan(
         policy=policy,
         mailto=m,
+        contact_mode=contact_mode,
+        contact_provided=contact_provided,
         per_bucket_limit=per_bucket_limit,
         target_min=target_min,
         target_max=target_max,
@@ -713,6 +727,7 @@ def run_corpus_v2_candidate_plan_from_cli(
 __all__ = [
     "V2_BUCKET_CAPS",
     "V2_BUCKET_ORDER",
+    "compute_contact_provenance",
     "evaluate_v2_candidate",
     "render_corpus_v2_plan_markdown",
     "run_corpus_v2_candidate_plan",
