@@ -55,6 +55,10 @@ from pipeline.bridge_weight_experiment_delta_summary import (
     BridgeWeightExperimentDeltaSummaryError,
     run_bridge_weight_experiment_delta_summary,
 )
+from pipeline.bridge_weight_response_rollup import (
+    BridgeWeightResponseRollupError,
+    run_bridge_weight_response_rollup,
+)
 from pipeline.bridge_eligibility_sensitivity import (
     BridgeEligibilitySensitivityError,
     run_bridge_eligibility_sensitivity,
@@ -844,6 +848,60 @@ def main() -> None:
         default=None,
         help="Optional path to write delta summary Markdown",
     )
+    bridge_weight_response_rollup_parser = subparsers.add_parser(
+        "bridge-weight-response-rollup",
+        help="Synthesize zero / w005 / w010 bridge-weight experiments into one JSON (+ optional Markdown) artifact",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--baseline-review-rollup",
+        required=True,
+        help="Path to baseline rank review rollup JSON (zero-weight run)",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--compare-zero-vs-w005",
+        required=True,
+        help="Path to bridge_weight_experiment compare JSON (zero vs 0.05)",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--delta-review-summary",
+        required=True,
+        help="Path to completed delta review summary JSON (0.05 experiment)",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--compare-w005-vs-w010",
+        required=True,
+        help="Path to compare JSON (0.05 vs 0.10)",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--compare-zero-vs-w010",
+        required=True,
+        help="Path to compare JSON (zero vs 0.10)",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--labeled-baseline-bridge-worksheet",
+        required=True,
+        help="CSV path with baseline bridge eligible labels (paper_id column)",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--delta-review-csv",
+        required=True,
+        help="Completed delta review worksheet CSV (paper_id column)",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write bridge weight response rollup JSON",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write rollup Markdown",
+    )
+    bridge_weight_response_rollup_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL for label coverage check (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
 
@@ -1167,6 +1225,27 @@ def main() -> None:
             )
         except BridgeWeightExperimentDeltaSummaryError as e:
             print(f"bridge-weight-experiment-delta-summary: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "bridge-weight-response-rollup":
+        try:
+            run_bridge_weight_response_rollup(
+                baseline_review_rollup_path=Path(args.baseline_review_rollup),
+                compare_zero_vs_w005_path=Path(args.compare_zero_vs_w005),
+                delta_review_summary_path=Path(args.delta_review_summary),
+                compare_w005_vs_w010_path=Path(args.compare_w005_vs_w010),
+                compare_zero_vs_w010_path=Path(args.compare_zero_vs_w010),
+                labeled_baseline_bridge_worksheet_path=Path(args.labeled_baseline_bridge_worksheet),
+                delta_review_csv_path=Path(args.delta_review_csv),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+                database_url=args.database_url,
+            )
+        except BridgeWeightResponseRollupError as e:
+            print(f"bridge-weight-response-rollup: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
