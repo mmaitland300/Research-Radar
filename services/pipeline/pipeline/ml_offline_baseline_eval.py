@@ -380,6 +380,7 @@ def _label_baseline_readiness_sentence(meta: dict[str, Any]) -> str:
 def markdown_from_ml_offline_baseline_eval(payload: dict[str, Any]) -> str:
     prov = payload["provenance"]
     meta = payload["metrics"]["by_family"]
+    gen_at = payload.get("generated_at") or prov.get("generated_at")
     lines = [
         "# Offline label baseline evaluation",
         "",
@@ -397,7 +398,7 @@ def markdown_from_ml_offline_baseline_eval(payload: dict[str, Any]) -> str:
         f"- **label_dataset_path:** `{prov.get('label_dataset_path')}`",
         f"- **label_dataset_version:** `{prov.get('label_dataset_version')}`",
         f"- **label_dataset_sha256:** `{prov.get('label_dataset_sha256')}`",
-        f"- **generated_at:** `{prov.get('generated_at')}`",
+        f"- **generated_at:** `{gen_at}`",
         "",
         "## Join summary",
         "",

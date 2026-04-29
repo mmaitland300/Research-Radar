@@ -12,7 +12,7 @@ Read-only join of **ml-label-dataset** rows to persisted **`paper_scores`** for 
 - **label_dataset_path:** `C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v1.json`
 - **label_dataset_version:** `ml-label-dataset-v1`
 - **label_dataset_sha256:** `f404f995f2da9607a1448d51dd51c1c130dcb0b3a8945501a3a6d3f133f3e607`
-- **generated_at:** `None`
+- **generated_at:** `2026-04-29T21:23:39Z`
 
 ## Join summary
 

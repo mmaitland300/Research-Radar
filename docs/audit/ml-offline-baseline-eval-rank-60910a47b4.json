@@ -1,6 +1,6 @@
 {
   "artifact_type": "ml_offline_baseline_eval",
-  "generated_at": "2026-04-29T21:23:09Z",
+  "generated_at": "2026-04-29T21:23:39Z",
   "provenance": {
     "ranking_run_id": "rank-60910a47b4",
     "ranking_version": "bridge-v2-nm1-zero-corpusv2-r5-k12-elig-exclude-persistent-v1-20260429",
