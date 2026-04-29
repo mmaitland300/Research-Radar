@@ -1146,8 +1146,50 @@ def main() -> None:
         default=None,
         help="Postgres URL to resolve work_id→paper_id for eligible head (default: DATABASE_URL or PG* env)",
     )
+    ml_label_dataset_parser = subparsers.add_parser(
+        "ml-label-dataset",
+        help="Export versioned manual-label dataset JSON (+ optional Markdown) from audit review CSVs (no DB, no ranking)",
+    )
+    ml_label_dataset_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-label-dataset JSON (e.g. docs/audit/ml-label-dataset-v1.json)",
+    )
+    ml_label_dataset_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown data card",
+    )
+    ml_label_dataset_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Repository root containing docs/audit/manual-review (default: parent of services/pipeline)",
+    )
+    ml_label_dataset_parser.add_argument(
+        "--manual-review-dir",
+        default=None,
+        help="Directory of manual-review CSV worksheets (default: <repo-root>/docs/audit/manual-review)",
+    )
 
     args = parser.parse_args()
+
+    if args.command == "ml-label-dataset":
+        from pipeline.ml_label_dataset import write_ml_label_dataset
+
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parents[3]
+        manual_dir = Path(args.manual_review_dir).resolve() if args.manual_review_dir else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        write_ml_label_dataset(
+            repo_root=repo_root,
+            json_path=out_json,
+            markdown_path=out_md,
+            manual_review_dir=manual_dir,
+        )
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
 
     if args.command == "corpus-expansion-preview":
         from pipeline.corpus_expansion_preview import run_corpus_expansion_preview_from_cli
