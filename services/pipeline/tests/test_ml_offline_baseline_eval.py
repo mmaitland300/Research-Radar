@@ -233,6 +233,8 @@ def test_markdown_caveats_present() -> None:
     for c in CAVEATS:
         assert c in md
     assert "separate" in md.lower()
+    assert "interpretation" in md.lower()
+    assert "diagnostic offline label eval" in md.lower()
 
 
 def test_build_requires_succeeded_run(tmp_path: Path) -> None:

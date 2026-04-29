@@ -1,0 +1,314 @@
+{
+  "artifact_type": "ml_offline_baseline_eval",
+  "generated_at": "2026-04-29T21:23:09Z",
+  "provenance": {
+    "ranking_run_id": "rank-60910a47b4",
+    "ranking_version": "bridge-v2-nm1-zero-corpusv2-r5-k12-elig-exclude-persistent-v1-20260429",
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+    "label_dataset_path": "C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v1.json",
+    "label_dataset_version": "ml-label-dataset-v1",
+    "label_dataset_sha256": "f404f995f2da9607a1448d51dd51c1c130dcb0b3a8945501a3a6d3f133f3e607"
+  },
+  "caveats": [
+    "Offline audit baseline only; not validation of production ranking quality.",
+    "Labels are single-reviewer manual audit material unless a source states otherwise.",
+    "Rows are biased by ranking outputs and worksheet selection (ranking-selection bias).",
+    "This evaluation does not create or imply train/dev/test splits."
+  ],
+  "join_summary": {
+    "label_rows_included": 1,
+    "duplicate_row_id_skipped": 0,
+    "joined_count": 1,
+    "missing_score_join_count": 0
+  },
+  "metrics": {
+    "by_family": {
+      "bridge": {
+        "baseline_feature_summary": {
+          "final_score": {
+            "count": 1,
+            "mean": 0.64697,
+            "median": 0.64697
+          },
+          "bridge_score": {
+            "count": 1,
+            "mean": 0.908103,
+            "median": 0.908103
+          },
+          "semantic_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "citation_velocity_score": {
+            "count": 1,
+            "mean": 0.181818,
+            "median": 0.181818
+          },
+          "topic_growth_score": {
+            "count": 1,
+            "mean": 1.0,
+            "median": 1.0
+          },
+          "diversity_penalty": {
+            "count": 1,
+            "mean": 0.333333,
+            "median": 0.333333
+          }
+        },
+        "good_or_acceptable": {
+          "labeled_row_count": 1,
+          "matched_to_ranking_count": 1,
+          "missing_from_ranking_count": 0,
+          "positive_count": 1,
+          "negative_count": 0,
+          "mean_final_score_positive": 0.64697,
+          "mean_final_score_negative": null,
+          "median_rank_positive": 57.0,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        },
+        "surprising_or_useful": {
+          "labeled_row_count": 1,
+          "matched_to_ranking_count": 1,
+          "missing_from_ranking_count": 0,
+          "positive_count": 1,
+          "negative_count": 0,
+          "mean_final_score_positive": 0.64697,
+          "mean_final_score_negative": null,
+          "median_rank_positive": 57.0,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        },
+        "bridge_like_yes_or_partial": {
+          "labeled_row_count": 1,
+          "matched_to_ranking_count": 1,
+          "missing_from_ranking_count": 0,
+          "positive_count": 1,
+          "negative_count": 0,
+          "mean_final_score_positive": 0.64697,
+          "mean_final_score_negative": null,
+          "median_rank_positive": 57.0,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        }
+      },
+      "emerging": {
+        "baseline_feature_summary": {
+          "final_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "bridge_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "semantic_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "citation_velocity_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "topic_growth_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "diversity_penalty": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          }
+        },
+        "good_or_acceptable": {
+          "labeled_row_count": 0,
+          "matched_to_ranking_count": 0,
+          "missing_from_ranking_count": 0,
+          "positive_count": 0,
+          "negative_count": 0,
+          "mean_final_score_positive": null,
+          "mean_final_score_negative": null,
+          "median_rank_positive": null,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        },
+        "surprising_or_useful": {
+          "labeled_row_count": 0,
+          "matched_to_ranking_count": 0,
+          "missing_from_ranking_count": 0,
+          "positive_count": 0,
+          "negative_count": 0,
+          "mean_final_score_positive": null,
+          "mean_final_score_negative": null,
+          "median_rank_positive": null,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        },
+        "bridge_like_yes_or_partial": {
+          "labeled_row_count": 0,
+          "matched_to_ranking_count": 0,
+          "missing_from_ranking_count": 0,
+          "positive_count": 0,
+          "negative_count": 0,
+          "mean_final_score_positive": null,
+          "mean_final_score_negative": null,
+          "median_rank_positive": null,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        }
+      },
+      "undercited": {
+        "baseline_feature_summary": {
+          "final_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "bridge_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "semantic_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "citation_velocity_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "topic_growth_score": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          },
+          "diversity_penalty": {
+            "count": 0,
+            "mean": null,
+            "median": null
+          }
+        },
+        "good_or_acceptable": {
+          "labeled_row_count": 0,
+          "matched_to_ranking_count": 0,
+          "missing_from_ranking_count": 0,
+          "positive_count": 0,
+          "negative_count": 0,
+          "mean_final_score_positive": null,
+          "mean_final_score_negative": null,
+          "median_rank_positive": null,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        },
+        "surprising_or_useful": {
+          "labeled_row_count": 0,
+          "matched_to_ranking_count": 0,
+          "missing_from_ranking_count": 0,
+          "positive_count": 0,
+          "negative_count": 0,
+          "mean_final_score_positive": null,
+          "mean_final_score_negative": null,
+          "median_rank_positive": null,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        },
+        "bridge_like_yes_or_partial": {
+          "labeled_row_count": 0,
+          "matched_to_ranking_count": 0,
+          "missing_from_ranking_count": 0,
+          "positive_count": 0,
+          "negative_count": 0,
+          "mean_final_score_positive": null,
+          "mean_final_score_negative": null,
+          "median_rank_positive": null,
+          "median_rank_negative": null,
+          "precision_at_5": null,
+          "precision_at_10": null,
+          "precision_at_20": null,
+          "roc_auc_mann_whitney": null,
+          "pairwise_accuracy": null
+        }
+      }
+    }
+  },
+  "joined_rows": [
+    {
+      "dataset_version": "ml-label-dataset-v1",
+      "row_id": "60f9e25cf71d372c2516cbef41c619c430738a73d9a472c411423df40cfbb507",
+      "paper_id": "https://openalex.org/W4412072230",
+      "work_id": 116,
+      "title": "Audio Signal Processing in the Artificial Intelligence Era: Challenges and Directions",
+      "ranking_run_id": "rank-60910a47b4",
+      "ranking_version": null,
+      "corpus_snapshot_version": null,
+      "family": "bridge",
+      "review_pool_variant": null,
+      "rank": null,
+      "experiment_rank": "20",
+      "source_worksheet_path": "docs/audit/manual-review/bridge_objective_delta_rank-60910a47b4_one_row_review.csv",
+      "source_worksheet_sha256": "a879f01e6831779e255cf80a2f1332147583a51beb1eb44831bcba7733376e10",
+      "source_row_number": 2,
+      "relevance_label": "good",
+      "novelty_label": "useful",
+      "bridge_like_label": "partial",
+      "reviewer_notes": "Broad 2025 JAES survey/position paper on AI for audio engineering; highly relevant to audio ML and useful as a bridge across audio DSP, ML systems, human-centered AI, real-time constraints, effects/synthesis/mixing/spatial/speech/music applications. Bridge-like, but partial because it is a broad field overview rather than a specific cross-cluster technical method.",
+      "label_provenance": "manual_review_worksheet_csv",
+      "split": "audit_only",
+      "good_or_acceptable": true,
+      "surprising_or_useful": true,
+      "bridge_like_yes_or_partial": true,
+      "family_inferred": true,
+      "_joined_score": true,
+      "recommendation_family": "bridge",
+      "semantic_score": null,
+      "citation_velocity_score": 0.181818,
+      "topic_growth_score": 1.0,
+      "bridge_score": 0.908103,
+      "diversity_penalty": 0.333333,
+      "final_score": 0.64697,
+      "_rank": 57
+    }
+  ]
+}

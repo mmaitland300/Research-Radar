@@ -341,6 +341,42 @@ CAVEATS = (
 )
 
 
+def _label_baseline_readiness_sentence(meta: dict[str, Any]) -> str:
+    """One-line readout: whether any family×target has both positive and negative labels (joined)."""
+    any_neg = False
+    any_pair_metric = False
+    for fam_data in meta.values():
+        if not isinstance(fam_data, dict):
+            continue
+        for key, block in fam_data.items():
+            if key == "baseline_feature_summary" or not isinstance(block, dict):
+                continue
+            n_neg = int(block.get("negative_count") or 0)
+            n_pos = int(block.get("positive_count") or 0)
+            if n_neg > 0:
+                any_neg = True
+            if n_pos > 0 and n_neg > 0:
+                any_pair_metric = True
+    if any_pair_metric:
+        return (
+            "At least one family×target pair has **both** positive and negative manual labels among rows "
+            "that joined to `paper_scores`, so rank-based AUC / pairwise accuracy and precision@k can be non-null "
+            "where row counts allow. That still does **not** imply enough data for a stable learned baseline."
+        )
+    if not any_neg:
+        return (
+            "For this `ranking_run_id`, **no** family×target slice has a negative (false) class among joined labeled "
+            "rows—counts are positive-only or empty. **Discrimination metrics (AUC, pairwise accuracy, meaningful P@k) "
+            "cannot apply.** A simple feature baseline or learned ranker would need **more labeled negatives** (and "
+            "usually more rows overall) before offline training experiments are informative."
+        )
+    return (
+        "Some targets include negative labels, but no single family×target slice currently has **both** classes "
+        "among joined rows, so AUC / pairwise accuracy remain undefined. Add balanced or negatives-rich labels "
+        "before relying on these metrics for model selection."
+    )
+
+
 def markdown_from_ml_offline_baseline_eval(payload: dict[str, Any]) -> str:
     prov = payload["provenance"]
     meta = payload["metrics"]["by_family"]
@@ -369,6 +405,17 @@ def markdown_from_ml_offline_baseline_eval(payload: dict[str, Any]) -> str:
         f"- **Duplicate row_id rows skipped:** {payload['join_summary']['duplicate_row_id_skipped']}",
         f"- **Joined to paper_scores:** {payload['join_summary']['joined_count']}",
         f"- **Missing from ranking (no score row for family/work):** {payload['join_summary']['missing_score_join_count']}",
+        "",
+        "## Interpretation (readout, not conclusions)",
+        "",
+        "- This artifact is a **diagnostic offline label eval, not validation** of production ranking quality.",
+        "- Labels here are **sparse single-reviewer** audit material tied to specific worksheets and runs; do not treat them as ground truth for the full corpus.",
+        "- The ranking compared is a **heuristic baseline only**; there is **no learned model** in this pipeline step.",
+        "- **Next step** toward ML experiments would be a **simple feature baseline** (e.g. linear model on persisted scores) **only if** label coverage grows enough—especially **negatives**—for stable offline metrics.",
+        "",
+        "### Label coverage vs. simple learned baseline",
+        "",
+        _label_baseline_readiness_sentence(meta),
         "",
         "## Caveats",
         "",
