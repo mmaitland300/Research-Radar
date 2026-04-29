@@ -781,9 +781,11 @@ def main() -> None:
     )
     bridge_weight_compare_parser.add_argument(
         "--baseline-bridge-worksheet",
+        "--labeled-bridge-worksheet",
+        dest="baseline_bridge_worksheet",
         default=None,
         help=(
-            "Optional baseline labeled bridge worksheet CSV path. "
+            "Optional labeled bridge worksheet CSV path for already-reviewed baseline/delta rows. "
             "Default: docs/audit/manual-review/bridge_eligible_<baseline_run_id>_top20.csv"
         ),
     )

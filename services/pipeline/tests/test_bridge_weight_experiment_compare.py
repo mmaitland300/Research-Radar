@@ -140,6 +140,36 @@ def test_compare_happy_path_and_unlabeled_flags(tmp_path: Path) -> None:
     )
 
 
+def test_unlabeled_risk_only_flags_new_eligible_entrants(tmp_path: Path) -> None:
+    runs = {
+        "rank-base": _run_row("rank-base", bridge_weight=0.05),
+        "rank-exp": _run_row("rank-exp", bridge_weight=0.10),
+    }
+    topk = {
+        ("rank-base", "bridge", False): _rows([1, 2, 3]),
+        ("rank-exp", "bridge", False): _rows([1, 2, 3]),
+        ("rank-base", "bridge", True): _rows([11, 12, 13]),
+        ("rank-exp", "bridge", True): _rows([11, 12, 14]),
+        ("rank-base", "emerging", False): _rows([50, 51, 52]),
+        ("rank-exp", "emerging", False): _rows([50, 51, 52]),
+        ("rank-base", "undercited", False): _rows([70, 71, 72]),
+        ("rank-exp", "undercited", False): _rows([70, 71, 72]),
+    }
+    conn = _FakeConn(runs=runs, topk_rows=topk)
+    ws = tmp_path / "delta.csv"
+    ws.write_text("paper_id\nW99\n", encoding="utf-8")
+    payload = build_bridge_weight_experiment_compare_payload(
+        conn,
+        baseline_ranking_run_id="rank-base",
+        experiment_ranking_run_id="rank-exp",
+        k=3,
+        baseline_bridge_worksheet_path=ws,
+    )
+    assert payload["quality_risk"]["unlabeled_new_experiment_eligible_top_k_count"] == 1
+    assert payload["quality_risk"]["unlabeled_new_experiment_eligible_top_k_rows"][0]["work_id"] == 14
+    assert payload["decision"]["candidate_for_labeling"] is True
+
+
 def test_markdown_includes_required_caveat_text(tmp_path: Path) -> None:
     runs = {
         "rank-base": _run_row("rank-base", bridge_weight=0.0),
@@ -222,3 +252,49 @@ def test_cli_compare_writes_outputs(tmp_path: Path) -> None:
     assert data["provenance"]["baseline"]["ranking_run_id"] == "rank-base"
     assert data["provenance"]["experiment"]["ranking_run_id"] == "rank-exp"
     assert md.is_file()
+
+
+def test_cli_accepts_labeled_bridge_worksheet_alias(tmp_path: Path) -> None:
+    runs = {
+        "rank-base": _run_row("rank-base", bridge_weight=0.0),
+        "rank-exp": _run_row("rank-exp", bridge_weight=0.05),
+    }
+    topk = {
+        ("rank-base", "bridge", False): _rows([1]),
+        ("rank-exp", "bridge", False): _rows([1]),
+        ("rank-base", "bridge", True): _rows([10]),
+        ("rank-exp", "bridge", True): _rows([10]),
+        ("rank-base", "emerging", False): _rows([20]),
+        ("rank-exp", "emerging", False): _rows([20]),
+        ("rank-base", "undercited", False): _rows([30]),
+        ("rank-exp", "undercited", False): _rows([30]),
+    }
+    fake_conn = _FakeConn(runs=runs, topk_rows=topk)
+    mock_cm = MagicMock()
+    mock_cm.__enter__.return_value = fake_conn
+    mock_cm.__exit__.return_value = None
+    worksheet = tmp_path / "labeled.csv"
+    worksheet.write_text("paper_id\nW10\n", encoding="utf-8")
+    out = tmp_path / "cmp.json"
+
+    with patch("pipeline.bridge_weight_experiment_compare.psycopg.connect", return_value=mock_cm):
+        with patch.object(
+            sys,
+            "argv",
+            [
+                "pipeline.cli",
+                "bridge-weight-experiment-compare",
+                "--baseline-ranking-run-id",
+                "rank-base",
+                "--experiment-ranking-run-id",
+                "rank-exp",
+                "--k",
+                "1",
+                "--labeled-bridge-worksheet",
+                str(worksheet),
+                "--output",
+                str(out),
+            ],
+        ):
+            cli_main.main()
+    assert out.is_file()

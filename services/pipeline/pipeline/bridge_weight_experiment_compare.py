@@ -276,11 +276,12 @@ def build_bridge_weight_experiment_compare_payload(
     new_bridge_ids = sorted(set(e_bridge_ids) - set(b_bridge_ids))
     dropped_bridge_ids = sorted(set(b_bridge_ids) - set(e_bridge_ids))
 
-    baseline_labeled_paper_ids = _load_labeled_baseline_paper_ids(baseline_bridge_worksheet_path)
+    labeled_paper_ids = _load_labeled_baseline_paper_ids(baseline_bridge_worksheet_path)
+    baseline_eligible_paper_ids = {str(row.get("paper_id") or "") for row in b_eligible_rows}
     unlabeled_experiment_rows: list[dict[str, Any]] = []
     for idx, row in enumerate(e_eligible_rows, start=1):
         pid = str(row.get("paper_id") or "")
-        if pid not in baseline_labeled_paper_ids:
+        if pid not in baseline_eligible_paper_ids and pid not in labeled_paper_ids:
             unlabeled_experiment_rows.append(
                 {
                     "rank": idx,
@@ -347,9 +348,11 @@ def build_bridge_weight_experiment_compare_payload(
         "quality_risk": {
             "experiment_eligible_top_k_not_in_labeled_baseline_rows": unlabeled_experiment_rows,
             "unlabeled_experiment_eligible_top_k_count": len(unlabeled_experiment_rows),
+            "unlabeled_new_experiment_eligible_top_k_rows": unlabeled_experiment_rows,
+            "unlabeled_new_experiment_eligible_top_k_count": len(unlabeled_experiment_rows),
         },
         "decision": {
-            "candidate_for_labeling": changed_eligible_head,
+            "candidate_for_labeling": bool(unlabeled_experiment_rows),
             "candidate_for_weight_increase": False,
             "ready_for_default": False,
         },
