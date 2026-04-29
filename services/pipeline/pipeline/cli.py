@@ -47,6 +47,10 @@ from pipeline.bridge_objective_experiment_compare import (
     BridgeObjectiveExperimentCompareError,
     run_bridge_objective_experiment_compare,
 )
+from pipeline.bridge_objective_label_coverage import (
+    BridgeObjectiveLabelCoverageError,
+    run_bridge_objective_label_coverage,
+)
 from pipeline.bridge_weight_experiment_compare import (
     BridgeWeightExperimentCompareError,
     run_bridge_weight_experiment_compare,
@@ -490,6 +494,10 @@ def main() -> None:
     bridge_weight_delta_parser = subparsers.add_parser(
         "bridge-weight-experiment-delta-worksheet",
         help="Read-only CSV worksheet for unlabeled moved-in eligible bridge experiment rows",
+    )
+    bridge_objective_label_coverage_parser = subparsers.add_parser(
+        "bridge-objective-label-coverage",
+        help="Read-only objective-experiment label coverage correction and one-row review scaffold",
     )
     bridge_weight_delta_summary_parser = subparsers.add_parser(
         "bridge-weight-experiment-delta-summary",
@@ -936,6 +944,36 @@ def main() -> None:
         "--database-url",
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+    bridge_objective_label_coverage_parser.add_argument(
+        "--comparison",
+        required=True,
+        help="Objective experiment comparison JSON artifact",
+    )
+    bridge_objective_label_coverage_parser.add_argument(
+        "--baseline-bridge-worksheet",
+        required=True,
+        help="Baseline labeled bridge eligible worksheet CSV",
+    )
+    bridge_objective_label_coverage_parser.add_argument(
+        "--prior-delta-worksheet",
+        required=True,
+        help="Previously labeled bridge-weight delta worksheet CSV",
+    )
+    bridge_objective_label_coverage_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write label coverage correction JSON",
+    )
+    bridge_objective_label_coverage_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write label coverage correction Markdown",
+    )
+    bridge_objective_label_coverage_parser.add_argument(
+        "--review-output",
+        required=True,
+        help="Path to write one-row unlabeled review worksheet CSV",
     )
     bridge_weight_delta_summary_parser.add_argument(
         "--input",
@@ -1461,6 +1499,24 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(len(rows))
+        return
+    if args.command == "bridge-objective-label-coverage":
+        try:
+            payload, rows = run_bridge_objective_label_coverage(
+                comparison_path=Path(args.comparison),
+                baseline_worksheet_path=Path(args.baseline_bridge_worksheet),
+                prior_delta_worksheet_path=Path(args.prior_delta_worksheet),
+                output_json_path=Path(args.output),
+                output_markdown_path=Path(args.markdown_output),
+                output_review_csv_path=Path(args.review_output),
+            )
+        except BridgeObjectiveLabelCoverageError as e:
+            print(f"bridge-objective-label-coverage: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(Path(args.review_output).resolve(), file=sys.stderr)
+        print(int(payload.get("summary", {}).get("truly_unlabeled_moved_in_count", len(rows))))
         return
     if args.command == "bridge-weight-experiment-delta-summary":
         try:

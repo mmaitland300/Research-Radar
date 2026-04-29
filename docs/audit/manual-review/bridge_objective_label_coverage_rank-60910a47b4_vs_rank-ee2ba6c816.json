@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-04-29T17:48:40.073568+00:00",
+  "review_kind": "bridge_objective_label_coverage",
+  "provenance": {
+    "objective_experiment_comparison_path": "c:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_objective_experiment_rank-60910a47b4_vs_rank-ee2ba6c816.json",
+    "objective_experiment_ranking_run_id": "rank-60910a47b4",
+    "baseline_ranking_run_id": "rank-ee2ba6c816",
+    "known_label_sources": [
+      {
+        "name": "baseline_bridge_eligible_top20",
+        "path": "c:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_eligible_rank-ee2ba6c816_top20.csv"
+      },
+      {
+        "name": "prior_bridge_weight_delta_review",
+        "path": "c:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_weight_experiment_rank-bc1123e00c_delta_review.csv"
+      }
+    ]
+  },
+  "summary": {
+    "moved_in_count_relative_to_baseline": 5,
+    "moved_in_already_labeled_count": 4,
+    "truly_unlabeled_moved_in_count": 1
+  },
+  "moved_in": {
+    "already_labeled_moved_in_ids": [
+      "https://openalex.org/W4412072221",
+      "https://openalex.org/W4411141538",
+      "https://openalex.org/W4411141958",
+      "https://openalex.org/W7128600794"
+    ],
+    "truly_unlabeled_moved_in_ids": [
+      "https://openalex.org/W4412072230"
+    ],
+    "label_source_by_paper_id": {
+      "https://openalex.org/W4412072221": "prior_bridge_weight_delta_review",
+      "https://openalex.org/W4411141538": "prior_bridge_weight_delta_review",
+      "https://openalex.org/W4411141958": "prior_bridge_weight_delta_review",
+      "https://openalex.org/W7128600794": "prior_bridge_weight_delta_review"
+    }
+  },
+  "diagnostics": {
+    "id_mismatches_or_missing_identifiers": [],
+    "missing_identifier_rows": []
+  },
+  "guardrails": {
+    "diagnostic_only": true,
+    "validation_claim": false,
+    "ready_for_default": false,
+    "requires_manual_labeling_before_quality_rollup": true
+  }
+}
