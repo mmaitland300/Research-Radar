@@ -1,0 +1,326 @@
+{
+  "generated_note": "bridge_eligibility_failure_analysis v1 (stdlib JSON transform)",
+  "verbatim_caveats": [
+    "Diagnostic only; not validation; no ranking/default/product claim.",
+    "No new eligibility rule should be selected without a follow-up zero-weight ranking run and labels."
+  ],
+  "inputs": {
+    "sensitivity_provenance": {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "k": 20
+    },
+    "signal_provenance": {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "k": 20
+    },
+    "weight_response_review_kind": "bridge_weight_response_rollup",
+    "labeled_outcome_review_kind": "bridge_weight_labeled_outcome"
+  },
+  "baseline_minimum_variant_vs_emerging_jaccard": 0.212121,
+  "baseline_jaccard_reference_existing_bridge_eligible": 0.212121,
+  "cohort_collapse_variants_below_reference_baseline_jaccard": [],
+  "tied_variants_at_baseline_minimum": [
+    {
+      "variant_id": "existing_bridge_eligible",
+      "eligible_count_total": 93,
+      "eligible_top_k_ids": [
+        21,
+        104,
+        14,
+        10,
+        125,
+        126,
+        131,
+        143,
+        138,
+        142,
+        4,
+        5,
+        7,
+        22,
+        23,
+        24,
+        25,
+        111,
+        113,
+        114
+      ],
+      "eligible_top_k_hash_sha256": "1a7e25b9d7d5c7ae96ae4be6fa5ed53ab54147f565b135e6f7d52a58853bec23",
+      "variant_vs_emerging_jaccard": 0.212121,
+      "eligible_top_k_intersect_emerging_top_k": [
+        10,
+        14,
+        21,
+        104,
+        125,
+        131,
+        138
+      ]
+    },
+    {
+      "variant_id": "bridge_score_top_25pct",
+      "eligible_count_total": 54,
+      "eligible_top_k_ids": [
+        14,
+        10,
+        125,
+        131,
+        143,
+        138,
+        4,
+        7,
+        24,
+        113,
+        117,
+        124,
+        127,
+        1281,
+        116,
+        130,
+        120,
+        135,
+        128,
+        147
+      ],
+      "eligible_top_k_hash_sha256": "808cdbb3ec5e70642166a765dfcb51c3c212dbd9eac857ab85c453e8c2309dae",
+      "variant_vs_emerging_jaccard": 0.212121,
+      "eligible_top_k_intersect_emerging_top_k": [
+        10,
+        14,
+        116,
+        125,
+        128,
+        131,
+        138
+      ]
+    },
+    {
+      "variant_id": "top50_and_cross_cluster_gte_0_40",
+      "eligible_count_total": 92,
+      "eligible_top_k_ids": [
+        21,
+        104,
+        14,
+        10,
+        125,
+        126,
+        131,
+        143,
+        138,
+        142,
+        4,
+        5,
+        7,
+        22,
+        23,
+        24,
+        25,
+        111,
+        113,
+        114
+      ],
+      "eligible_top_k_hash_sha256": "1a7e25b9d7d5c7ae96ae4be6fa5ed53ab54147f565b135e6f7d52a58853bec23",
+      "variant_vs_emerging_jaccard": 0.212121,
+      "eligible_top_k_intersect_emerging_top_k": [
+        10,
+        14,
+        21,
+        104,
+        125,
+        131,
+        138
+      ]
+    },
+    {
+      "variant_id": "top50_and_same_cluster_lte_0_60",
+      "eligible_count_total": 92,
+      "eligible_top_k_ids": [
+        21,
+        104,
+        14,
+        10,
+        125,
+        126,
+        131,
+        143,
+        138,
+        142,
+        4,
+        5,
+        7,
+        22,
+        23,
+        24,
+        25,
+        111,
+        113,
+        114
+      ],
+      "eligible_top_k_hash_sha256": "1a7e25b9d7d5c7ae96ae4be6fa5ed53ab54147f565b135e6f7d52a58853bec23",
+      "variant_vs_emerging_jaccard": 0.212121,
+      "eligible_top_k_intersect_emerging_top_k": [
+        10,
+        14,
+        21,
+        104,
+        125,
+        131,
+        138
+      ]
+    },
+    {
+      "variant_id": "top25_and_cross_cluster_gte_0_40",
+      "eligible_count_total": 52,
+      "eligible_top_k_ids": [
+        14,
+        10,
+        125,
+        131,
+        143,
+        138,
+        4,
+        7,
+        24,
+        113,
+        117,
+        124,
+        127,
+        1281,
+        116,
+        120,
+        135,
+        128,
+        147,
+        2395
+      ],
+      "eligible_top_k_hash_sha256": "f0d4fac07f71755999681bfbe851eace0c2abd742fcaca0ae372003427339eb1",
+      "variant_vs_emerging_jaccard": 0.212121,
+      "eligible_top_k_intersect_emerging_top_k": [
+        10,
+        14,
+        116,
+        125,
+        128,
+        131,
+        138
+      ]
+    }
+  ],
+  "tied_variants_with_same_top_20_count": 3,
+  "existing_bridge_eligible_top_k_hash_sha256": "1a7e25b9d7d5c7ae96ae4be6fa5ed53ab54147f565b135e6f7d52a58853bec23",
+  "persistent_shared_with_emerging_ids": [
+    10,
+    14,
+    125,
+    131,
+    138
+  ],
+  "union_shared_with_emerging_ids_across_tied_variants": [
+    10,
+    14,
+    21,
+    104,
+    116,
+    125,
+    128,
+    131,
+    138
+  ],
+  "per_work_id_tied_variant_overlap_count": {
+    "10": 5,
+    "14": 5,
+    "21": 3,
+    "104": 3,
+    "116": 2,
+    "125": 5,
+    "128": 2,
+    "131": 5,
+    "138": 5
+  },
+  "distinct_eligible_top_k_hashes_among_tied_variants": [
+    "1a7e25b9d7d5c7ae96ae4be6fa5ed53ab54147f565b135e6f7d52a58853bec23",
+    "808cdbb3ec5e70642166a765dfcb51c3c212dbd9eac857ab85c453e8c2309dae",
+    "f0d4fac07f71755999681bfbe851eace0c2abd742fcaca0ae372003427339eb1"
+  ],
+  "cohort_distinctness_cost_variants_jaccard_lt_0_40": [
+    {
+      "variant_id": "bridge_score_top_25pct",
+      "eligible_count_total": 54,
+      "variant_vs_emerging_jaccard": 0.212121
+    },
+    {
+      "variant_id": "existing_bridge_eligible",
+      "eligible_count_total": 93,
+      "variant_vs_emerging_jaccard": 0.212121
+    },
+    {
+      "variant_id": "top25_and_cross_cluster_gte_0_40",
+      "eligible_count_total": 52,
+      "variant_vs_emerging_jaccard": 0.212121
+    },
+    {
+      "variant_id": "top50_and_cross_cluster_gte_0_40",
+      "eligible_count_total": 92,
+      "variant_vs_emerging_jaccard": 0.212121
+    },
+    {
+      "variant_id": "top50_and_same_cluster_lte_0_60",
+      "eligible_count_total": 92,
+      "variant_vs_emerging_jaccard": 0.212121
+    },
+    {
+      "variant_id": "bridge_score_top_50pct",
+      "eligible_count_total": 108,
+      "variant_vs_emerging_jaccard": 0.25
+    }
+  ],
+  "cohort_collapse_risk_eligible_count_lt_50": [],
+  "supporting": {
+    "weight_response_distinctness": {
+      "eligible_bridge_vs_emerging_jaccard_by_run": {
+        "zero": 0.212121,
+        "w005": 0.212121,
+        "w010": 0.212121
+      },
+      "trend_vs_emerging_overlap": "stable"
+    },
+    "labeled_per_run_distinctness": {
+      "zero": {
+        "eligible_bridge_vs_emerging_jaccard": 0.212121,
+        "full_bridge_vs_emerging_jaccard": 0.73913
+      },
+      "w005": {
+        "eligible_bridge_vs_emerging_jaccard": 0.212121,
+        "full_bridge_vs_emerging_jaccard": 0.73913
+      },
+      "w010": {
+        "eligible_bridge_vs_emerging_jaccard": 0.212121,
+        "full_bridge_vs_emerging_jaccard": 0.666667
+      }
+    },
+    "bridge_score_percentile_variant_jaccards": {
+      "bridge_score_top_75pct": 0.428571,
+      "bridge_score_top_50pct": 0.25,
+      "bridge_score_top_25pct": 0.212121
+    },
+    "percentile_loosen_monotonic_distinctness_loss": true,
+    "bridge_top_k_pearson_bridge_score_vs_final_score": -0.12147045419452576
+  },
+  "primary_suspected_cause": "tied_variants_collapse_to_same_top_20",
+  "recommended_next_lever": "Redefine the bridge objective to penalize high final_score(emerging) (for example, bridge_eligible := cross_cluster_share >= X AND work_id NOT IN emerging_top_k_50); do not pick a threshold variant from this sweep.",
+  "classifier_branch_notes": {
+    "tied_variants_collapse_to_same_top_20": "same_top_20_count>=2 among tied-at-minimum AND len(persistent_shared)>=5",
+    "structural_bridge_emerging_intersection": "len(persistent_shared)>=4 AND >=2 distinct top-k hashes among tied-at-minimum",
+    "cohort_collapse": "every variant with jaccard strictly below existing_bridge_eligible.variant_vs_emerging_jaccard has eligible_count_total<50 (requires at least one such variant)",
+    "threshold_too_weak": "no ties at baseline_minimum AND baseline_minimum>=0.40",
+    "correlation_dominant": "percentile monotonic loss AND strong Pearson on diagnostics bridge_top_k_rows (fallback branch)"
+  }
+}
