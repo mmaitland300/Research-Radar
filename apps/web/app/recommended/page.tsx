@@ -310,6 +310,29 @@ function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanatio
   );
 }
 
+function bridgeEligibilityLabel(bridgeEligible: boolean | null): string {
+  if (bridgeEligible === true) return "Bridge eligible";
+  if (bridgeEligible === false) return "Not bridge eligible";
+  return "Bridge eligibility not recorded";
+}
+
+function bridgeSignalOrderingLine(explanations: RankedSignalExplanation[]): string | null {
+  const bridge = explanations.find((e) => e.key === "bridge");
+  if (!bridge) return null;
+  if (bridge.role === "used") {
+    return "Cross-cluster (bridge) signal is used in final ordering for this run.";
+  }
+  if (bridge.role === "measured" || bridge.role === "experimental") {
+    return "Cross-cluster (bridge) signal is measured for this run but is not used in final ordering.";
+  }
+  return "Cross-cluster (bridge) signal is not computed for this row.";
+}
+
+function BridgeSignalOrderingParagraph({ explanations }: { explanations: RankedSignalExplanation[] }) {
+  const line = bridgeSignalOrderingLine(explanations);
+  return line ? <p className="result-breakdown">{line}</p> : null;
+}
+
 function EmergingWhySurfaced({ explanations }: { explanations: RankedSignalExplanation[] }) {
   return (
     <details className="ranking-why-details">
@@ -516,6 +539,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 run for inspection. Depending on the pinned run, it may be measured-only or experimental,
                 so this page is a <strong>preview / diagnostics</strong>{" "}
                 surface—not a validated bridge recommender.
+              </p>
+            ) : null}
+            {family === "bridge" ? (
+              <p className="muted-inline">
+                Bridge evidence is experimental and run-specific. Use pinned runs for reviewed behavior.
               </p>
             ) : null}
             {family === "bridge" && viewingReviewedEligibleBridgeArm ? (
@@ -731,7 +759,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <span className="stamp">Limit: {limit}</span>
             </div>
           </div>
-          {family === "emerging" ? (
+          {family === "emerging" || family === "bridge" ? (
             <EmergingHowPanel expl={data.list_explanation} rankingVersion={data.ranking_version} />
           ) : null}
           {data.items.length === 0 ? (
@@ -764,8 +792,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     <span className={`stamp stamp-family stamp-family-${family}`}>
                       {FAMILY_LABEL[family]}
                     </span>
-                    {family === "bridge" && item.bridge_eligible === true ? (
-                      <span className="stamp">Bridge eligible</span>
+                    {family === "bridge" ? (
+                      <span className="stamp">{bridgeEligibilityLabel(item.bridge_eligible)}</span>
                     ) : null}
                     {focusPaperId === item.paper_id ? <span className="stamp">Focus paper</span> : null}
                     <span className="stamp">{item.topics.length} topic label{item.topics.length === 1 ? "" : "s"}</span>
@@ -780,9 +808,23 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     </div>
                   ) : null}
                   <p className="result-reason">{item.reason_short}</p>
+                  {family === "bridge" && bridgeEligibleOnly ? (
+                    <p className="result-breakdown">
+                      This row passed the bridge eligibility gate for the resolved run.
+                    </p>
+                  ) : null}
+                  {family === "bridge" ? (
+                    <BridgeSignalOrderingParagraph explanations={item.signal_explanations} />
+                  ) : null}
                   {family === "emerging" && item.signal_explanations?.length ? (
                     <EmergingWhySurfaced explanations={item.signal_explanations} />
-                  ) : (
+                  ) : null}
+                  {family === "bridge" && item.signal_explanations?.length ? (
+                    <EmergingWhySurfaced explanations={item.signal_explanations} />
+                  ) : null}
+                  {family === "bridge" ? (
+                    <p className="result-breakdown">Signals: {formatSignals(item.signals)}</p>
+                  ) : family === "emerging" && item.signal_explanations?.length ? null : (
                     <p className="result-breakdown">Signals: {formatSignals(item.signals)}</p>
                   )}
                   <div className="action-row" aria-label="Related views">
