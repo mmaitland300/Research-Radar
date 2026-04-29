@@ -89,6 +89,10 @@ export default async function TrendsPage() {
           from the selected &quot;recent&quot; year window against an earlier band to label topics rising,
           steady, or cooling: a sanity check for the corpus, not a field-wide forecast.
         </p>
+        <p className="muted-inline">
+          Topic labels are imported metadata and can be noisy; use them as coarse navigation hints,
+          not authoritative classifications.
+        </p>
         {data ? (
           <div className="hero-metrics" aria-label="Trend summary">
             <article className="metric-card">

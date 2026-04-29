@@ -12,7 +12,7 @@ const FAMILY_LABEL: Record<Family, string> = {
 const FAMILY_SUMMARY: Record<Family, string> = {
   emerging: "Momentum-weighted papers gaining relevance inside your curated slice.",
   bridge:
-    "Candidate bridge papers with measured cross-cluster signal. In this public run, bridge signal is visible for inspection but is not weighted into final_score yet.",
+    "Candidate bridge papers with measured cross-cluster signal. Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and product policy support stronger recommender claims.",
   undercited: "Low-cite candidates that appear stronger than their current attention level."
 };
 
@@ -23,9 +23,9 @@ const FAMILY_NOTES: Record<Family, string[]> = {
     "The goal is early importance, not raw popularity."
   ],
   bridge: [
-    "Bridge signal is currently measured for inspection, not weighted into final_score.",
+    "Bridge signal is currently measured for inspection and not used in ordering for this public run.",
     "Use this page as a diagnostics surface for cross-cluster candidates, not a validated bridge recommender.",
-    "First-class recommender framing for bridge should wait until evaluation, labeling scale, and policy—not bridge weighting alone—support that claim."
+    "Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and product policy support stronger recommender claims."
   ],
   undercited: [
     "These rows are judged against a low-cite candidate pool, not the whole corpus.",
@@ -427,7 +427,7 @@ async function fetchRanked(
       return {
         data: null,
         error:
-          "No succeeded ranking run found. Run the pipeline ranking job against your DB, or set NEXT_PUBLIC_RANKING_VERSION to match an existing run.",
+          "No succeeded ranking run found. Align the configured run label with an existing run, or use an explicit ranking_run_id.",
         status: 404
       };
     }
@@ -560,8 +560,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <div className="ranking-how-panel" role="status">
                 <h3>Run pin warning</h3>
                 <p className="muted-inline">
-                  Using latest succeeded run. For current bridge evidence, pin a{" "}
-                  <code>ranking_run_id</code> or <code>NEXT_PUBLIC_RANKING_VERSION</code>.
+                  Using latest succeeded run. For evidence review, use an explicit run id or run
+                  label so the page stays tied to the intended snapshot.
                 </p>
               </div>
             ) : null}
@@ -631,11 +631,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               </div>
             ) : null}
             <p>
-              Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code> per
-              family). The API derives plain-language explanations from the same weights stored on the
-              run. The <strong>undercited</strong> family only scores works in the frozen low-cite
-              candidate pool (<code>docs/candidate-pool-low-cite.md</code> v0), scoped to your corpus
-              snapshot.
+              Papers come from a <strong>materialized ranking run</strong>. The explanations reflect the
+              recorded signal weights for the resolved run. The <strong>undercited</strong> family is
+              scoped to a frozen low-citation candidate pool for the same corpus snapshot.
             </p>
             <nav className="tabs" aria-label="Recommendation family">
               {FAMILIES.map((f) => (
@@ -712,6 +710,10 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 {data.total === 1 ? "paper" : "papers"}
               </p>
             ) : null}
+            <p className="muted-inline">
+              Topic labels are imported metadata and can be noisy; use them as coarse navigation hints,
+              not authoritative classifications.
+            </p>
             {focusPaperId ? (
               <p className="muted-inline">
                 Focus paper: <code>{focusPaperId}</code>
@@ -725,16 +727,30 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   : ` is not in the current top ${limit} rows for this slice, but the run context is still pinned while you switch families.`}
               </p>
             ) : null}
-            {RANKING_VERSION ? (
-              <p className="muted-inline">
-                Web is filtering runs with <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>.
+            <details className="ranking-why-details">
+              <summary>Technical run metadata</summary>
+              <p className="result-breakdown">
+                {RANKING_VERSION ? (
+                  <>
+                    Run label filter: <code>{RANKING_VERSION}</code>.
+                  </>
+                ) : (
+                  <>No run label filter is configured; the API resolves the latest succeeded run.</>
+                )}
+                {data ? (
+                  <>
+                    {" "}
+                    Resolved run: <code>{data.ranking_run_id}</code>; snapshot:{" "}
+                    <code>{data.corpus_snapshot_version}</code>.
+                  </>
+                ) : null}
               </p>
-            ) : (
-              <p className="muted-inline">
-                Using the latest succeeded run for the corpus snapshot (set{" "}
-                <code>NEXT_PUBLIC_RANKING_VERSION</code> to pin a label).
+              <p className="result-breakdown">
+                Storage provenance: materialized family rows are read from <code>paper_scores</code>.
+                Result ordering is <code>final_score desc, work_id asc</code>. The undercited pool
+                definition is documented in <code>docs/candidate-pool-low-cite.md</code>.
               </p>
-            )}
+            </details>
           </div>
           <aside className="family-brief">
             <div className="family-brief-diagram" aria-hidden="true">
@@ -768,8 +784,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           <p>{error}</p>
           {status === 404 ? (
             <p className="muted-inline">
-              Example:{" "}
-              <code>NEXT_PUBLIC_RANKING_VERSION=v0-heuristic-no-embeddings-step3</code>
+              Example run label: <code>v0-heuristic-no-embeddings-step3</code>
             </p>
           ) : null}
         </section>
@@ -793,7 +808,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               {family === "bridge" && bridgeEligibleOnly ? (
                 <span className="stamp">Eligible only</span>
               ) : null}
-              <span className="stamp">Order: final_score desc, work_id asc</span>
+              <span className="stamp">Order: score desc, stable tie-break</span>
               <span className="stamp">Limit: {limit}</span>
             </div>
           </div>
@@ -892,8 +907,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           <p>
             ML milestone 1 delivers retrieval for similar papers. Writing{" "}
             <code>semantic_score</code> into ranked families stays gated until a defined relevance target;
-            bridge-style scores remain diagnostics until weighting and proxy evaluation justify recommender
-            framing.
+            bridge remains a diagnostic review surface until labeled review, proxy evaluation, and
+            product policy support stronger recommender claims.
           </p>
         </article>
         <article className="card">

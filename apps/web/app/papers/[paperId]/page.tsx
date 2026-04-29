@@ -482,7 +482,7 @@ export default async function PaperDetailPage({
               <h2>Use this page as a paper dossier</h2>
               <ul className="measure-list">
                 <li>Confirm the source and abstract before judging similarity.</li>
-                <li>Use topic labels to understand neighborhood placement.</li>
+                <li>Use topic labels as coarse navigation hints for neighborhood placement.</li>
                 <li>Hand off from this page into ranked or similar-paper surfaces.</li>
               </ul>
             </div>
@@ -676,6 +676,10 @@ export default async function PaperDetailPage({
             </div>
           ) : null}
         </div>
+        <p className="muted-inline">
+          Topic labels are imported metadata and can be noisy; use them as coarse navigation hints,
+          not authoritative classifications.
+        </p>
         {paper && paper.topics.length > 0 ? (
           <p className="chip-row" aria-label="Topics">
             {paper.topics.map((topic) => (

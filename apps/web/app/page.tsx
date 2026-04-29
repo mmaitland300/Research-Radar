@@ -7,7 +7,7 @@ const cards = [
   {
     title: "Bridge preview",
     body:
-      "Inspect cross-cluster candidates with measured bridge signal. Weighting into final_score is gated until the evaluation story matches the label."
+      "Inspect cross-cluster candidates with measured bridge signal. Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and product policy support stronger recommender claims."
   },
   {
     title: "Explainable Ranking",
@@ -33,7 +33,7 @@ const signalCards = [
     label: "Bridge",
     value: "Cross-cluster links",
     body:
-      "Inspect candidate works that may connect nearby but distinct research neighborhoods, with bridge signal kept diagnostic until weighting and evaluation justify stronger claims."
+      "Inspect candidate works that may connect nearby but distinct research neighborhoods, with bridge signal kept diagnostic until labeled review, proxy evaluation, and product policy support stronger claims."
   },
   {
     tone: "undercited",

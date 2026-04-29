@@ -379,7 +379,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
         return {
           data: null,
           error:
-            "No succeeded ranking run found. Run the pipeline ranking job, or set NEXT_PUBLIC_RANKING_VERSION to match a run.",
+            "No succeeded ranking run found. Align the configured run label with an existing run, or use an explicit ranking_run_id.",
           status: 404
         };
       }
@@ -473,12 +473,12 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
         </nav>
         {RANKING_VERSION ? (
           <p className="muted-inline">
-            Pin: <code>NEXT_PUBLIC_RANKING_VERSION={RANKING_VERSION}</code>
+            Run label filter: <code>{RANKING_VERSION}</code>
           </p>
         ) : (
           <p className="muted-inline">
-            Using latest succeeded run for the default snapshot (set{" "}
-            <code>NEXT_PUBLIC_RANKING_VERSION</code> to pin).
+            Using latest succeeded run for the default snapshot. Use an explicit run label or run id
+            for stable reviewer checks.
           </p>
         )}
         {focusPaperId ? (
@@ -516,8 +516,8 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
           <p>{error}</p>
           {status === 404 ? (
             <p className="muted-inline">
-              Run <code>ranking-run</code> against Postgres, or align{" "}
-              <code>NEXT_PUBLIC_RANKING_VERSION</code> with an existing label.
+              Run <code>ranking-run</code> against Postgres, or align the configured run label with
+              an existing label.
             </p>
           ) : null}
         </section>
@@ -557,9 +557,12 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
               <p className="muted-inline">
                 Low-cite gate from run config: year at least {data.low_cite_min_year}, citations at most
                 {data.low_cite_max_citations} (revision {data.candidate_pool_doc_revision ?? "v0"}).
-                Frozen definition: <code>docs/candidate-pool-low-cite.md</code>.
               </p>
             ) : null}
+            <p className="muted-inline">
+              Topic labels are imported metadata and can be noisy; use them as coarse navigation hints,
+              not authoritative classifications.
+            </p>
           </section>
 
           {family === "bridge" && bridgeDistinctness ? (
@@ -575,8 +578,11 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                   <strong>Diagnostic only.</strong>
                 </li>
                 <li>Not a human relevance benchmark.</li>
-                <li>Used to decide whether bridge weighting is worth testing.</li>
-                <li>Bridge remains unvalidated until judged improvements exist.</li>
+                <li>Used to inspect whether this bridge review arm is worth further evaluation.</li>
+                <li>
+                  Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and
+                  product policy support stronger recommender claims.
+                </li>
               </ul>
               {bridgeDistinctness.kind === "error" ? (
                 <div className="eval-bridge-distinctness-error">

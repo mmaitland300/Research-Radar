@@ -16,6 +16,7 @@ Manual checks before tagging a release or demoing a new deploy. Assumes API and 
 
 ## Recommended — emerging
 
+- [ ] Open `/recommended`.
 - [ ] Open `/recommended?family=emerging` (e.g. `http://localhost:3000/recommended?family=emerging`).
 - [ ] Page loads without API errors; run metadata (version / run id / snapshot) looks intended.
 - [ ] List renders with scores and explanations where the API provides them.
@@ -49,8 +50,27 @@ Manual checks before tagging a release or demoing a new deploy. Assumes API and 
 
 ## Evaluation — bridge (if route is deployed)
 
+- [ ] Open `/evaluation`.
 - [ ] Open `/evaluation?family=bridge` (bridge is a supported family in `evaluation/page.tsx`).
 - [ ] Disclaimer and ranked vs baseline arms render; no hard error from the compare API.
+
+## Stale route guard
+
+For the current public reviewer routes, confirm the old smoke identifiers do not appear:
+
+- [ ] `/recommended`
+- [ ] `/recommended?family=bridge`
+- [ ] `/recommended?family=undercited`
+- [ ] `/trends`
+- [ ] `/evaluation`
+- [ ] `/evaluation?family=bridge`
+
+Expected current public metadata:
+
+- [ ] `rank-60910a47b4` appears on ranking-backed routes.
+- [ ] `source-snapshot-v2-candidate-plan-20260428` appears where run or snapshot metadata is visible.
+- [ ] `rank-3904fec89d` does not appear.
+- [ ] `source-snapshot-20260425-044015` does not appear.
 
 ---
 

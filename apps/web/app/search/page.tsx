@@ -397,7 +397,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             <p className="hero-lead">
               Search v1 is intentionally narrow: lexical retrieval over titles and abstracts, plus
               practical filters for narrowing the curated slice. Semantic assist can come later,
-              but it is not part of this branch&apos;s contract.
+              but it is not part of Search v1&apos;s scope.
             </p>
             {data ? (
               <div className="hero-metrics" aria-label="Search surface summary">
@@ -422,9 +422,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
               </div>
             ) : null}
             <p className="muted-inline">
-              Search branch contract: dedicated <code>/api/v1/search</code>, lexical ordering, real
-              filters, and clean handoff into dossier and ranking views. When ranking family
-              filtering is active, the API resolves and returns one explicit run context.
+              Search v1 scope: dedicated lexical search, practical filters, and clean handoff into
+              dossier and ranking views. When ranking family filtering is active, the API resolves
+              and returns one explicit run context.
             </p>
           </div>
           <aside className="family-brief">
@@ -438,7 +438,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <span className="family-node family-node-bridge family-node-3" />
             </div>
             <div className="family-brief-copy">
-              <p className="eyebrow family-bridge">Search contract</p>
+              <p className="eyebrow family-bridge">Search scope</p>
               <h2>Lexical now, semantic later</h2>
               <ul className="measure-list">
                 <li>Search title and abstract with deterministic lexical ordering.</li>
@@ -547,13 +547,17 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </form>
         </article>
         <article className="panel instrument-panel">
-          <h2>What this branch ships</h2>
+          <h2>What Search v1 ships</h2>
           <ul className="measure-list">
             <li>Lexical retrieval over <code>title + abstract</code>.</li>
             <li>Filters for year, scope, venue/source, topic label, and ranking family filter.</li>
             <li>Stable ordering: lexical rank, then year, citations, and work id.</li>
             <li>Run metadata appears only when the search depended on ranking state.</li>
           </ul>
+          <p className="muted-inline">
+            Topic labels are imported metadata and can be noisy; use them as coarse navigation hints,
+            not authoritative classifications.
+          </p>
         </article>
       </section>
 
