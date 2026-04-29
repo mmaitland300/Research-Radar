@@ -1224,7 +1224,74 @@ def main() -> None:
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    ml_contrastive_ws_parser = subparsers.add_parser(
+        "ml-contrastive-review-worksheet",
+        help="Read-only CSV/Markdown worksheet to expand contrastive offline audit label coverage for one ranking_run_id",
+    )
+    ml_contrastive_ws_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON (e.g. docs/audit/ml-label-dataset-v1.json)",
+    )
+    ml_contrastive_ws_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id (no implicit latest selection)",
+    )
+    ml_contrastive_ws_parser.add_argument(
+        "--output",
+        required=True,
+        help="Output CSV path (e.g. docs/audit/manual-review/ml_contrastive_<run>_review.csv)",
+    )
+    ml_contrastive_ws_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Companion Markdown path",
+    )
+    ml_contrastive_ws_parser.add_argument(
+        "--per-family",
+        type=int,
+        default=15,
+        help="Max rows per recommendation family (default 15)",
+    )
+    ml_contrastive_ws_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     args = parser.parse_args()
+
+    if args.command == "ml-contrastive-review-worksheet":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_contrastive_review_worksheet import (
+            MLContrastiveReviewWorksheetError,
+            run_ml_contrastive_review_worksheet_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        pf = int(args.per_family)
+        if pf < 1 or pf > 200:
+            parser.error("--per-family must be between 1 and 200")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        label_path = Path(args.label_dataset)
+        try:
+            run_ml_contrastive_review_worksheet_cli(
+                database_url=dsn,
+                label_dataset_path=label_path,
+                ranking_run_id=rid,
+                output_csv=Path(args.output),
+                markdown_output=Path(args.markdown_output),
+                per_family=pf,
+            )
+        except MLContrastiveReviewWorksheetError as e:
+            print(f"ml-contrastive-review-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
 
     if args.command == "ml-label-readiness-matrix":
         from pipeline import bootstrap_loader as _bootstrap_loader
