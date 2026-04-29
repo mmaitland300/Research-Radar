@@ -51,6 +51,10 @@ from pipeline.bridge_weight_experiment_delta_worksheet import (
     BridgeWeightExperimentDeltaWorksheetError,
     write_bridge_weight_experiment_delta_worksheet,
 )
+from pipeline.bridge_weight_experiment_delta_summary import (
+    BridgeWeightExperimentDeltaSummaryError,
+    run_bridge_weight_experiment_delta_summary,
+)
 from pipeline.bridge_eligibility_sensitivity import (
     BridgeEligibilitySensitivityError,
     run_bridge_eligibility_sensitivity,
@@ -471,6 +475,10 @@ def main() -> None:
         "bridge-weight-experiment-delta-worksheet",
         help="Read-only CSV worksheet for unlabeled moved-in eligible bridge experiment rows",
     )
+    bridge_weight_delta_summary_parser = subparsers.add_parser(
+        "bridge-weight-experiment-delta-summary",
+        help="Validate and summarize a completed bridge-weight delta review worksheet CSV",
+    )
     bridge_sensitivity_parser = subparsers.add_parser(
         "bridge-eligibility-sensitivity",
         help="Read-only threshold sweep for bridge eligibility distinctness on one explicit ranking_run_id",
@@ -819,6 +827,21 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    bridge_weight_delta_summary_parser.add_argument(
+        "--input",
+        required=True,
+        help="Completed delta review worksheet CSV path",
+    )
+    bridge_weight_delta_summary_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write delta summary JSON",
+    )
+    bridge_weight_delta_summary_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write delta summary Markdown",
+    )
 
     args = parser.parse_args()
 
@@ -1132,6 +1155,20 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(len(rows))
+        return
+    if args.command == "bridge-weight-experiment-delta-summary":
+        try:
+            run_bridge_weight_experiment_delta_summary(
+                input_path=Path(args.input),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+            )
+        except BridgeWeightExperimentDeltaSummaryError as e:
+            print(f"bridge-weight-experiment-delta-summary: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
         return
 
     policy = CorpusPolicy()
