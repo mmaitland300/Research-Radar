@@ -71,6 +71,7 @@ type RankedItem = {
   final_score: number;
   reason_short: string;
   signal_explanations: RankedSignalExplanation[];
+  bridge_eligible: boolean | null;
 };
 
 type RankedResponse = {
@@ -197,7 +198,13 @@ function normalizeRankedPayload(json: unknown, family: Family): RankedResponse |
       signals,
       final_score: Number.isFinite(finalNum) ? finalNum : 0,
       reason_short: String(r.reason_short ?? ""),
-      signal_explanations
+      signal_explanations,
+      bridge_eligible:
+        typeof r.bridge_eligible === "boolean"
+          ? r.bridge_eligible
+          : r.bridge_eligible == null
+            ? null
+            : Boolean(r.bridge_eligible)
     };
   });
 
@@ -336,6 +343,7 @@ async function fetchRanked(
   options: {
     limit: number;
     rankingRunId: string | undefined;
+    bridgeEligibleOnly: boolean;
   }
 ): Promise<{
   data: RankedResponse | null;
@@ -348,6 +356,9 @@ async function fetchRanked(
   });
   if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);
   if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
+  if (family === "bridge" && options.bridgeEligibleOnly) {
+    params.set("bridge_eligible_only", "true");
+  }
 
   try {
     const response = await fetch(
@@ -415,6 +426,11 @@ function parseLimit(raw: string | string[] | undefined, fallback: number, max: n
   return Math.max(1, Math.min(max, Math.trunc(parsed)));
 }
 
+function parseBooleanParam(raw: string | string[] | undefined): boolean {
+  const value = parseSingleParam(raw);
+  return value === "true" || value === "1" || value === "yes";
+}
+
 function paperAnchorId(paperId: string): string {
   return `paper-${encodeURIComponent(paperId)}`;
 }
@@ -425,12 +441,16 @@ function buildRecommendedFamilyHref(
     focusPaperId?: string;
     rankingRunId?: string;
     limit?: number;
+    bridgeEligibleOnly?: boolean;
   }
 ): string {
   const params = new URLSearchParams({ family });
   if (options.focusPaperId) params.set("paper", options.focusPaperId);
   if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
   if (options.limit != null) params.set("limit", String(options.limit));
+  if (family === "bridge" && options.bridgeEligibleOnly) {
+    params.set("bridge_eligible_only", "true");
+  }
   return `/recommended?${params.toString()}`;
 }
 
@@ -439,7 +459,13 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
   const focusPaperId = parseSingleParam(searchParams.paper);
   const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
   const limit = parseLimit(searchParams.limit, 15, 100);
-  const { data, error, status } = await fetchRanked(family, { limit, rankingRunId });
+  const bridgeEligibleOnly = family === "bridge" && parseBooleanParam(searchParams.bridge_eligible_only);
+  const usingUnpinnedLatestRun = !rankingRunId && !RANKING_VERSION;
+  const { data, error, status } = await fetchRanked(family, {
+    limit,
+    rankingRunId,
+    bridgeEligibleOnly
+  });
   const topScore = data?.items[0]?.final_score ?? null;
   const surfacedWithTopics = data?.items.filter((item) => item.topics.length > 0).length ?? 0;
   const focusItem = focusPaperId
@@ -458,19 +484,44 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               </div>
               <div className="stamp-row">
                 <span className={`stamp stamp-family stamp-family-${family}`}>
-                  {family === "bridge" ? "Bridge preview" : `${FAMILY_LABEL[family]} feed`}
+                  {family === "bridge" && bridgeEligibleOnly
+                    ? "Eligible-only bridge view"
+                    : family === "bridge"
+                      ? "Bridge preview"
+                      : `${FAMILY_LABEL[family]} feed`}
                 </span>
                 <span className="stamp">Materialized ranking run</span>
               </div>
             </div>
             <p className="hero-lead">{FAMILY_SUMMARY[family]}</p>
+            {usingUnpinnedLatestRun ? (
+              <div className="ranking-how-panel" role="status">
+                <h3>Run pin warning</h3>
+                <p className="muted-inline">
+                  Using latest succeeded run. For reviewed bridge evidence, pin a{" "}
+                  <code>ranking_run_id</code> or <code>NEXT_PUBLIC_RANKING_VERSION</code>.
+                </p>
+              </div>
+            ) : null}
             {family === "bridge" ? (
               <p className="muted-inline">
                 <strong>Diagnostics:</strong> bridge signal is <strong>measured</strong> and visible in this
-                run for inspection. In the current public configuration it is <strong>not</strong> weighted
-                into <code>final_score</code>, so this page is a <strong>preview / diagnostics</strong>{" "}
+                run for inspection. Depending on the pinned run, it may be measured-only or experimental,
+                so this page is a <strong>preview / diagnostics</strong>{" "}
                 surface—not a validated bridge recommender.
               </p>
+            ) : null}
+            {family === "bridge" && bridgeEligibleOnly ? (
+              <div className="ranking-how-panel">
+                <h3>Eligible-only bridge view</h3>
+                <p className="muted-inline">
+                  Experimental bridge arm; not a default or validation claim.
+                </p>
+                <p className="muted-inline">
+                  Current evidence supports 0.05 as a plausible experimental bridge-weight arm,
+                  not default. 0.10 showed no additional eligible top-20 membership movement.
+                </p>
+              </div>
             ) : null}
             <p>
               Papers come from a <strong>materialized ranking run</strong> (<code>paper_scores</code> per
@@ -486,7 +537,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   href={buildRecommendedFamilyHref(f, {
                     focusPaperId,
                     rankingRunId,
-                    limit
+                    limit,
+                    bridgeEligibleOnly: f === "bridge" ? bridgeEligibleOnly : false
                   })}
                   aria-current={f === family ? "page" : undefined}
                   scroll={false}
@@ -495,6 +547,32 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 </Link>
               ))}
             </nav>
+            {family === "bridge" ? (
+              <nav className="tabs" aria-label="Bridge feed view">
+                <Link
+                  href={buildRecommendedFamilyHref("bridge", {
+                    focusPaperId,
+                    rankingRunId,
+                    limit,
+                    bridgeEligibleOnly: false
+                  })}
+                  aria-current={!bridgeEligibleOnly ? "page" : undefined}
+                >
+                  Full bridge feed
+                </Link>
+                <Link
+                  href={buildRecommendedFamilyHref("bridge", {
+                    focusPaperId,
+                    rankingRunId,
+                    limit,
+                    bridgeEligibleOnly: true
+                  })}
+                  aria-current={bridgeEligibleOnly ? "page" : undefined}
+                >
+                  Eligible-only bridge feed
+                </Link>
+              </nav>
+            ) : null}
             {data ? (
               <div className="hero-metrics" aria-label="Ranking run summary">
                 <article className="metric-card">
@@ -603,6 +681,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <span className={`stamp stamp-family stamp-family-${family}`}>
                 Family: {data.family}
               </span>
+              {family === "bridge" && bridgeEligibleOnly ? (
+                <span className="stamp">Eligible only</span>
+              ) : null}
               <span className="stamp">Order: final_score desc, work_id asc</span>
               <span className="stamp">Limit: {limit}</span>
             </div>
@@ -640,6 +721,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     <span className={`stamp stamp-family stamp-family-${family}`}>
                       {FAMILY_LABEL[family]}
                     </span>
+                    {family === "bridge" && item.bridge_eligible === true ? (
+                      <span className="stamp">Bridge eligible</span>
+                    ) : null}
                     {focusPaperId === item.paper_id ? <span className="stamp">Focus paper</span> : null}
                     <span className="stamp">{item.topics.length} topic label{item.topics.length === 1 ? "" : "s"}</span>
                   </div>
