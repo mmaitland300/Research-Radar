@@ -541,6 +541,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                       rankingRunId: REVIEWED_ELIGIBLE_BRIDGE_RUN_ID,
                       bridgeEligibleOnly: true
                     })}
+                    scroll={false}
                   >
                     Open reviewed 0.05 eligible bridge arm
                   </Link>
@@ -597,6 +598,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     bridgeEligibleOnly: false
                   })}
                   aria-current={!bridgeEligibleOnly ? "page" : undefined}
+                  scroll={false}
                 >
                   Full bridge feed
                 </Link>
@@ -608,6 +610,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     bridgeEligibleOnly: true
                   })}
                   aria-current={bridgeEligibleOnly ? "page" : undefined}
+                  scroll={false}
                 >
                   Eligible-only bridge feed
                 </Link>
