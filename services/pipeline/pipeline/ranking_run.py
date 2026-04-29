@@ -48,10 +48,29 @@ from pipeline.ranking_persistence import (
 RECOMMENDATION_FAMILIES: tuple[str, ...] = ("emerging", "bridge", "undercited")
 BRIDGE_ELIGIBILITY_MODE_CURRENT = "current"
 BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040 = "top50_cross_cluster_gte_0_40"
+# Same top50 + cross_cluster>=0.40 rule as TOP50_CROSS040, then force ineligible for persistent overlap IDs
+# (diagnostic experiment; not the product default).
+BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1 = "top50_cross040_exclude_persistent_shared_v1"
 SUPPORTED_BRIDGE_ELIGIBILITY_MODES: tuple[str, ...] = (
     BRIDGE_ELIGIBILITY_MODE_CURRENT,
     BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
+    BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1,
 )
+
+# Persistent shared-with-emerging (baseline rank-ee2ba6c816); frozen for this experiment mode only.
+PERSISTENT_SHARED_EXCLUDED_WORK_IDS: tuple[int, ...] = (10, 14, 125, 131, 138)
+PERSISTENT_SHARED_EXCLUDED_PAPER_IDS: tuple[str, ...] = (
+    "https://openalex.org/W4412696666",
+    "https://openalex.org/W4407236737",
+    "https://openalex.org/W4411141659",
+    "https://openalex.org/W4410025413",
+    "https://openalex.org/W4409215217",
+)
+BRIDGE_ELIGIBILITY_EXPERIMENT_SOURCE_ARTIFACT = (
+    "docs/audit/manual-review/bridge_objective_redesign_simulation_rank-ee2ba6c816_top20.json"
+)
+
+PERSISTENT_SHARED_EXCLUDED_WORK_ID_SET: frozenset[int] = frozenset(PERSISTENT_SHARED_EXCLUDED_WORK_IDS)
 
 # Upper bound for --bridge-weight-for-family-bridge (ML2-5b experiments); keeps fat-finger runs bounded.
 MAX_BRIDGE_WEIGHT_FOR_BRIDGE_FAMILY = 0.25
@@ -151,6 +170,13 @@ def validate_bridge_eligibility_mode(value: str) -> str:
     return mode
 
 
+def _bridge_eligibility_uses_top50_cross040_family(mode: str) -> bool:
+    return mode in (
+        BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
+        BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1,
+    )
+
+
 def resolved_family_weights(
     bridge_weight_for_bridge_family: float,
     *,
@@ -213,10 +239,19 @@ def _build_ranking_config(
     bridge_eligibility_mode = validate_bridge_eligibility_mode(bridge_eligibility_mode)
     bridge_score_percentile_threshold: str | None = None
     cross_cluster_neighbor_share_min: float | None = None
-    if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+    if _bridge_eligibility_uses_top50_cross040_family(bridge_eligibility_mode):
         bridge_score_percentile_threshold = "top50"
         cross_cluster_neighbor_share_min = 0.40
-    return {
+    exclusion: dict[str, Any] | None = None
+    if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1:
+        exclusion = {
+            "bridge_eligibility_mode": BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1,
+            "inherits_from_mode": BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
+            "excluded_work_ids": list(PERSISTENT_SHARED_EXCLUDED_WORK_IDS),
+            "excluded_paper_ids": list(PERSISTENT_SHARED_EXCLUDED_PAPER_IDS),
+            "source_diagnostic_artifact": BRIDGE_ELIGIBILITY_EXPERIMENT_SOURCE_ARTIFACT,
+        }
+    out: dict[str, Any] = {
         "default_weights": asdict(ScoreWeights()),
         "family_weights": {family: asdict(weights) for family, weights in family_weights_resolved.items()},
         "families_written": list(RECOMMENDATION_FAMILIES),
@@ -274,6 +309,9 @@ def _build_ranking_config(
         "bridge_score_percentile_threshold": bridge_score_percentile_threshold,
         "cross_cluster_neighbor_share_min": cross_cluster_neighbor_share_min,
     }
+    if exclusion is not None:
+        out["bridge_eligibility_exclusion"] = exclusion
+    return out
 
 
 def _clamp_01(value: float) -> float:
@@ -454,7 +492,7 @@ def build_step3_heuristic_score_rows(
 
     bridge_score_cutoff_top50: float | None = None
     if (
-        bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
+        _bridge_eligibility_uses_top50_cross040_family(bridge_eligibility_mode)
         and cluster_version is not None
         and bridge_boundary_by_work is not None
     ):
@@ -485,7 +523,7 @@ def build_step3_heuristic_score_rows(
         mix_bridge_signal_json: dict[str, Any] | None = None
         if neighbor_mix_by_work is not None:
             if mix is not None:
-                if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+                if _bridge_eligibility_uses_top50_cross040_family(bridge_eligibility_mode):
                     cross_cluster_share = mix.mix_score
                     passes_threshold = bool(
                         mix.eligible
@@ -495,20 +533,29 @@ def build_step3_heuristic_score_rows(
                         and cross_cluster_share is not None
                         and cross_cluster_share >= 0.40
                     )
+                    if (
+                        bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1
+                        and candidate.work_id in PERSISTENT_SHARED_EXCLUDED_WORK_ID_SET
+                    ):
+                        passes_threshold = False
                     mix_bridge_eligible = passes_threshold
                 else:
                     mix_bridge_eligible = mix.eligible
                 mix_bridge_signal_json = neighbor_mix_v1_json_payload(mix, k=neighbor_mix_k)
                 mix_bridge_signal_json["eligible"] = mix_bridge_eligible
-                if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+                if _bridge_eligibility_uses_top50_cross040_family(bridge_eligibility_mode):
                     mix_bridge_signal_json["eligibility_mode"] = bridge_eligibility_mode
                     mix_bridge_signal_json["bridge_score_percentile_threshold"] = "top50"
                     mix_bridge_signal_json["cross_cluster_neighbor_share_min"] = 0.40
                     mix_bridge_signal_json["bridge_score_top50_cutoff"] = bridge_score_cutoff_top50
+                    if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1:
+                        mix_bridge_signal_json["persistent_overlap_exclusion_v1"] = (
+                            candidate.work_id in PERSISTENT_SHARED_EXCLUDED_WORK_ID_SET
+                        )
             else:
                 mix_bridge_eligible = False
                 mix_bridge_signal_json = neighbor_mix_v1_unsupported_payload(k=neighbor_mix_k)
-                if bridge_eligibility_mode == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040:
+                if _bridge_eligibility_uses_top50_cross040_family(bridge_eligibility_mode):
                     mix_bridge_signal_json["eligibility_mode"] = bridge_eligibility_mode
 
         emerging_semantic: float | None = None

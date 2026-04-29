@@ -6,6 +6,7 @@ import pytest
 from pipeline.ranking_run import (
     BRIDGE_ELIGIBILITY_MODE_CURRENT,
     BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040,
+    BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1,
     BRIDGE_REASON_LEGACY,
     BRIDGE_REASON_NO_CLUSTER,
     BRIDGE_REASON_STRUCTURAL,
@@ -440,9 +441,39 @@ def test_bridge_eligibility_mode_top50_cross040_changes_bridge_eligible() -> Non
     assert bridge[1].bridge_signal_json["eligibility_mode"] == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
 
 
+def test_bridge_eligibility_mode_exclude_persistent_overrides_top50_pass() -> None:
+    """Persistent overlap IDs become ineligible even when top50+cross040 would pass."""
+    cands = [
+        _pool_candidate(work_id=10, topic_ids=(1,)),
+        _pool_candidate(work_id=11, topic_ids=(1,)),
+    ]
+    bridge_scores = {10: 0.95, 11: 0.95}
+    mix_map = {
+        10: NeighborMixV1Result(True, 0.50, (20, 21), "c1", 5),
+        11: NeighborMixV1Result(True, 0.50, (20, 21), "c1", 5),
+    }
+    rows = build_step3_heuristic_score_rows(
+        cands,
+        cluster_version="cv",
+        bridge_boundary_by_work=bridge_scores,
+        bridge_eligibility_mode=BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1,
+        neighbor_mix_by_work=mix_map,
+    )
+    bridge = {r.work_id: r for r in rows if r.recommendation_family == "bridge"}
+    assert bridge[10].bridge_eligible is False
+    assert bridge[10].bridge_signal_json is not None
+    assert bridge[10].bridge_signal_json.get("persistent_overlap_exclusion_v1") is True
+    assert bridge[11].bridge_eligible is True
+    assert bridge[11].bridge_signal_json.get("persistent_overlap_exclusion_v1") is False
+
+
 def test_validate_bridge_eligibility_mode_and_config_top50() -> None:
     assert validate_bridge_eligibility_mode(BRIDGE_ELIGIBILITY_MODE_CURRENT) == BRIDGE_ELIGIBILITY_MODE_CURRENT
     assert validate_bridge_eligibility_mode(BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040) == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
+    assert (
+        validate_bridge_eligibility_mode(BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1)
+        == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1
+    )
     with pytest.raises(ValueError):
         validate_bridge_eligibility_mode("bad")
     cfg = _build_ranking_config(
@@ -459,3 +490,22 @@ def test_validate_bridge_eligibility_mode_and_config_top50() -> None:
     assert cfg["bridge_eligibility_mode"] == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040
     assert cfg["bridge_score_percentile_threshold"] == "top50"
     assert cfg["cross_cluster_neighbor_share_min"] == 0.40
+
+
+def test_build_ranking_config_exclude_persistent_has_exclusion_metadata() -> None:
+    cfg = _build_ranking_config(
+        corpus_snapshot_version="snap",
+        placeholder_policy="p",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+        cluster_version="k1",
+        embedding_version="ev",
+        bridge_weight_for_bridge_family=0.0,
+        family_weights_resolved=resolved_family_weights(0.0),
+        bridge_eligibility_mode=BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1,
+    )
+    assert cfg["bridge_eligibility_mode"] == BRIDGE_ELIGIBILITY_MODE_TOP50_CROSS040_EXCLUDE_PERSISTENT_SHARED_V1
+    ex = cfg.get("bridge_eligibility_exclusion")
+    assert isinstance(ex, dict)
+    assert ex["excluded_work_ids"] == [10, 14, 125, 131, 138]
+    assert "openalex.org" in ex["excluded_paper_ids"][0]

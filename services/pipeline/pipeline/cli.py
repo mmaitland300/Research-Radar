@@ -43,6 +43,10 @@ from pipeline.bridge_signal_diagnostics import (
     BridgeSignalDiagnosticsError,
     run_bridge_signal_diagnostics,
 )
+from pipeline.bridge_objective_experiment_compare import (
+    BridgeObjectiveExperimentCompareError,
+    run_bridge_objective_experiment_compare,
+)
 from pipeline.bridge_weight_experiment_compare import (
     BridgeWeightExperimentCompareError,
     run_bridge_weight_experiment_compare,
@@ -856,10 +860,52 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    bridge_objective_compare_parser = subparsers.add_parser(
+        "bridge-objective-experiment-compare",
+        help="Read-only baseline vs experiment when only bridge_eligibility_mode differs (same bridge weight)",
+    )
+    bridge_objective_compare_parser.add_argument(
+        "--baseline-ranking-run-id",
+        required=True,
+        help="Baseline ranking_run_id",
+    )
+    bridge_objective_compare_parser.add_argument(
+        "--experiment-ranking-run-id",
+        required=True,
+        help="Experiment ranking_run_id (different bridge_eligibility_mode)",
+    )
+    bridge_objective_compare_parser.add_argument(
+        "--k",
+        type=int,
+        default=20,
+        help="Top-k size from paper_scores (default 20)",
+    )
+    bridge_objective_compare_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write comparison JSON",
+    )
+    bridge_objective_compare_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write comparison Markdown",
+    )
+    bridge_objective_compare_parser.add_argument(
+        "--baseline-bridge-worksheet",
+        "--labeled-bridge-worksheet",
+        dest="baseline_bridge_worksheet",
+        required=True,
+        help="Baseline labeled bridge eligible top-k CSV (for new-unlabeled detection)",
+    )
+    bridge_objective_compare_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     bridge_weight_delta_parser.add_argument(
         "--comparison",
         required=True,
-        help="Bridge weight comparison JSON artifact",
+        help="Bridge weight or objective experiment comparison JSON artifact",
     )
     bridge_weight_delta_parser.add_argument(
         "--baseline-bridge-worksheet",
@@ -1366,6 +1412,32 @@ def main() -> None:
             )
         except BridgeWeightExperimentCompareError as e:
             print(f"bridge-weight-experiment-compare: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "bridge-objective-experiment-compare":
+        if args.k < 1 or args.k > 200:
+            parser.error("--k must be between 1 and 200")
+        baseline_rrid = (args.baseline_ranking_run_id or "").strip()
+        experiment_rrid = (args.experiment_ranking_run_id or "").strip()
+        if not baseline_rrid:
+            parser.error("--baseline-ranking-run-id is required and must not be blank")
+        if not experiment_rrid:
+            parser.error("--experiment-ranking-run-id is required and must not be blank")
+        try:
+            run_bridge_objective_experiment_compare(
+                baseline_ranking_run_id=baseline_rrid,
+                experiment_ranking_run_id=experiment_rrid,
+                k=int(args.k),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+                database_url=args.database_url,
+                baseline_bridge_worksheet_path=Path(args.baseline_bridge_worksheet),
+            )
+        except BridgeObjectiveExperimentCompareError as e:
+            print(f"bridge-objective-experiment-compare: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:

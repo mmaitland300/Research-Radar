@@ -107,7 +107,24 @@ def _validate_comparison_artifact(
         raise BridgeWeightExperimentDeltaWorksheetError("experiment ranking_run_id argument mismatches comparison artifact", code=2)
 
     same_stack = comparison.get("same_stack_check")
-    if not isinstance(same_stack, dict) or not all(bool(v) for v in same_stack.values()):
+    if not isinstance(same_stack, dict):
+        raise BridgeWeightExperimentDeltaWorksheetError("comparison artifact missing same_stack_check", code=2)
+    if comparison.get("review_kind") == "bridge_objective_experiment_compare":
+        required_true = (
+            "same_corpus_snapshot_version",
+            "same_embedding_version",
+            "same_cluster_version",
+            "same_bridge_weight_for_family_bridge",
+        )
+        if not all(bool(same_stack.get(k)) for k in required_true):
+            raise BridgeWeightExperimentDeltaWorksheetError(
+                "objective experiment comparison did not pass same-stack checks", code=2
+            )
+        if not bool(same_stack.get("bridge_eligibility_modes_differ")):
+            raise BridgeWeightExperimentDeltaWorksheetError(
+                "objective experiment comparison requires differing bridge_eligibility_mode", code=2
+            )
+    elif not all(bool(v) for v in same_stack.values()):
         raise BridgeWeightExperimentDeltaWorksheetError("comparison artifact did not pass same-stack checks", code=2)
 
     quality = comparison.get("quality_risk")

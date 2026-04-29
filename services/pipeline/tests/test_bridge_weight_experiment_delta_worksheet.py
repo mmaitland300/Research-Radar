@@ -13,6 +13,7 @@ import pytest
 
 from pipeline.bridge_weight_experiment_delta_worksheet import (
     BridgeWeightExperimentDeltaWorksheetError,
+    _validate_comparison_artifact,
     build_bridge_weight_experiment_delta_rows,
     render_delta_worksheet_csv,
 )
@@ -290,3 +291,30 @@ def test_cli_delta_worksheet_writes_output(tmp_path: Path) -> None:
     parsed = list(csv.DictReader(out.read_text(encoding="utf-8").splitlines()))
     assert len(parsed) == 4
     assert parsed[0]["paper_id"] == "https://openalex.org/W4411141538"
+
+
+def test_validate_comparison_artifact_accepts_objective_experiment_compare() -> None:
+    comp = {
+        "review_kind": "bridge_objective_experiment_compare",
+        "provenance": {
+            "baseline": {"ranking_run_id": "rank-a"},
+            "experiment": {"ranking_run_id": "rank-b"},
+        },
+        "same_stack_check": {
+            "same_corpus_snapshot_version": True,
+            "same_embedding_version": True,
+            "same_cluster_version": True,
+            "same_bridge_weight_for_family_bridge": True,
+            "bridge_eligibility_modes_differ": True,
+        },
+        "quality_risk": {
+            "experiment_eligible_top_k_not_in_labeled_baseline_rows": [
+                {"rank": 1, "work_id": 99, "paper_id": "https://openalex.org/W99", "title": "t"},
+            ],
+            "unlabeled_experiment_eligible_top_k_count": 1,
+        },
+    }
+    base, exp, rows = _validate_comparison_artifact(comp, baseline_ranking_run_id=None, experiment_ranking_run_id=None)
+    assert base == "rank-a"
+    assert exp == "rank-b"
+    assert len(rows) == 1
