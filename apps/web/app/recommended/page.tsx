@@ -489,6 +489,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     limit
                   })}
                   aria-current={f === family ? "page" : undefined}
+                  scroll={false}
                 >
                   {FAMILY_LABEL[f]}
                 </Link>

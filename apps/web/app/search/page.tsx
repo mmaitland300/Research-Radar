@@ -522,7 +522,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <button className="action-link action-link-button" type="submit">
                 Run lexical search
               </button>
-              <Link className="action-link" href="/search">
+              <Link className="action-link" href="/search" scroll={false}>
                 Reset filters
               </Link>
             </div>
@@ -537,6 +537,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                   <Link
                     className="action-link"
                     href={buildSearchHref(currentState, { q: sample, offset: 0 })}
+                    scroll={false}
                   >
                     {sample}
                   </Link>
@@ -762,6 +763,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                       href={buildSearchHref(currentState, {
                         offset: Math.max(0, offset - limit)
                       })}
+                      scroll={false}
                     >
                       Previous page
                     </Link>
@@ -772,6 +774,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                       href={buildSearchHref(currentState, {
                         offset: offset + limit
                       })}
+                      scroll={false}
                     >
                       Next page
                     </Link>
