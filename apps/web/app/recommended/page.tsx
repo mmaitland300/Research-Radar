@@ -328,6 +328,30 @@ function bridgeSignalOrderingLine(explanations: RankedSignalExplanation[]): stri
   return "Cross-cluster (bridge) signal is not computed for this row.";
 }
 
+function bridgeOrderingState(explanations: RankedSignalExplanation[]): "used" | "measured only" | "not computed" {
+  const bridge = explanations.find((e) => e.key === "bridge");
+  if (!bridge) return "not computed";
+  if (bridge.role === "used") return "used";
+  if (bridge.role === "measured" || bridge.role === "experimental") return "measured only";
+  return "not computed";
+}
+
+function bridgeEligibilityState(bridgeEligible: boolean | null): "passed" | "failed" | "not recorded" {
+  if (bridgeEligible === true) return "passed";
+  if (bridgeEligible === false) return "failed";
+  return "not recorded";
+}
+
+function bridgeRationaleLine(item: RankedItem): string {
+  const ordering = bridgeOrderingState(item.signal_explanations);
+  const eligibility = bridgeEligibilityState(item.bridge_eligible);
+  const bridgeScore =
+    item.signals.bridge != null && Number.isFinite(item.signals.bridge)
+      ? item.signals.bridge.toFixed(3)
+      : "n/a";
+  return `Bridge signal: ${ordering}. Eligibility: ${eligibility}. Bridge score: ${bridgeScore}.`;
+}
+
 function BridgeSignalOrderingParagraph({ explanations }: { explanations: RankedSignalExplanation[] }) {
   const line = bridgeSignalOrderingLine(explanations);
   return line ? <p className="result-breakdown">{line}</p> : null;
@@ -808,6 +832,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                     </div>
                   ) : null}
                   <p className="result-reason">{item.reason_short}</p>
+                  {family === "bridge" ? (
+                    <p className="result-breakdown">{bridgeRationaleLine(item)}</p>
+                  ) : null}
                   {family === "bridge" && bridgeEligibleOnly ? (
                     <p className="result-breakdown">
                       This row passed the bridge eligibility gate for the resolved run.
