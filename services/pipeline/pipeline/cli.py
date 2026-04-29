@@ -1170,8 +1170,63 @@ def main() -> None:
         default=None,
         help="Directory of manual-review CSV worksheets (default: <repo-root>/docs/audit/manual-review)",
     )
+    ml_offline_baseline_parser = subparsers.add_parser(
+        "ml-offline-baseline-eval",
+        help="Read-only offline label baseline metrics (join ml-label-dataset to paper_scores for one ranking_run_id)",
+    )
+    ml_offline_baseline_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON (e.g. docs/audit/ml-label-dataset-v1.json)",
+    )
+    ml_offline_baseline_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id to join (no implicit latest selection)",
+    )
+    ml_offline_baseline_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write offline baseline eval JSON",
+    )
+    ml_offline_baseline_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_offline_baseline_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
+
+    if args.command == "ml-offline-baseline-eval":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_offline_baseline_eval import MLOfflineBaselineEvalError, run_ml_offline_baseline_eval_cli
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_offline_baseline_eval_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                ranking_run_id=rid,
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLOfflineBaselineEvalError as e:
+            print(f"ml-offline-baseline-eval: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
 
     if args.command == "ml-label-dataset":
         from pipeline.ml_label_dataset import write_ml_label_dataset
