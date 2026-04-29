@@ -59,6 +59,10 @@ from pipeline.bridge_weight_response_rollup import (
     BridgeWeightResponseRollupError,
     run_bridge_weight_response_rollup,
 )
+from pipeline.bridge_weight_labeled_outcome import (
+    BridgeWeightLabeledOutcomeError,
+    run_bridge_weight_labeled_outcome,
+)
 from pipeline.bridge_eligibility_sensitivity import (
     BridgeEligibilitySensitivityError,
     run_bridge_eligibility_sensitivity,
@@ -902,6 +906,70 @@ def main() -> None:
         default=None,
         help="Postgres URL for label coverage check (default: DATABASE_URL or PG* env)",
     )
+    bridge_weight_labeled_outcome_parser = subparsers.add_parser(
+        "bridge-weight-labeled-outcome",
+        help="Eligible-bridge top-20 label quality by weight using baseline + delta worksheets (read-only)",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--baseline-bridge-worksheet",
+        required=True,
+        help="Baseline bridge eligible top-20 labeled CSV (rank-ee2ba6c816)",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--delta-review-csv",
+        required=True,
+        help="Completed 0.05 delta review CSV",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--response-rollup",
+        required=True,
+        help="bridge_weight_response_rollup JSON (movement + stack)",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--compare-zero-vs-w005",
+        required=True,
+        help="Compare JSON zero vs 0.05",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--compare-w005-vs-w010",
+        required=True,
+        help="Compare JSON 0.05 vs 0.10",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--compare-zero-vs-w010",
+        required=True,
+        help="Compare JSON zero vs 0.10",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--diagnostics-zero",
+        required=True,
+        help="bridge_signal_diagnostics JSON for rank-ee2ba6c816",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--diagnostics-w005",
+        required=True,
+        help="bridge_signal_diagnostics JSON for rank-bc1123e00c",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--diagnostics-w010",
+        required=True,
+        help="bridge_signal_diagnostics JSON for rank-9a02c81d40",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write labeled outcome JSON",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write labeled outcome Markdown",
+    )
+    bridge_weight_labeled_outcome_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL to resolve work_id→paper_id for eligible head (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
 
@@ -1246,6 +1314,29 @@ def main() -> None:
             )
         except BridgeWeightResponseRollupError as e:
             print(f"bridge-weight-response-rollup: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "bridge-weight-labeled-outcome":
+        try:
+            run_bridge_weight_labeled_outcome(
+                baseline_worksheet_path=Path(args.baseline_bridge_worksheet),
+                delta_worksheet_path=Path(args.delta_review_csv),
+                response_rollup_path=Path(args.response_rollup),
+                compare_zero_vs_w005_path=Path(args.compare_zero_vs_w005),
+                compare_w005_vs_w010_path=Path(args.compare_w005_vs_w010),
+                compare_zero_vs_w010_path=Path(args.compare_zero_vs_w010),
+                diagnostics_rank_zero_path=Path(args.diagnostics_zero),
+                diagnostics_rank_w005_path=Path(args.diagnostics_w005),
+                diagnostics_rank_w010_path=Path(args.diagnostics_w010),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+                database_url=args.database_url,
+            )
+        except BridgeWeightLabeledOutcomeError as e:
+            print(f"bridge-weight-labeled-outcome: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
