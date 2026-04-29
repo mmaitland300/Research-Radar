@@ -1,6 +1,6 @@
 # Bridge Evidence Summary
 
-This index summarizes the current evidence-backed bridge objective experiment. It is a release-readiness pointer for reviewers, not a new experiment and not a product behavior change.
+This index summarizes the current evidence-backed bridge objective experiment. It is a reviewer-facing diagnostic evidence pointer, not a new experiment, not validation, and not a product behavior change.
 
 ## Current Artifact
 

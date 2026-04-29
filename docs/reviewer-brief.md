@@ -12,7 +12,7 @@
 
 - Corpus is intentionally narrow and currently wired to TISMIR + JAES
 - Evaluation is proxy/distributional and not a human-labeled relevance benchmark
-- Bridge remains experimental; treat `/recommended?family=bridge` as diagnostics, not a validated recommender until weighting ships
+- Bridge remains experimental; treat `/recommended?family=bridge` as diagnostic evidence, not a validated bridge recommender. Default readiness and stronger product claims require further evidence—not bridge weighting alone (`ready_for_default=false` in audit artifacts).
 - General query-semantic search is not yet shipped; some pinned **emerging** runs may use embedding **slice-fit** as one bounded feature when labeled in the UI
 
 ## Recommended bridge guardrails

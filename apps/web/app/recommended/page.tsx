@@ -25,7 +25,7 @@ const FAMILY_NOTES: Record<Family, string[]> = {
   bridge: [
     "Bridge signal is currently measured for inspection, not weighted into final_score.",
     "Use this page as a diagnostics surface for cross-cluster candidates, not a validated bridge recommender.",
-    "Bridge should get first-class recommender framing only after the weighting and evaluation story match the label."
+    "First-class recommender framing for bridge should wait until evaluation, labeling scale, and policy—not bridge weighting alone—support that claim."
   ],
   undercited: [
     "These rows are judged against a low-cite candidate pool, not the whole corpus.",

@@ -4,7 +4,7 @@ Research Radar is a product-shaped prototype for ranking and explaining papers i
 
 The V1 thesis is:
 
-> Find emerging and undercited papers in audio ML, while exposing bridge-candidate diagnostics until weighting and evaluation justify stronger recommender claims.
+> Find emerging and undercited papers in audio ML, while exposing bridge-candidate diagnostics as an experimental bridge review arm. Default readiness and stronger recommender claims require further evidence—scaled evaluation, labeling, and policy—not bridge weighting alone.
 
 V1 is intentionally scoped to `MIR + audio representation learning`, with `neural audio effects` and `music/audio generation` deferred to a controlled edge slice in `V1.1` unless a paper clearly connects back to the core corpus.
 
