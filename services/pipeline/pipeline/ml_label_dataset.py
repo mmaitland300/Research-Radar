@@ -27,6 +27,8 @@ VERBATIM_CAVEATS = (
 
 _WORK_ID_RE = re.compile(r"(?:openalex\.org/)?(W\d+)\s*$", re.IGNORECASE)
 
+DERIVED_TARGET_FIELDS = ("good_or_acceptable", "surprising_or_useful", "bridge_like_yes_or_partial")
+
 
 def _norm_ws(value: str | None) -> str:
     if value is None:
@@ -57,6 +59,25 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _fieldnames_set(fieldnames: Iterable[str] | None) -> set[str]:
+    if not fieldnames:
+        return set()
+    return {str(n).strip() for n in fieldnames if n and str(n).strip()}
+
+
+def worksheet_infer_bridge_family_from_context(rel_path: str, fieldnames: Iterable[str] | None) -> bool:
+    """True when worksheet is a known bridge delta/objective review CSV without a family column."""
+    names = _fieldnames_set(fieldnames)
+    if "family" in names:
+        return False
+    base = Path(rel_path).name.lower()
+    if base.startswith("bridge_weight_experiment_") and "delta_review" in base:
+        return True
+    if base.startswith("bridge_objective_") and ("delta" in base or "one_row_review" in base):
+        return True
+    return False
 
 
 def worksheet_has_label_schema(fieldnames: Iterable[str] | None) -> bool:
@@ -193,6 +214,7 @@ def parse_manual_review_worksheet(
     fieldnames, raw_rows = _read_csv_rows(csv_path)
     if not worksheet_has_label_schema(fieldnames):
         return None
+    infer_bridge_family = worksheet_infer_bridge_family_from_context(rel, fieldnames)
 
     skipped_blank = 0
     included: list[dict[str, Any]] = []
@@ -223,6 +245,17 @@ def parse_manual_review_worksheet(
         nov_l = _norm_ws(row.get("novelty_label")) or None
         br_l = _norm_ws(row.get("bridge_like_label")) or None
         notes = _norm_ws(row.get("reviewer_notes")) or None
+        names = _fieldnames_set(fieldnames)
+        has_family_col = "family" in names
+        raw_family = _norm_ws(row.get("family")) if has_family_col else ""
+        family_inferred = False
+        if raw_family:
+            family: str | None = raw_family
+        elif infer_bridge_family:
+            family = "bridge"
+            family_inferred = True
+        else:
+            family = None
         out: dict[str, Any] = {
             "dataset_version": DATASET_VERSION,
             "row_id": row_id,
@@ -232,7 +265,7 @@ def parse_manual_review_worksheet(
             "ranking_run_id": ranking_run_id,
             "ranking_version": _norm_ws(row.get("ranking_version")) or None,
             "corpus_snapshot_version": _norm_ws(row.get("corpus_snapshot_version")) or None,
-            "family": _norm_ws(row.get("family")) or None,
+            "family": family,
             "review_pool_variant": _norm_ws(row.get("review_pool_variant")) or None,
             "rank": rank_val,
             "experiment_rank": experiment_rank,
@@ -249,6 +282,8 @@ def parse_manual_review_worksheet(
             "surprising_or_useful": surprising_or_useful(nov_l),
             "bridge_like_yes_or_partial": bridge_like_yes_or_partial(br_l),
         }
+        if family_inferred:
+            out["family_inferred"] = True
         included.append(out)
     return ParsedWorksheet(rel, csv_path, digest, len(raw_rows), skipped_blank, included, malformed)
 
@@ -314,8 +349,15 @@ def build_ml_label_dataset(
 
     by_family: Counter[str] = Counter()
     for r in all_rows:
-        fam = r.get("family") or "unknown"
-        by_family[str(fam)] += 1
+        fam = r.get("family")
+        key = str(fam) if fam is not None else "(null)"
+        by_family[key] += 1
+
+    inferred_family_count = sum(1 for r in all_rows if r.get("family_inferred") is True)
+    inferred_family_by_source: Counter[str] = Counter()
+    for r in all_rows:
+        if r.get("family_inferred") is True:
+            inferred_family_by_source[str(r["source_worksheet_path"])] += 1
 
     completeness: Counter[str] = Counter()
     for r in all_rows:
@@ -358,6 +400,27 @@ def build_ml_label_dataset(
     for f in LABEL_FIELDS:
         _collect_conflicts(f)
 
+    derived_conflicts: list[dict[str, Any]] = []
+    for pid, lst in paper_to_rows.items():
+        for field in DERIVED_TARGET_FIELDS:
+            true_ids: list[str] = []
+            false_ids: list[str] = []
+            for r in lst:
+                v = r.get(field)
+                if v is True:
+                    true_ids.append(str(r["row_id"]))
+                elif v is False:
+                    false_ids.append(str(r["row_id"]))
+            if true_ids and false_ids:
+                derived_conflicts.append(
+                    {
+                        "paper_id": pid,
+                        "field": field,
+                        "true_row_ids": sorted(true_ids),
+                        "false_row_ids": sorted(false_ids),
+                    }
+                )
+
     caveats = list(VERBATIM_CAVEATS)
     if unmapped_label_warnings:
         caveats.append("Some rows contain label strings outside the expected closed sets; derived targets are null for those.")
@@ -385,6 +448,12 @@ def build_ml_label_dataset(
                 "conflicting_label_count": len(conflicts),
                 "conflicts": conflicts,
             },
+            "derived_target_conflict_report": {
+                "derived_target_conflict_count": len(derived_conflicts),
+                "conflicts": derived_conflicts,
+            },
+            "inferred_family_count": inferred_family_count,
+            "inferred_family_by_source": dict(sorted(inferred_family_by_source.items())),
             "skipped_malformed_rows": skipped_malformed_all,
             "total_explicit_labeled_rows": len(all_rows),
             "total_blank_rows_skipped": sum(blank_rows_by_source.values()),
@@ -396,6 +465,8 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     meta = payload["metadata"]
     dup = meta["duplicate_paper_id_report"]
     conf = meta["conflicting_label_report"]
+    dconf = meta["derived_target_conflict_report"]
+    inferred_n = meta.get("inferred_family_count", 0)
     lines = [
         f"# Manual label dataset ({payload['dataset_version']})",
         "",
@@ -446,12 +517,32 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "- **Top-k / worksheet selection**: labels exist for papers that reached audit worksheets, not a random sample of the corpus.",
         "- **Family-specific contexts** (bridge, emerging, undercited, experiment deltas) are not interchangeable without careful experimental design.",
         "",
+        "## Family inference (worksheet context)",
+        "",
+        "Some bridge experiment review CSVs (weight delta review, objective delta / eligibility delta / one-row review) "
+        "do not include a `family` column. For those files only, `family` is set to **`bridge`** from worksheet naming "
+        "convention so downstream joins can treat rows like other bridge-family audits. "
+        "This does **not** change any reviewer label columns.",
+        "",
+        f"- **Rows with inferred `family`:** {inferred_n} (per-source counts: `metadata.inferred_family_by_source`).",
+        "",
         "## Duplicate and conflicting labels",
         "",
         f"- **Duplicate `paper_id` count** (papers with more than one retained row): {dup['duplicate_paper_id_count']}",
-        f"- **Conflicting label groups** (same `paper_id`, same field, multiple distinct non-empty values): {conf['conflicting_label_count']}",
+        f"- **Conflicting raw label groups** (same `paper_id`, same label field, multiple distinct non-empty values): {conf['conflicting_label_count']}",
         "",
-        "Duplicate appearances are **preserved as separate rows** when the same paper was reviewed in different worksheet contexts.",
+        "**Duplicate rows:** the same `paper_id` may appear in multiple worksheets or ranks. Each row remains a **separate "
+        "labeled observation**; nothing in this export merges or collapses duplicates—use `row_id` and provenance fields "
+        "when designing offline baselines.",
+        "",
+        "## Derived target conflicts",
+        "",
+        "For each derived boolean target (`good_or_acceptable`, `surprising_or_useful`, `bridge_like_yes_or_partial`), "
+        "we group by `paper_id` and compare non-null values only. A conflict is recorded when the same paper has **both** "
+        "`true` and `false` for that target across rows (e.g. `surprising` vs `obvious` both map into `surprising_or_useful` "
+        "and therefore do **not** count as a conflict on that target).",
+        "",
+        f"- **Derived target conflict count:** {dconf['derived_target_conflict_count']}",
         "",
         "## Skipped blank rows",
         "",

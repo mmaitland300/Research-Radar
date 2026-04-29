@@ -13,6 +13,7 @@ artifacts/
 *.egg-info/
 .DS_Store
 docs/audit/out/
+services/pipeline/tests/_sim_artifacts/
 
 # Cursor workspace rules (keep locally; not published on GitHub)
 .cursor/rules/*.mdc

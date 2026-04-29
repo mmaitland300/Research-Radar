@@ -54,12 +54,24 @@ These are **deterministic functions** of the three manual label columns only (no
 - **Top-k / worksheet selection**: labels exist for papers that reached audit worksheets, not a random sample of the corpus.
 - **Family-specific contexts** (bridge, emerging, undercited, experiment deltas) are not interchangeable without careful experimental design.
 
+## Family inference (worksheet context)
+
+Some bridge experiment review CSVs (weight delta review, objective delta / eligibility delta / one-row review) do not include a `family` column. For those files only, `family` is set to **`bridge`** from worksheet naming convention so downstream joins can treat rows like other bridge-family audits. This does **not** change any reviewer label columns.
+
+- **Rows with inferred `family`:** 5 (per-source counts: `metadata.inferred_family_by_source`).
+
 ## Duplicate and conflicting labels
 
 - **Duplicate `paper_id` count** (papers with more than one retained row): 39
-- **Conflicting label groups** (same `paper_id`, same field, multiple distinct non-empty values): 55
+- **Conflicting raw label groups** (same `paper_id`, same label field, multiple distinct non-empty values): 55
 
-Duplicate appearances are **preserved as separate rows** when the same paper was reviewed in different worksheet contexts.
+**Duplicate rows:** the same `paper_id` may appear in multiple worksheets or ranks. Each row remains a **separate labeled observation**; nothing in this export merges or collapses duplicates—use `row_id` and provenance fields when designing offline baselines.
+
+## Derived target conflicts
+
+For each derived boolean target (`good_or_acceptable`, `surprising_or_useful`, `bridge_like_yes_or_partial`), we group by `paper_id` and compare non-null values only. A conflict is recorded when the same paper has **both** `true` and `false` for that target across rows (e.g. `surprising` vs `obvious` both map into `surprising_or_useful` and therefore do **not** count as a conflict on that target).
+
+- **Derived target conflict count:** 4
 
 ## Skipped blank rows
 

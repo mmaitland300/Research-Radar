@@ -1,6 +1,6 @@
 {
   "dataset_version": "ml-label-dataset-v1",
-  "generated_at": "2026-04-29T19:55:59Z",
+  "generated_at": "2026-04-29T20:35:39Z",
   "caveats": [
     "This dataset is not validation of bridge ranking quality.",
     "Labels are single-reviewer offline audit material unless a source explicitly says otherwise.",
@@ -567,7 +567,7 @@
       "ranking_run_id": "rank-60910a47b4",
       "ranking_version": null,
       "corpus_snapshot_version": null,
-      "family": null,
+      "family": "bridge",
       "review_pool_variant": null,
       "rank": null,
       "experiment_rank": "20",
@@ -582,7 +582,8 @@
       "split": "audit_only",
       "good_or_acceptable": true,
       "surprising_or_useful": true,
-      "bridge_like_yes_or_partial": true
+      "bridge_like_yes_or_partial": true,
+      "family_inferred": true
     },
     {
       "dataset_version": "ml-label-dataset-v1",
@@ -1113,7 +1114,7 @@
       "ranking_run_id": "rank-bc1123e00c",
       "ranking_version": null,
       "corpus_snapshot_version": null,
-      "family": null,
+      "family": "bridge",
       "review_pool_variant": null,
       "rank": null,
       "experiment_rank": "11",
@@ -1128,7 +1129,8 @@
       "split": "audit_only",
       "good_or_acceptable": true,
       "surprising_or_useful": true,
-      "bridge_like_yes_or_partial": true
+      "bridge_like_yes_or_partial": true,
+      "family_inferred": true
     },
     {
       "dataset_version": "ml-label-dataset-v1",
@@ -1139,7 +1141,7 @@
       "ranking_run_id": "rank-bc1123e00c",
       "ranking_version": null,
       "corpus_snapshot_version": null,
-      "family": null,
+      "family": "bridge",
       "review_pool_variant": null,
       "rank": null,
       "experiment_rank": "13",
@@ -1154,7 +1156,8 @@
       "split": "audit_only",
       "good_or_acceptable": true,
       "surprising_or_useful": true,
-      "bridge_like_yes_or_partial": true
+      "bridge_like_yes_or_partial": true,
+      "family_inferred": true
     },
     {
       "dataset_version": "ml-label-dataset-v1",
@@ -1165,7 +1168,7 @@
       "ranking_run_id": "rank-bc1123e00c",
       "ranking_version": null,
       "corpus_snapshot_version": null,
-      "family": null,
+      "family": "bridge",
       "review_pool_variant": null,
       "rank": null,
       "experiment_rank": "15",
@@ -1180,7 +1183,8 @@
       "split": "audit_only",
       "good_or_acceptable": true,
       "surprising_or_useful": true,
-      "bridge_like_yes_or_partial": true
+      "bridge_like_yes_or_partial": true,
+      "family_inferred": true
     },
     {
       "dataset_version": "ml-label-dataset-v1",
@@ -1191,7 +1195,7 @@
       "ranking_run_id": "rank-bc1123e00c",
       "ranking_version": null,
       "corpus_snapshot_version": null,
-      "family": null,
+      "family": "bridge",
       "review_pool_variant": null,
       "rank": null,
       "experiment_rank": "17",
@@ -1206,7 +1210,8 @@
       "split": "audit_only",
       "good_or_acceptable": true,
       "surprising_or_useful": true,
-      "bridge_like_yes_or_partial": true
+      "bridge_like_yes_or_partial": true,
+      "family_inferred": true
     },
     {
       "dataset_version": "ml-label-dataset-v1",
@@ -3344,8 +3349,7 @@
       "docs/audit/manual-review/undercited_rank-3904fec89d_top20.csv"
     ],
     "row_counts_by_family": {
-      "bridge": 40,
-      "unknown": 5,
+      "bridge": 45,
       "emerging": 40,
       "undercited": 40
     },
@@ -4354,6 +4358,58 @@
           }
         }
       ]
+    },
+    "derived_target_conflict_report": {
+      "derived_target_conflict_count": 4,
+      "conflicts": [
+        {
+          "paper_id": "https://openalex.org/W4408635446",
+          "field": "good_or_acceptable",
+          "true_row_ids": [
+            "39c04ddc2d25b83ce2d0bbaf8419491f96895c7e7a7c36613b1e0d8a28292b25"
+          ],
+          "false_row_ids": [
+            "196f3f8ac11c52598caf2d7aa7a285da5b643e9525ad0706c434b895e738432d",
+            "6875a6d330d5f34d882bb7a79b13012eeac48d738a1d1326b772f2a7e9354b87"
+          ]
+        },
+        {
+          "paper_id": "https://openalex.org/W4408635446",
+          "field": "surprising_or_useful",
+          "true_row_ids": [
+            "39c04ddc2d25b83ce2d0bbaf8419491f96895c7e7a7c36613b1e0d8a28292b25"
+          ],
+          "false_row_ids": [
+            "196f3f8ac11c52598caf2d7aa7a285da5b643e9525ad0706c434b895e738432d",
+            "6875a6d330d5f34d882bb7a79b13012eeac48d738a1d1326b772f2a7e9354b87"
+          ]
+        },
+        {
+          "paper_id": "https://openalex.org/W4412072230",
+          "field": "surprising_or_useful",
+          "true_row_ids": [
+            "60f9e25cf71d372c2516cbef41c619c430738a73d9a472c411423df40cfbb507"
+          ],
+          "false_row_ids": [
+            "9fa3a7f7acf4a24baa459782312c5e5c0b63fa14f11513b6199d395856f7805f"
+          ]
+        },
+        {
+          "paper_id": "https://openalex.org/W4411463636",
+          "field": "surprising_or_useful",
+          "true_row_ids": [
+            "b2bedceeeb13249797a375e4fabac57a03bf69e8c017caf3a58e2eb5aa2da20e"
+          ],
+          "false_row_ids": [
+            "e39e41578a46c6ee7c88d3e036a590aef78870dcb33be125d1fa3e33a96c92a2"
+          ]
+        }
+      ]
+    },
+    "inferred_family_count": 5,
+    "inferred_family_by_source": {
+      "docs/audit/manual-review/bridge_objective_delta_rank-60910a47b4_one_row_review.csv": 1,
+      "docs/audit/manual-review/bridge_weight_experiment_rank-bc1123e00c_delta_review.csv": 4
     },
     "skipped_malformed_rows": [],
     "total_explicit_labeled_rows": 125,

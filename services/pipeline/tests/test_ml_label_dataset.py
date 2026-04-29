@@ -22,6 +22,7 @@ from pipeline.ml_label_dataset import (
     surprising_or_useful,
     write_ml_label_dataset,
     worksheet_has_label_schema,
+    worksheet_infer_bridge_family_from_context,
 )
 
 
@@ -292,3 +293,119 @@ def test_write_ml_label_dataset_writes_files(tmp_path: Path) -> None:
     assert row["bridge_like_yes_or_partial"] is None
     assert row["good_or_acceptable"] is True
     assert row["surprising_or_useful"] is True
+
+
+def test_worksheet_infer_bridge_family_from_context() -> None:
+    delta_fields = [c.strip() for c in HEADER_DELTA.strip().split(",")]
+    assert worksheet_infer_bridge_family_from_context(
+        "docs/audit/manual-review/bridge_weight_experiment_rank-bc1123e00c_delta_review.csv",
+        delta_fields,
+    )
+    assert worksheet_infer_bridge_family_from_context(
+        "docs/audit/manual-review/bridge_objective_delta_rank-60910a47b4_one_row_review.csv",
+        delta_fields,
+    )
+    assert worksheet_infer_bridge_family_from_context(
+        "docs/audit/manual-review/bridge_objective_elig_delta_rank-x_review.csv",
+        delta_fields,
+    )
+    std_fields = [c.strip() for c in HEADER_STANDARD.strip().split(",")]
+    assert not worksheet_infer_bridge_family_from_context("docs/audit/manual-review/x.csv", std_fields)
+    assert not worksheet_infer_bridge_family_from_context(
+        "docs/audit/manual-review/bridge_weight_experiment_rank-bc1123e00c_delta_review.csv",
+        std_fields,
+    )
+
+
+def test_bridge_delta_worksheet_infers_family_bridge(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "audit" / "manual-review"
+    name = "bridge_weight_experiment_rank-bc1123e00c_delta_review.csv"
+    csv_path = mr / name
+    row = (
+        "rank-ee2ba6c816,rank-bc1123e00c,1,https://openalex.org/W1,T,2025,0,x,,0.5,0.9,r,good,useful,yes,n\n"
+    )
+    _write(csv_path, HEADER_DELTA + row)
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    r0 = payload["rows"][0]
+    assert r0["family"] == "bridge"
+    assert r0.get("family_inferred") is True
+    assert "family inference" in markdown_from_ml_label_dataset(payload).lower()
+
+
+def test_inferred_family_metadata(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    row = "rb,re,1,https://openalex.org/W1,T,2025,0,x,,0.5,0.9,r,good,useful,yes,n\n"
+    _write(mr / "bridge_objective_delta_rank-x_one_row_review.csv", HEADER_DELTA + row)
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    meta = payload["metadata"]
+    assert meta["inferred_family_count"] == 1
+    assert meta["inferred_family_by_source"]["docs/mr/bridge_objective_delta_rank-x_one_row_review.csv"] == 1
+
+
+def test_derived_target_conflict_true_false(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    a = HEADER_STANDARD + _std_data_row(
+        paper_id="https://openalex.org/Wdup",
+        relevance="good",
+        novelty="useful",
+        bridge_like="yes",
+        notes="",
+    )
+    b = HEADER_STANDARD + _std_data_row(
+        rank="2",
+        paper_id="https://openalex.org/Wdup",
+        title="T2",
+        relevance="miss",
+        novelty="obvious",
+        bridge_like="no",
+        notes="",
+    )
+    _write(mr / "a.csv", a)
+    _write(mr / "b.csv", b)
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    drep = payload["metadata"]["derived_target_conflict_report"]
+    assert drep["derived_target_conflict_count"] >= 1
+    fields = {c["field"] for c in drep["conflicts"]}
+    assert "good_or_acceptable" in fields
+    assert "surprising_or_useful" in fields
+    assert "bridge_like_yes_or_partial" in fields
+
+
+def test_derived_target_no_conflict_surprising_vs_useful(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    a = HEADER_STANDARD + _std_data_row(
+        paper_id="https://openalex.org/Wsame",
+        relevance="good",
+        novelty="surprising",
+        bridge_like="yes",
+        notes="",
+    )
+    b = HEADER_STANDARD + _std_data_row(
+        rank="2",
+        paper_id="https://openalex.org/Wsame",
+        title="T2",
+        relevance="good",
+        novelty="useful",
+        bridge_like="yes",
+        notes="",
+    )
+    _write(mr / "a.csv", a)
+    _write(mr / "b.csv", b)
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    drep = payload["metadata"]["derived_target_conflict_report"]
+    for c in drep["conflicts"]:
+        assert c["field"] != "surprising_or_useful"
+
+
+def test_no_train_dev_test_split_in_dataset(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    _write(mr / "one.csv", HEADER_STANDARD + _std_data_row(relevance="good", novelty="useful", bridge_like="yes"))
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    assert all(r["split"] == "audit_only" for r in payload["rows"])
+    meta = payload["metadata"]
+    assert "train_split" not in meta and "dev_split" not in meta and "test_split" not in meta
