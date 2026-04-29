@@ -67,6 +67,10 @@ from pipeline.bridge_eligibility_sensitivity import (
     BridgeEligibilitySensitivityError,
     run_bridge_eligibility_sensitivity,
 )
+from pipeline.bridge_objective_redesign_simulation import (
+    BridgeObjectiveRedesignSimulationError,
+    run_bridge_objective_redesign_simulation,
+)
 from pipeline.cluster_inspection import (
     ClusterInspectionError,
     run_cluster_inspection,
@@ -761,6 +765,56 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    bridge_objective_sim_parser = subparsers.add_parser(
+        "bridge-objective-redesign-simulation",
+        help="Read-only simulation of alternative bridge objectives (SELECT-only DB; no ranking writes)",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id (e.g. zero-weight baseline run)",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--k",
+        type=int,
+        default=20,
+        help="Emerging / eligible overlap window (must be 20 for this simulation)",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write simulation JSON",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write simulation Markdown",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Repository root for default audit paths (default: cwd, or parent if cwd is services/pipeline)",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--sensitivity-json",
+        default=None,
+        help="bridge_eligibility_sensitivity JSON (default: docs/audit/manual-review/... under repo root)",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--failure-analysis-json",
+        default=None,
+        help="bridge_eligibility_failure_analysis JSON (default under docs/audit/manual-review/)",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--bridge-worksheet-csv",
+        default=None,
+        help="Labeled bridge eligible top-20 CSV (default: bridge_eligible_<run>_top20.csv)",
+    )
+    bridge_objective_sim_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     bridge_weight_compare_parser.add_argument(
         "--baseline-ranking-run-id",
         required=True,
@@ -1236,6 +1290,58 @@ def main() -> None:
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
             print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "bridge-objective-redesign-simulation":
+        if int(args.k) != 20:
+            parser.error("bridge-objective-redesign-simulation: --k must be 20")
+        rrid = (args.ranking_run_id or "").strip()
+        if not rrid:
+            parser.error("--ranking-run-id is required and must not be blank")
+        if args.repo_root:
+            repo_root = Path(args.repo_root).resolve()
+        else:
+            cwd = Path.cwd().resolve()
+            if (cwd / "docs" / "audit").is_dir():
+                repo_root = cwd
+            elif (cwd.parent / "docs" / "audit").is_dir():
+                repo_root = cwd.parent
+            elif (cwd.parent.parent / "docs" / "audit").is_dir():
+                repo_root = cwd.parent.parent
+            else:
+                repo_root = cwd
+        mr = repo_root / "docs" / "audit" / "manual-review"
+        k = int(args.k)
+        sens = Path(args.sensitivity_json).resolve() if args.sensitivity_json else mr / f"bridge_eligibility_sensitivity_{rrid}_top{k}.json"
+        failp = (
+            Path(args.failure_analysis_json).resolve()
+            if args.failure_analysis_json
+            else mr / f"bridge_eligibility_failure_analysis_{rrid}_top{k}.json"
+        )
+        csvp = (
+            Path(args.bridge_worksheet_csv).resolve()
+            if args.bridge_worksheet_csv
+            else mr / f"bridge_eligible_{rrid}_top{k}.csv"
+        )
+        for p, label in ((sens, "sensitivity-json"), (failp, "failure-analysis-json"), (csvp, "bridge-worksheet-csv")):
+            if not p.is_file():
+                print(f"bridge-objective-redesign-simulation: missing {label}: {p}", file=sys.stderr)
+                raise SystemExit(2)
+        try:
+            run_bridge_objective_redesign_simulation(
+                ranking_run_id=rrid,
+                k=k,
+                sensitivity_json_path=sens,
+                failure_analysis_json_path=failp,
+                bridge_worksheet_csv_path=csvp,
+                output_json_path=Path(args.output),
+                markdown_path=Path(args.markdown_output),
+                database_url=args.database_url,
+            )
+        except BridgeObjectiveRedesignSimulationError as e:
+            print(f"bridge-objective-redesign-simulation: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
         return
     if args.command == "bridge-weight-experiment-compare":
         if args.k < 1 or args.k > 200:
