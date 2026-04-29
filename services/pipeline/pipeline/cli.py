@@ -51,6 +51,10 @@ from pipeline.bridge_objective_label_coverage import (
     BridgeObjectiveLabelCoverageError,
     run_bridge_objective_label_coverage,
 )
+from pipeline.bridge_objective_labeled_outcome import (
+    BridgeObjectiveLabeledOutcomeError,
+    run_bridge_objective_labeled_outcome,
+)
 from pipeline.bridge_weight_experiment_compare import (
     BridgeWeightExperimentCompareError,
     run_bridge_weight_experiment_compare,
@@ -498,6 +502,10 @@ def main() -> None:
     bridge_objective_label_coverage_parser = subparsers.add_parser(
         "bridge-objective-label-coverage",
         help="Read-only objective-experiment label coverage correction and one-row review scaffold",
+    )
+    bridge_objective_labeled_outcome_parser = subparsers.add_parser(
+        "bridge-objective-labeled-outcome",
+        help="Read-only labeled outcome rollup for objective experiment (baseline + prior delta + one-row label)",
     )
     bridge_weight_delta_summary_parser = subparsers.add_parser(
         "bridge-weight-experiment-delta-summary",
@@ -974,6 +982,36 @@ def main() -> None:
         "--review-output",
         required=True,
         help="Path to write one-row unlabeled review worksheet CSV",
+    )
+    bridge_objective_labeled_outcome_parser.add_argument(
+        "--baseline-bridge-worksheet",
+        required=True,
+        help="Baseline labeled bridge eligible worksheet CSV",
+    )
+    bridge_objective_labeled_outcome_parser.add_argument(
+        "--prior-delta-worksheet",
+        required=True,
+        help="Prior bridge-weight delta labeled worksheet CSV",
+    )
+    bridge_objective_labeled_outcome_parser.add_argument(
+        "--objective-delta-worksheet",
+        required=True,
+        help="Objective one-row labeled worksheet CSV",
+    )
+    bridge_objective_labeled_outcome_parser.add_argument(
+        "--objective-comparison",
+        required=True,
+        help="Objective experiment comparison JSON artifact",
+    )
+    bridge_objective_labeled_outcome_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write objective labeled outcome JSON",
+    )
+    bridge_objective_labeled_outcome_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write objective labeled outcome Markdown",
     )
     bridge_weight_delta_summary_parser.add_argument(
         "--input",
@@ -1517,6 +1555,23 @@ def main() -> None:
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
         print(Path(args.review_output).resolve(), file=sys.stderr)
         print(int(payload.get("summary", {}).get("truly_unlabeled_moved_in_count", len(rows))))
+        return
+    if args.command == "bridge-objective-labeled-outcome":
+        try:
+            run_bridge_objective_labeled_outcome(
+                baseline_worksheet_path=Path(args.baseline_bridge_worksheet),
+                prior_delta_worksheet_path=Path(args.prior_delta_worksheet),
+                objective_delta_worksheet_path=Path(args.objective_delta_worksheet),
+                objective_comparison_path=Path(args.objective_comparison),
+                output_path=Path(args.output),
+                markdown_path=Path(args.markdown_output) if args.markdown_output else None,
+            )
+        except BridgeObjectiveLabeledOutcomeError as e:
+            print(f"bridge-objective-labeled-outcome: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        if args.markdown_output:
+            print(Path(args.markdown_output).resolve(), file=sys.stderr)
         return
     if args.command == "bridge-weight-experiment-delta-summary":
         try:

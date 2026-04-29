@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-04-29T18:12:36.388837+00:00",
+  "review_kind": "bridge_objective_labeled_outcome",
+  "provenance": {
+    "baseline_ranking_run_id": "rank-ee2ba6c816",
+    "experiment_ranking_run_id": "rank-60910a47b4",
+    "baseline_worksheet_path": "c:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_eligible_rank-ee2ba6c816_top20.csv",
+    "prior_delta_worksheet_path": "c:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_weight_experiment_rank-bc1123e00c_delta_review.csv",
+    "objective_delta_worksheet_path": "c:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_objective_delta_rank-60910a47b4_one_row_review.csv",
+    "objective_comparison_path": "c:\\dev\\Cursor Projects\\Research-Radar\\docs\\audit\\manual-review\\bridge_objective_experiment_rank-60910a47b4_vs_rank-ee2ba6c816.json",
+    "bridge_eligibility_mode_baseline": "top50_cross_cluster_gte_0_40",
+    "bridge_eligibility_mode_experiment": "top50_cross040_exclude_persistent_shared_v1",
+    "bridge_weight_for_family_bridge_baseline": 0.0,
+    "bridge_weight_for_family_bridge_experiment": 0.0,
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12"
+  },
+  "coverage": {
+    "label_map_paper_id_count": 25,
+    "baseline_labeled_count": 20,
+    "prior_delta_labeled_count": 4,
+    "objective_delta_labeled_count": 1
+  },
+  "baseline": {
+    "row_count": 20,
+    "good_or_acceptable_count": 19,
+    "good_or_acceptable_share": 0.95,
+    "bridge_like_yes_or_partial_count": 19,
+    "bridge_like_yes_or_partial_share": 0.95
+  },
+  "experiment": {
+    "row_count": 20,
+    "good_or_acceptable_count": 19,
+    "good_or_acceptable_share": 0.95,
+    "bridge_like_yes_or_partial_count": 19,
+    "bridge_like_yes_or_partial_share": 0.95
+  },
+  "distinctness": {
+    "baseline_eligible_bridge_vs_emerging_jaccard": 0.212121,
+    "experiment_eligible_bridge_vs_emerging_jaccard": 0.081081,
+    "improves": true
+  },
+  "decision": {
+    "quality_preserved_under_new_mode": true,
+    "bridge_like_preserved_under_new_mode": true,
+    "distinctness_improves": true,
+    "recommend_persistent_overlap_exclusion_as_experimental_arm": true,
+    "ready_for_default": false
+  },
+  "caveats": [
+    "This is not validation of bridge ranking quality.",
+    "Single-reviewer, top-20, offline audit material only.",
+    "Persistent-overlap exclusion is corpus-snapshot-specific (source-snapshot-v2-candidate-plan-20260428); the rule must not become default without rederivation on the active snapshot."
+  ]
+}
