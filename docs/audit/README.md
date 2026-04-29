@@ -1,5 +1,10 @@
 # Audit scripts
 
+## Bridge evidence index
+
+Current bridge objective evidence is summarized in `docs/audit/bridge-evidence-summary.md`.
+It records the baseline run, objective experiment run, eligibility mode, labeled top-20 result, and caveats. The summary is diagnostic only: it does not validate bridge ranking quality and it records `ready_for_default=false`.
+
 ## `semantic_coverage_baseline.sql`
 
 Baseline for the **semantic v1 coverage** milestone: one reference `ranking_run_id` (or latest succeeded run), the run's `corpus_snapshot_version` and `embedding_version`, and tabular counts for `paper_scores` + `embeddings`.
