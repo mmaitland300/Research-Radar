@@ -53,5 +53,10 @@ No bridge weights were changed.
 - The observed distinctness invariance across bridge weights indicates the fixed eligibility rule is controlling the eligible cohort.
 - Under the current eligibility setting (`top50_cross_cluster_gte_0_40`), bridge weight should **not** be increased.
 
+## Guardrail candidate screen (baseline eligible-vs-emerging Jaccard: 0.212121)
+
+- Candidate rule applied here: `eligible_vs_emerging_jaccard < 0.212121` AND non-empty eligible top-20 AND not-unduly-small eligible total.
+- Result on this run: **no threshold variant qualifies** under this guardrail; the best observed eligible-vs-emerging Jaccard in the sweep is `0.212121` (tie, not lower).
+
 > Caveat: read-only diagnostic, not ranking validation, not bridge validation.
 > Caveat: no bridge weights changed.
