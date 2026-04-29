@@ -1199,8 +1199,54 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_label_readiness_parser = subparsers.add_parser(
+        "ml-label-readiness-matrix",
+        help="Read-only label coverage / offline-baseline readiness by ranking_run_id (no training, no ranking)",
+    )
+    ml_label_readiness_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON (e.g. docs/audit/ml-label-dataset-v1.json)",
+    )
+    ml_label_readiness_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write readiness matrix JSON",
+    )
+    ml_label_readiness_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_label_readiness_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
+
+    if args.command == "ml-label-readiness-matrix":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_label_readiness_matrix import MLLabelReadinessMatrixError, run_ml_label_readiness_matrix_cli
+
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_label_readiness_matrix_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLLabelReadinessMatrixError as e:
+            print(f"ml-label-readiness-matrix: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
 
     if args.command == "ml-offline-baseline-eval":
         from pipeline import bootstrap_loader as _bootstrap_loader
