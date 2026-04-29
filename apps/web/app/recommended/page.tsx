@@ -227,6 +227,9 @@ const API_BASE_URL =
 const RANKING_VERSION =
   process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
 
+/** Evidence-backed reviewed 0.05 eligible-only bridge arm (manual audit / delta review). Not a default. */
+const REVIEWED_ELIGIBLE_BRIDGE_RUN_ID = "rank-bc1123e00c";
+
 function parseFamily(raw: string | string[] | undefined): Family {
   const v = Array.isArray(raw) ? raw[0] : raw;
   if (v && (FAMILIES as readonly string[]).includes(v)) {
@@ -460,6 +463,10 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
   const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
   const limit = parseLimit(searchParams.limit, 15, 100);
   const bridgeEligibleOnly = family === "bridge" && parseBooleanParam(searchParams.bridge_eligible_only);
+  const viewingReviewedEligibleBridgeArm =
+    family === "bridge" &&
+    bridgeEligibleOnly &&
+    rankingRunId === REVIEWED_ELIGIBLE_BRIDGE_RUN_ID;
   const usingUnpinnedLatestRun = !rankingRunId && !RANKING_VERSION;
   const { data, error, status } = await fetchRanked(family, {
     limit,
@@ -511,7 +518,40 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 surface—not a validated bridge recommender.
               </p>
             ) : null}
-            {family === "bridge" && bridgeEligibleOnly ? (
+            {family === "bridge" && viewingReviewedEligibleBridgeArm ? (
+              <div className="ranking-how-panel" role="status">
+                <h3>Reviewed 0.05 eligible bridge arm</h3>
+                <p>
+                  <strong>Viewing reviewed 0.05 eligible bridge arm.</strong>
+                </p>
+                <p className="muted-inline">
+                  Pinned to reviewed experimental run <code>{REVIEWED_ELIGIBLE_BRIDGE_RUN_ID}</code>. Not
+                  default. Not validation.
+                </p>
+              </div>
+            ) : null}
+            {family === "bridge" && !viewingReviewedEligibleBridgeArm ? (
+              <div className="ranking-how-panel">
+                <h3>Reviewed experimental arm</h3>
+                <p>
+                  <Link
+                    className="action-link"
+                    href={buildRecommendedFamilyHref("bridge", {
+                      focusPaperId,
+                      rankingRunId: REVIEWED_ELIGIBLE_BRIDGE_RUN_ID,
+                      bridgeEligibleOnly: true
+                    })}
+                  >
+                    Open reviewed 0.05 eligible bridge arm
+                  </Link>
+                </p>
+                <p className="muted-inline">
+                  Pinned to reviewed experimental run <code>{REVIEWED_ELIGIBLE_BRIDGE_RUN_ID}</code>. Not
+                  default. Not validation.
+                </p>
+              </div>
+            ) : null}
+            {family === "bridge" && bridgeEligibleOnly && !viewingReviewedEligibleBridgeArm ? (
               <div className="ranking-how-panel">
                 <h3>Eligible-only bridge view</h3>
                 <p className="muted-inline">
