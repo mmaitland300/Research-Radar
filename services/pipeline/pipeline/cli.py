@@ -47,6 +47,10 @@ from pipeline.bridge_weight_experiment_compare import (
     BridgeWeightExperimentCompareError,
     run_bridge_weight_experiment_compare,
 )
+from pipeline.bridge_weight_experiment_delta_worksheet import (
+    BridgeWeightExperimentDeltaWorksheetError,
+    write_bridge_weight_experiment_delta_worksheet,
+)
 from pipeline.bridge_eligibility_sensitivity import (
     BridgeEligibilitySensitivityError,
     run_bridge_eligibility_sensitivity,
@@ -463,6 +467,10 @@ def main() -> None:
         "bridge-weight-experiment-compare",
         help="Read-only baseline vs experiment comparison for a small bridge-weight run",
     )
+    bridge_weight_delta_parser = subparsers.add_parser(
+        "bridge-weight-experiment-delta-worksheet",
+        help="Read-only CSV worksheet for unlabeled moved-in eligible bridge experiment rows",
+    )
     bridge_sensitivity_parser = subparsers.add_parser(
         "bridge-eligibility-sensitivity",
         help="Read-only threshold sweep for bridge eligibility distinctness on one explicit ranking_run_id",
@@ -776,6 +784,41 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    bridge_weight_delta_parser.add_argument(
+        "--comparison",
+        required=True,
+        help="Bridge weight comparison JSON artifact",
+    )
+    bridge_weight_delta_parser.add_argument(
+        "--baseline-bridge-worksheet",
+        required=True,
+        help="Baseline labeled bridge eligible worksheet CSV",
+    )
+    bridge_weight_delta_parser.add_argument(
+        "--experiment-diagnostics",
+        required=True,
+        help="Experiment bridge signal diagnostics JSON artifact",
+    )
+    bridge_weight_delta_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write delta review worksheet CSV",
+    )
+    bridge_weight_delta_parser.add_argument(
+        "--baseline-ranking-run-id",
+        default=None,
+        help="Optional guard: expected baseline ranking_run_id",
+    )
+    bridge_weight_delta_parser.add_argument(
+        "--experiment-ranking-run-id",
+        default=None,
+        help="Optional guard: expected experiment ranking_run_id",
+    )
+    bridge_weight_delta_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
 
@@ -1070,6 +1113,25 @@ def main() -> None:
         print(Path(args.output).resolve(), file=sys.stderr)
         if args.markdown_output:
             print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+    if args.command == "bridge-weight-experiment-delta-worksheet":
+        baseline_rrid = (args.baseline_ranking_run_id or "").strip() or None
+        experiment_rrid = (args.experiment_ranking_run_id or "").strip() or None
+        try:
+            rows = write_bridge_weight_experiment_delta_worksheet(
+                comparison_path=Path(args.comparison),
+                baseline_worksheet_path=Path(args.baseline_bridge_worksheet),
+                diagnostics_path=Path(args.experiment_diagnostics),
+                output_path=Path(args.output),
+                database_url=args.database_url,
+                baseline_ranking_run_id=baseline_rrid,
+                experiment_ranking_run_id=experiment_rrid,
+            )
+        except BridgeWeightExperimentDeltaWorksheetError as e:
+            print(f"bridge-weight-experiment-delta-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(len(rows))
         return
 
     policy = CorpusPolicy()
