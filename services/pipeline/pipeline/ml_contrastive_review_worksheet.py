@@ -316,11 +316,17 @@ def select_contrastive_for_family(
         reason_fn: Callable[[ContrastiveCandidate], str],
         *,
         max_take: int | None = None,
+        preserve_order: bool = False,
     ) -> None:
         nonlocal out
         seq_list = list(seq)
+        ordered = (
+            seq_list
+            if preserve_order
+            else sorted(seq_list, key=lambda x: (x.family_rank, x.work_token))
+        )
         taken_bucket = 0
-        for c in sorted(seq_list, key=lambda x: (x.family_rank, x.work_token)):
+        for c in ordered:
             if len(out) >= per_family:
                 return
             if max_take is not None and taken_bucket >= max_take:
@@ -344,10 +350,15 @@ def select_contrastive_for_family(
     # 2) lower_rank_window (capped)
     take_from(lower_win, lambda _c: "lower_rank_window", max_take=lr_cap)
 
-    # 3) median_borderline — closest scores to median first (capped)
+    # 3) median_borderline - closest scores to median first (capped; preserve distance ordering)
     if med is not None:
         ordered_border = list(borderline_sorted)
-        take_from(ordered_border, lambda _c: "median_borderline", max_take=mb_cap)
+        take_from(
+            ordered_border,
+            lambda _c: "median_borderline",
+            max_take=mb_cap,
+            preserve_order=True,
+        )
 
     # 4) weak family signal / bridge_ineligible
     def bridge_reason(c: ContrastiveCandidate) -> str:
@@ -484,7 +495,7 @@ def markdown_report(
         "audit slice of the label dataset."
     )
     lines.append(
-        "- Prefer ranks **40–80**, score values **near the family median**, and **weak family-specific signals** "
+        "- Prefer ranks **40-80**, score values **near the family median**, and **weak family-specific signals** "
         "(including bridge ineligibility where applicable), then fill remaining slots deterministically."
     )
     lines.append(

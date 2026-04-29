@@ -115,6 +115,29 @@ def test_excludes_complete_labeled_papers() -> None:
     assert "W2" in tokens
 
 
+def test_median_borderline_selects_closest_to_median_first() -> None:
+    """median_borderline must follow borderline_sorted (distance to median), not family_rank order."""
+    # Ranks 1-6 only: lower_rank_window is empty. Median of scores is between 0.51 and 0.52 -> ~0.515;
+    # closest rows are W3 and W4 (tie-break by rank), then W2.
+    pool = [
+        _cand(family="bridge", fr=1, wt="W1", fs=0.10, bs=0.9, elig=True),
+        _cand(family="bridge", fr=2, wt="W2", fs=0.50, bs=0.9, elig=True),
+        _cand(family="bridge", fr=3, wt="W3", fs=0.51, bs=0.9, elig=True),
+        _cand(family="bridge", fr=4, wt="W4", fs=0.52, bs=0.9, elig=True),
+        _cand(family="bridge", fr=5, wt="W5", fs=0.90, bs=0.9, elig=True),
+        _cand(family="bridge", fr=6, wt="W6", fs=0.91, bs=0.9, elig=True),
+    ]
+    sel = select_contrastive_for_family(
+        "bridge",
+        pool,
+        per_family=6,
+        complete_keys=set(),
+        incomplete_keys=set(),
+    )
+    mb = [t[0].work_token for t in sel if t[1] == "median_borderline"]
+    assert mb[:3] == ["W3", "W4", "W2"]
+
+
 def test_label_incomplete_bucket_reason() -> None:
     c1 = _cand(family="emerging", fr=50, wt="W50", fs=0.5)
     c2 = _cand(family="emerging", fr=51, wt="W51", fs=0.49)
@@ -261,6 +284,8 @@ def test_markdown_contains_verbatim_caveats() -> None:
         assert line in md
     assert "contrastive" in md.lower()
     assert "validation" in md.lower()
+    assert "**40-80**" in md
+    assert "â€" not in md
 
 
 def test_missing_label_dataset_raises(tmp_path: Path) -> None:

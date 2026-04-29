@@ -7,7 +7,7 @@ This artifact lists manually reviewable candidate rows drawn from a **single per
 ## Selection strategy
 
 - Exclude papers that already have **all three** manual label columns filled for this run + family in the audit slice of the label dataset.
-- Prefer ranks **40–80**, score values **near the family median**, and **weak family-specific signals** (including bridge ineligibility where applicable), then fill remaining slots deterministically.
+- Prefer ranks **40-80**, score values **near the family median**, and **weak family-specific signals** (including bridge ineligibility where applicable), then fill remaining slots deterministically.
 - Rows with **incomplete** prior labels in the dataset may appear with `sample_reason=label_incomplete`; label columns are left blank for a fresh pass.
 
 ## Row counts by family
@@ -44,13 +44,10 @@ This artifact lists manually reviewable candidate rows drawn from a **single per
 - **embedding_version:** `v2-title-abstract-1536-cleantext-r1`
 - **cluster_version:** `kmeans-l2-v2-cleantext-r1-k12`
 - **label_dataset:** `C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v1.json`
-- **generated_at:** `2026-04-29T23:27:01Z`
+- **generated_at:** `2026-04-29T23:30:54Z`
 
 ## Duplicate paper notes
 
 - `W4411141538` appears in more than one family row in this worksheet (same persisted pool edge case).
-- `W4414799719` appears in more than one family row in this worksheet (same persisted pool edge case).
+- `W4415315857` appears in more than one family row in this worksheet (same persisted pool edge case).
 - `W4412780451` appears in more than one family row in this worksheet (same persisted pool edge case).
-- `W4411489043` appears in more than one family row in this worksheet (same persisted pool edge case).
-- `W7116976483` appears in more than one family row in this worksheet (same persisted pool edge case).
-- `W4411141874` appears in more than one family row in this worksheet (same persisted pool edge case).
