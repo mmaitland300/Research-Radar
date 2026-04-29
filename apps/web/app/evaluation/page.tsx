@@ -465,6 +465,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                 limit
               })}
               aria-current={f === family ? "page" : undefined}
+              scroll={false}
             >
               {FAMILY_LABEL[f]}
             </Link>
