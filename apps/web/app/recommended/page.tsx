@@ -227,8 +227,16 @@ const API_BASE_URL =
 const RANKING_VERSION =
   process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
 
-/** Evidence-backed reviewed 0.05 eligible-only bridge arm (manual audit / delta review). Not a default. */
-const REVIEWED_ELIGIBLE_BRIDGE_RUN_ID = "rank-bc1123e00c";
+function envFlagEnabled(raw: string | undefined): boolean {
+  const value = raw?.trim().toLowerCase();
+  return value === "true" || value === "1" || value === "yes" || value === "on";
+}
+
+const ENABLE_EXPERIMENTAL_BRIDGE_VIEW = envFlagEnabled(
+  process.env.NEXT_PUBLIC_ENABLE_EXPERIMENTAL_BRIDGE_VIEW
+);
+
+const OBJECTIVE_BRIDGE_EXPERIMENT_RUN_ID = "rank-60910a47b4";
 
 function parseFamily(raw: string | string[] | undefined): Family {
   const v = Array.isArray(raw) ? raw[0] : raw;
@@ -509,11 +517,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
   const focusPaperId = parseSingleParam(searchParams.paper);
   const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
   const limit = parseLimit(searchParams.limit, 15, 100);
-  const bridgeEligibleOnly = family === "bridge" && parseBooleanParam(searchParams.bridge_eligible_only);
-  const viewingReviewedEligibleBridgeArm =
-    family === "bridge" &&
-    bridgeEligibleOnly &&
-    rankingRunId === REVIEWED_ELIGIBLE_BRIDGE_RUN_ID;
+  const bridgeEligibleOnlyRequested =
+    family === "bridge" && parseBooleanParam(searchParams.bridge_eligible_only);
+  const bridgeEligibleOnly = ENABLE_EXPERIMENTAL_BRIDGE_VIEW && bridgeEligibleOnlyRequested;
+  const bridgeEligibleOnlyDisabledNotice =
+    family === "bridge" && bridgeEligibleOnlyRequested && !ENABLE_EXPERIMENTAL_BRIDGE_VIEW;
   const usingUnpinnedLatestRun = !rankingRunId && !RANKING_VERSION;
   const { data, error, status } = await fetchRanked(family, {
     limit,
@@ -552,7 +560,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <div className="ranking-how-panel" role="status">
                 <h3>Run pin warning</h3>
                 <p className="muted-inline">
-                  Using latest succeeded run. For reviewed bridge evidence, pin a{" "}
+                  Using latest succeeded run. For current bridge evidence, pin a{" "}
                   <code>ranking_run_id</code> or <code>NEXT_PUBLIC_RANKING_VERSION</code>.
                 </p>
               </div>
@@ -567,52 +575,58 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             ) : null}
             {family === "bridge" ? (
               <p className="muted-inline">
-                Bridge evidence is experimental and run-specific. Use pinned runs for reviewed behavior.
+                Bridge evidence is experimental and run-specific. Use pinned runs for current evidence
+                review.
               </p>
             ) : null}
-            {family === "bridge" && viewingReviewedEligibleBridgeArm ? (
+            {bridgeEligibleOnlyDisabledNotice ? (
               <div className="ranking-how-panel" role="status">
-                <h3>Reviewed 0.05 eligible bridge arm</h3>
-                <p>
-                  <strong>Viewing reviewed 0.05 eligible bridge arm.</strong>
-                </p>
                 <p className="muted-inline">
-                  Pinned to reviewed experimental run <code>{REVIEWED_ELIGIBLE_BRIDGE_RUN_ID}</code>. Not
-                  default. Not validation.
+                  Experimental eligible-only bridge review view is disabled. Showing the full bridge preview
+                  instead.
                 </p>
               </div>
             ) : null}
-            {family === "bridge" && !viewingReviewedEligibleBridgeArm ? (
+            {family === "bridge" && ENABLE_EXPERIMENTAL_BRIDGE_VIEW ? (
               <div className="ranking-how-panel">
-                <h3>Reviewed experimental arm</h3>
+                <h3>Experimental bridge review guardrail</h3>
+                <p>
+                  <strong>Experimental bridge review view; not validated or default.</strong>
+                </p>
+                <p className="muted-inline">
+                  Single-reviewer, top-20, offline audit evidence only.
+                </p>
+                <p className="muted-inline">
+                  Current objective experiment: <code>{OBJECTIVE_BRIDGE_EXPERIMENT_RUN_ID}</code>. This is
+                  an experimental arm for this corpus snapshot, not validation or default readiness.
+                </p>
                 <p>
                   <Link
                     className="action-link"
                     href={buildRecommendedFamilyHref("bridge", {
                       focusPaperId,
-                      rankingRunId: REVIEWED_ELIGIBLE_BRIDGE_RUN_ID,
+                      rankingRunId: OBJECTIVE_BRIDGE_EXPERIMENT_RUN_ID,
                       bridgeEligibleOnly: true
                     })}
                     scroll={false}
                   >
-                    Open reviewed 0.05 eligible bridge arm
+                    Open current experimental bridge review view
                   </Link>
-                </p>
-                <p className="muted-inline">
-                  Pinned to reviewed experimental run <code>{REVIEWED_ELIGIBLE_BRIDGE_RUN_ID}</code>. Not
-                  default. Not validation.
                 </p>
               </div>
             ) : null}
-            {family === "bridge" && bridgeEligibleOnly && !viewingReviewedEligibleBridgeArm ? (
+            {family === "bridge" && bridgeEligibleOnly ? (
               <div className="ranking-how-panel">
                 <h3>Eligible-only bridge view</h3>
-                <p className="muted-inline">
-                  Experimental bridge arm; not a default or validation claim.
+                <p>
+                  <strong>Experimental bridge review view; not validated or default.</strong>
                 </p>
                 <p className="muted-inline">
-                  Current evidence supports 0.05 as a plausible experimental bridge-weight arm,
-                  not default. 0.10 showed no additional eligible top-20 membership movement.
+                  Single-reviewer, top-20, offline audit evidence only.
+                </p>
+                <p className="muted-inline">
+                  Eligible-only filtering is exposed only as an experimental review aid for the resolved
+                  run. It is not validation, not a superiority claim, and not default readiness.
                 </p>
               </div>
             ) : null}
@@ -640,7 +654,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 </Link>
               ))}
             </nav>
-            {family === "bridge" ? (
+            {family === "bridge" && ENABLE_EXPERIMENTAL_BRIDGE_VIEW ? (
               <nav className="tabs" aria-label="Bridge feed view">
                 <Link
                   href={buildRecommendedFamilyHref("bridge", {
