@@ -1,0 +1,233 @@
+{
+  "artifact_type": "ml_tiny_baseline",
+  "generated_at": "2026-04-30T03:36:18Z",
+  "provenance": {
+    "ranking_run_id": "rank-ee2ba6c816",
+    "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+    "label_dataset_path": "C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v3.json",
+    "label_dataset_version": "ml-label-dataset-v3",
+    "label_dataset_sha256": "ebe1ec0d258d5c2a183ab29c6d6bda570a1bab1ce88f27e10c2c62d3e076fcbd",
+    "family": "emerging",
+    "target": "surprising_or_useful"
+  },
+  "caveats": [
+    "This is an offline tiny baseline experiment, not validation.",
+    "Labels are single-reviewer audit labels with ranking-selection bias.",
+    "Results must not change production ranking defaults.",
+    "No train/dev/test split is created by this artifact."
+  ],
+  "join_summary": {
+    "label_rows_run_match": 130,
+    "duplicate_row_id_skipped": 0,
+    "emerging_target_bool_rows_joined": 60,
+    "missing_score_for_emerging_labeled_rows": 0
+  },
+  "cv_results": {
+    "cv_policy": {
+      "type": "stratified_round_robin_by_row_id",
+      "n_folds": 5,
+      "min_positive_required": 10,
+      "min_negative_required": 10,
+      "feature_names": [
+        "final_score",
+        "semantic_score",
+        "citation_velocity_score",
+        "topic_growth_score",
+        "diversity_penalty"
+      ],
+      "model": "l2_logistic_regression_gradient_descent_pure_python"
+    },
+    "class_counts": {
+      "positive": 43,
+      "negative": 17,
+      "total": 60
+    },
+    "aggregate_out_of_fold": {
+      "learned": {
+        "roc_auc_mann_whitney": 0.8549931600547196,
+        "pairwise_accuracy": 0.8549931600547196,
+        "precision_at_5": 1.0,
+        "precision_at_10": 1.0,
+        "precision_at_20": 0.9
+      },
+      "heuristic_final_score": {
+        "roc_auc_mann_whitney": 0.8344733242134063,
+        "pairwise_accuracy": 0.8344733242134063,
+        "precision_at_5": 1.0,
+        "precision_at_10": 1.0,
+        "precision_at_20": 0.9
+      }
+    },
+    "mean_coefficients_across_folds_standardized_space": {
+      "intercept": 1.5481875749291438,
+      "weights": {
+        "final_score": 0.33140494886762223,
+        "semantic_score": 1.4680167880516726,
+        "citation_velocity_score": -0.34812384828876347,
+        "topic_growth_score": 0.5577129822168255,
+        "diversity_penalty": 0.0
+      }
+    },
+    "per_fold": [
+      {
+        "fold_id": 0,
+        "n_train": 47,
+        "n_test": 13,
+        "test_positive_count": 9,
+        "test_negative_count": 4,
+        "learned": {
+          "roc_auc_mann_whitney": 0.8333333333333334,
+          "pairwise_accuracy": 0.8333333333333334,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.8055555555555556,
+          "pairwise_accuracy": 0.8055555555555556,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 1.7326994996752325,
+          "weights": {
+            "final_score": 0.4122724486577982,
+            "semantic_score": 1.5669847893873696,
+            "citation_velocity_score": -0.3303417703660094,
+            "topic_growth_score": 0.6599951713568392,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 1,
+        "n_train": 47,
+        "n_test": 13,
+        "test_positive_count": 9,
+        "test_negative_count": 4,
+        "learned": {
+          "roc_auc_mann_whitney": 0.9444444444444444,
+          "pairwise_accuracy": 0.9444444444444444,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.9166666666666666,
+          "pairwise_accuracy": 0.9166666666666666,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 1.4290597350262422,
+          "weights": {
+            "final_score": 0.1840827685666216,
+            "semantic_score": 1.5646784744350986,
+            "citation_velocity_score": -0.25267018763688576,
+            "topic_growth_score": 0.3085106237842171,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 2,
+        "n_train": 48,
+        "n_test": 12,
+        "test_positive_count": 9,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 0.7407407407407407,
+          "pairwise_accuracy": 0.7407407407407407,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.7407407407407407,
+          "pairwise_accuracy": 0.7407407407407407,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 1.7148446137240256,
+          "weights": {
+            "final_score": 0.42476832540184445,
+            "semantic_score": 1.5573174373753653,
+            "citation_velocity_score": -0.5443595091822273,
+            "topic_growth_score": 0.845050667327731,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 3,
+        "n_train": 49,
+        "n_test": 11,
+        "test_positive_count": 8,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 0.9583333333333334,
+          "pairwise_accuracy": 0.9583333333333334,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.9583333333333334,
+          "pairwise_accuracy": 0.9583333333333334,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 1.4367391520379633,
+          "weights": {
+            "final_score": 0.33365142214627286,
+            "semantic_score": 1.2941491575684094,
+            "citation_velocity_score": -0.4388151772295402,
+            "topic_growth_score": 0.5442608860917993,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 4,
+        "n_train": 49,
+        "n_test": 11,
+        "test_positive_count": 8,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 0.9583333333333334,
+          "pairwise_accuracy": 0.9583333333333334,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.8333333333333334,
+          "pairwise_accuracy": 0.8333333333333334,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 1.4275948741822553,
+          "weights": {
+            "final_score": 0.30224977956557425,
+            "semantic_score": 1.356954081492119,
+            "citation_velocity_score": -0.17443259702915476,
+            "topic_growth_score": 0.43074756252354085,
+            "diversity_penalty": 0.0
+          }
+        }
+      }
+    ]
+  },
+  "interpretation_note": "This artifact compares a tiny transparent logistic model on five persisted score features against the ranking's final_score on the same cross-validation folds. Stratified CV estimates offline behavior on this fixed slice only; it does not allocate a production held-out split. It does not claim ML superiority over production ranking and is not validation."
+}

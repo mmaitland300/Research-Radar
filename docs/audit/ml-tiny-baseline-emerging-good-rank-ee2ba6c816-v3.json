@@ -1,0 +1,233 @@
+{
+  "artifact_type": "ml_tiny_baseline",
+  "generated_at": "2026-04-30T03:36:16Z",
+  "provenance": {
+    "ranking_run_id": "rank-ee2ba6c816",
+    "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+    "label_dataset_path": "C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v3.json",
+    "label_dataset_version": "ml-label-dataset-v3",
+    "label_dataset_sha256": "ebe1ec0d258d5c2a183ab29c6d6bda570a1bab1ce88f27e10c2c62d3e076fcbd",
+    "family": "emerging",
+    "target": "good_or_acceptable"
+  },
+  "caveats": [
+    "This is an offline tiny baseline experiment, not validation.",
+    "Labels are single-reviewer audit labels with ranking-selection bias.",
+    "Results must not change production ranking defaults.",
+    "No train/dev/test split is created by this artifact."
+  ],
+  "join_summary": {
+    "label_rows_run_match": 130,
+    "duplicate_row_id_skipped": 0,
+    "emerging_target_bool_rows_joined": 60,
+    "missing_score_for_emerging_labeled_rows": 0
+  },
+  "cv_results": {
+    "cv_policy": {
+      "type": "stratified_round_robin_by_row_id",
+      "n_folds": 5,
+      "min_positive_required": 10,
+      "min_negative_required": 10,
+      "feature_names": [
+        "final_score",
+        "semantic_score",
+        "citation_velocity_score",
+        "topic_growth_score",
+        "diversity_penalty"
+      ],
+      "model": "l2_logistic_regression_gradient_descent_pure_python"
+    },
+    "class_counts": {
+      "positive": 45,
+      "negative": 15,
+      "total": 60
+    },
+    "aggregate_out_of_fold": {
+      "learned": {
+        "roc_auc_mann_whitney": 0.9407407407407408,
+        "pairwise_accuracy": 0.9407407407407408,
+        "precision_at_5": 1.0,
+        "precision_at_10": 1.0,
+        "precision_at_20": 1.0
+      },
+      "heuristic_final_score": {
+        "roc_auc_mann_whitney": 0.9096296296296297,
+        "pairwise_accuracy": 0.9096296296296297,
+        "precision_at_5": 1.0,
+        "precision_at_10": 1.0,
+        "precision_at_20": 1.0
+      }
+    },
+    "mean_coefficients_across_folds_standardized_space": {
+      "intercept": 4.010699501496763,
+      "weights": {
+        "final_score": 1.1762781154504238,
+        "semantic_score": 1.9404238042598512,
+        "citation_velocity_score": -1.4452481771521355,
+        "topic_growth_score": 2.2972697117003524,
+        "diversity_penalty": 0.0
+      }
+    },
+    "per_fold": [
+      {
+        "fold_id": 0,
+        "n_train": 48,
+        "n_test": 12,
+        "test_positive_count": 9,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 0.9259259259259259,
+          "pairwise_accuracy": 0.9259259259259259,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.8148148148148148,
+          "pairwise_accuracy": 0.8148148148148148,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 3.584727663992174,
+          "weights": {
+            "final_score": 1.099974741100166,
+            "semantic_score": 1.7775314913347098,
+            "citation_velocity_score": -0.7618207422055577,
+            "topic_growth_score": 1.868212131840941,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 1,
+        "n_train": 48,
+        "n_test": 12,
+        "test_positive_count": 9,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 1.0,
+          "pairwise_accuracy": 1.0,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.9629629629629629,
+          "pairwise_accuracy": 0.9629629629629629,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 3.8981352034971515,
+          "weights": {
+            "final_score": 1.2117621902641822,
+            "semantic_score": 1.5449353688718634,
+            "citation_velocity_score": -1.571087738275701,
+            "topic_growth_score": 2.452910343400075,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 2,
+        "n_train": 48,
+        "n_test": 12,
+        "test_positive_count": 9,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 0.9259259259259259,
+          "pairwise_accuracy": 0.9259259259259259,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.9259259259259259,
+          "pairwise_accuracy": 0.9259259259259259,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 4.066260604342021,
+          "weights": {
+            "final_score": 1.1497586016633485,
+            "semantic_score": 2.028288419528178,
+            "citation_velocity_score": -1.694661105348169,
+            "topic_growth_score": 2.539844080220697,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 3,
+        "n_train": 48,
+        "n_test": 12,
+        "test_positive_count": 9,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 0.9259259259259259,
+          "pairwise_accuracy": 0.9259259259259259,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.8,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 0.8518518518518519,
+          "pairwise_accuracy": 0.8518518518518519,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 4.5996379329174655,
+          "weights": {
+            "final_score": 1.2328218240359625,
+            "semantic_score": 2.6650016285209808,
+            "citation_velocity_score": -1.6462557019900033,
+            "topic_growth_score": 2.183895501775758,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      {
+        "fold_id": 4,
+        "n_train": 48,
+        "n_test": 12,
+        "test_positive_count": 9,
+        "test_negative_count": 3,
+        "learned": {
+          "roc_auc_mann_whitney": 1.0,
+          "pairwise_accuracy": 1.0,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "heuristic_final_score": {
+          "roc_auc_mann_whitney": 1.0,
+          "pairwise_accuracy": 1.0,
+          "precision_at_5": 1.0,
+          "precision_at_10": 0.9,
+          "precision_at_20": null
+        },
+        "coefficients_standardized_space": {
+          "intercept": 3.904736102735004,
+          "weights": {
+            "final_score": 1.1870732201884595,
+            "semantic_score": 1.6863621130435231,
+            "citation_velocity_score": -1.5524155979412464,
+            "topic_growth_score": 2.44148650126429,
+            "diversity_penalty": 0.0
+          }
+        }
+      }
+    ]
+  },
+  "interpretation_note": "This artifact compares a tiny transparent logistic model on five persisted score features against the ranking's final_score on the same cross-validation folds. Stratified CV estimates offline behavior on this fixed slice only; it does not allocate a production held-out split. It does not claim ML superiority over production ranking and is not validation."
+}

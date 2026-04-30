@@ -1204,6 +1204,47 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_tiny_baseline_parser = subparsers.add_parser(
+        "ml-tiny-baseline",
+        help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
+    )
+    ml_tiny_baseline_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON",
+    )
+    ml_tiny_baseline_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id (no implicit latest selection)",
+    )
+    ml_tiny_baseline_parser.add_argument(
+        "--family",
+        required=True,
+        choices=["emerging"],
+        help="Only emerging is supported for this experiment",
+    )
+    ml_tiny_baseline_parser.add_argument(
+        "--target",
+        required=True,
+        choices=sorted(["good_or_acceptable", "surprising_or_useful"]),
+        help="Manual target (refuses bridge_like_yes_or_partial)",
+    )
+    ml_tiny_baseline_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write tiny baseline JSON",
+    )
+    ml_tiny_baseline_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_tiny_baseline_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     ml_label_readiness_parser = subparsers.add_parser(
         "ml-label-readiness-matrix",
         help="Read-only label coverage / offline-baseline readiness by ranking_run_id (no training, no ranking)",
@@ -1420,6 +1461,34 @@ def main() -> None:
             )
         except MLOfflineBaselineEvalError as e:
             print(f"ml-offline-baseline-eval: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-tiny-baseline":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_tiny_baseline import MLTinyBaselineError, run_ml_tiny_baseline_cli
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_tiny_baseline_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                ranking_run_id=rid,
+                family=str(args.family),
+                target=str(args.target),
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLTinyBaselineError as e:
+            print(f"ml-tiny-baseline: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
