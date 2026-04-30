@@ -14,8 +14,25 @@ Compares **within-slice** ordering by persisted `final_score` vs **OOF learned_f
 - This is an offline disagreement audit, not validation of production ranking.
 - OOF logits come from the same stratified folds as ml-tiny-baseline learned_full; ranks are within this labeled slice only.
 - Labels are single-reviewer audit labels with ranking-selection bias.
+- Worksheet-driven sampling (gap/tail pools, contrastive expansions) can align labels with rank-driven slices; bucket counts are for inspection only, not evidence that learned ranking improves product quality.
 - Results must not change production ranking defaults.
 - No train/dev/test split is created by this artifact beyond the documented cross-fitting used for OOF scores.
+
+## Selection bias disclosure
+
+Audit worksheets often oversample tail or gap slices chosen by the prior ranking pipeline (for example emerging_bottom_rank_tail in gap-audit pools). Stratified OOF folds do not remove that selection bias. Bucket counts compare reordering within this labeled slice to manual labels only.
+
+### Row counts by `review_pool_variant`
+
+- `ml_emerging_target_gap_audit:good_or_acceptable`: `25`
+- `full_family_top_k`: `20`
+- `ml_contrastive_offline_audit`: `15`
+
+### Row counts by `source_worksheet_path`
+
+- `docs/audit/manual-review/ml_emerging_gap_rank-ee2ba6c816_review.csv`: `25`
+- `docs/audit/manual-review/emerging_rank-ee2ba6c816_top20.csv`: `20`
+- `docs/audit/manual-review/ml_contrastive_rank-ee2ba6c816_review.csv`: `15`
 
 ## Target `good_or_acceptable`
 
@@ -29,7 +46,7 @@ Compares **within-slice** ordering by persisted `final_score` vs **OOF learned_f
 
 ### Interpretation
 
-learned movement looks directionally product-useful on this labeled slice: useful movements=35, harmful movements=25. This is an offline disagreement audit for reviewer inspection, not validation or a production/default ranking change.
+Judgment-aware movement vs labels on this slice: useful_promotions+demotions=35, harmful_promotions+demotions=25 (useful = promoted_positive + demoted_negative; harmful = promoted_negative + demoted_positive). Offline inspection counts only; not validation and not evidence of product-quality improvement.
 
 ### Top promotions (learned ranks higher than final_score)
 
@@ -89,7 +106,7 @@ learned movement looks directionally product-useful on this labeled slice: usefu
 
 ### Interpretation
 
-learned movement looks directionally product-useful on this labeled slice: useful movements=31, harmful movements=26. This is an offline disagreement audit for reviewer inspection, not validation or a production/default ranking change.
+Judgment-aware movement vs labels on this slice: useful_promotions+demotions=31, harmful_promotions+demotions=26 (useful = promoted_positive + demoted_negative; harmful = promoted_negative + demoted_positive). Offline inspection counts only; not validation and not evidence of product-quality improvement.
 
 ### Top promotions (learned ranks higher than final_score)
 

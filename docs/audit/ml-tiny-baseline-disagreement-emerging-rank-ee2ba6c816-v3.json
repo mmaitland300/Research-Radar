@@ -1,6 +1,6 @@
 {
   "artifact_type": "ml_tiny_baseline_disagreement",
-  "generated_at": "2026-04-30T05:27:01Z",
+  "generated_at": "2026-04-30T05:40:43Z",
   "provenance": {
     "ranking_run_id": "rank-ee2ba6c816",
     "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
@@ -21,6 +21,7 @@
     "This is an offline disagreement audit, not validation of production ranking.",
     "OOF logits come from the same stratified folds as ml-tiny-baseline learned_full; ranks are within this labeled slice only.",
     "Labels are single-reviewer audit labels with ranking-selection bias.",
+    "Worksheet-driven sampling (gap/tail pools, contrastive expansions) can align labels with rank-driven slices; bucket counts are for inspection only, not evidence that learned ranking improves product quality.",
     "Results must not change production ranking defaults.",
     "No train/dev/test split is created by this artifact beyond the documented cross-fitting used for OOF scores."
   ],
@@ -29,6 +30,19 @@
     "duplicate_row_id_skipped": 0,
     "emerging_dual_bool_target_rows_joined": 60,
     "missing_score_for_emerging_labeled_rows": 0
+  },
+  "selection_bias_disclosure": {
+    "row_counts_by_review_pool_variant": {
+      "ml_emerging_target_gap_audit:good_or_acceptable": 25,
+      "full_family_top_k": 20,
+      "ml_contrastive_offline_audit": 15
+    },
+    "row_counts_by_source_worksheet_path": {
+      "docs/audit/manual-review/ml_emerging_gap_rank-ee2ba6c816_review.csv": 25,
+      "docs/audit/manual-review/emerging_rank-ee2ba6c816_top20.csv": 20,
+      "docs/audit/manual-review/ml_contrastive_rank-ee2ba6c816_review.csv": 15
+    },
+    "note": "Audit worksheets often oversample tail or gap slices chosen by the prior ranking pipeline (for example emerging_bottom_rank_tail in gap-audit pools). Stratified OOF folds do not remove that selection bias. Bucket counts compare reordering within this labeled slice to manual labels only."
   },
   "targets": {
     "good_or_acceptable": {
@@ -2757,7 +2771,7 @@
         }
       ],
       "movement_definition": "rank_delta_heuristic_minus_learned > 0 means the paper moves up under OOF learned ordering vs final_score (smaller rank is better). This answers whether the learned model would reorder this slice differently from the heuristic composite; it does not prove better recommendations in production.",
-      "interpretation_note": "learned movement looks directionally product-useful on this labeled slice: useful movements=35, harmful movements=25. This is an offline disagreement audit for reviewer inspection, not validation or a production/default ranking change."
+      "interpretation_note": "Judgment-aware movement vs labels on this slice: useful_promotions+demotions=35, harmful_promotions+demotions=25 (useful = promoted_positive + demoted_negative; harmful = promoted_negative + demoted_positive). Offline inspection counts only; not validation and not evidence of product-quality improvement."
     },
     "surprising_or_useful": {
       "target": "surprising_or_useful",
@@ -5431,7 +5445,7 @@
         }
       ],
       "movement_definition": "rank_delta_heuristic_minus_learned > 0 means the paper moves up under OOF learned ordering vs final_score (smaller rank is better). This answers whether the learned model would reorder this slice differently from the heuristic composite; it does not prove better recommendations in production.",
-      "interpretation_note": "learned movement looks directionally product-useful on this labeled slice: useful movements=31, harmful movements=26. This is an offline disagreement audit for reviewer inspection, not validation or a production/default ranking change."
+      "interpretation_note": "Judgment-aware movement vs labels on this slice: useful_promotions+demotions=31, harmful_promotions+demotions=26 (useful = promoted_positive + demoted_negative; harmful = promoted_negative + demoted_positive). Offline inspection counts only; not validation and not evidence of product-quality improvement."
     }
   }
 }

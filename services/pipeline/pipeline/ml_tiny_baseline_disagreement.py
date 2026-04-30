@@ -36,6 +36,8 @@ DISAGREEMENT_CAVEATS = (
     "This is an offline disagreement audit, not validation of production ranking.",
     "OOF logits come from the same stratified folds as ml-tiny-baseline learned_full; ranks are within this labeled slice only.",
     "Labels are single-reviewer audit labels with ranking-selection bias.",
+    "Worksheet-driven sampling (gap/tail pools, contrastive expansions) can align labels with rank-driven slices; "
+    "bucket counts are for inspection only, not evidence that learned ranking improves product quality.",
     "Results must not change production ranking defaults.",
     "No train/dev/test split is created by this artifact beyond the documented cross-fitting used for OOF scores.",
 )
@@ -93,18 +95,49 @@ def _bucket_counts(rows: Sequence[dict[str, Any]]) -> dict[str, int]:
 
 
 def _interpretation_from_bucket_counts(counts: dict[str, int]) -> str:
+    """Neutral summary of judgment buckets; avoids product-quality claims."""
     useful = int(counts.get("promoted_positive", 0)) + int(counts.get("demoted_negative", 0))
     harmful = int(counts.get("promoted_negative", 0)) + int(counts.get("demoted_positive", 0))
-    if useful > harmful:
-        verdict = "learned movement looks directionally product-useful on this labeled slice"
-    elif harmful > useful:
-        verdict = "learned movement looks directionally product-risky on this labeled slice"
-    else:
-        verdict = "learned movement looks mixed on this labeled slice"
     return (
-        f"{verdict}: useful movements={useful}, harmful movements={harmful}. "
-        "This is an offline disagreement audit for reviewer inspection, not validation or a production/default ranking change."
+        "Judgment-aware movement vs labels on this slice: "
+        f"useful_promotions+demotions={useful}, harmful_promotions+demotions={harmful} "
+        "(useful = promoted_positive + demoted_negative; harmful = promoted_negative + demoted_positive). "
+        "Offline inspection counts only; not validation and not evidence of product-quality improvement."
     )
+
+
+def _count_nonempty_field(rows: Sequence[dict[str, Any]], field: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        raw = str(row.get(field) or "").strip()
+        key = raw if raw else "(missing)"
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
+def selection_bias_disclosure_from_joined_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Counts for reviewer context; does not remove selection bias from the experiment."""
+    by_variant = _count_nonempty_field(rows, "review_pool_variant")
+    by_path = _count_nonempty_field(rows, "source_worksheet_path")
+    sample_counts: dict[str, int] = {}
+    for row in rows:
+        sr = str(row.get("sample_reason") or "").strip()
+        if sr:
+            sample_counts[sr] = sample_counts.get(sr, 0) + 1
+    sample_counts = dict(sorted(sample_counts.items(), key=lambda kv: (-kv[1], kv[0])))
+    note = (
+        "Audit worksheets often oversample tail or gap slices chosen by the prior ranking pipeline "
+        "(for example emerging_bottom_rank_tail in gap-audit pools). Stratified OOF folds do not remove that "
+        "selection bias. Bucket counts compare reordering within this labeled slice to manual labels only."
+    )
+    out: dict[str, Any] = {
+        "row_counts_by_review_pool_variant": by_variant,
+        "row_counts_by_source_worksheet_path": by_path,
+        "note": note,
+    }
+    if sample_counts:
+        out["row_counts_by_sample_reason"] = sample_counts
+    return out
 
 
 def _build_target_audit(
@@ -293,6 +326,7 @@ def build_ml_tiny_baseline_disagreement_payload(
         targets_out[tgt] = _build_target_audit(joined, target=tgt, oof_logits=oof, top_n=top_n)
 
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    disclosure = selection_bias_disclosure_from_joined_rows(joined)
     return {
         "artifact_type": "ml_tiny_baseline_disagreement",
         "generated_at": generated_at,
@@ -311,6 +345,7 @@ def build_ml_tiny_baseline_disagreement_payload(
         },
         "caveats": list(DISAGREEMENT_CAVEATS),
         "join_summary": join_meta,
+        "selection_bias_disclosure": disclosure,
         "targets": targets_out,
     }
 
@@ -334,7 +369,30 @@ def markdown_from_ml_tiny_baseline_disagreement(payload: dict[str, Any]) -> str:
         "",
         *[f"- {c}" for c in payload.get("caveats", [])],
         "",
+        "## Selection bias disclosure",
+        "",
+        _ascii_markdown_text((payload.get("selection_bias_disclosure") or {}).get("note", "")),
+        "",
     ]
+    disc = payload.get("selection_bias_disclosure") or {}
+    if disc.get("row_counts_by_review_pool_variant"):
+        lines.append("### Row counts by `review_pool_variant`")
+        lines.append("")
+        for key, cnt in disc["row_counts_by_review_pool_variant"].items():
+            lines.append(f"- `{_ascii_markdown_text(key)}`: `{cnt}`")
+        lines.append("")
+    if disc.get("row_counts_by_source_worksheet_path"):
+        lines.append("### Row counts by `source_worksheet_path`")
+        lines.append("")
+        for key, cnt in disc["row_counts_by_source_worksheet_path"].items():
+            lines.append(f"- `{_ascii_markdown_text(key)}`: `{cnt}`")
+        lines.append("")
+    if disc.get("row_counts_by_sample_reason"):
+        lines.append("### Row counts by `sample_reason` (when present on worksheet rows)")
+        lines.append("")
+        for key, cnt in disc["row_counts_by_sample_reason"].items():
+            lines.append(f"- `{_ascii_markdown_text(key)}`: `{cnt}`")
+        lines.append("")
     for tgt, block in payload.get("targets", {}).items():
         counts = block.get("judgment_bucket_counts") or {}
         lines.extend(

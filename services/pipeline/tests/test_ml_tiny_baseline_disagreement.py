@@ -13,9 +13,11 @@ from pipeline.ml_tiny_baseline_disagreement import (
     DISAGREEMENT_CAVEATS,
     MLTinyBaselineDisagreementError,
     _build_target_audit,
+    _interpretation_from_bucket_counts,
     build_ml_tiny_baseline_disagreement_payload,
     markdown_from_ml_tiny_baseline_disagreement,
     ordinal_rank_descending,
+    selection_bias_disclosure_from_joined_rows,
 )
 
 
@@ -288,6 +290,37 @@ def test_refuses_non_emerging(tmp_path: Path) -> None:
         )
 
 
+def test_selection_bias_disclosure_counts_variants() -> None:
+    rows = [
+        {"review_pool_variant": "pool_a", "source_worksheet_path": "a.csv"},
+        {"review_pool_variant": "pool_a", "source_worksheet_path": "b.csv"},
+        {"review_pool_variant": "pool_b", "source_worksheet_path": "a.csv", "sample_reason": "tail"},
+    ]
+    disc = selection_bias_disclosure_from_joined_rows(rows)
+    assert disc["row_counts_by_review_pool_variant"] == {"pool_a": 2, "pool_b": 1}
+    assert disc["row_counts_by_source_worksheet_path"] == {"a.csv": 2, "b.csv": 1}
+    assert disc["row_counts_by_sample_reason"] == {"tail": 1}
+    assert "Stratified OOF" in disc["note"]
+
+
+def test_interpretation_avoids_product_quality_verdicts() -> None:
+    text = _interpretation_from_bucket_counts(
+        {
+            "promoted_positive": 10,
+            "promoted_negative": 0,
+            "demoted_positive": 0,
+            "demoted_negative": 0,
+            "stable_positive": 0,
+            "stable_negative": 0,
+        }
+    )
+    lowered = text.lower()
+    assert "directionally" not in lowered
+    assert "product-useful" not in lowered
+    assert "product-risky" not in lowered
+    assert "useful_promotions+demotions=10" in text
+
+
 def test_markdown_has_caveats(tmp_path: Path) -> None:
     scores = [_score(i, pos=(i <= 15)) for i in range(1, 27)]
     fc = _FakeConn(run_row=_run_row(), score_rows=scores)
@@ -302,7 +335,13 @@ def test_markdown_has_caveats(tmp_path: Path) -> None:
         targets=("good_or_acceptable", "surprising_or_useful"),
         top_n=3,
     )
+    assert "selection_bias_disclosure" in payload
+    disc = payload["selection_bias_disclosure"]
+    assert "row_counts_by_review_pool_variant" in disc
+    assert disc["row_counts_by_review_pool_variant"].get("emerging_gap") == 26
     md = markdown_from_ml_tiny_baseline_disagreement(payload)
+    assert "## Selection bias disclosure" in md
+    assert "Row counts by `review_pool_variant`" in md
     for c in DISAGREEMENT_CAVEATS:
         assert c in md
     assert md.isascii()
