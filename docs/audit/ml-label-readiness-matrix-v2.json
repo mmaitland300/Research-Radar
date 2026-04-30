@@ -1,0 +1,579 @@
+{
+  "artifact_type": "ml_label_readiness_matrix",
+  "generated_at": "2026-04-30T03:06:19Z",
+  "provenance": {
+    "label_dataset_path": "C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v2.json",
+    "label_dataset_version": "ml-label-dataset-v2",
+    "label_dataset_sha256": "c5b908973cd033ab363c6673a7b0955fe176406742449aac09fd800855829722",
+    "duplicate_row_id_skipped_globally": 0
+  },
+  "caveats": [
+    "Labels are single-reviewer manual audit material unless a source states otherwise.",
+    "Rows are biased by ranking outputs and worksheet selection (ranking-selection bias).",
+    "This matrix is not validation of ranking quality or of any future model.",
+    "This artifact does not create or imply train/dev/test splits."
+  ],
+  "run_snapshots": {
+    "rank-3904fec89d": {
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167
+    },
+    "rank-60910a47b4": {
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514
+    },
+    "rank-bc1123e00c": {
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514
+    },
+    "rank-ee2ba6c816": {
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514
+    }
+  },
+  "groups": [
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "bridge",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 20,
+      "positive_count": 20,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "bridge",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 20,
+      "positive_count": 20,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "bridge",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 20,
+      "positive_count": 20,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "emerging",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 20,
+      "positive_count": 0,
+      "negative_count": 0,
+      "null_target_count": 20,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "emerging",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 20,
+      "positive_count": 20,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "emerging",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 20,
+      "positive_count": 20,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "undercited",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 20,
+      "positive_count": 0,
+      "negative_count": 0,
+      "null_target_count": 20,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "undercited",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 20,
+      "positive_count": 20,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-3904fec89d",
+      "family": "undercited",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 20,
+      "positive_count": 20,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 167,
+      "paper_scores_joinable_count": 20,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-60910a47b4",
+      "family": "bridge",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 1,
+      "positive_count": 1,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 1,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-60910a47b4",
+      "family": "bridge",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 1,
+      "positive_count": 1,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 1,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-60910a47b4",
+      "family": "bridge",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 1,
+      "positive_count": 1,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 1,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-bc1123e00c",
+      "family": "bridge",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 4,
+      "positive_count": 4,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 4,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-bc1123e00c",
+      "family": "bridge",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 4,
+      "positive_count": 4,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 4,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-bc1123e00c",
+      "family": "bridge",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 4,
+      "positive_count": 4,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 4,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "bridge",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 35,
+      "positive_count": 29,
+      "negative_count": 6,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": true,
+        "enough_for_diagnostic_auc": true,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "bridge",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 35,
+      "positive_count": 32,
+      "negative_count": 3,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": true,
+        "enough_for_diagnostic_auc": true,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "bridge",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 35,
+      "positive_count": 28,
+      "negative_count": 7,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": true,
+        "enough_for_diagnostic_auc": true,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "emerging",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 35,
+      "positive_count": 0,
+      "negative_count": 0,
+      "null_target_count": 35,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "emerging",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 35,
+      "positive_count": 35,
+      "negative_count": 0,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "emerging",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 35,
+      "positive_count": 33,
+      "negative_count": 2,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": true,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "undercited",
+      "target": "bridge_like_yes_or_partial",
+      "total_labeled_rows": 35,
+      "positive_count": 0,
+      "negative_count": 0,
+      "null_target_count": 35,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": false,
+        "enough_for_diagnostic_auc": false,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "undercited",
+      "target": "good_or_acceptable",
+      "total_labeled_rows": 35,
+      "positive_count": 32,
+      "negative_count": 3,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": true,
+        "enough_for_diagnostic_auc": true,
+        "enough_for_tiny_baseline": false
+      }
+    },
+    {
+      "ranking_run_id": "rank-ee2ba6c816",
+      "family": "undercited",
+      "target": "surprising_or_useful",
+      "total_labeled_rows": 35,
+      "positive_count": 31,
+      "negative_count": 4,
+      "null_target_count": 0,
+      "duplicate_paper_id_count": 0,
+      "derived_target_conflict_count": 0,
+      "ranking_run_exists": true,
+      "ranking_run_succeeded": true,
+      "ranking_run_status": "succeeded",
+      "paper_scores_row_count": 514,
+      "paper_scores_joinable_count": 35,
+      "missing_score_count": 0,
+      "readiness": {
+        "has_both_classes": true,
+        "enough_for_diagnostic_auc": true,
+        "enough_for_tiny_baseline": false
+      }
+    }
+  ],
+  "recommendation": {
+    "run_ml_offline_baseline_eval_for": [
+      "rank-ee2ba6c816"
+    ],
+    "targeted_labeling_suggested_for_groups": 19,
+    "notes": "Run `ml-offline-baseline-eval` for each succeeded `ranking_run_id` that appears under `run_ml_offline_baseline_eval_for` once you care about score-aligned metrics for those slices. For groups without both classes\u2014or below diagnostic counts\u2014prioritize **targeted worksheets** (explicit negatives / contrastive rows) before expecting stable AUC or tiny baselines."
+  }
+}

@@ -1170,6 +1170,11 @@ def main() -> None:
         default=None,
         help="Directory of manual-review CSV worksheets (default: <repo-root>/docs/audit/manual-review)",
     )
+    ml_label_dataset_parser.add_argument(
+        "--dataset-version",
+        default="ml-label-dataset-v1",
+        help="Version string written on each row and the payload (default: ml-label-dataset-v1; e.g. ml-label-dataset-v2)",
+    )
     ml_offline_baseline_parser = subparsers.add_parser(
         "ml-offline-baseline-eval",
         help="Read-only offline label baseline metrics (join ml-label-dataset to paper_scores for one ranking_run_id)",
@@ -1348,11 +1353,13 @@ def main() -> None:
         manual_dir = Path(args.manual_review_dir).resolve() if args.manual_review_dir else None
         out_json = Path(args.output)
         out_md = Path(args.markdown_output) if args.markdown_output else None
+        dver = (args.dataset_version or "").strip() or None
         write_ml_label_dataset(
             repo_root=repo_root,
             json_path=out_json,
             markdown_path=out_md,
             manual_review_dir=manual_dir,
+            dataset_version=dver,
         )
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:

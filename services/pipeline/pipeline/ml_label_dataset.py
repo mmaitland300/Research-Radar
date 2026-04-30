@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 DATASET_VERSION = "ml-label-dataset-v1"
+DEFAULT_DATASET_VERSION = DATASET_VERSION
 LABEL_FIELDS = ("relevance_label", "novelty_label", "bridge_like_label")
 
 VERBATIM_CAVEATS = (
@@ -166,6 +167,8 @@ def _resolve_ranking_run_id(row: dict[str, str]) -> str | None:
 
 def _resolve_rank_fields(row: dict[str, str]) -> tuple[str | None, str | None]:
     r = _norm_ws(row.get("rank"))
+    if not r:
+        r = _norm_ws(row.get("family_rank"))
     er = _norm_ws(row.get("experiment_rank"))
     rank_out = r or None
     exp_rank_out = er or None
@@ -208,6 +211,7 @@ def parse_manual_review_worksheet(
     csv_path: Path,
     *,
     repo_root: Path,
+    dataset_version: str = DEFAULT_DATASET_VERSION,
 ) -> ParsedWorksheet | None:
     rel = csv_path.resolve().relative_to(repo_root.resolve()).as_posix()
     digest = sha256_file(csv_path)
@@ -257,7 +261,7 @@ def parse_manual_review_worksheet(
         else:
             family = None
         out: dict[str, Any] = {
-            "dataset_version": DATASET_VERSION,
+            "dataset_version": dataset_version,
             "row_id": row_id,
             "paper_id": paper_id,
             "work_id": work_id,
@@ -299,11 +303,13 @@ def build_ml_label_dataset(
     *,
     repo_root: Path,
     manual_review_dir: Path | None = None,
+    dataset_version: str | None = None,
 ) -> dict[str, Any]:
     root = repo_root.resolve()
     mdir = (manual_review_dir or (root / "docs" / "audit" / "manual-review")).resolve()
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
+    ver = dataset_version or DEFAULT_DATASET_VERSION
     csv_paths = discover_manual_review_csvs(mdir)
     skipped_blank_worksheets: list[str] = []
     source_sha256: dict[str, str] = {}
@@ -316,7 +322,7 @@ def build_ml_label_dataset(
     source_worksheets_sorted: list[str] = []
 
     for p in csv_paths:
-        pw = parse_manual_review_worksheet(p, repo_root=root)
+        pw = parse_manual_review_worksheet(p, repo_root=root, dataset_version=ver)
         if pw is None:
             continue
         source_worksheets_sorted.append(pw.rel_path)
@@ -429,7 +435,7 @@ def build_ml_label_dataset(
 
     sha_out = {k: source_sha256[k] for k in sorted(source_sha256) if k in source_worksheets_sorted}
     return {
-        "dataset_version": DATASET_VERSION,
+        "dataset_version": ver,
         "generated_at": generated_at,
         "caveats": caveats,
         "source_worksheets": source_worksheets_sorted,
@@ -567,7 +573,7 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "",
         "## JSON artifact",
         "",
-        "Machine-readable export: `docs/audit/ml-label-dataset-v1.json` (regenerate via `python -m pipeline.cli ml-label-dataset`).",
+        f"Machine-readable export: regenerate via `python -m pipeline.cli ml-label-dataset --dataset-version {payload['dataset_version']} --output <path>.json`.",
         "",
     ]
     return "\n".join(lines).rstrip() + "\n"
@@ -579,8 +585,13 @@ def write_ml_label_dataset(
     json_path: Path,
     markdown_path: Path | None,
     manual_review_dir: Path | None = None,
+    dataset_version: str | None = None,
 ) -> dict[str, Any]:
-    payload = build_ml_label_dataset(repo_root=repo_root, manual_review_dir=manual_review_dir)
+    payload = build_ml_label_dataset(
+        repo_root=repo_root,
+        manual_review_dir=manual_review_dir,
+        dataset_version=dataset_version,
+    )
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
     if markdown_path is not None:

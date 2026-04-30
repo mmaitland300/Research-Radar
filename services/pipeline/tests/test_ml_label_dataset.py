@@ -409,3 +409,35 @@ def test_no_train_dev_test_split_in_dataset(tmp_path: Path) -> None:
     assert all(r["split"] == "audit_only" for r in payload["rows"])
     meta = payload["metadata"]
     assert "train_split" not in meta and "dev_split" not in meta and "test_split" not in meta
+
+
+HEADER_FAMILY_RANK = (
+    "ranking_run_id,ranking_version,corpus_snapshot_version,embedding_version,cluster_version,"
+    "review_pool_variant,family,family_rank,paper_id,title,year,citation_count,source_slug,topics,"
+    "final_score,reason_short,semantic_score,citation_velocity_score,topic_growth_score,"
+    "bridge_score,diversity_penalty,bridge_eligible,relevance_label,novelty_label,bridge_like_label,reviewer_notes\n"
+)
+
+
+def _row_family_rank(fr: str = "42") -> str:
+    return (
+        f"r1,v,c,e,cl,pv,emerging,{fr},https://openalex.org/W2,T2,2025,0,x,t,0.1,rs,,0,0,0,0,true,"
+        "good,useful,not_applicable,notes\n"
+    )
+
+
+def test_dataset_version_parameter_on_payload_and_rows(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    _write(mr / "one.csv", HEADER_STANDARD + _std_data_row(relevance="good", novelty="useful", bridge_like="yes"))
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr, dataset_version="ml-label-dataset-v2")
+    assert payload["dataset_version"] == "ml-label-dataset-v2"
+    assert all(r["dataset_version"] == "ml-label-dataset-v2" for r in payload["rows"])
+
+
+def test_family_rank_used_when_rank_column_missing(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    _write(mr / "fr.csv", HEADER_FAMILY_RANK + _row_family_rank("99"))
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    assert payload["rows"][0]["rank"] == "99"
