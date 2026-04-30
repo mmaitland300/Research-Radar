@@ -10,7 +10,7 @@ from typing import Any, Sequence
 
 import psycopg
 
-from pipeline.ml_offline_baseline_eval import _parse_config_json, load_label_dataset, sha256_file
+from pipeline.ml_offline_baseline_eval import _parse_config_json, load_label_dataset, normalize_w_token, sha256_file
 from pipeline.ml_tiny_baseline import (
     EMERGING_FAMILY,
     ALLOWED_TARGETS,
@@ -23,6 +23,14 @@ from pipeline.ml_tiny_baseline import (
 from pipeline.recommendation_review_worksheet import cluster_version_from_config
 
 TARGET_ORDER = ("good_or_acceptable", "surprising_or_useful")
+JUDGMENT_BUCKETS = (
+    "promoted_positive",
+    "promoted_negative",
+    "demoted_positive",
+    "demoted_negative",
+    "stable_positive",
+    "stable_negative",
+)
 
 DISAGREEMENT_CAVEATS = (
     "This is an offline disagreement audit, not validation of production ranking.",
@@ -46,6 +54,30 @@ def _tie_key(row: dict[str, Any]) -> str:
     return str(row.get("paper_id", ""))
 
 
+def _openalex_work_id(row: dict[str, Any]) -> str | None:
+    for key in ("paper_id", "openalex_id", "work_id"):
+        token = normalize_w_token(str(row.get(key) or ""))
+        if token:
+            return token
+    return None
+
+
+def _movement_bucket(delta: int) -> str:
+    if delta > 0:
+        return "promoted_by_learned_ordering"
+    if delta < 0:
+        return "demoted_by_learned_ordering"
+    return "stable_by_learned_ordering"
+
+
+def _judgment_bucket(delta: int, *, is_positive: bool) -> str:
+    if delta > 0:
+        return "promoted_positive" if is_positive else "promoted_negative"
+    if delta < 0:
+        return "demoted_positive" if is_positive else "demoted_negative"
+    return "stable_positive" if is_positive else "stable_negative"
+
+
 def ordinal_rank_descending(scores: Sequence[float], tie_keys: Sequence[str]) -> list[int]:
     """1 = best (highest score); ties broken by tie_keys ascending."""
     n = len(scores)
@@ -54,6 +86,25 @@ def ordinal_rank_descending(scores: Sequence[float], tie_keys: Sequence[str]) ->
     for pos, idx in enumerate(order, start=1):
         ranks[idx] = pos
     return ranks
+
+
+def _bucket_counts(rows: Sequence[dict[str, Any]]) -> dict[str, int]:
+    return {bucket: sum(1 for r in rows if r.get("disagreement_bucket") == bucket) for bucket in JUDGMENT_BUCKETS}
+
+
+def _interpretation_from_bucket_counts(counts: dict[str, int]) -> str:
+    useful = int(counts.get("promoted_positive", 0)) + int(counts.get("demoted_negative", 0))
+    harmful = int(counts.get("promoted_negative", 0)) + int(counts.get("demoted_positive", 0))
+    if useful > harmful:
+        verdict = "learned movement looks directionally product-useful on this labeled slice"
+    elif harmful > useful:
+        verdict = "learned movement looks directionally product-risky on this labeled slice"
+    else:
+        verdict = "learned movement looks mixed on this labeled slice"
+    return (
+        f"{verdict}: useful movements={useful}, harmful movements={harmful}. "
+        "This is an offline disagreement audit for reviewer inspection, not validation or a production/default ranking change."
+    )
 
 
 def _build_target_audit(
@@ -74,49 +125,123 @@ def _build_target_audit(
     detail_rows: list[dict[str, Any]] = []
     for i in range(n):
         d = deltas[i]
-        if d > 0:
-            bucket = "promoted_by_learned_ordering"
-        elif d < 0:
-            bucket = "demoted_by_learned_ordering"
-        else:
-            bucket = "tie"
+        positive = bool(rows[i].get(target))
+        openalex_work_id = _openalex_work_id(rows[i])
         detail_rows.append(
             {
                 "row_id": str(rows[i].get("row_id", "")),
-                "work_id": rows[i].get("work_id"),
+                "openalex_work_id": openalex_work_id,
+                "openalex_work_url": f"https://openalex.org/{openalex_work_id}" if openalex_work_id else None,
+                "internal_work_id": rows[i].get("work_id"),
                 "paper_id": rows[i].get("paper_id"),
                 "title": rows[i].get("title"),
+                "rank": rows[i].get("rank"),
+                "family_rank": rows[i].get("_rank"),
+                "experiment_rank": rows[i].get("experiment_rank"),
+                "review_pool_variant": rows[i].get("review_pool_variant"),
+                "source_worksheet_path": rows[i].get("source_worksheet_path"),
+                "source_row_number": rows[i].get("source_row_number"),
+                "relevance_label": rows[i].get("relevance_label"),
+                "novelty_label": rows[i].get("novelty_label"),
+                "bridge_like_label": rows[i].get("bridge_like_label"),
+                "reviewer_notes": rows[i].get("reviewer_notes"),
                 "final_score": final_scores[i],
                 "oof_learned_linear_logit": oof_logits[i],
                 "rank_by_final_score": r_heur[i],
                 "rank_by_oof_learned_logit": r_learn[i],
                 "rank_delta_heuristic_minus_learned": d,
-                "disagreement_bucket": bucket,
+                "movement_bucket": _movement_bucket(d),
+                "disagreement_bucket": _judgment_bucket(d, is_positive=positive),
                 "good_or_acceptable": rows[i].get("good_or_acceptable"),
                 "surprising_or_useful": rows[i].get("surprising_or_useful"),
             }
         )
 
-    promoted = [r for r in detail_rows if r["disagreement_bucket"] == "promoted_by_learned_ordering"]
-    demoted = [r for r in detail_rows if r["disagreement_bucket"] == "demoted_by_learned_ordering"]
+    promoted = [r for r in detail_rows if r["movement_bucket"] == "promoted_by_learned_ordering"]
+    demoted = [r for r in detail_rows if r["movement_bucket"] == "demoted_by_learned_ordering"]
     promoted.sort(key=lambda r: (-r["rank_delta_heuristic_minus_learned"], str(r.get("row_id", ""))))
     demoted.sort(key=lambda r: (r["rank_delta_heuristic_minus_learned"], str(r.get("row_id", ""))))
+    bucket_counts = _bucket_counts(detail_rows)
 
     return {
         "target": target,
         "n_rows": n,
         "promoted_count": len(promoted),
         "demoted_count": len(demoted),
-        "tie_count": sum(1 for r in detail_rows if r["disagreement_bucket"] == "tie"),
+        "stable_count": sum(1 for r in detail_rows if r["movement_bucket"] == "stable_by_learned_ordering"),
+        "tie_count": sum(1 for r in detail_rows if r["movement_bucket"] == "stable_by_learned_ordering"),
+        "judgment_bucket_counts": bucket_counts,
+        "useful_promotion_count": bucket_counts["promoted_positive"],
+        "harmful_promotion_count": bucket_counts["promoted_negative"],
+        "useful_demotion_count": bucket_counts["demoted_negative"],
+        "harmful_demotion_count": bucket_counts["demoted_positive"],
         "top_promotions_by_abs_rank_delta": promoted[:top_n],
         "top_demotions_by_abs_rank_delta": demoted[:top_n],
         "all_rows": detail_rows,
-        "interpretation_note": (
+        "movement_definition": (
             "rank_delta_heuristic_minus_learned > 0 means the paper moves up under OOF learned ordering vs final_score "
             "(smaller rank is better). This answers whether the learned model would reorder this slice differently "
             "from the heuristic composite; it does not prove better recommendations in production."
         ),
+        "interpretation_note": _interpretation_from_bucket_counts(bucket_counts),
     }
+
+
+def _ascii_markdown_text(value: Any, *, max_len: int | None = None) -> str:
+    text = "" if value is None else str(value)
+    replacements = {
+        "\u2010": "-",
+        "\u2011": "-",
+        "\u2012": "-",
+        "\u2013": "-",
+        "\u2014": " - ",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2026": "...",
+        "\u00a0": " ",
+    }
+    for src, dst in replacements.items():
+        text = text.replace(src, dst)
+    text = text.encode("ascii", "replace").decode("ascii")
+    text = " ".join(text.split())
+    if max_len is not None and len(text) > max_len:
+        return text[: max(0, max_len - 3)].rstrip() + "..."
+    return text
+
+
+def _format_value(value: Any) -> str:
+    if value is None or value == "":
+        return "n/a"
+    return _ascii_markdown_text(value)
+
+
+def _format_disagreement_row(row: dict[str, Any]) -> str:
+    title = _ascii_markdown_text(row.get("title"), max_len=110)
+    notes = _ascii_markdown_text(row.get("reviewer_notes"), max_len=120)
+    source = _ascii_markdown_text(row.get("source_worksheet_path"), max_len=110)
+    label_bits = (
+        f"relevance={_format_value(row.get('relevance_label'))}, "
+        f"novelty={_format_value(row.get('novelty_label'))}, "
+        f"bridge_like={_format_value(row.get('bridge_like_label'))}"
+    )
+    rank_bits = (
+        f"family_rank={_format_value(row.get('family_rank'))}, "
+        f"source_rank={_format_value(row.get('rank'))}"
+    )
+    return (
+        f"- `{_format_value(row.get('openalex_work_id'))}` "
+        f"rank_delta={row.get('rank_delta_heuristic_minus_learned')} "
+        f"bucket={_format_value(row.get('disagreement_bucket'))} "
+        f"final={row.get('final_score'):.6g} logit={row.get('oof_learned_linear_logit'):.6g}; "
+        f"{label_bits}; {rank_bits}; "
+        f"source={source or 'n/a'}; notes={notes or 'n/a'} - {title}"
+    )
+
+
+def _ascii_markdown_document(markdown: str) -> str:
+    return "\n".join(_ascii_markdown_text(line) for line in markdown.splitlines()).rstrip() + "\n"
 
 
 def build_ml_tiny_baseline_disagreement_payload(
@@ -211,32 +336,34 @@ def markdown_from_ml_tiny_baseline_disagreement(payload: dict[str, Any]) -> str:
         "",
     ]
     for tgt, block in payload.get("targets", {}).items():
+        counts = block.get("judgment_bucket_counts") or {}
         lines.extend(
             [
                 f"## Target `{tgt}`",
                 "",
                 f"- **n_rows:** `{block.get('n_rows')}`",
-                f"- **promoted / demoted / tie:** `{block.get('promoted_count')}` / `{block.get('demoted_count')}` / `{block.get('tie_count')}`",
+                f"- **promoted / demoted / stable:** `{block.get('promoted_count')}` / `{block.get('demoted_count')}` / `{block.get('stable_count', block.get('tie_count'))}`",
+                f"- **useful promotions:** `{block.get('useful_promotion_count')}` (`promoted_positive`)",
+                f"- **harmful promotions:** `{block.get('harmful_promotion_count')}` (`promoted_negative`)",
+                f"- **useful demotions:** `{block.get('useful_demotion_count')}` (`demoted_negative`)",
+                f"- **harmful demotions:** `{block.get('harmful_demotion_count')}` (`demoted_positive`)",
+                f"- **stable positives / negatives:** `{counts.get('stable_positive', 0)}` / `{counts.get('stable_negative', 0)}`",
+                "",
+                "### Interpretation",
+                "",
+                _ascii_markdown_text(block.get("interpretation_note")),
                 "",
                 "### Top promotions (learned ranks higher than final_score)",
                 "",
             ]
         )
         for r in block.get("top_promotions_by_abs_rank_delta", []):
-            lines.append(
-                f"- `{r.get('work_id')}` Δrank={r.get('rank_delta_heuristic_minus_learned')} "
-                f"final={r.get('final_score'):.6g} logit={r.get('oof_learned_linear_logit'):.6g} — "
-                f"{str(r.get('title') or '')[:120]}"
-            )
+            lines.append(_format_disagreement_row(r))
         lines.extend(["", "### Top demotions", ""])
         for r in block.get("top_demotions_by_abs_rank_delta", []):
-            lines.append(
-                f"- `{r.get('work_id')}` Δrank={r.get('rank_delta_heuristic_minus_learned')} "
-                f"final={r.get('final_score'):.6g} logit={r.get('oof_learned_linear_logit'):.6g} — "
-                f"{str(r.get('title') or '')[:120]}"
-            )
+            lines.append(_format_disagreement_row(r))
         lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    return _ascii_markdown_document("\n".join(lines))
 
 
 def write_ml_tiny_baseline_disagreement(

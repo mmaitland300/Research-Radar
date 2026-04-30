@@ -26,6 +26,7 @@ class _FakeCur:
     def execute(self, query: str, params: tuple | None = None) -> "_FakeCur":
         self._sql = query
         self._params = params
+        self._p.executed_sql.append(query)
         return self
 
     def fetchone(self) -> dict | None:
@@ -54,6 +55,7 @@ class _FakeConn:
     def __init__(self, *, run_row: dict, score_rows: list[dict]) -> None:
         self.run_row = run_row
         self.score_rows = score_rows
+        self.executed_sql: list[str] = []
 
     def cursor(self, row_factory: object | None = None) -> _FakeCurCtx:
         return _FakeCurCtx(self)
@@ -93,6 +95,14 @@ def _row(rid: str, row_id: str, wid: int, *, goa: bool, sou: bool) -> dict:
         "work_id": str(wid),
         "paper_id": f"https://openalex.org/W{wid}",
         "title": f"Title {wid}",
+        "rank": str(wid),
+        "review_pool_variant": "emerging_gap",
+        "source_worksheet_path": "docs/audit/manual-review/test_emerging.csv",
+        "source_row_number": wid + 1,
+        "relevance_label": "good" if goa else "miss",
+        "novelty_label": "surprising" if sou else "not_useful",
+        "bridge_like_label": "not_applicable",
+        "reviewer_notes": f"Reviewer note {wid}",
         "good_or_acceptable": goa,
         "surprising_or_useful": sou,
         "bridge_like_yes_or_partial": None,
@@ -114,10 +124,19 @@ def test_build_target_audit_promotion_and_demotion() -> None:
         rows.append(
             {
                 "row_id": f"r{i}",
-                "work_id": f"w{i:04d}",
-                "paper_id": "",
+                "work_id": i,
+                "paper_id": f"https://openalex.org/W100{i:04d}",
                 "title": f"T{i}",
                 "final_score": 1.0 - i * 0.01,
+                "rank": str(i + 1),
+                "_rank": i + 1,
+                "review_pool_variant": "emerging_test",
+                "source_worksheet_path": "docs/audit/manual-review/test.csv",
+                "source_row_number": i + 2,
+                "relevance_label": "good" if i < 13 else "miss",
+                "novelty_label": "useful",
+                "bridge_like_label": "not_applicable",
+                "reviewer_notes": f"note {i}",
             }
         )
     for i, r in enumerate(rows):
@@ -129,8 +148,44 @@ def test_build_target_audit_promotion_and_demotion() -> None:
     audit = _build_target_audit(rows, target="good_or_acceptable", oof_logits=learn, top_n=5)
     assert audit["promoted_count"] >= 1
     assert audit["demoted_count"] >= 1
-    assert any(r["work_id"] == "w0025" for r in audit["top_promotions_by_abs_rank_delta"])
-    assert any(r["work_id"] == "w0000" for r in audit["top_demotions_by_abs_rank_delta"])
+    assert any(r["openalex_work_id"] == "W1000025" for r in audit["top_promotions_by_abs_rank_delta"])
+    assert any(r["openalex_work_id"] == "W1000000" for r in audit["top_demotions_by_abs_rank_delta"])
+    assert any(r["disagreement_bucket"] == "promoted_negative" for r in audit["top_promotions_by_abs_rank_delta"])
+    assert any(r["disagreement_bucket"] == "demoted_positive" for r in audit["top_demotions_by_abs_rank_delta"])
+
+
+def test_judgment_bucket_assignment() -> None:
+    rows = [
+        {"row_id": "pos_promoted", "work_id": 1, "paper_id": "https://openalex.org/W1", "final_score": 0.2, "good_or_acceptable": True},
+        {"row_id": "neg_promoted", "work_id": 2, "paper_id": "https://openalex.org/W2", "final_score": 0.1, "good_or_acceptable": False},
+        {"row_id": "pos_demoted", "work_id": 3, "paper_id": "https://openalex.org/W3", "final_score": 0.9, "good_or_acceptable": True},
+        {"row_id": "neg_demoted", "work_id": 4, "paper_id": "https://openalex.org/W4", "final_score": 0.8, "good_or_acceptable": False},
+        {"row_id": "pos_stable", "work_id": 5, "paper_id": "https://openalex.org/W5", "final_score": 0.5, "good_or_acceptable": True},
+        {"row_id": "neg_stable", "work_id": 6, "paper_id": "https://openalex.org/W6", "final_score": 0.4, "good_or_acceptable": False},
+    ]
+    audit = _build_target_audit(
+        rows,
+        target="good_or_acceptable",
+        oof_logits=[1.0, 0.95, 0.3, 0.25, 0.5, 0.4],
+        top_n=10,
+    )
+    buckets = {r["row_id"]: r["disagreement_bucket"] for r in audit["all_rows"]}
+    assert buckets == {
+        "pos_promoted": "promoted_positive",
+        "neg_promoted": "promoted_negative",
+        "pos_demoted": "demoted_positive",
+        "neg_demoted": "demoted_negative",
+        "pos_stable": "stable_positive",
+        "neg_stable": "stable_negative",
+    }
+    assert audit["judgment_bucket_counts"] == {
+        "promoted_positive": 1,
+        "promoted_negative": 1,
+        "demoted_positive": 1,
+        "demoted_negative": 1,
+        "stable_positive": 1,
+        "stable_negative": 1,
+    }
 
 
 def test_oof_logits_cover_all_rows(tmp_path: Path) -> None:
@@ -152,6 +207,34 @@ def test_oof_logits_cover_all_rows(tmp_path: Path) -> None:
     assert len(g["all_rows"]) == 26
 
 
+def test_rows_preserve_openalex_id_and_label_context(tmp_path: Path) -> None:
+    scores = [_score(i, pos=(i <= 15)) for i in range(1, 27)]
+    fc = _FakeConn(run_row=_run_row(), score_rows=scores)
+    rows = [_row("rank-x", f"id{i:03d}", i, goa=i <= 13, sou=i % 2 == 0) for i in range(1, 27)]
+    p = tmp_path / "lab.json"
+    p.write_text(json.dumps({"dataset_version": "t", "rows": rows}), encoding="utf-8")
+    payload = build_ml_tiny_baseline_disagreement_payload(
+        fc,
+        label_dataset_path=p,
+        ranking_run_id="rank-x",
+        family="emerging",
+        targets=("good_or_acceptable",),
+        top_n=5,
+    )
+    row = payload["targets"]["good_or_acceptable"]["all_rows"][0]
+    assert row["openalex_work_id"].startswith("W")
+    assert row["openalex_work_url"].startswith("https://openalex.org/W")
+    assert "work_id" not in row
+    assert isinstance(row["internal_work_id"], int)
+    assert row["relevance_label"] in {"good", "miss"}
+    assert row["novelty_label"] in {"surprising", "not_useful"}
+    assert row["bridge_like_label"] == "not_applicable"
+    assert row["reviewer_notes"].startswith("Reviewer note")
+    assert row["source_worksheet_path"] == "docs/audit/manual-review/test_emerging.csv"
+    assert row["review_pool_variant"] == "emerging_gap"
+    assert row["family_rank"] is not None
+
+
 def test_dual_targets_in_one_payload(tmp_path: Path) -> None:
     scores = [_score(i, pos=(i <= 15)) for i in range(1, 27)]
     fc = _FakeConn(run_row=_run_row(), score_rows=scores)
@@ -167,6 +250,27 @@ def test_dual_targets_in_one_payload(tmp_path: Path) -> None:
         top_n=3,
     )
     assert set(payload["targets"].keys()) == {"good_or_acceptable", "surprising_or_useful"}
+
+
+def test_payload_builder_executes_only_read_sql(tmp_path: Path) -> None:
+    scores = [_score(i, pos=(i <= 15)) for i in range(1, 27)]
+    fc = _FakeConn(run_row=_run_row(), score_rows=scores)
+    rows = [_row("rank-x", f"id{i:03d}", i, goa=i <= 13, sou=i % 2 == 0) for i in range(1, 27)]
+    p = tmp_path / "lab.json"
+    p.write_text(json.dumps({"dataset_version": "t", "rows": rows}), encoding="utf-8")
+    build_ml_tiny_baseline_disagreement_payload(
+        fc,
+        label_dataset_path=p,
+        ranking_run_id="rank-x",
+        family="emerging",
+        targets=("good_or_acceptable",),
+        top_n=5,
+    )
+    assert fc.executed_sql
+    for sql in fc.executed_sql:
+        normalized = " ".join(sql.split()).upper()
+        assert normalized.startswith("SELECT ")
+        assert not any(word in normalized for word in ("INSERT ", "UPDATE ", "DELETE ", "DROP ", "ALTER "))
 
 
 def test_refuses_non_emerging(tmp_path: Path) -> None:
@@ -201,6 +305,17 @@ def test_markdown_has_caveats(tmp_path: Path) -> None:
     md = markdown_from_ml_tiny_baseline_disagreement(payload)
     for c in DISAGREEMENT_CAVEATS:
         assert c in md
+    assert md.isascii()
+    assert "rank_delta=" in md
+    assert "\u0394rank" not in md
+    assert "\u00ce\u201drank" not in md
+    assert "\u2014" not in md
+    assert "relevance=" in md
+    assert "novelty=" in md
+    assert "bridge_like=" in md
+    assert "Reviewer note" in md
+    assert "`1` rank_delta=" not in md
+    assert "- `W" in md
 
 
 def test_module_sql_is_read_only() -> None:
