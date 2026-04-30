@@ -334,10 +334,10 @@ def compute_family_target_metrics(
 
 
 CAVEATS = (
-    "Offline audit baseline only; not validation of production ranking quality.",
-    "Labels are single-reviewer manual audit material unless a source states otherwise.",
-    "Rows are biased by ranking outputs and worksheet selection (ranking-selection bias).",
-    "This evaluation does not create or imply train/dev/test splits.",
+    "This is not validation.",
+    "Blind snapshot labels reduce but do not eliminate selection bias.",
+    "All rows remain audit_only.",
+    "No production ranking change is supported.",
 )
 
 

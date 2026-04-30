@@ -20,10 +20,10 @@ DEFAULT_DATASET_VERSION = DATASET_VERSION
 LABEL_FIELDS = ("relevance_label", "novelty_label", "bridge_like_label")
 
 VERBATIM_CAVEATS = (
-    "This dataset is not validation of bridge ranking quality.",
-    "Labels are single-reviewer offline audit material unless a source explicitly says otherwise.",
-    "Rows come from ranking outputs and review worksheets, so the dataset may contain ranking-selection bias.",
-    "The split field defaults to audit_only; train/dev/test splits must be created deliberately in a later experiment.",
+    "This is not validation.",
+    "Blind snapshot labels reduce but do not eliminate selection bias.",
+    "All rows remain audit_only.",
+    "No production ranking change is supported.",
 )
 
 _WORK_ID_RE = re.compile(r"(?:openalex\.org/)?(W\d+)\s*$", re.IGNORECASE)
@@ -157,9 +157,12 @@ def stable_row_id(
 
 def _resolve_ranking_run_id(row: dict[str, str]) -> str | None:
     exp = _norm_ws(row.get("experiment_ranking_run_id"))
+    ctx = _norm_ws(row.get("ranking_run_id_context"))
     base = _norm_ws(row.get("ranking_run_id"))
     if exp:
         return exp
+    if ctx:
+        return ctx
     if base:
         return base
     return None

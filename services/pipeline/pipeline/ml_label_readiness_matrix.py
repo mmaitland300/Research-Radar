@@ -22,10 +22,10 @@ from pipeline.ml_offline_baseline_eval import (
 )
 
 CAVEATS = (
-    "Labels are single-reviewer manual audit material unless a source states otherwise.",
-    "Rows are biased by ranking outputs and worksheet selection (ranking-selection bias).",
-    "This matrix is not validation of ranking quality or of any future model.",
-    "This artifact does not create or imply train/dev/test splits.",
+    "This is not validation.",
+    "Blind snapshot labels reduce but do not eliminate selection bias.",
+    "All rows remain audit_only.",
+    "No production ranking change is supported.",
 )
 
 
@@ -137,6 +137,14 @@ def _readiness_flags(pos: int, neg: int) -> dict[str, bool]:
     }
 
 
+def _review_pool_variant_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    out: dict[str, int] = defaultdict(int)
+    for r in rows:
+        key = str(r.get("review_pool_variant") or "(null)")
+        out[key] += 1
+    return dict(sorted(out.items()))
+
+
 def _score_cache_for_run(
     conn: psycopg.Connection, *, ranking_run_id: str, succeeded: bool
 ) -> tuple[dict[tuple[str, int], dict], dict[tuple[str, str], dict]] | None:
@@ -207,6 +215,7 @@ def build_ml_label_readiness_matrix_payload(
                 "positive_count": pos,
                 "negative_count": neg,
                 "null_target_count": null_n,
+                "review_pool_variant_counts": _review_pool_variant_counts(rows_g),
                 "duplicate_paper_id_count": dup_pid,
                 "derived_target_conflict_count": dconf,
                 "ranking_run_exists": snap["ranking_run_exists"],
@@ -220,6 +229,21 @@ def build_ml_label_readiness_matrix_payload(
         )
 
     groups_out.sort(key=lambda g: (g["ranking_run_id"], g["family"] or "", g["target"]))
+    source_slice_summary = [
+        {
+            "ranking_run_id": g["ranking_run_id"],
+            "family": g["family"],
+            "target": g["target"],
+            "positive_count": g["positive_count"],
+            "negative_count": g["negative_count"],
+            "null_count": g["null_target_count"],
+            "has_both_classes": g["readiness"]["has_both_classes"],
+            "enough_for_diagnostic_auc": g["readiness"]["enough_for_diagnostic_auc"],
+            "enough_for_tiny_baseline": g["readiness"]["enough_for_tiny_baseline"],
+            "review_pool_variant_counts": g["review_pool_variant_counts"],
+        }
+        for g in groups_out
+    ]
 
     eval_candidates = [
         g
@@ -249,6 +273,7 @@ def build_ml_label_readiness_matrix_payload(
         "caveats": list(CAVEATS),
         "run_snapshots": run_snapshots,
         "groups": groups_out,
+        "source_slice_summary": source_slice_summary,
         "recommendation": {
             "run_ml_offline_baseline_eval_for": sorted(
                 {g["ranking_run_id"] for g in eval_candidates if g["readiness"]["has_both_classes"]}
@@ -302,7 +327,13 @@ def markdown_from_ml_label_readiness_matrix(payload: dict[str, Any]) -> str:
         "",
         "## Groups (detail)",
         "",
-        "See JSON `groups` for per (`ranking_run_id`, `family`, `target`) counts, join coverage, conflicts, and readiness flags.",
+        "See JSON `groups` for per (`ranking_run_id`, `family`, `target`) counts, join coverage, conflicts, readiness flags, "
+        "and `review_pool_variant_counts`.",
+        "",
+        "## Source-slice summary",
+        "",
+        "See JSON `source_slice_summary` for per-slice diagnostics (`positive_count`, `negative_count`, `null_count`, "
+        "`has_both_classes`, `enough_for_diagnostic_auc`, `enough_for_tiny_baseline`) plus `review_pool_variant_counts`.",
         "",
     ]
     return "\n".join(lines).rstrip() + "\n"

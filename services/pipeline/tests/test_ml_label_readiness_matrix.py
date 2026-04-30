@@ -92,6 +92,7 @@ def test_build_groups_by_run_family_target(monkeypatch: pytest.MonkeyPatch, tmp_
                     "row_id": "1",
                     "ranking_run_id": "run-a",
                     "family": "bridge",
+                    "review_pool_variant": "rank_top_k",
                     "work_id": "10",
                     "paper_id": "https://openalex.org/W10",
                     "good_or_acceptable": True,
@@ -103,6 +104,7 @@ def test_build_groups_by_run_family_target(monkeypatch: pytest.MonkeyPatch, tmp_
                     "row_id": "2",
                     "ranking_run_id": "run-a",
                     "family": "emerging",
+                    "review_pool_variant": "ml_blind_snapshot_audit",
                     "work_id": "11",
                     "paper_id": "https://openalex.org/W11",
                     "good_or_acceptable": False,
@@ -157,11 +159,14 @@ def test_build_groups_by_run_family_target(monkeypatch: pytest.MonkeyPatch, tmp_
     assert len(groups) == 6
     b_go = groups[("run-a", "bridge", "good_or_acceptable")]
     assert b_go["positive_count"] == 1 and b_go["negative_count"] == 0
+    assert b_go["review_pool_variant_counts"] == {"rank_top_k": 1}
     assert b_go["paper_scores_joinable_count"] == 1 and b_go["missing_score_count"] == 0
     e_go = groups[("run-a", "emerging", "good_or_acceptable")]
     assert e_go["positive_count"] == 0 and e_go["negative_count"] == 1
+    assert e_go["review_pool_variant_counts"] == {"ml_blind_snapshot_audit": 1}
     assert e_go["paper_scores_joinable_count"] == 1
     assert payload["run_snapshots"]["run-a"]["ranking_run_succeeded"] is True
+    assert payload["source_slice_summary"]
 
 
 def test_run_missing_and_not_succeeded_joinable_zero(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

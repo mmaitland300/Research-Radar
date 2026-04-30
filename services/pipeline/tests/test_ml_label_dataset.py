@@ -441,3 +441,15 @@ def test_family_rank_used_when_rank_column_missing(tmp_path: Path) -> None:
     _write(mr / "fr.csv", HEADER_FAMILY_RANK + _row_family_rank("99"))
     payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
     assert payload["rows"][0]["rank"] == "99"
+
+
+def test_ranking_run_id_context_used_when_ranking_run_id_missing(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    header = (
+        "ranking_run_id_context,review_pool_variant,paper_id,relevance_label,novelty_label,bridge_like_label,reviewer_notes\n"
+    )
+    row = "rank-ee2ba6c816,ml_blind_snapshot_audit,https://openalex.org/W1,good,useful,yes,n\n"
+    _write(mr / "blind_like.csv", header + row)
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    assert payload["rows"][0]["ranking_run_id"] == "rank-ee2ba6c816"
