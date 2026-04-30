@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import os
 import random
 from collections import Counter, defaultdict
 from collections.abc import Callable, Sequence
@@ -105,8 +106,17 @@ def _truncate_abstract(abstract: str, max_chars: int = ABSTRACT_PREVIEW_MAX_CHAR
     text = " ".join(abstract.split())
     if len(text) <= max_chars:
         return text
-    cut = text[: max_chars - 1].rstrip()
-    return cut + "\u2026"
+    cut = text[: max_chars - 3].rstrip()
+    return cut + "..."
+
+
+def _portable_path_display(path: Path) -> str:
+    """Render path for committed artifacts without machine-specific absolutes when possible."""
+    try:
+        rel = os.path.relpath(path.resolve(), Path.cwd().resolve())
+        return Path(rel).as_posix()
+    except (OSError, ValueError):
+        return path.as_posix()
 
 
 def _year_band(year: int | None) -> str:
@@ -618,10 +628,9 @@ def render_markdown(
     by_year_band: Counter[str] = Counter(_year_band(c.year) for c, _sr in selected)
     by_cite_band: Counter[str] = Counter(_citation_band(c.citation_count) for c, _sr in selected)
 
-    try:
-        ds_disp = label_dataset_path.resolve().as_posix()
-    except OSError:
-        ds_disp = label_dataset_path.as_posix()
+    ds_disp = _portable_path_display(label_dataset_path)
+    csv_disp = _portable_path_display(csv_output_path)
+    md_disp = _portable_path_display(markdown_output_path)
 
     pool_size = int(debug["eligible_pool_size"])
     excluded_labeled = int(debug["fully_labeled_excluded_count"])
@@ -653,8 +662,8 @@ def render_markdown(
         f"- **cluster_version:** `{cluster_version}`",
         f"- **ranking_run_id_context:** `{ranking_run_id_context}`",
         f"- **label_dataset:** `{ds_disp}`",
-        f"- **csv_output:** `{csv_output_path.as_posix()}`",
-        f"- **markdown_output:** `{markdown_output_path.as_posix()}`",
+        f"- **csv_output:** `{csv_disp}`",
+        f"- **markdown_output:** `{md_disp}`",
         f"- **generated_at:** `{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}`",
         "",
         "## Command",
@@ -668,8 +677,8 @@ def render_markdown(
         f"  --ranking-run-id {ranking_run_id_context} \\",
         f"  --rows {requested_rows} \\",
         f"  --seed {seed} \\",
-        f"  --output {csv_output_path.as_posix()} \\",
-        f"  --markdown-output {markdown_output_path.as_posix()}",
+        f"  --output {csv_disp} \\",
+        f"  --markdown-output {md_disp}",
         "```",
         "",
         "## Sample summary",

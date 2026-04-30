@@ -13,16 +13,16 @@ Rows are selected by cluster, year, citation, and weak-context strata using a se
 - **embedding_version:** `v2-title-abstract-1536-cleantext-r1`
 - **cluster_version:** `kmeans-l2-v2-cleantext-r1-k12`
 - **ranking_run_id_context:** `rank-ee2ba6c816`
-- **label_dataset:** `C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v3.json`
+- **label_dataset:** `../../docs/audit/ml-label-dataset-v3.json`
 - **csv_output:** `../../docs/audit/manual-review/ml_blind_snapshot_review_v1.csv`
 - **markdown_output:** `../../docs/audit/manual-review/ml_blind_snapshot_review_v1.md`
-- **generated_at:** `2026-04-30T06:02:57Z`
+- **generated_at:** `2026-04-30T06:11:17Z`
 
 ## Command
 
 ```
 python -m pipeline.cli ml-blind-snapshot-review-worksheet \
-  --label-dataset C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v3.json \
+  --label-dataset ../../docs/audit/ml-label-dataset-v3.json \
   --corpus-snapshot-version source-snapshot-v2-candidate-plan-20260428 \
   --embedding-version v2-title-abstract-1536-cleantext-r1 \
   --cluster-version kmeans-l2-v2-cleantext-r1-k12 \
