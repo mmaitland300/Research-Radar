@@ -1265,7 +1265,87 @@ def main() -> None:
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    ml_gap_ws_parser = subparsers.add_parser(
+        "ml-targeted-gap-review-worksheet",
+        help="Read-only emerging-family gap worksheet for extra contrastive labels (one ranking_run_id; no training)",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON (e.g. docs/audit/ml-label-dataset-v2.json)",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id (no implicit latest selection)",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--family",
+        default="emerging",
+        choices=["emerging"],
+        help="Recommendation family (only emerging is supported)",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--target-gap",
+        required=True,
+        choices=sorted(["good_or_acceptable", "surprising_or_useful"]),
+        help="Primary gap name for provenance / Markdown (good_or_acceptable or surprising_or_useful)",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--output",
+        required=True,
+        help="Output CSV path",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Companion Markdown path",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--limit",
+        type=int,
+        default=25,
+        help="Max worksheet rows (default 25)",
+    )
+    ml_gap_ws_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     args = parser.parse_args()
+
+    if args.command == "ml-targeted-gap-review-worksheet":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_targeted_gap_review_worksheet import (
+            MLTargetedGapReviewWorksheetError,
+            run_ml_targeted_gap_review_worksheet_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        lim = int(args.limit)
+        if lim < 1 or lim > 200:
+            parser.error("--limit must be between 1 and 200")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        try:
+            run_ml_targeted_gap_review_worksheet_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                ranking_run_id=rid,
+                family=str(args.family),
+                target_gap=str(args.target_gap),
+                output_csv=Path(args.output),
+                markdown_output=Path(args.markdown_output),
+                limit=lim,
+            )
+        except MLTargetedGapReviewWorksheetError as e:
+            print(f"ml-targeted-gap-review-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
 
     if args.command == "ml-contrastive-review-worksheet":
         from pipeline import bootstrap_loader as _bootstrap_loader

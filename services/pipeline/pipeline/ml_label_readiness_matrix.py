@@ -257,7 +257,7 @@ def build_ml_label_readiness_matrix_payload(
             "notes": (
                 "Run `ml-offline-baseline-eval` for each succeeded `ranking_run_id` that appears under "
                 "`run_ml_offline_baseline_eval_for` once you care about score-aligned metrics for those slices. "
-                "For groups without both classes—or below diagnostic counts—prioritize **targeted worksheets** "
+                "For groups without both classes or below diagnostic counts, prioritize **targeted worksheets** "
                 "(explicit negatives / contrastive rows) before expecting stable AUC or tiny baselines."
             ),
         },

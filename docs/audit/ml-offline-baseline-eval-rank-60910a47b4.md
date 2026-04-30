@@ -26,11 +26,11 @@ Read-only join of **ml-label-dataset** rows to persisted **`paper_scores`** for 
 - This artifact is a **diagnostic offline label eval, not validation** of production ranking quality.
 - Labels here are **sparse single-reviewer** audit material tied to specific worksheets and runs; do not treat them as ground truth for the full corpus.
 - The ranking compared is a **heuristic baseline only**; there is **no learned model** in this pipeline step.
-- **Next step** toward ML experiments would be a **simple feature baseline** (e.g. linear model on persisted scores) **only if** label coverage grows enough—especially **negatives**—for stable offline metrics.
+- **Next step** toward ML experiments would be a **simple feature baseline** (e.g. linear model on persisted scores) **only if** label coverage grows enough - especially **negatives** - for stable offline metrics.
 
 ### Label coverage vs. simple learned baseline
 
-For this `ranking_run_id`, **no** family×target slice has a negative (false) class among joined labeled rows—counts are positive-only or empty. **Discrimination metrics (AUC, pairwise accuracy, meaningful P@k) cannot apply.** A simple feature baseline or learned ranker would need **more labeled negatives** (and usually more rows overall) before offline training experiments are informative.
+For this `ranking_run_id`, **no** family x target slice has a negative (false) class among joined labeled rows - counts are positive-only or empty. **Discrimination metrics (AUC, pairwise accuracy, meaningful P@k) cannot apply.** A simple feature baseline or learned ranker would need **more labeled negatives** (and usually more rows overall) before offline training experiments are informative.
 
 ## Caveats
 
@@ -43,7 +43,7 @@ For this `ranking_run_id`, **no** family×target slice has a negative (false) cl
 
 ## Metrics (by family and target)
 
-See JSON `metrics.by_family` for `good_or_acceptable`, `surprising_or_useful`, `bridge_like_yes_or_partial`, including precision@k (k=5,10,20 when at least k matched labeled rows exist), ROC AUC (Mann–Whitney rank), and pairwise accuracy.
+See JSON `metrics.by_family` for `good_or_acceptable`, `surprising_or_useful`, `bridge_like_yes_or_partial`, including precision@k (k=5,10,20 when at least k matched labeled rows exist), ROC AUC (Mann-Whitney rank), and pairwise accuracy.
 
 ### Families present
 

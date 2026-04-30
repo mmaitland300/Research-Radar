@@ -219,7 +219,7 @@ def pairwise_accuracy(scores_labels: list[tuple[float, bool]]) -> float | None:
 
 
 def roc_auc_mann_whitney(scores_labels: list[tuple[float, bool]]) -> float | None:
-    """Rank/Mann–Whitney U AUC (higher score ⇒ higher rank); equivalent to pairwise accuracy with tie half-weight."""
+    """Rank/Mann-Whitney U AUC (higher score implies higher rank); equivalent to pairwise accuracy with tie half-weight."""
     n = len(scores_labels)
     pos_n = sum(1 for _, y in scores_labels if y)
     neg_n = n - pos_n
@@ -342,7 +342,7 @@ CAVEATS = (
 
 
 def _label_baseline_readiness_sentence(meta: dict[str, Any]) -> str:
-    """One-line readout: whether any family×target has both positive and negative labels (joined)."""
+    """One-line readout: whether any family x target has both positive and negative labels (joined)."""
     any_neg = False
     any_pair_metric = False
     for fam_data in meta.values():
@@ -359,19 +359,19 @@ def _label_baseline_readiness_sentence(meta: dict[str, Any]) -> str:
                 any_pair_metric = True
     if any_pair_metric:
         return (
-            "At least one family×target pair has **both** positive and negative manual labels among rows "
+            "At least one family x target pair has **both** positive and negative manual labels among rows "
             "that joined to `paper_scores`, so rank-based AUC / pairwise accuracy and precision@k can be non-null "
             "where row counts allow. That still does **not** imply enough data for a stable learned baseline."
         )
     if not any_neg:
         return (
-            "For this `ranking_run_id`, **no** family×target slice has a negative (false) class among joined labeled "
-            "rows—counts are positive-only or empty. **Discrimination metrics (AUC, pairwise accuracy, meaningful P@k) "
+            "For this `ranking_run_id`, **no** family x target slice has a negative (false) class among joined labeled "
+            "rows - counts are positive-only or empty. **Discrimination metrics (AUC, pairwise accuracy, meaningful P@k) "
             "cannot apply.** A simple feature baseline or learned ranker would need **more labeled negatives** (and "
             "usually more rows overall) before offline training experiments are informative."
         )
     return (
-        "Some targets include negative labels, but no single family×target slice currently has **both** classes "
+        "Some targets include negative labels, but no single family x target slice currently has **both** classes "
         "among joined rows, so AUC / pairwise accuracy remain undefined. Add balanced or negatives-rich labels "
         "before relying on these metrics for model selection."
     )
@@ -412,7 +412,7 @@ def markdown_from_ml_offline_baseline_eval(payload: dict[str, Any]) -> str:
         "- This artifact is a **diagnostic offline label eval, not validation** of production ranking quality.",
         "- Labels here are **sparse single-reviewer** audit material tied to specific worksheets and runs; do not treat them as ground truth for the full corpus.",
         "- The ranking compared is a **heuristic baseline only**; there is **no learned model** in this pipeline step.",
-        "- **Next step** toward ML experiments would be a **simple feature baseline** (e.g. linear model on persisted scores) **only if** label coverage grows enough—especially **negatives**—for stable offline metrics.",
+        "- **Next step** toward ML experiments would be a **simple feature baseline** (e.g. linear model on persisted scores) **only if** label coverage grows enough - especially **negatives** - for stable offline metrics.",
         "",
         "### Label coverage vs. simple learned baseline",
         "",
@@ -427,7 +427,7 @@ def markdown_from_ml_offline_baseline_eval(payload: dict[str, Any]) -> str:
         "## Metrics (by family and target)",
         "",
         "See JSON `metrics.by_family` for `good_or_acceptable`, `surprising_or_useful`, `bridge_like_yes_or_partial`, "
-        "including precision@k (k=5,10,20 when at least k matched labeled rows exist), ROC AUC (Mann–Whitney rank), and pairwise accuracy.",
+        "including precision@k (k=5,10,20 when at least k matched labeled rows exist), ROC AUC (Mann-Whitney rank), and pairwise accuracy.",
         "",
         "### Families present",
         "",

@@ -45,9 +45,9 @@ These are **deterministic functions** of the three manual label columns only (no
 
 | Column | Rule |
 |--------|------|
-| `good_or_acceptable` | `true` if `relevance_label` ∈ {good, acceptable}; `false` if ∈ {miss, irrelevant}; else `null` |
-| `surprising_or_useful` | `true` if `novelty_label` ∈ {surprising, useful}; `false` if ∈ {obvious, not_useful, neither}; else `null` |
-| `bridge_like_yes_or_partial` | `true` if `bridge_like_label` ∈ {yes, partial}; `false` if `no`; `null` if missing, empty, `not_applicable`, or unknown token |
+| `good_or_acceptable` | `true` if `relevance_label` is one of good, acceptable; `false` if one of miss, irrelevant; else `null` |
+| `surprising_or_useful` | `true` if `novelty_label` is one of surprising, useful; `false` if one of obvious, not_useful, neither; else `null` |
+| `bridge_like_yes_or_partial` | `true` if `bridge_like_label` is one of yes, partial; `false` if `no`; `null` if missing, empty, `not_applicable`, or unknown token |
 
 ## Known biases
 
@@ -66,7 +66,7 @@ Some bridge experiment review CSVs (weight delta review, objective delta / eligi
 - **Duplicate `paper_id` count** (papers with more than one retained row): 54
 - **Conflicting raw label groups** (same `paper_id`, same label field, multiple distinct non-empty values): 80
 
-**Duplicate rows:** the same `paper_id` may appear in multiple worksheets or ranks. Each row remains a **separate labeled observation**; nothing in this export merges or collapses duplicates—use `row_id` and provenance fields when designing offline baselines.
+**Duplicate rows:** the same `paper_id` may appear in multiple worksheets or ranks. Each row remains a **separate labeled observation**; nothing in this export merges or collapses duplicates - use `row_id` and provenance fields when designing offline baselines.
 
 ## Derived target conflicts
 
