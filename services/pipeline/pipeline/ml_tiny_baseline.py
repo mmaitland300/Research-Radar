@@ -11,7 +11,6 @@ from typing import Any, Sequence
 
 import psycopg
 
-from pipeline.bootstrap_loader import database_url_from_env
 from pipeline.ml_offline_baseline_eval import (
     _build_score_lookups,
     _parse_config_json,
@@ -110,7 +109,6 @@ def stratified_round_robin_fold_test_indices(
 def _column_train_stats(
     rows: list[dict[str, Any]],
     train_idx: list[int],
-    j: int,
     name: str,
 ) -> tuple[float, float, float]:
     """Median (impute), mean, std on train after imputation."""
@@ -133,12 +131,13 @@ def _column_train_stats(
 
 def _row_feature_vector(
     row: dict[str, Any],
+    feature_names: Sequence[str],
     medians: list[float],
     means: list[float],
     stds: list[float],
 ) -> list[float]:
     out: list[float] = []
-    for j, name in enumerate(FEATURE_NAMES):
+    for j, name in enumerate(feature_names):
         v = _float_or_none(row.get(name))
         if v is None:
             v = medians[j]
@@ -146,6 +145,30 @@ def _row_feature_vector(
         out.append((v - means[j]) / sig if sig > 1e-12 else 0.0)
     out.append(1.0)
     return out
+
+
+def prepare_stratified_cv_fold_tests(
+    rows: list[dict[str, Any]],
+    *,
+    target: str,
+) -> tuple[list[int], list[list[int]], int, list[str]]:
+    """Validate class counts and return y, fold test index lists, n_folds, row_ids (deterministic folds)."""
+    if target not in ALLOWED_TARGETS:
+        raise MLTinyBaselineError(
+            f"target must be one of {sorted(ALLOWED_TARGETS)}, not {target!r}",
+        )
+    y = [1 if bool(r[target]) else 0 for r in rows]
+    pos_n = sum(y)
+    neg_n = len(y) - pos_n
+    if pos_n < MIN_POS_FOR_TINY or neg_n < MIN_NEG_FOR_TINY:
+        raise MLTinyBaselineError(
+            f"insufficient class balance for tiny baseline: need at least {MIN_POS_FOR_TINY} positive and "
+            f"{MIN_NEG_FOR_TINY} negative joined emerging rows for {target}; got {pos_n} positive, {neg_n} negative.",
+        )
+    row_ids = [str(r.get("row_id", f"idx{i}")) for i, r in enumerate(rows)]
+    n_folds = _fold_count_for_classes(pos_n, neg_n)
+    fold_tests = stratified_round_robin_fold_test_indices(row_ids, y, n_folds)
+    return y, fold_tests, n_folds, row_ids
 
 
 def _logistic_fit_gd(
@@ -248,26 +271,62 @@ def collect_joined_emerging_rows(
     return joined, meta
 
 
+def collect_joined_emerging_rows_dual_bool_targets(
+    conn: psycopg.Connection,
+    *,
+    label_dataset_path: Path,
+    ranking_run_id: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Join emerging rows where both good_or_acceptable and surprising_or_useful are bool (same slice for rollup)."""
+    path = label_dataset_path.resolve()
+    if not path.is_file():
+        raise MLTinyBaselineError(f"label dataset not found: {path}")
+    raw = load_label_dataset(path)
+    rows, dup_skip = filter_audit_rows_for_run(raw, ranking_run_id=ranking_run_id)
+    _ = fetch_ranking_run_row(conn, ranking_run_id=ranking_run_id)
+    score_rows = fetch_paper_scores_with_openalex(conn, ranking_run_id=ranking_run_id)
+    by_work, by_wtoken = _build_score_lookups(score_rows)
+
+    joined: list[dict[str, Any]] = []
+    missing = 0
+    for lab in rows:
+        if str(lab.get("family", "")) != EMERGING_FAMILY:
+            continue
+        if not isinstance(lab.get("good_or_acceptable"), bool) or not isinstance(
+            lab.get("surprising_or_useful"), bool
+        ):
+            continue
+        sc = join_label_row_to_score(lab, by_work, by_wtoken)
+        if sc is None:
+            missing += 1
+            continue
+        merged = dict(lab)
+        merged["_joined_score"] = True
+        merged["recommendation_family"] = sc["recommendation_family"]
+        merged["work_id"] = sc["work_id"]
+        for f in FEATURE_NAMES:
+            merged[f] = sc.get(f)
+        merged["final_score"] = sc.get("final_score")
+        merged["_rank"] = sc.get("_rank")
+        joined.append(merged)
+
+    meta = {
+        "label_rows_run_match": len(rows),
+        "duplicate_row_id_skipped": dup_skip,
+        "emerging_dual_bool_target_rows_joined": len(joined),
+        "missing_score_for_emerging_labeled_rows": missing,
+    }
+    return joined, meta
+
+
 def run_stratified_cv_tiny_baseline(
     rows: list[dict[str, Any]],
     *,
     target: str,
 ) -> dict[str, Any]:
-    if target not in ALLOWED_TARGETS:
-        raise MLTinyBaselineError(
-            f"target must be one of {sorted(ALLOWED_TARGETS)}, not {target!r}",
-        )
-    y = [1 if bool(r[target]) else 0 for r in rows]
+    y, fold_tests, n_folds, _row_ids = prepare_stratified_cv_fold_tests(rows, target=target)
     pos_n = sum(y)
     neg_n = len(y) - pos_n
-    if pos_n < MIN_POS_FOR_TINY or neg_n < MIN_NEG_FOR_TINY:
-        raise MLTinyBaselineError(
-            f"insufficient class balance for tiny baseline: need at least {MIN_POS_FOR_TINY} positive and "
-            f"{MIN_NEG_FOR_TINY} negative joined emerging rows for {target}; got {pos_n} positive, {neg_n} negative.",
-        )
-    row_ids = [str(r.get("row_id", f"idx{i}")) for i, r in enumerate(rows)]
-    n_folds = _fold_count_for_classes(pos_n, neg_n)
-    fold_tests = stratified_round_robin_fold_test_indices(row_ids, y, n_folds)
 
     oof_learned: list[tuple[float, bool]] = []
     oof_heuristic: list[tuple[float, bool]] = []
@@ -287,13 +346,13 @@ def run_stratified_cv_tiny_baseline(
         medians: list[float] = []
         means: list[float] = []
         stds: list[float] = []
-        for j, name in enumerate(FEATURE_NAMES):
-            med, mu, sig = _column_train_stats(rows, train_idx, j, name)
+        for name in FEATURE_NAMES:
+            med, mu, sig = _column_train_stats(rows, train_idx, name)
             medians.append(med)
             means.append(mu)
             stds.append(sig)
 
-        X_tr = [_row_feature_vector(rows[i], medians, means, stds) for i in train_idx]
+        X_tr = [_row_feature_vector(rows[i], FEATURE_NAMES, medians, means, stds) for i in train_idx]
         y_tr_bin = [y[i] for i in train_idx]
         w = _logistic_fit_gd(X_tr, y_tr_bin)
 
@@ -303,7 +362,7 @@ def run_stratified_cv_tiny_baseline(
         learned_test: list[tuple[float, bool]] = []
         heuristic_test: list[tuple[float, bool]] = []
         for i in test_idx:
-            xi = _row_feature_vector(rows[i], medians, means, stds)
+            xi = _row_feature_vector(rows[i], FEATURE_NAMES, medians, means, stds)
             ls = _dot(w, xi)
             hf = _float_or_none(rows[i].get("final_score"))
             if hf is None:

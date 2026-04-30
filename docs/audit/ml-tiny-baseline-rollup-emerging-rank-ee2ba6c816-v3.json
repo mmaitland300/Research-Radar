@@ -1,0 +1,1247 @@
+{
+  "artifact_type": "ml_tiny_baseline_rollup",
+  "generated_at": "2026-04-30T04:01:41Z",
+  "provenance": {
+    "ranking_run_id": "rank-ee2ba6c816",
+    "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+    "label_dataset_path": "C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v3.json",
+    "label_dataset_version": "ml-label-dataset-v3",
+    "label_dataset_sha256": "ebe1ec0d258d5c2a183ab29c6d6bda570a1bab1ce88f27e10c2c62d3e076fcbd",
+    "family": "emerging",
+    "targets": [
+      "good_or_acceptable",
+      "surprising_or_useful"
+    ]
+  },
+  "caveats": [
+    "This is an offline robustness diagnostic, not validation.",
+    "Labels are single-reviewer audit labels with ranking-selection bias.",
+    "Results must not change production ranking defaults.",
+    "No train/dev/test split is created by this artifact.",
+    "Flat or unchanged P@k means the learned model has not shown improved recommendation-head quality."
+  ],
+  "join_summary": {
+    "label_rows_run_match": 130,
+    "duplicate_row_id_skipped": 0,
+    "emerging_dual_bool_target_rows_joined": 60,
+    "missing_score_for_emerging_labeled_rows": 0
+  },
+  "cv_policy_note": "Same joined emerging slice (dual boolean targets) and stratified_round_robin_by_row_id fold assignment as ml-tiny-baseline per target; fingerprint is per-target (includes y).",
+  "targets": {
+    "good_or_acceptable": {
+      "class_counts": {
+        "positive": 45,
+        "negative": 15,
+        "total": 60
+      },
+      "fold_count": 5,
+      "fold_tests_fingerprint_sha256": "4ba03100ca45eb46341f176db62f623ff0e4c8097ea56cc1946f7458a90ba212",
+      "specs": {
+        "heuristic_final_score": {
+          "spec_id": "heuristic_final_score",
+          "mode": "heuristic",
+          "feature_names": [],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.9096296296296297,
+            "pairwise_accuracy": 0.9096296296296297,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8148148148148148,
+              "pairwise_accuracy": 0.8148148148148148,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9629629629629629,
+              "pairwise_accuracy": 0.9629629629629629,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8518518518518519,
+              "pairwise_accuracy": 0.8518518518518519,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 1.0,
+              "pairwise_accuracy": 1.0,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8148148148148148,
+            0.9629629629629629,
+            0.9259259259259259,
+            0.8518518518518519,
+            1.0
+          ],
+          "mean_per_fold_auc": 0.9111111111111111,
+          "median_per_fold_auc": 0.9259259259259259,
+          "iqr_per_fold_auc": 0.11111111111111105,
+          "min_per_fold_auc": 0.8148148148148148,
+          "max_per_fold_auc": 1.0
+        },
+        "learned_final_score_only": {
+          "spec_id": "learned_final_score_only",
+          "mode": "learned",
+          "feature_names": [
+            "final_score"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.8740740740740741,
+            "pairwise_accuracy": 0.8740740740740741,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8148148148148148,
+              "pairwise_accuracy": 0.8148148148148148,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9629629629629629,
+              "pairwise_accuracy": 0.9629629629629629,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8518518518518519,
+              "pairwise_accuracy": 0.8518518518518519,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 1.0,
+              "pairwise_accuracy": 1.0,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8148148148148148,
+            0.9629629629629629,
+            0.9259259259259259,
+            0.8518518518518519,
+            1.0
+          ],
+          "mean_per_fold_auc": 0.9111111111111111,
+          "median_per_fold_auc": 0.9259259259259259,
+          "iqr_per_fold_auc": 0.11111111111111105,
+          "min_per_fold_auc": 0.8148148148148148,
+          "max_per_fold_auc": 1.0
+        },
+        "learned_semantic_only": {
+          "spec_id": "learned_semantic_only",
+          "mode": "learned",
+          "feature_names": [
+            "semantic_score"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.914074074074074,
+            "pairwise_accuracy": 0.914074074074074,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9629629629629629,
+              "pairwise_accuracy": 0.9629629629629629,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 1.0,
+              "pairwise_accuracy": 1.0,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.9259259259259259,
+            0.9629629629629629,
+            0.9259259259259259,
+            0.9259259259259259,
+            1.0
+          ],
+          "mean_per_fold_auc": 0.9481481481481481,
+          "median_per_fold_auc": 0.9259259259259259,
+          "iqr_per_fold_auc": 0.03703703703703698,
+          "min_per_fold_auc": 0.9259259259259259,
+          "max_per_fold_auc": 1.0
+        },
+        "learned_topic_citation_only": {
+          "spec_id": "learned_topic_citation_only",
+          "mode": "learned",
+          "feature_names": [
+            "citation_velocity_score",
+            "topic_growth_score",
+            "diversity_penalty"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.8,
+            "pairwise_accuracy": 0.8,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8148148148148148,
+              "pairwise_accuracy": 0.8148148148148148,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8703703703703703,
+              "pairwise_accuracy": 0.8703703703703703,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8888888888888888,
+              "pairwise_accuracy": 0.8888888888888888,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.7,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8148148148148148,
+              "pairwise_accuracy": 0.8148148148148148,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8333333333333334,
+              "pairwise_accuracy": 0.8333333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.7,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8148148148148148,
+            0.8703703703703703,
+            0.8888888888888888,
+            0.8148148148148148,
+            0.8333333333333334
+          ],
+          "mean_per_fold_auc": 0.8444444444444444,
+          "median_per_fold_auc": 0.8333333333333334,
+          "iqr_per_fold_auc": 0.05555555555555558,
+          "min_per_fold_auc": 0.8148148148148148,
+          "max_per_fold_auc": 0.8888888888888888
+        },
+        "learned_without_final_score": {
+          "spec_id": "learned_without_final_score",
+          "mode": "learned",
+          "feature_names": [
+            "semantic_score",
+            "citation_velocity_score",
+            "topic_growth_score",
+            "diversity_penalty"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.9422222222222222,
+            "pairwise_accuracy": 0.9422222222222222,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 1.0,
+              "pairwise_accuracy": 1.0,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 1.0,
+              "pairwise_accuracy": 1.0,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.9259259259259259,
+            1.0,
+            0.9259259259259259,
+            0.9259259259259259,
+            1.0
+          ],
+          "mean_per_fold_auc": 0.9555555555555555,
+          "median_per_fold_auc": 0.9259259259259259,
+          "iqr_per_fold_auc": 0.07407407407407407,
+          "min_per_fold_auc": 0.9259259259259259,
+          "max_per_fold_auc": 1.0
+        },
+        "learned_full": {
+          "spec_id": "learned_full",
+          "mode": "learned",
+          "feature_names": [
+            "final_score",
+            "semantic_score",
+            "citation_velocity_score",
+            "topic_growth_score",
+            "diversity_penalty"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.9407407407407408,
+            "pairwise_accuracy": 0.9407407407407408,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 1.0,
+              "pairwise_accuracy": 1.0,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9259259259259259,
+              "pairwise_accuracy": 0.9259259259259259,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 1.0,
+              "pairwise_accuracy": 1.0,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.9259259259259259,
+            1.0,
+            0.9259259259259259,
+            0.9259259259259259,
+            1.0
+          ],
+          "mean_per_fold_auc": 0.9555555555555555,
+          "median_per_fold_auc": 0.9259259259259259,
+          "iqr_per_fold_auc": 0.07407407407407407,
+          "min_per_fold_auc": 0.9259259259259259,
+          "max_per_fold_auc": 1.0
+        }
+      },
+      "comparisons_vs_heuristic": {
+        "learned_final_score_only": {
+          "aggregate_auc_delta": -0.03555555555555556,
+          "aggregate_pairwise_delta": -0.03555555555555556,
+          "learned_beat_heuristic_fold_count": 0,
+          "learned_tied_heuristic_fold_count": 5,
+          "learned_lost_to_heuristic_fold_count": 0,
+          "worst_fold_auc_gap": 0.0,
+          "p_at_k_improved_any_fold": false,
+          "p_at_k_worsened_any_fold": false
+        },
+        "learned_semantic_only": {
+          "aggregate_auc_delta": 0.004444444444444362,
+          "aggregate_pairwise_delta": 0.004444444444444362,
+          "learned_beat_heuristic_fold_count": 2,
+          "learned_tied_heuristic_fold_count": 3,
+          "learned_lost_to_heuristic_fold_count": 0,
+          "worst_fold_auc_gap": 0.0,
+          "p_at_k_improved_any_fold": true,
+          "p_at_k_worsened_any_fold": true
+        },
+        "learned_topic_citation_only": {
+          "aggregate_auc_delta": -0.10962962962962963,
+          "aggregate_pairwise_delta": -0.10962962962962963,
+          "learned_beat_heuristic_fold_count": 0,
+          "learned_tied_heuristic_fold_count": 1,
+          "learned_lost_to_heuristic_fold_count": 4,
+          "worst_fold_auc_gap": -0.16666666666666663,
+          "p_at_k_improved_any_fold": false,
+          "p_at_k_worsened_any_fold": true
+        },
+        "learned_without_final_score": {
+          "aggregate_auc_delta": 0.032592592592592506,
+          "aggregate_pairwise_delta": 0.032592592592592506,
+          "learned_beat_heuristic_fold_count": 3,
+          "learned_tied_heuristic_fold_count": 2,
+          "learned_lost_to_heuristic_fold_count": 0,
+          "worst_fold_auc_gap": 0.0,
+          "p_at_k_improved_any_fold": true,
+          "p_at_k_worsened_any_fold": true
+        },
+        "learned_full": {
+          "aggregate_auc_delta": 0.03111111111111109,
+          "aggregate_pairwise_delta": 0.03111111111111109,
+          "learned_beat_heuristic_fold_count": 3,
+          "learned_tied_heuristic_fold_count": 2,
+          "learned_lost_to_heuristic_fold_count": 0,
+          "worst_fold_auc_gap": 0.0,
+          "p_at_k_improved_any_fold": true,
+          "p_at_k_worsened_any_fold": true
+        }
+      },
+      "conservative_decision_fields": {
+        "supports_more_ml_experiments": true,
+        "supports_product_ranking_change": false,
+        "supports_validation_claim": false,
+        "suggested_next_step": "Continue offline diagnostics (ablations, fold stability, more labels) before any production experiment.",
+        "oof_p_at_k_unchanged_vs_heuristic": true
+      },
+      "interpretation_summary": "Learned_full improves OOF AUC / pairwise modestly vs heuristic_final_score, but P@k is flat or unchanged; this supports offline feature-learning investigation, not product ranking change. learned_without_final_score is close to learned_full relative to heuristic; there may be signal beyond the existing composite. This is not validation and does not justify production superiority."
+    },
+    "surprising_or_useful": {
+      "class_counts": {
+        "positive": 43,
+        "negative": 17,
+        "total": 60
+      },
+      "fold_count": 5,
+      "fold_tests_fingerprint_sha256": "73b74164ee958bb8bb44edae13eb4611a0e80273e93057735937875e22eb0895",
+      "specs": {
+        "heuristic_final_score": {
+          "spec_id": "heuristic_final_score",
+          "mode": "heuristic",
+          "feature_names": [],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.8344733242134063,
+            "pairwise_accuracy": 0.8344733242134063,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 0.9
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.8055555555555556,
+              "pairwise_accuracy": 0.8055555555555556,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.9166666666666666,
+              "pairwise_accuracy": 0.9166666666666666,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.7407407407407407,
+              "pairwise_accuracy": 0.7407407407407407,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8333333333333334,
+              "pairwise_accuracy": 0.8333333333333334,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8055555555555556,
+            0.9166666666666666,
+            0.7407407407407407,
+            0.9583333333333334,
+            0.8333333333333334
+          ],
+          "mean_per_fold_auc": 0.850925925925926,
+          "median_per_fold_auc": 0.8333333333333334,
+          "iqr_per_fold_auc": 0.11111111111111105,
+          "min_per_fold_auc": 0.7407407407407407,
+          "max_per_fold_auc": 0.9583333333333334
+        },
+        "learned_final_score_only": {
+          "spec_id": "learned_final_score_only",
+          "mode": "learned",
+          "feature_names": [
+            "final_score"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.7852257181942545,
+            "pairwise_accuracy": 0.7852257181942545,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 0.9
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.8055555555555556,
+              "pairwise_accuracy": 0.8055555555555556,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.9166666666666666,
+              "pairwise_accuracy": 0.9166666666666666,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.7407407407407407,
+              "pairwise_accuracy": 0.7407407407407407,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8333333333333334,
+              "pairwise_accuracy": 0.8333333333333334,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8055555555555556,
+            0.9166666666666666,
+            0.7407407407407407,
+            0.9583333333333334,
+            0.8333333333333334
+          ],
+          "mean_per_fold_auc": 0.850925925925926,
+          "median_per_fold_auc": 0.8333333333333334,
+          "iqr_per_fold_auc": 0.11111111111111105,
+          "min_per_fold_auc": 0.7407407407407407,
+          "max_per_fold_auc": 0.9583333333333334
+        },
+        "learned_semantic_only": {
+          "spec_id": "learned_semantic_only",
+          "mode": "learned",
+          "feature_names": [
+            "semantic_score"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.8768809849521204,
+            "pairwise_accuracy": 0.8768809849521204,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.8888888888888888,
+              "pairwise_accuracy": 0.8888888888888888,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.8888888888888888,
+              "pairwise_accuracy": 0.8888888888888888,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8518518518518519,
+              "pairwise_accuracy": 0.8518518518518519,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.9,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8888888888888888,
+            0.8888888888888888,
+            0.8518518518518519,
+            0.9583333333333334,
+            0.9583333333333334
+          ],
+          "mean_per_fold_auc": 0.9092592592592592,
+          "median_per_fold_auc": 0.8888888888888888,
+          "iqr_per_fold_auc": 0.06944444444444453,
+          "min_per_fold_auc": 0.8518518518518519,
+          "max_per_fold_auc": 0.9583333333333334
+        },
+        "learned_topic_citation_only": {
+          "spec_id": "learned_topic_citation_only",
+          "mode": "learned",
+          "feature_names": [
+            "citation_velocity_score",
+            "topic_growth_score",
+            "diversity_penalty"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.725718194254446,
+            "pairwise_accuracy": 0.725718194254446,
+            "precision_at_5": 1.0,
+            "precision_at_10": 0.8,
+            "precision_at_20": 0.9
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.7083333333333334,
+              "pairwise_accuracy": 0.7083333333333334,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.7,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.8194444444444444,
+              "pairwise_accuracy": 0.8194444444444444,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.7,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.7592592592592593,
+              "pairwise_accuracy": 0.7592592592592593,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.7,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.75,
+              "pairwise_accuracy": 0.75,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.7,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.8333333333333334,
+              "pairwise_accuracy": 0.8333333333333334,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.7083333333333334,
+            0.8194444444444444,
+            0.7592592592592593,
+            0.75,
+            0.8333333333333334
+          ],
+          "mean_per_fold_auc": 0.774074074074074,
+          "median_per_fold_auc": 0.7592592592592593,
+          "iqr_per_fold_auc": 0.06944444444444442,
+          "min_per_fold_auc": 0.7083333333333334,
+          "max_per_fold_auc": 0.8333333333333334
+        },
+        "learned_without_final_score": {
+          "spec_id": "learned_without_final_score",
+          "mode": "learned",
+          "feature_names": [
+            "semantic_score",
+            "citation_velocity_score",
+            "topic_growth_score",
+            "diversity_penalty"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.8549931600547196,
+            "pairwise_accuracy": 0.8549931600547196,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 0.9
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.8333333333333334,
+              "pairwise_accuracy": 0.8333333333333334,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.9444444444444444,
+              "pairwise_accuracy": 0.9444444444444444,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.7407407407407407,
+              "pairwise_accuracy": 0.7407407407407407,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8333333333333334,
+            0.9444444444444444,
+            0.7407407407407407,
+            0.9583333333333334,
+            0.9583333333333334
+          ],
+          "mean_per_fold_auc": 0.8870370370370371,
+          "median_per_fold_auc": 0.9444444444444444,
+          "iqr_per_fold_auc": 0.125,
+          "min_per_fold_auc": 0.7407407407407407,
+          "max_per_fold_auc": 0.9583333333333334
+        },
+        "learned_full": {
+          "spec_id": "learned_full",
+          "mode": "learned",
+          "feature_names": [
+            "final_score",
+            "semantic_score",
+            "citation_velocity_score",
+            "topic_growth_score",
+            "diversity_penalty"
+          ],
+          "aggregate_out_of_fold": {
+            "roc_auc_mann_whitney": 0.8549931600547196,
+            "pairwise_accuracy": 0.8549931600547196,
+            "precision_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 0.9
+          },
+          "per_fold": [
+            {
+              "fold_id": 0,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.8333333333333334,
+              "pairwise_accuracy": 0.8333333333333334,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 1,
+              "n_train": 47,
+              "n_test": 13,
+              "test_positive_count": 9,
+              "test_negative_count": 4,
+              "roc_auc_mann_whitney": 0.9444444444444444,
+              "pairwise_accuracy": 0.9444444444444444,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 2,
+              "n_train": 48,
+              "n_test": 12,
+              "test_positive_count": 9,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.7407407407407407,
+              "pairwise_accuracy": 0.7407407407407407,
+              "precision_at_5": 0.8,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 3,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            },
+            {
+              "fold_id": 4,
+              "n_train": 49,
+              "n_test": 11,
+              "test_positive_count": 8,
+              "test_negative_count": 3,
+              "roc_auc_mann_whitney": 0.9583333333333334,
+              "pairwise_accuracy": 0.9583333333333334,
+              "precision_at_5": 1.0,
+              "precision_at_10": 0.8,
+              "precision_at_20": null
+            }
+          ],
+          "per_fold_roc_auc_mann_whitney": [
+            0.8333333333333334,
+            0.9444444444444444,
+            0.7407407407407407,
+            0.9583333333333334,
+            0.9583333333333334
+          ],
+          "mean_per_fold_auc": 0.8870370370370371,
+          "median_per_fold_auc": 0.9444444444444444,
+          "iqr_per_fold_auc": 0.125,
+          "min_per_fold_auc": 0.7407407407407407,
+          "max_per_fold_auc": 0.9583333333333334
+        }
+      },
+      "comparisons_vs_heuristic": {
+        "learned_final_score_only": {
+          "aggregate_auc_delta": -0.04924760601915179,
+          "aggregate_pairwise_delta": -0.04924760601915179,
+          "learned_beat_heuristic_fold_count": 0,
+          "learned_tied_heuristic_fold_count": 5,
+          "learned_lost_to_heuristic_fold_count": 0,
+          "worst_fold_auc_gap": 0.0,
+          "p_at_k_improved_any_fold": false,
+          "p_at_k_worsened_any_fold": false
+        },
+        "learned_semantic_only": {
+          "aggregate_auc_delta": 0.04240766073871416,
+          "aggregate_pairwise_delta": 0.04240766073871416,
+          "learned_beat_heuristic_fold_count": 3,
+          "learned_tied_heuristic_fold_count": 1,
+          "learned_lost_to_heuristic_fold_count": 1,
+          "worst_fold_auc_gap": -0.02777777777777779,
+          "p_at_k_improved_any_fold": true,
+          "p_at_k_worsened_any_fold": false
+        },
+        "learned_topic_citation_only": {
+          "aggregate_auc_delta": -0.1087551299589603,
+          "aggregate_pairwise_delta": -0.1087551299589603,
+          "learned_beat_heuristic_fold_count": 1,
+          "learned_tied_heuristic_fold_count": 1,
+          "learned_lost_to_heuristic_fold_count": 3,
+          "worst_fold_auc_gap": -0.20833333333333337,
+          "p_at_k_improved_any_fold": true,
+          "p_at_k_worsened_any_fold": true
+        },
+        "learned_without_final_score": {
+          "aggregate_auc_delta": 0.02051983584131334,
+          "aggregate_pairwise_delta": 0.02051983584131334,
+          "learned_beat_heuristic_fold_count": 3,
+          "learned_tied_heuristic_fold_count": 2,
+          "learned_lost_to_heuristic_fold_count": 0,
+          "worst_fold_auc_gap": 0.0,
+          "p_at_k_improved_any_fold": true,
+          "p_at_k_worsened_any_fold": true
+        },
+        "learned_full": {
+          "aggregate_auc_delta": 0.02051983584131334,
+          "aggregate_pairwise_delta": 0.02051983584131334,
+          "learned_beat_heuristic_fold_count": 3,
+          "learned_tied_heuristic_fold_count": 2,
+          "learned_lost_to_heuristic_fold_count": 0,
+          "worst_fold_auc_gap": 0.0,
+          "p_at_k_improved_any_fold": true,
+          "p_at_k_worsened_any_fold": true
+        }
+      },
+      "conservative_decision_fields": {
+        "supports_more_ml_experiments": true,
+        "supports_product_ranking_change": false,
+        "supports_validation_claim": false,
+        "suggested_next_step": "Continue offline diagnostics (ablations, fold stability, more labels) before any production experiment.",
+        "oof_p_at_k_unchanged_vs_heuristic": true
+      },
+      "interpretation_summary": "Learned_full improves OOF AUC / pairwise modestly vs heuristic_final_score, but P@k is flat or unchanged; this supports offline feature-learning investigation, not product ranking change. learned_without_final_score is close to learned_full relative to heuristic; there may be signal beyond the existing composite. This is not validation and does not justify production superiority."
+    }
+  }
+}
