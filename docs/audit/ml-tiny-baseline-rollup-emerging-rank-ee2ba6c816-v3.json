@@ -1,6 +1,6 @@
 {
   "artifact_type": "ml_tiny_baseline_rollup",
-  "generated_at": "2026-04-30T04:01:41Z",
+  "generated_at": "2026-04-30T04:43:02Z",
   "provenance": {
     "ranking_run_id": "rank-ee2ba6c816",
     "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",

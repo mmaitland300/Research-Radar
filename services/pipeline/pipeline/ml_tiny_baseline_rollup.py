@@ -480,7 +480,7 @@ def markdown_from_ml_tiny_baseline_rollup(payload: dict[str, Any]) -> str:
                 f"## Target: `{tgt}`",
                 "",
                 f"- **fold fingerprint:** `{block.get('fold_tests_fingerprint_sha256')}`",
-                f"- **class counts:** +{block['class_counts']['positive']} / −{block['class_counts']['negative']} (n={block['class_counts']['total']})",
+                f"- **class counts:** positive {block['class_counts']['positive']} / negative {block['class_counts']['negative']} (n={block['class_counts']['total']})",
                 "",
                 "### Conservative decision fields",
                 "",

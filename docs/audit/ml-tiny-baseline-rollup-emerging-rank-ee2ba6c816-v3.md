@@ -24,7 +24,7 @@ Offline-only diagnostics: ablations and fold-wise summaries vs `heuristic_final_
 ## Target: `good_or_acceptable`
 
 - **fold fingerprint:** `4ba03100ca45eb46341f176db62f623ff0e4c8097ea56cc1946f7458a90ba212`
-- **class counts:** +45 / −15 (n=60)
+- **class counts:** positive 45 / negative 15 (n=60)
 
 ### Conservative decision fields
 
@@ -61,7 +61,7 @@ Offline-only diagnostics: ablations and fold-wise summaries vs `heuristic_final_
 ## Target: `surprising_or_useful`
 
 - **fold fingerprint:** `73b74164ee958bb8bb44edae13eb4611a0e80273e93057735937875e22eb0895`
-- **class counts:** +43 / −17 (n=60)
+- **class counts:** positive 43 / negative 17 (n=60)
 
 ### Conservative decision fields
 
