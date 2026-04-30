@@ -1,13 +1,13 @@
 {
   "artifact_type": "ml_offline_baseline_eval",
-  "generated_at": "2026-04-30T06:47:37Z",
+  "generated_at": "2026-04-30T16:51:22Z",
   "provenance": {
     "ranking_run_id": "rank-ee2ba6c816",
     "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
     "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
     "embedding_version": "v2-title-abstract-1536-cleantext-r1",
     "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
-    "label_dataset_path": "C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v4.json",
+    "label_dataset_path": "docs/audit/ml-label-dataset-v4.json",
     "label_dataset_version": "ml-label-dataset-v4",
     "label_dataset_sha256": "88a3067b48f52b6a99295c51e75da54dd03b2b84bd43b9edc674755a28f92288"
   },

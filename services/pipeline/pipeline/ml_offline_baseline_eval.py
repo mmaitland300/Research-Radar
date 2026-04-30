@@ -16,6 +16,7 @@ from psycopg.rows import dict_row
 
 from pipeline.bootstrap_loader import database_url_from_env
 from pipeline.recommendation_review_worksheet import cluster_version_from_config
+from pipeline.repo_paths import portable_repo_path
 
 VALID_FAMILIES = frozenset({"bridge", "emerging", "undercited"})
 TARGET_FIELDS = ("good_or_acceptable", "surprising_or_useful", "bridge_like_yes_or_partial")
@@ -499,7 +500,7 @@ def build_ml_offline_baseline_eval_payload(
             "corpus_snapshot_version": str(run_row.get("corpus_snapshot_version", "")),
             "embedding_version": str(run_row.get("embedding_version", "")),
             "cluster_version": cluster_version,
-            "label_dataset_path": path.as_posix(),
+            "label_dataset_path": portable_repo_path(path),
             "label_dataset_version": label_version,
             "label_dataset_sha256": label_sha,
         },

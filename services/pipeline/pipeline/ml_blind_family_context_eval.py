@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from pipeline.ml_label_dataset import BLIND_REVIEW_POOL_VARIANT
+from pipeline.repo_paths import portable_repo_path
 from pipeline.ml_offline_baseline_eval import (
     TARGET_FIELDS,
     VALID_FAMILIES,
@@ -47,15 +48,6 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
-
-
-def _portable_dataset_path(path: Path) -> str:
-    """Prefer repo-relative provenance paths to avoid local machine leakage."""
-    try:
-        repo_root = Path(__file__).resolve().parents[3]
-        return path.relative_to(repo_root).as_posix()
-    except ValueError:
-        return path.as_posix()
 
 
 def _load_label_dataset(path: Path) -> dict[str, Any]:
@@ -213,7 +205,7 @@ def build_blind_family_context_eval_payload(
     ranking_run_id: str,
 ) -> dict[str, Any]:
     path = label_dataset_path.resolve()
-    path_for_provenance = _portable_dataset_path(path)
+    path_for_provenance = portable_repo_path(path)
     if not path.is_file():
         raise MLBlindFamilyContextEvalError(f"label dataset not found: {path}")
     label_sha = sha256_file(path)

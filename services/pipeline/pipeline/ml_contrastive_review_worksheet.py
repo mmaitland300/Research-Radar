@@ -16,6 +16,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from pipeline.bootstrap_loader import database_url_from_env
+from pipeline.repo_paths import portable_repo_path
 from pipeline.ml_label_dataset import LABEL_FIELDS, paper_id_to_work_id
 from pipeline.ml_offline_baseline_eval import load_label_dataset as load_label_dataset_json
 from pipeline.recommendation_review_worksheet import (
@@ -538,11 +539,7 @@ def markdown_report(
     lines.append(f"- **corpus_snapshot_version:** `{run.get('corpus_snapshot_version')}`")
     lines.append(f"- **embedding_version:** `{run.get('embedding_version')}`")
     lines.append(f"- **cluster_version:** `{cluster_ver}`")
-    try:
-        ds_disp = label_dataset_path.resolve().as_posix()
-    except OSError:
-        ds_disp = label_dataset_path.as_posix()
-    lines.append(f"- **label_dataset:** `{ds_disp}`")
+    lines.append(f"- **label_dataset:** `{portable_repo_path(label_dataset_path)}`")
     lines.append(f"- **generated_at:** `{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}`")
     lines.append("")
     if duplicate_notes:

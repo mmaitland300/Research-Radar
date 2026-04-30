@@ -34,8 +34,8 @@ The v2 label dataset and readiness matrix show **emerging** slices with **few or
 - **corpus_snapshot_version:** `source-snapshot-v2-candidate-plan-20260428`
 - **embedding_version:** `v2-title-abstract-1536-cleantext-r1`
 - **cluster_version:** `kmeans-l2-v2-cleantext-r1-k12`
-- **label_dataset:** `C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v2.json`
-- **generated_at:** `2026-04-30T03:16:05Z`
+- **label_dataset:** `docs/audit/ml-label-dataset-v2.json`
+- **generated_at:** `2026-04-30T16:52:03Z`
 
 ## Caveats
 

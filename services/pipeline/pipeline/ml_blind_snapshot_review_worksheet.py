@@ -5,7 +5,6 @@ from __future__ import annotations
 import csv
 import io
 import json
-import os
 import random
 from collections import Counter, defaultdict
 from collections.abc import Callable, Sequence
@@ -18,6 +17,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from pipeline.bootstrap_loader import database_url_from_env
+from pipeline.repo_paths import portable_repo_path
 from pipeline.ml_label_dataset import LABEL_FIELDS, paper_id_to_work_id
 from pipeline.recommendation_review_worksheet import _topic_names_from_json
 
@@ -112,11 +112,7 @@ def _truncate_abstract(abstract: str, max_chars: int = ABSTRACT_PREVIEW_MAX_CHAR
 
 def _portable_path_display(path: Path) -> str:
     """Render path for committed artifacts without machine-specific absolutes when possible."""
-    try:
-        rel = os.path.relpath(path.resolve(), Path.cwd().resolve())
-        return Path(rel).as_posix()
-    except (OSError, ValueError):
-        return path.as_posix()
+    return portable_repo_path(path)
 
 
 def _year_band(year: int | None) -> str:

@@ -13,6 +13,7 @@ from typing import Any, Sequence
 import psycopg
 
 from pipeline.ml_offline_baseline_eval import _parse_config_json, load_label_dataset, sha256_file
+from pipeline.repo_paths import portable_repo_path
 from pipeline.ml_tiny_baseline import (
     EMERGING_FAMILY,
     MLTinyBaselineError,
@@ -434,7 +435,7 @@ def build_ml_tiny_baseline_rollup_payload(
             "corpus_snapshot_version": str(run_row.get("corpus_snapshot_version", "")),
             "embedding_version": str(run_row.get("embedding_version", "")),
             "cluster_version": cluster_version,
-            "label_dataset_path": path.as_posix(),
+            "label_dataset_path": portable_repo_path(path),
             "label_dataset_version": label_version,
             "label_dataset_sha256": label_sha,
             "family": EMERGING_FAMILY,

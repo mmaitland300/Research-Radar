@@ -9,10 +9,10 @@ Read-only join of **ml-label-dataset** rows to persisted **`paper_scores`** for 
 - **corpus_snapshot_version:** `source-snapshot-v2-candidate-plan-20260428`
 - **embedding_version:** `v2-title-abstract-1536-cleantext-r1`
 - **cluster_version:** `kmeans-l2-v2-cleantext-r1-k12`
-- **label_dataset_path:** `C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v4.json`
+- **label_dataset_path:** `docs/audit/ml-label-dataset-v4.json`
 - **label_dataset_version:** `ml-label-dataset-v4`
 - **label_dataset_sha256:** `88a3067b48f52b6a99295c51e75da54dd03b2b84bd43b9edc674755a28f92288`
-- **generated_at:** `2026-04-30T06:47:37Z`
+- **generated_at:** `2026-04-30T16:51:22Z`
 
 ## Join summary
 

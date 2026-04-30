@@ -25,6 +25,7 @@ from pipeline.ml_contrastive_review_worksheet import (
     raw_row_to_candidate,
 )
 from pipeline.ml_offline_baseline_eval import load_label_dataset as load_label_dataset_json
+from pipeline.repo_paths import portable_repo_path
 from pipeline.recommendation_review_worksheet import (
     _topic_names_from_json,
     cluster_version_from_config,
@@ -369,13 +370,9 @@ def markdown_gap_report(
         f"- **embedding_version:** `{run.get('embedding_version')}`",
         f"- **cluster_version:** `{cluster_ver}`",
     ]
-    try:
-        ds_disp = label_dataset_path.resolve().as_posix()
-    except OSError:
-        ds_disp = label_dataset_path.as_posix()
     lines.extend(
         [
-            f"- **label_dataset:** `{ds_disp}`",
+            f"- **label_dataset:** `{portable_repo_path(label_dataset_path)}`",
             f"- **generated_at:** `{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}`",
             "",
             "## Caveats",

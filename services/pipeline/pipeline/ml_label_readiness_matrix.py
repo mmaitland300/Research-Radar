@@ -11,6 +11,7 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
+from pipeline.repo_paths import portable_repo_path
 from pipeline.ml_offline_baseline_eval import (
     VALID_FAMILIES,
     TARGET_FIELDS,
@@ -265,7 +266,7 @@ def build_ml_label_readiness_matrix_payload(
         "artifact_type": "ml_label_readiness_matrix",
         "generated_at": generated_at,
         "provenance": {
-            "label_dataset_path": path.as_posix(),
+            "label_dataset_path": portable_repo_path(path),
             "label_dataset_version": label_version,
             "label_dataset_sha256": label_sha,
             "duplicate_row_id_skipped_globally": dup_global,
