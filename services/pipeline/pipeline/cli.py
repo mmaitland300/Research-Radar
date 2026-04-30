@@ -1280,6 +1280,58 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_tiny_baseline_disagreement_parser = subparsers.add_parser(
+        "ml-tiny-baseline-disagreement",
+        help="Offline emerging audit: promote/demote vs final_score using OOF learned_full logits (read-only DB)",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--family",
+        required=True,
+        choices=["emerging"],
+        help="Only emerging is supported",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--target",
+        default=None,
+        choices=sorted(["good_or_acceptable", "surprising_or_useful"]),
+        help="Single manual target for OOF model (omit if --all-targets)",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--all-targets",
+        action="store_true",
+        help="Run both good_or_acceptable and surprising_or_useful in one artifact",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--top-n",
+        type=int,
+        default=25,
+        help="Max rows to list in top promotions/demotions per target (default 25)",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write disagreement JSON",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write Markdown summary",
+    )
+    ml_tiny_baseline_disagreement_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     ml_label_readiness_parser = subparsers.add_parser(
         "ml-label-readiness-matrix",
         help="Read-only label coverage / offline-baseline readiness by ranking_run_id (no training, no ranking)",
@@ -1553,6 +1605,49 @@ def main() -> None:
         except (MLTinyBaselineRollupError, MLTinyBaselineError) as e:
             code = getattr(e, "code", 2)
             print(f"ml-tiny-baseline-rollup: {e}", file=sys.stderr)
+            raise SystemExit(code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-tiny-baseline-disagreement":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_tiny_baseline import MLTinyBaselineError
+        from pipeline.ml_tiny_baseline_disagreement import (
+            MLTinyBaselineDisagreementError,
+            TARGET_ORDER as _disag_targets,
+            run_ml_tiny_baseline_disagreement_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        if bool(getattr(args, "all_targets", False)) and getattr(args, "target", None):
+            parser.error("use either --all-targets or --target, not both")
+        if not getattr(args, "all_targets", False) and not getattr(args, "target", None):
+            parser.error("provide --target or --all-targets")
+        targets = tuple(_disag_targets) if getattr(args, "all_targets", False) else (str(args.target),)
+        top_n = int(getattr(args, "top_n", 25) or 25)
+        if top_n < 1 or top_n > 200:
+            parser.error("--top-n must be between 1 and 200")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_tiny_baseline_disagreement_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                ranking_run_id=rid,
+                family=str(args.family),
+                targets=targets,
+                top_n=top_n,
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except (MLTinyBaselineDisagreementError, MLTinyBaselineError) as e:
+            code = getattr(e, "code", 2)
+            print(f"ml-tiny-baseline-disagreement: {e}", file=sys.stderr)
             raise SystemExit(code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:

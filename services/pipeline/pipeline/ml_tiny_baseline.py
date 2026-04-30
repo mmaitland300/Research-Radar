@@ -171,6 +171,43 @@ def prepare_stratified_cv_fold_tests(
     return y, fold_tests, n_folds, row_ids
 
 
+def compute_oof_learned_logits_learned_full(
+    rows: list[dict[str, Any]],
+    *,
+    target: str,
+) -> list[float]:
+    """Out-of-fold linear logits (w·x) from the same stratified folds and learned_full feature set as ml-tiny-baseline."""
+    y, fold_tests, _, _ = prepare_stratified_cv_fold_tests(rows, target=target)
+    n = len(rows)
+    oof: list[float] = [float("nan")] * n
+    for fold_id, test_idx in enumerate(fold_tests):
+        train_idx = [i for i in range(n) if i not in set(test_idx)]
+        if not train_idx or not test_idx:
+            raise MLTinyBaselineError(f"fold {fold_id} has empty train or test")
+        y_tr = [y[i] for i in train_idx]
+        if sum(y_tr) == 0 or sum(y_tr) == len(y_tr):
+            raise MLTinyBaselineError(
+                f"fold {fold_id} training set is single-class after stratified assignment; reduce folds or check data.",
+            )
+        medians: list[float] = []
+        means: list[float] = []
+        stds: list[float] = []
+        for name in FEATURE_NAMES:
+            med, mu, sig = _column_train_stats(rows, train_idx, name)
+            medians.append(med)
+            means.append(mu)
+            stds.append(sig)
+        X_tr = [_row_feature_vector(rows[i], FEATURE_NAMES, medians, means, stds) for i in train_idx]
+        y_tr_bin = [y[i] for i in train_idx]
+        w = _logistic_fit_gd(X_tr, y_tr_bin)
+        for i in test_idx:
+            xi = _row_feature_vector(rows[i], FEATURE_NAMES, medians, means, stds)
+            oof[i] = _dot(w, xi)
+    if any(math.isnan(v) for v in oof):
+        raise MLTinyBaselineError("OOF learned logits did not cover all rows")
+    return oof
+
+
 def _logistic_fit_gd(
     X: list[list[float]],
     y: list[int],
