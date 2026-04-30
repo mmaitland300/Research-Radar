@@ -289,7 +289,7 @@ function explanationSummary(explanations: RankedSignalExplanation[]): string {
   if (experimental) parts.push(`${experimental} experimental`);
   if (penalty) parts.push(`${penalty} penalty`);
   if (notComputed) parts.push(`${notComputed} not computed`);
-  return parts.length > 0 ? parts.join(" · ") : "No signal breakdown";
+  return parts.length > 0 ? parts.join(" | ") : "No signal breakdown";
 }
 
 function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanation; rankingVersion: string }) {
@@ -302,9 +302,9 @@ function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanatio
         ))}
       </ul>
       <p className="ranking-how-meta">
-        <strong>Used in ordering:</strong> {expl.used_in_ordering.join(", ") || "—"}
+        <strong>Used in ordering:</strong> {expl.used_in_ordering.join(", ") || "none"}
         <br />
-        <strong>Measured only (transparency):</strong> {expl.measured_only.join(", ") || "—"}
+        <strong>Measured only (transparency):</strong> {expl.measured_only.join(", ") || "none"}
         {expl.experimental.length > 0 ? (
           <>
             <br />
@@ -368,7 +368,7 @@ function BridgeSignalOrderingParagraph({ explanations }: { explanations: RankedS
 function EmergingWhySurfaced({ explanations }: { explanations: RankedSignalExplanation[] }) {
   return (
     <details className="ranking-why-details">
-      <summary>Why this surfaced · {explanationSummary(explanations)}</summary>
+      <summary>Why this surfaced | {explanationSummary(explanations)}</summary>
       {explanations.map((e) => (
         <div key={e.key} className="ranking-signal-row">
           <div className="ranking-signal-label">
@@ -570,7 +570,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 <strong>Diagnostics:</strong> bridge signal is <strong>measured</strong> and visible in this
                 run for inspection. Depending on the pinned run, it may be measured-only or experimental,
                 so this page is a <strong>preview / diagnostics</strong>{" "}
-                surface—not a validated bridge recommender.
+                surface, not a validated bridge recommender.
               </p>
             ) : null}
             {family === "bridge" ? (
