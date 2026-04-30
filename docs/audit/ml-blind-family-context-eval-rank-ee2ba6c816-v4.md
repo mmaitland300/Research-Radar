@@ -5,11 +5,11 @@ Read-only diagnostic that evaluates how the heuristic ranking's per-family **con
 ## Provenance
 
 - **ranking_run_id:** `rank-ee2ba6c816`
-- **label_dataset_path:** `C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v4.json`
+- **label_dataset_path:** `docs/audit/ml-label-dataset-v4.json`
 - **label_dataset_version:** `ml-label-dataset-v4`
 - **label_dataset_sha256:** `88a3067b48f52b6a99295c51e75da54dd03b2b84bd43b9edc674755a28f92288`
 - **review_pool_variant:** `ml_blind_snapshot_audit`
-- **generated_at:** `2026-04-30T06:47:44Z`
+- **generated_at:** `2026-04-30T06:57:31Z`
 
 ## Blind row summary
 

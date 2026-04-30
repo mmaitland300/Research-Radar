@@ -49,6 +49,15 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _portable_dataset_path(path: Path) -> str:
+    """Prefer repo-relative provenance paths to avoid local machine leakage."""
+    try:
+        repo_root = Path(__file__).resolve().parents[3]
+        return path.relative_to(repo_root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _load_label_dataset(path: Path) -> dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -204,6 +213,7 @@ def build_blind_family_context_eval_payload(
     ranking_run_id: str,
 ) -> dict[str, Any]:
     path = label_dataset_path.resolve()
+    path_for_provenance = _portable_dataset_path(path)
     if not path.is_file():
         raise MLBlindFamilyContextEvalError(f"label dataset not found: {path}")
     label_sha = sha256_file(path)
@@ -237,7 +247,7 @@ def build_blind_family_context_eval_payload(
         "generated_at": generated_at,
         "provenance": {
             "ranking_run_id": ranking_run_id,
-            "label_dataset_path": path.as_posix(),
+            "label_dataset_path": path_for_provenance,
             "label_dataset_version": label_version,
             "label_dataset_sha256": label_sha,
             "review_pool_variant": BLIND_REVIEW_POOL_VARIANT,
