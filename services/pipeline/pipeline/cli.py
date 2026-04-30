@@ -1357,6 +1357,34 @@ def main() -> None:
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    ml_blind_family_context_parser = subparsers.add_parser(
+        "ml-blind-family-context-eval",
+        help=(
+            "Read-only blind-source family-context diagnostic for ml_blind_snapshot_audit rows "
+            "(uses worksheet context scores/ranks; no DB, no ranking, no training, not validation)"
+        ),
+    )
+    ml_blind_family_context_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON containing blind worksheet rows with context fields",
+    )
+    ml_blind_family_context_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="ranking_run_id whose blind-snapshot rows to evaluate (e.g. rank-ee2ba6c816)",
+    )
+    ml_blind_family_context_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write blind family-context diagnostic JSON",
+    )
+    ml_blind_family_context_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+
     ml_contrastive_ws_parser = subparsers.add_parser(
         "ml-contrastive-review-worksheet",
         help="Read-only CSV/Markdown worksheet to expand contrastive offline audit label coverage for one ranking_run_id",
@@ -1627,6 +1655,32 @@ def main() -> None:
             )
         except MLLabelReadinessMatrixError as e:
             print(f"ml-label-readiness-matrix: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-blind-family-context-eval":
+        from pipeline.ml_blind_family_context_eval import (
+            MLBlindFamilyContextEvalError,
+            run_ml_blind_family_context_eval_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_blind_family_context_eval_cli(
+                label_dataset_path=Path(args.label_dataset),
+                ranking_run_id=rid,
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLBlindFamilyContextEvalError as e:
+            print(f"ml-blind-family-context-eval: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:

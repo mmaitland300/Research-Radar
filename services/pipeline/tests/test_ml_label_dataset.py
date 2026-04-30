@@ -443,6 +443,96 @@ def test_family_rank_used_when_rank_column_missing(tmp_path: Path) -> None:
     assert payload["rows"][0]["rank"] == "99"
 
 
+HEADER_BLIND = (
+    "worksheet_version,sample_seed,sample_reason,corpus_snapshot_version,embedding_version,cluster_version,"
+    "ranking_run_id_context,review_pool_variant,paper_id,openalex_work_id,internal_work_id,title,year,"
+    "citation_count,source_slug,type,cluster_id,topics,abstract_preview,"
+    "ranking_context_family_scores_json,ranking_context_family_ranks_json,"
+    "relevance_label,novelty_label,bridge_like_label,reviewer_notes\n"
+)
+
+
+def _blind_data_row(
+    *,
+    paper_id: str = "https://openalex.org/W7153448625",
+    cluster_id: str = "c000",
+    topics: str = "Music and Audio Processing",
+    abstract: str = "An abstract preview.",
+    scores_json: str = '"{""bridge"": -0.2, ""emerging"": 0.16}"',
+    ranks_json: str = '"{""bridge"": 96, ""emerging"": 174}"',
+    relevance: str = "good",
+    novelty: str = "useful",
+    bridge_like: str = "yes",
+    notes: str = "blind notes",
+) -> str:
+    return (
+        f"ml-blind-snapshot-review-v1,20260430,cluster_stratified_seeded,corpus-v2,emb-v2,clust-v2,"
+        f"rank-ee2ba6c816,ml_blind_snapshot_audit,{paper_id},W7153448625,2296,Title,2026,0,,article,"
+        f"{cluster_id},{topics},{abstract},{scores_json},{ranks_json},{relevance},{novelty},{bridge_like},{notes}\n"
+    )
+
+
+def test_blind_worksheet_rows_preserve_context_and_family_null(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "audit" / "manual-review"
+    _write(mr / "ml_blind_snapshot_review_v1.csv", HEADER_BLIND + _blind_data_row())
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    assert payload["metadata"]["total_explicit_labeled_rows"] == 1
+    row = payload["rows"][0]
+    assert row["family"] is None
+    assert row["review_pool_variant"] == "ml_blind_snapshot_audit"
+    assert row["worksheet_version"] == "ml-blind-snapshot-review-v1"
+    assert row["sample_seed"] == "20260430"
+    assert row["sample_reason"] == "cluster_stratified_seeded"
+    assert row["cluster_id"] == "c000"
+    assert row["topics"] == "Music and Audio Processing"
+    assert row["abstract_preview"] == "An abstract preview."
+    assert row["ranking_context_family_scores_json"] == '{"bridge": -0.2, "emerging": 0.16}'
+    assert row["ranking_context_family_ranks_json"] == '{"bridge": 96, "emerging": 174}'
+    assert row["openalex_work_id"] == "W7153448625"
+    assert row["internal_work_id"] == "2296"
+
+
+def test_blind_worksheet_does_not_infer_labels_from_context(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "audit" / "manual-review"
+    _write(mr / "ml_blind_snapshot_review_v1.csv", HEADER_BLIND + _blind_data_row())
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    row = payload["rows"][0]
+    assert row["relevance_label"] == "good"
+    assert row["novelty_label"] == "useful"
+    assert row["bridge_like_label"] == "yes"
+    assert row["good_or_acceptable"] is True
+    assert row["surprising_or_useful"] is True
+    assert row["bridge_like_yes_or_partial"] is True
+    assert row["family"] is None
+    assert row.get("rank") is None
+    assert row.get("experiment_rank") is None
+
+
+def test_non_blind_rows_do_not_get_blind_context_fields(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    mr = root / "docs" / "mr"
+    _write(
+        mr / "one.csv",
+        HEADER_STANDARD + _std_data_row(relevance="good", novelty="useful", bridge_like="yes"),
+    )
+    payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
+    row = payload["rows"][0]
+    for f in (
+        "worksheet_version",
+        "sample_seed",
+        "sample_reason",
+        "cluster_id",
+        "ranking_context_family_scores_json",
+        "ranking_context_family_ranks_json",
+        "openalex_work_id",
+        "internal_work_id",
+        "abstract_preview",
+    ):
+        assert f not in row
+
+
 def test_ranking_run_id_context_used_when_ranking_run_id_missing(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     mr = root / "docs" / "mr"

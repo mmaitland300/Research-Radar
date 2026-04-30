@@ -63,6 +63,10 @@ Some bridge experiment review CSVs (weight delta review, objective delta / eligi
 
 - **Rows with inferred `family`:** 5 (per-source counts: `metadata.inferred_family_by_source`).
 
+## Blind snapshot context fields
+
+Rows from worksheets with `review_pool_variant=ml_blind_snapshot_audit` keep `family=null` (these papers were **not** sampled from a recommendation family's top-k). To support a blind-source family-context diagnostic, these rows additionally preserve worksheet-level context when the worksheet provides it: `worksheet_version`, `sample_seed`, `sample_reason`, `cluster_id`, `topics`, `abstract_preview`, `ranking_context_family_scores_json`, `ranking_context_family_ranks_json`, `openalex_work_id`, and `internal_work_id`. These context fields are **not labels** and must not be treated as family-selected ranking outputs.
+
 ## Duplicate and conflicting labels
 
 - **Duplicate `paper_id` count** (papers with more than one retained row): 55

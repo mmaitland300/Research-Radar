@@ -1,0 +1,149 @@
+{
+  "artifact_type": "ml_blind_family_context_eval",
+  "diagnostic_kind": "blind_source_family_context_diagnostic",
+  "generated_at": "2026-04-30T06:47:44Z",
+  "provenance": {
+    "ranking_run_id": "rank-ee2ba6c816",
+    "label_dataset_path": "C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v4.json",
+    "label_dataset_version": "ml-label-dataset-v4",
+    "label_dataset_sha256": "88a3067b48f52b6a99295c51e75da54dd03b2b84bd43b9edc674755a28f92288",
+    "review_pool_variant": "ml_blind_snapshot_audit"
+  },
+  "caveats": [
+    "This is not validation.",
+    "Blind rows were not sampled from family top-k rankings.",
+    "Family scores/ranks are context fields, not labels.",
+    "Results must not change production ranking defaults.",
+    "All rows remain audit_only."
+  ],
+  "blind_row_summary": {
+    "blind_rows_included": 60,
+    "duplicate_row_id_skipped": 0,
+    "rows_with_family_scores_context": 60,
+    "rows_with_family_ranks_context": 60,
+    "context_family_keys_seen": [
+      "bridge",
+      "emerging",
+      "undercited"
+    ],
+    "all_rows_family_null": true
+  },
+  "metrics": {
+    "by_family_context": {
+      "bridge": {
+        "good_or_acceptable": {
+          "positive_count": 51,
+          "negative_count": 9,
+          "null_count": 0,
+          "rows_with_family_score": 60,
+          "rows_with_family_rank": 60,
+          "median_rank_positive": 135.0,
+          "median_rank_negative": 168.0,
+          "mean_family_score_positive": -0.021904960784313737,
+          "mean_family_score_negative": -0.2,
+          "diagnostic_auc_family_score": 0.6274509803921569
+        },
+        "surprising_or_useful": {
+          "positive_count": 46,
+          "negative_count": 14,
+          "null_count": 0,
+          "rows_with_family_score": 60,
+          "rows_with_family_rank": 60,
+          "median_rank_positive": 126.0,
+          "median_rank_negative": 169.5,
+          "mean_family_score_positive": -0.0025468043478260967,
+          "mean_family_score_negative": -0.2,
+          "diagnostic_auc_family_score": 0.6413043478260869
+        },
+        "bridge_like_yes_or_partial": {
+          "positive_count": 48,
+          "negative_count": 4,
+          "null_count": 8,
+          "rows_with_family_score": 60,
+          "rows_with_family_rank": 60,
+          "median_rank_positive": 144.5,
+          "median_rank_negative": 80.5,
+          "mean_family_score_positive": -0.04473866666666668,
+          "mean_family_score_negative": 0.20757575,
+          "diagnostic_auc_family_score": 0.23958333333333334
+        }
+      },
+      "emerging": {
+        "good_or_acceptable": {
+          "positive_count": 51,
+          "negative_count": 9,
+          "null_count": 0,
+          "rows_with_family_score": 60,
+          "rows_with_family_rank": 60,
+          "median_rank_positive": 139.0,
+          "median_rank_negative": 157.0,
+          "mean_family_score_positive": 0.2354258431372549,
+          "mean_family_score_negative": 0.16526544444444446,
+          "diagnostic_auc_family_score": 0.6775599128540305
+        },
+        "surprising_or_useful": {
+          "positive_count": 46,
+          "negative_count": 14,
+          "null_count": 0,
+          "rows_with_family_score": 60,
+          "rows_with_family_rank": 60,
+          "median_rank_positive": 142.0,
+          "median_rank_negative": 155.0,
+          "mean_family_score_positive": 0.24257930434782607,
+          "mean_family_score_negative": 0.1668185,
+          "diagnostic_auc_family_score": 0.6009316770186336
+        },
+        "bridge_like_yes_or_partial": {
+          "positive_count": 48,
+          "negative_count": 4,
+          "null_count": 8,
+          "rows_with_family_score": 60,
+          "rows_with_family_rank": 60,
+          "median_rank_positive": 146.0,
+          "median_rank_negative": 81.0,
+          "mean_family_score_positive": 0.22596327083333334,
+          "mean_family_score_negative": 0.33222075,
+          "diagnostic_auc_family_score": 0.15625
+        }
+      },
+      "undercited": {
+        "good_or_acceptable": {
+          "positive_count": 51,
+          "negative_count": 9,
+          "null_count": 0,
+          "rows_with_family_score": 12,
+          "rows_with_family_rank": 12,
+          "median_rank_positive": 52.5,
+          "median_rank_negative": null,
+          "mean_family_score_positive": 0.6149524166666667,
+          "mean_family_score_negative": null,
+          "diagnostic_auc_family_score": null
+        },
+        "surprising_or_useful": {
+          "positive_count": 46,
+          "negative_count": 14,
+          "null_count": 0,
+          "rows_with_family_score": 12,
+          "rows_with_family_rank": 12,
+          "median_rank_positive": 52.5,
+          "median_rank_negative": null,
+          "mean_family_score_positive": 0.6149524166666667,
+          "mean_family_score_negative": null,
+          "diagnostic_auc_family_score": null
+        },
+        "bridge_like_yes_or_partial": {
+          "positive_count": 48,
+          "negative_count": 4,
+          "null_count": 8,
+          "rows_with_family_score": 12,
+          "rows_with_family_rank": 12,
+          "median_rank_positive": 61.5,
+          "median_rank_negative": 48.5,
+          "mean_family_score_positive": 0.6021892,
+          "mean_family_score_negative": 0.6787685,
+          "diagnostic_auc_family_score": 0.35
+        }
+      }
+    }
+  }
+}

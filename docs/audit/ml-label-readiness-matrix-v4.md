@@ -6,9 +6,9 @@ Read-only summary of **manual label coverage** and **offline baseline readiness*
 
 - **label_dataset_path:** `C:/dev/Cursor Projects/Research-Radar/docs/audit/ml-label-dataset-v4.json`
 - **label_dataset_version:** `ml-label-dataset-v4`
-- **label_dataset_sha256:** `96863255e17ad8e7948d6cc1ac53c81b16da68752bda542ebbab0740b6c72dbb`
+- **label_dataset_sha256:** `88a3067b48f52b6a99295c51e75da54dd03b2b84bd43b9edc674755a28f92288`
 - **duplicate_row_id_skipped (global):** 0
-- **generated_at:** `2026-04-30T06:33:11Z`
+- **generated_at:** `2026-04-30T06:47:35Z`
 
 ## Caveats
 

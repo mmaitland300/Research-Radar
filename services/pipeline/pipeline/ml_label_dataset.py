@@ -30,6 +30,22 @@ _WORK_ID_RE = re.compile(r"(?:openalex\.org/)?(W\d+)\s*$", re.IGNORECASE)
 
 DERIVED_TARGET_FIELDS = ("good_or_acceptable", "surprising_or_useful", "bridge_like_yes_or_partial")
 
+BLIND_REVIEW_POOL_VARIANT = "ml_blind_snapshot_audit"
+# Worksheet/context fields preserved for blind-snapshot rows so future diagnostics can read
+# sample provenance and ranking-context family scores/ranks without inferring labels.
+BLIND_CONTEXT_FIELDS = (
+    "worksheet_version",
+    "sample_seed",
+    "sample_reason",
+    "cluster_id",
+    "topics",
+    "abstract_preview",
+    "ranking_context_family_scores_json",
+    "ranking_context_family_ranks_json",
+    "openalex_work_id",
+    "internal_work_id",
+)
+
 
 def _norm_ws(value: str | None) -> str:
     if value is None:
@@ -291,6 +307,10 @@ def parse_manual_review_worksheet(
         }
         if family_inferred:
             out["family_inferred"] = True
+        if _norm_ws(row.get("review_pool_variant")) == BLIND_REVIEW_POOL_VARIANT:
+            for ctx_field in BLIND_CONTEXT_FIELDS:
+                if ctx_field in names:
+                    out[ctx_field] = _norm_ws(row.get(ctx_field)) or None
         included.append(out)
     return ParsedWorksheet(rel, csv_path, digest, len(raw_rows), skipped_blank, included, malformed)
 
@@ -534,6 +554,16 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "This does **not** change any reviewer label columns.",
         "",
         f"- **Rows with inferred `family`:** {inferred_n} (per-source counts: `metadata.inferred_family_by_source`).",
+        "",
+        "## Blind snapshot context fields",
+        "",
+        "Rows from worksheets with `review_pool_variant=ml_blind_snapshot_audit` keep `family=null` (these papers were "
+        "**not** sampled from a recommendation family's top-k). To support a blind-source family-context diagnostic, "
+        "these rows additionally preserve worksheet-level context when the worksheet provides it: "
+        "`worksheet_version`, `sample_seed`, `sample_reason`, `cluster_id`, `topics`, `abstract_preview`, "
+        "`ranking_context_family_scores_json`, `ranking_context_family_ranks_json`, `openalex_work_id`, "
+        "and `internal_work_id`. These context fields are **not labels** and must not be treated as family-selected "
+        "ranking outputs.",
         "",
         "## Duplicate and conflicting labels",
         "",
