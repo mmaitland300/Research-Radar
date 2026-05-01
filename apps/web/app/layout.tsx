@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
@@ -8,7 +8,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Research Radar",
   description:
-    "Emerging, bridge diagnostics, and undercited papers in a curated MIR + audio-ML slice."
+    "Emerging, bridge diagnostics, and undercited papers in a curated MIR + audio-ML slice.",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }]
+  }
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0B1F3B"
 };
 
 const navItems = [

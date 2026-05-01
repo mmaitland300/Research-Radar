@@ -1,0 +1,21 @@
+{
+  "name": "Research Radar",
+  "short_name": "Research Radar",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#0B1F3B",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}
