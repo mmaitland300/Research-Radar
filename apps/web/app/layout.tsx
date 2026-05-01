@@ -11,7 +11,10 @@ export const metadata: Metadata = {
     "Emerging, bridge diagnostics, and undercited papers in a curated MIR + audio-ML slice.",
   manifest: "/site.webmanifest",
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32" },
+      { url: "/favicon.svg", type: "image/svg+xml" }
+    ],
     apple: [{ url: "/icon.svg", type: "image/svg+xml" }]
   }
 };
