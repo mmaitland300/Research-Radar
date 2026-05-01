@@ -7,7 +7,7 @@
   aria-label="Research Radar icon"
 >
   <!-- square canvas -->
-  <rect width="256" height="256" fill="#FFFFFF"/>
+  <rect width="256" height="256" fill="#0B1F3B"/>
 
   <!-- navy disk -->
   <circle cx="128" cy="128" r="116" fill="#0B1F3B"/>
