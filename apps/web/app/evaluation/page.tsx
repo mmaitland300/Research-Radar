@@ -584,8 +584,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                 <li>Not a human relevance benchmark.</li>
                 <li>Used to inspect whether this bridge review arm is worth further evaluation.</li>
                 <li>
-                  Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and
-                  product policy support stronger recommender claims.
+                  Use these diagnostics to decide whether the bridge experiment deserves further evaluation.
                 </li>
               </ul>
               {bridgeDistinctness.kind === "error" ? (

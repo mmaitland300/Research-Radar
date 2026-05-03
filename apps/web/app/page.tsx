@@ -7,7 +7,7 @@ const cards = [
   {
     title: "Bridge preview",
     body:
-      "Inspect cross-cluster candidates with measured bridge signal. Bridge stays in review mode until labeled review, proxy evaluation, and product policy support stronger recommender claims."
+      "Inspect cross-cluster candidates and the signal evidence recorded for the selected run. Bridge is experimental and separate from the default recommendation path."
   },
   {
     title: "Explainable Ranking",
@@ -26,14 +26,14 @@ const signalCards = [
     tone: "emerging",
     label: "Emerging",
     value: "Momentum first",
-    body: "Find papers where topic growth and citation velocity are rising inside your curated slice."
+    body: "Find papers where topic growth and citation velocity are rising inside the current corpus."
   },
   {
     tone: "bridge",
     label: "Bridge",
     value: "Cross-cluster links",
     body:
-      "Inspect candidate works that may connect nearby but distinct research neighborhoods, with bridge signal kept in review mode until labeled review, proxy evaluation, and product policy support stronger claims."
+      "Inspect candidates that may connect nearby but distinct research neighborhoods. Treat bridge as an experiment until review data supports a stronger role."
   },
   {
     tone: "undercited",
@@ -139,8 +139,8 @@ export default function HomePage() {
           <article className="brief-card">
             <h3>Bridge with evidence</h3>
             <p>
-              Bridge stays in review mode while the product explains how a paper
-              connects clusters and what evidence the current run recorded.
+              The bridge view shows cluster context and recorded evidence without
+              presenting the signal as a validated recommender.
             </p>
           </article>
           <article className="brief-card">

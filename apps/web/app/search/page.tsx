@@ -246,7 +246,8 @@ async function fetchSearch(params: {
   } catch {
     return {
       data: null,
-      error: "Could not reach the API. Start apps/api and Postgres, then refresh.",
+      error:
+        "The Research Radar API is unavailable. Try again later, or check the repository setup docs if you are running it locally.",
       status: null
     };
   }
@@ -396,7 +397,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </div>
             <p className="hero-lead">
               Search v1 is intentionally narrow: lexical retrieval over titles and abstracts, plus
-              practical filters for narrowing the curated slice. Semantic assist can come later,
+              practical filters for narrowing the current corpus. Semantic assist can come later,
               but it is not part of Search v1&apos;s scope.
             </p>
             {data ? (
@@ -442,7 +443,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <h2>Lexical now, semantic later</h2>
               <ul className="measure-list">
                 <li>Search title and abstract with deterministic lexical ordering.</li>
-                <li>Use filters to narrow the curated slice before ranking handoff.</li>
+                <li>Use filters to narrow the current result set before ranking handoff.</li>
                 <li>Ranking family filtering resolves against one explicit succeeded run.</li>
                 <li>When both run fields are supplied, exact run id wins over version label.</li>
                 <li>Keep explanation honest: no hybrid claims until hybrid retrieval exists.</li>
@@ -570,10 +571,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
         <div className="workflow-grid">
           <article className="workflow-card">
             <p className="workflow-step">01</p>
-            <h3>Find the right slice</h3>
+            <h3>Find the right candidate set</h3>
             <p>
               Start with lexical retrieval and narrow with year, venue, topic, and scope filters
-              until the candidate pool feels right.
+              until the candidate set is focused enough to inspect.
             </p>
           </article>
           <article className="workflow-card">

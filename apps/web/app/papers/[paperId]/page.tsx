@@ -120,7 +120,8 @@ async function fetchPaperDetail(
   } catch {
     return {
       paper: null,
-      error: "Could not reach the API. Start apps/api and Postgres, then refresh."
+      error:
+        "The Research Radar API is unavailable. Try again later, or check the repository setup docs if you are running it locally."
     };
   }
 }

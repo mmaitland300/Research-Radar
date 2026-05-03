@@ -10,9 +10,9 @@ const FAMILY_LABEL: Record<Family, string> = {
 };
 
 const FAMILY_SUMMARY: Record<Family, string> = {
-  emerging: "Momentum-weighted papers gaining relevance inside your curated slice.",
+  emerging: "Momentum-weighted papers gaining relevance inside the current corpus.",
   bridge:
-    "Candidate bridge papers with measured cross-cluster signal. Bridge stays in review mode until labeled review, proxy evaluation, and product policy support stronger recommender claims.",
+    "Candidate bridge papers with measured cross-cluster signal, presented as a separate experimental view.",
   undercited: "Low-cite candidates that appear stronger than their current attention level."
 };
 
@@ -23,9 +23,9 @@ const FAMILY_NOTES: Record<Family, string[]> = {
     "The goal is early importance, not raw popularity."
   ],
   bridge: [
-    "Bridge signal is currently measured for inspection and not used in ordering for this public run.",
+    "Bridge signal is visible for inspection and may be measured-only or experimental depending on the pinned run.",
     "Use this page to inspect cross-cluster candidates; it is not a validated bridge recommender.",
-    "Stronger bridge recommender claims should wait for labeled review, proxy evaluation, and product policy."
+    "Pinned runs matter because bridge evidence is run-specific."
   ],
   undercited: [
     "These rows are judged against a low-cite candidate pool, not the whole corpus.",
@@ -460,7 +460,8 @@ async function fetchRanked(
   } catch {
     return {
       data: null,
-      error: "Could not reach the API. Start apps/api and Postgres, then refresh.",
+      error:
+        "The Research Radar API is unavailable. Try again later, or check the repository setup docs if you are running it locally.",
       status: null
     };
   }
@@ -567,16 +568,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             ) : null}
             {family === "bridge" ? (
               <p className="muted-inline">
-                <strong>Diagnostics:</strong> bridge signal is <strong>measured</strong> and visible in this
-                run for inspection. Depending on the pinned run, it may be measured-only or experimental,
-                so this page is a <strong>preview / diagnostics</strong>{" "}
-                view while validation evidence is still limited.
-              </p>
-            ) : null}
-            {family === "bridge" ? (
-              <p className="muted-inline">
-                Bridge evidence is experimental and run-specific. Use pinned runs for current evidence
-                review.
+                Bridge evidence is experimental and run-specific. Use pinned runs to inspect how
+                the signal was measured and whether it affected ordering for that run.
               </p>
             ) : null}
             {bridgeEligibleOnlyDisabledNotice ? (
@@ -909,8 +902,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           <p>
             ML milestone 1 delivers retrieval for similar papers. Writing{" "}
             <code>semantic_score</code> into ranked families stays gated until a defined relevance target;
-            bridge stays in review mode until labeled review, proxy evaluation, and
-            product policy support stronger recommender claims.
+            bridge remains experimental and outside the default recommendation path.
           </p>
         </article>
         <article className="card">
