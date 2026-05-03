@@ -509,7 +509,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 <input type="text" name="ranking_version" defaultValue={rankingVersionControlValue} />
               </label>
               <label className="search-field">
-                <span>Ranking run id</span>
+                <span>Ranking run</span>
                 <input type="text" name="ranking_run_id" defaultValue={rankingRunIdControlValue} />
               </label>
               <label className="search-field">
@@ -527,8 +527,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               </Link>
             </div>
             <p className="muted-inline">
-              If both <code>ranking_run_id</code> and <code>ranking_version</code> are set, the
-              exact run id takes precedence.
+              If both ranking run and ranking version are set, the exact run takes precedence.
             </p>
             <p className="muted-inline">Quick sample queries (same filters as this form):</p>
             <ul className="action-row search-sample-query-list" aria-label="Sample lexical searches">
@@ -547,7 +546,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </form>
         </article>
         <article className="panel instrument-panel">
-          <h2>What Search v1 ships</h2>
+          <h2>What Search v1 supports</h2>
           <ul className="measure-list">
             <li>Lexical retrieval over <code>title + abstract</code>.</li>
             <li>Filters for year, scope, venue/source, topic label, and ranking family filter.</li>
@@ -662,7 +661,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               {resolvedRankingRunId ? (
                 <>
                   {" "}
-                  | run <code>{resolvedRankingRunId}</code>
+                  | active run <code>{resolvedRankingRunId}</code>
                 </>
               ) : null}
               {resolvedRankingVersion ? (

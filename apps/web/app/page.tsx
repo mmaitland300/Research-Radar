@@ -7,7 +7,7 @@ const cards = [
   {
     title: "Bridge preview",
     body:
-      "Inspect cross-cluster candidates with measured bridge signal. Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and product policy support stronger recommender claims."
+      "Inspect cross-cluster candidates with measured bridge signal. Bridge stays in review mode until labeled review, proxy evaluation, and product policy support stronger recommender claims."
   },
   {
     title: "Explainable Ranking",
@@ -17,7 +17,7 @@ const cards = [
   {
     title: "Evaluation First",
     body:
-      "Ship proxy evaluation and baseline comparison with the MVP so ranking behavior can be inspected before stronger quality claims are made."
+      "Pair proxy evaluation with baseline comparison so ranking behavior can be inspected before stronger quality claims are made."
   }
 ];
 
@@ -33,7 +33,7 @@ const signalCards = [
     label: "Bridge",
     value: "Cross-cluster links",
     body:
-      "Inspect candidate works that may connect nearby but distinct research neighborhoods, with bridge signal kept diagnostic until labeled review, proxy evaluation, and product policy support stronger claims."
+      "Inspect candidate works that may connect nearby but distinct research neighborhoods, with bridge signal kept in review mode until labeled review, proxy evaluation, and product policy support stronger claims."
   },
   {
     tone: "undercited",
@@ -44,9 +44,9 @@ const signalCards = [
 ];
 
 const operatingPrinciples = [
-  "Curate the corpus first so ranking operates on a coherent technical slice.",
+  "Curate the corpus first so ranking operates on coherent technical scope.",
   "Treat explanation as part of the product, not documentation after the fact.",
-  "Compare ranking runs against simple citation/date baselines before broadening the surface area."
+  "Compare ranking runs against simple citation/date baselines before broadening the public views."
 ];
 
 export default function HomePage() {
@@ -54,16 +54,16 @@ export default function HomePage() {
     <main className="page">
       <section className="hero hero-grid">
         <div className="hero-copy">
-          <p className="eyebrow">Research signal intelligence</p>
+          <p className="eyebrow">Audio ML paper discovery</p>
           <h1>Detect what matters next in audio ML.</h1>
           <p className="hero-lead">
-            Research Radar is a product-shaped prototype for ranking and explaining{" "}
-            <strong>MIR + audio representation learning</strong> papers. It favors
-            curated scope, signal quality, and transparent reasoning over raw
-            popularity or graph novelty.
+            Research Radar is a working prototype for ranking and explaining{" "}
+            <strong>MIR + audio representation learning</strong> papers. It keeps
+            the corpus narrow, shows the ranking signals, and explains why each
+            paper appears.
           </p>
           <div className="meta">
-            <span>Core slice: MIR + audio representation learning</span>
+            <span>Core corpus: MIR + audio representation learning</span>
             <span>Primary data: OpenAlex</span>
             <span>Graph UI intentionally deferred</span>
           </div>
@@ -82,12 +82,12 @@ export default function HomePage() {
       <section className="panel section-panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow eyebrow-muted">Operating model</p>
-            <h2>Build the product like an instrument, not a feed</h2>
+            <p className="eyebrow eyebrow-muted">Product frame</p>
+            <h2>Build a ranking instrument for a narrow corpus</h2>
           </div>
           <div className="stamp-row">
-            <span className="stamp">Curated slice only</span>
-            <span className="stamp">Why surfaced matters</span>
+            <span className="stamp">Curated corpus</span>
+            <span className="stamp">Why each paper appears</span>
             <span className="stamp">Evaluation before breadth</span>
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function HomePage() {
             <h3>Current frame</h3>
             <p>
               Neural audio effects and music generation stay as a controlled
-              edge slice so bridge-paper logic remains meaningful and the
+              edge set so bridge-paper logic remains meaningful and the
               recommendation surface stays coherent.
             </p>
           </article>
@@ -124,24 +124,23 @@ export default function HomePage() {
         <div className="panel-header">
           <div>
             <p className="eyebrow eyebrow-muted">Product promise</p>
-            <h2>Why this should feel different</h2>
+            <h2>How it differs in use</h2>
           </div>
         </div>
         <div className="brief-grid">
           <article className="brief-card">
-            <h3>Not another scholar clone</h3>
+            <h3>Search that hands off</h3>
             <p>
               Search hands off into ranked views, topic momentum, and
-              evaluation pages rather than collapsing every research job into a
-              single endless results screen.
+              evaluation pages, so discovery work does not end at a single
+              results screen.
             </p>
           </article>
           <article className="brief-card">
-            <h3>Not another graph toy</h3>
+            <h3>Bridge with evidence</h3>
             <p>
-              Bridge stays a diagnostics surface because the product explains how
-              a paper connects clusters instead of expecting the graph to do the
-              storytelling for us.
+              Bridge stays in review mode while the product explains how a paper
+              connects clusters and what evidence the current run recorded.
             </p>
           </article>
           <article className="brief-card">

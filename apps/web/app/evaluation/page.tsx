@@ -230,6 +230,10 @@ function boolLabel(v: boolean): string {
   return v ? "Yes" : "No";
 }
 
+function machineLabel(value: string): string {
+  return value.replaceAll("_", " ");
+}
+
 function ArmProxyStats({ arm }: { arm: EvalArm }) {
   return (
     <div className="eval-proxy">
@@ -605,8 +609,8 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
               ) : (
                 <>
                   <p className="muted-inline">
-                    Pinned to the same <code>ranking_run_id</code> as the compare response above. Overlap and
-                    coverage are structural checks on short heads — still not a relevance judgment.
+                    Pinned to the same ranking run as the compare response above. Overlap and
+                    coverage are structural checks on short heads, not relevance judgments.
                   </p>
                   <h3 className="eval-proxy-title">Head overlap (Jaccard)</h3>
                   <dl className="eval-dl">
@@ -642,7 +646,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                       {bridgeDistinctness.data.bridge_score_nonnull_count} /{" "}
                       {bridgeDistinctness.data.bridge_score_null_count}
                     </dd>
-                    <dt>bridge_signal_json (present / missing)</dt>
+                    <dt>Bridge signal payload (present / missing)</dt>
                     <dd>
                       {bridgeDistinctness.data.bridge_signal_json_present_count} /{" "}
                       {bridgeDistinctness.data.bridge_signal_json_missing_count}
@@ -652,15 +656,15 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                   </dl>
                   <h3 className="eval-proxy-title">Decision support (heuristic)</h3>
                   <dl className="eval-dl">
-                    <dt>suggested_next_step</dt>
+                    <dt>Suggested next step</dt>
                     <dd>
-                      <code>{bridgeDistinctness.data.decision_support.suggested_next_step}</code>
+                      {machineLabel(bridgeDistinctness.data.decision_support.suggested_next_step)}
                     </dd>
-                    <dt>eligible_head_differs_from_full</dt>
+                    <dt>Eligible head differs from full bridge</dt>
                     <dd>
                       {boolLabel(bridgeDistinctness.data.decision_support.eligible_head_differs_from_full)}
                     </dd>
-                    <dt>eligible_head_less_emerging_like_than_full</dt>
+                    <dt>Eligible head is less emerging-like than full bridge</dt>
                     <dd>
                       {boolLabel(
                         bridgeDistinctness.data.decision_support.eligible_head_less_emerging_like_than_full
@@ -669,23 +673,23 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                   </dl>
                   <h3 className="eval-proxy-title">Provenance</h3>
                   <dl className="eval-dl">
-                    <dt>ranking_run_id</dt>
+                    <dt>Active ranking run</dt>
                     <dd>
                       <code>{bridgeDistinctness.data.ranking_run_id}</code>
                     </dd>
-                    <dt>ranking_version</dt>
+                    <dt>Active ranking version</dt>
                     <dd>
                       <code>{bridgeDistinctness.data.ranking_version}</code>
                     </dd>
-                    <dt>corpus_snapshot_version</dt>
+                    <dt>Corpus snapshot</dt>
                     <dd>
                       <code>{bridgeDistinctness.data.corpus_snapshot_version}</code>
                     </dd>
-                    <dt>embedding_version</dt>
+                    <dt>Embedding version</dt>
                     <dd>
                       <code>{bridgeDistinctness.data.embedding_version}</code>
                     </dd>
-                    <dt>cluster_version</dt>
+                    <dt>Cluster version</dt>
                     <dd>
                       {bridgeDistinctness.data.cluster_version != null ? (
                         <code>{bridgeDistinctness.data.cluster_version}</code>
@@ -693,9 +697,9 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                         <>not recorded</>
                       )}
                     </dd>
-                    <dt>k</dt>
+                    <dt>Head size</dt>
                     <dd>{bridgeDistinctness.data.k}</dd>
-                    <dt>generated_at</dt>
+                    <dt>Generated at</dt>
                     <dd className="metric-value-mono">{bridgeDistinctness.data.generated_at}</dd>
                   </dl>
                 </>

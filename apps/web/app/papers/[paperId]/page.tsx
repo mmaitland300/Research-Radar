@@ -709,8 +709,8 @@ export default async function PaperDetailPage({
           </div>
           {similar.kind === "disabled" ? (
             <p className="muted-inline">
-              Set <code>NEXT_PUBLIC_EMBEDDING_VERSION</code> to enable
-              embedding-backed similar papers (e.g.{" "}
+              Configure an active embedding version to enable embedding-backed
+              similar papers (for example,{" "}
               <code>v1-title-abstract-1536</code>).
             </p>
           ) : null}
@@ -805,7 +805,7 @@ export default async function PaperDetailPage({
             <p>
               Use Recommended to see whether this paper behaves like an emerging or undercited
               signal in the current ranked feed, or how it appears on the bridge preview /
-              diagnostics surface.
+              diagnostics view.
             </p>
             <div className="action-row">
               <Link className="action-link" href={emergingFocusHref}>

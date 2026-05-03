@@ -1,10 +1,10 @@
 # Research Radar
 
-Research Radar is a product-shaped prototype for ranking and explaining papers in a curated MIR + audio-ML slice, with bridge signal currently exposed as diagnostics rather than a validated recommender family.
+Research Radar is a working prototype for ranking and explaining papers in a curated MIR + audio-ML corpus, with bridge signal exposed for review before stronger recommender claims.
 
 The V1 thesis is:
 
-> Find emerging and undercited papers in audio ML, while exposing bridge-candidate diagnostics as an experimental bridge review arm. Default readiness and stronger recommender claims require further evidence—scaled evaluation, labeling, and policy. Not bridge weighting alone.
+> Find emerging and undercited papers in audio ML, while exposing bridge-candidate diagnostics as an experimental bridge review arm. Default readiness and stronger recommender claims require further evidence—scaled evaluation, labeling, and policy. Those claims need more than bridge weighting alone.
 
 V1 is intentionally scoped to `MIR + audio representation learning`, with `neural audio effects` and `music/audio generation` deferred to a controlled edge slice in `V1.1` unless a paper clearly connects back to the core corpus.
 
@@ -33,11 +33,11 @@ V1 is intentionally scoped to `MIR + audio representation learning`, with `neura
 - Bootstrap the curated corpus through the OpenAlex API before any snapshot-scale ingestion.
 - Raw OpenAlex payloads and normalized rows are both retained.
 - Snapshot versions, ingest runs, and watermarks are first-class state.
-- Evaluation ships with the MVP instead of being postponed.
+- Evaluation is included from the first usable web version instead of being postponed.
 
 ## Current status - 2026-04
 
-Research Radar is a deployed, product-shaped prototype. The current public slice includes:
+Research Radar is a deployed working prototype. The current public corpus views include:
 
 - lexical Search over title + abstract
 - materialized Recommended feeds for emerging and undercited families, plus a bridge preview/diagnostics surface

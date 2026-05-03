@@ -12,7 +12,7 @@ const FAMILY_LABEL: Record<Family, string> = {
 const FAMILY_SUMMARY: Record<Family, string> = {
   emerging: "Momentum-weighted papers gaining relevance inside your curated slice.",
   bridge:
-    "Candidate bridge papers with measured cross-cluster signal. Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and product policy support stronger recommender claims.",
+    "Candidate bridge papers with measured cross-cluster signal. Bridge stays in review mode until labeled review, proxy evaluation, and product policy support stronger recommender claims.",
   undercited: "Low-cite candidates that appear stronger than their current attention level."
 };
 
@@ -24,8 +24,8 @@ const FAMILY_NOTES: Record<Family, string[]> = {
   ],
   bridge: [
     "Bridge signal is currently measured for inspection and not used in ordering for this public run.",
-    "Use this page as a diagnostics surface for cross-cluster candidates, not a validated bridge recommender.",
-    "Bridge remains a diagnostic review surface until labeled review, proxy evaluation, and product policy support stronger recommender claims."
+    "Use this page to inspect cross-cluster candidates; it is not a validated bridge recommender.",
+    "Stronger bridge recommender claims should wait for labeled review, proxy evaluation, and product policy."
   ],
   undercited: [
     "These rows are judged against a low-cite candidate pool, not the whole corpus.",
@@ -570,7 +570,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 <strong>Diagnostics:</strong> bridge signal is <strong>measured</strong> and visible in this
                 run for inspection. Depending on the pinned run, it may be measured-only or experimental,
                 so this page is a <strong>preview / diagnostics</strong>{" "}
-                surface, not a validated bridge recommender.
+                view while validation evidence is still limited.
               </p>
             ) : null}
             {family === "bridge" ? (
@@ -849,7 +849,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                       <span className="stamp">{bridgeEligibilityLabel(item.bridge_eligible)}</span>
                     ) : null}
                     {focusPaperId === item.paper_id ? <span className="stamp">Focus paper</span> : null}
-                    <span className="stamp">{item.topics.length} topic label{item.topics.length === 1 ? "" : "s"}</span>
+                    <span className="stamp">
+                      {item.topics.length} {item.topics.length === 1 ? "topic label" : "topic labels"}
+                    </span>
                   </div>
                   {item.topics.length > 0 ? (
                     <div className="chip-row" aria-label="Top topics">
@@ -907,7 +909,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           <p>
             ML milestone 1 delivers retrieval for similar papers. Writing{" "}
             <code>semantic_score</code> into ranked families stays gated until a defined relevance target;
-            bridge remains a diagnostic review surface until labeled review, proxy evaluation, and
+            bridge stays in review mode until labeled review, proxy evaluation, and
             product policy support stronger recommender claims.
           </p>
         </article>

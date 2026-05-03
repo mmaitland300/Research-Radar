@@ -18,10 +18,10 @@ A work is in the **low-cite candidate pool** when all of the following hold:
 
 **Ordering reference (for API parity):** `year DESC`, `citation_count ASC`, `openalex_id ASC`.
 
-## What this is not
+## Scope boundaries
 
-- Not the full ranked **undercited family** from `paper_scores` (that uses additional signals and per-run config).
-- Not a promise of “undiscovered gems only”; it is a **transparent filter** for a comparable candidate set.
+- This is separate from the full ranked **undercited family** from `paper_scores`, which uses additional signals and per-run config.
+- This is not a promise of “undiscovered gems only”; it is a **transparent filter** for a comparable candidate set.
 
 ## API alignment
 
