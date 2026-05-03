@@ -14,6 +14,9 @@ const API_BASE_URL =
 
 const RANKING_VERSION = process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
 
+const API_UNAVAILABLE_MESSAGE =
+  "The Research Radar API is unavailable. Try again later, or check the repository setup docs if you are running it locally.";
+
 type EvalPaper = {
   paper_id: string;
   title: string;
@@ -216,10 +219,10 @@ async function fetchBridgeDistinctness(
     }
     const payload = (await response.json()) as BridgeDistinctnessResponse;
     return { kind: "ok", data: payload };
-  } catch (e) {
+  } catch {
     return {
       kind: "error",
-      message: e instanceof Error ? e.message : "Unknown error",
+      message: API_UNAVAILABLE_MESSAGE,
       status: null,
       detail: null
     };
@@ -307,7 +310,7 @@ function ArmColumn({
       <ArmProxyStats arm={arm} />
       <ul className="result-list">
         {arm.items.length === 0 ? (
-          <li className="result-item">No papers in this slice.</li>
+          <li className="result-item">No papers in this list.</li>
         ) : (
           arm.items.map((item) => (
             <li
@@ -396,10 +399,10 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
       }
       const data = (await response.json()) as EvalCompareResponse;
       return { data, error: null, status: 200 };
-    } catch (e) {
+    } catch {
       return {
         data: null,
-        error: e instanceof Error ? e.message : "Unknown error",
+        error: API_UNAVAILABLE_MESSAGE,
         status: null
       };
     }
@@ -601,8 +604,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                     ) : null}
                   </p>
                   <p className="muted-inline">
-                    Suggested operator action: run a bridge-v2 zero-weight ranking with neighbor_mix_v1, then
-                    reload this page.
+                    Use a pinned bridge run with recorded bridge-signal diagnostics, then reload this page.
                   </p>
                 </div>
               ) : (
@@ -746,9 +748,9 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
           </div>
 
           <p className="muted-inline">
-            Generated at {data.generated_at} | Current view: proxy evaluation and citation/date baseline
-            comparison. Later work could add labeled sets, P@k, or freeze-at-T studies if/when labels exist—see
-            product checklist in API <code>/api/v1/evaluation/summary</code>.
+            Generated at {data.generated_at}. This page shows citation and date baselines plus
+            distributional checks on short lists. For roadmap-style framing, see{" "}
+            <code>/api/v1/evaluation/summary</code>.
           </p>
         </>
       ) : null}

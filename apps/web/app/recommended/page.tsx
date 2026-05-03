@@ -19,7 +19,7 @@ const FAMILY_SUMMARY: Record<Family, string> = {
 const FAMILY_NOTES: Record<Family, string[]> = {
   emerging: [
     "Topic-growth and citation-velocity signals should dominate the list.",
-    "General semantic relevance is not treated as a default quality score. Some pinned runs use embedding slice-fit as one bounded ranking feature, and the UI labels when that feature is used.",
+    "General semantic relevance is not treated as a default quality score. Some pinned runs use embedding fit as one bounded ranking feature, and the UI labels when that feature is used.",
     "The goal is early importance, not raw popularity."
   ],
   bridge: [
@@ -713,11 +713,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 {focusItem
                   ? (
                     <>
-                      {` is visible in this ${FAMILY_LABEL[family].toLowerCase()} slice. `}
+                      {` is visible in this ${FAMILY_LABEL[family].toLowerCase()} list. `}
                       <Link href={`#${paperAnchorId(focusPaperId)}`}>Jump to focused row</Link>.
                     </>
                   )
-                  : ` is not in the current top ${limit} rows for this slice, but the run context is still pinned while you switch families.`}
+                  : ` is not in the current top ${limit} rows for this view, but the run context is still pinned while you switch families.`}
               </p>
             ) : null}
             <details className="ranking-why-details">

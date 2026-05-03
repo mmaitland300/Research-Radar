@@ -17,7 +17,7 @@ const cards = [
   {
     title: "Evaluation First",
     body:
-      "Pair proxy evaluation with baseline comparison so ranking behavior can be inspected before stronger quality claims are made."
+      "Pair baseline comparison with simple citation and date sorts so ranking behavior can be inspected before stronger quality claims are made."
   }
 ];
 

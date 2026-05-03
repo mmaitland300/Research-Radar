@@ -47,10 +47,11 @@ async function fetchTopicTrends(): Promise<{
 
     const data = (await response.json()) as TopicTrendsResponse;
     return { data, error: null };
-  } catch (error) {
+  } catch {
     return {
       data: null,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error:
+        "The Research Radar API is unavailable. Try again later, or check the repository setup docs if you are running it locally."
     };
   }
 }
@@ -76,7 +77,7 @@ export default async function TrendsPage() {
         <div className="panel-header">
           <div>
             <p className="eyebrow family-bridge">Trends</p>
-            <h1>Topic momentum inside your curated slice only.</h1>
+            <h1>Topic momentum in the current dataset only.</h1>
           </div>
           <div className="stamp-row">
             <span className="stamp">Curated corpus trends</span>
