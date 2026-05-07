@@ -1,70 +1,38 @@
 # Research Radar
 
-Research Radar is a working prototype for ranking and explaining papers in a curated MIR + audio-ML corpus, with bridge signal exposed for review before stronger recommender claims.
+Research Radar is a deployed prototype for ranking and explaining papers in a curated MIR and audio-ML corpus. It surfaces search, recommendations, paper details, trends, and proxy evaluation while keeping bridge diagnostics explicitly experimental.
 
-The V1 thesis is:
+## What It Is
 
-> Find emerging and undercited papers in audio ML, while exposing bridge-candidate diagnostics as an experimental bridge review arm. Default readiness and stronger recommender claims require further evidence—scaled evaluation, labeling, and policy. Those claims need more than bridge weighting alone.
+- A Next.js + FastAPI + Python pipeline project backed by PostgreSQL and pgvector.
+- A reviewer-facing tool for finding emerging and undercited audio-ML papers in a deliberately narrow corpus.
+- An explainable ranking prototype, not a validated recommender system.
 
-V1 is intentionally scoped to `MIR + audio representation learning`, with `neural audio effects` and `music/audio generation` deferred to a controlled edge slice in `V1.1` unless a paper clearly connects back to the core corpus.
+## Status
 
-## Repo layout
+Current status as of 2026-04: deployed working prototype.
 
-- `apps/web` - Next.js frontend for search, recommendations, trends, and evaluation
-- `apps/api` - FastAPI service for metadata, rankings, and explanation endpoints
-- `services/pipeline` - Python ETL, bootstrap ingest planning, and ranking jobs
-- `infra/db` - PostgreSQL + pgvector schema
-- `docs` - build brief, roadmap, and implementation notes
+Implemented public surfaces:
 
-## Product pages in V1
-
-- `Search`
-- `Recommended`
-- `Paper Detail`
-- `Trends`
-- `Evaluation`
-
-`Idea Graph` is explicitly out of scope for V1.
-
-## Engineering principles
-
-- Ranking is the product, not graph visualization.
-- Every recommendation should be explainable with per-signal breakdowns.
-- Bootstrap the curated corpus through the OpenAlex API before any snapshot-scale ingestion.
-- Raw OpenAlex payloads and normalized rows are both retained.
-- Snapshot versions, ingest runs, and watermarks are first-class state.
-- Evaluation is included from the first usable web version instead of being postponed.
-
-## Current status - 2026-04
-
-Research Radar is a deployed working prototype. The current public corpus views include:
-
-- lexical Search over title + abstract
-- materialized Recommended feeds for emerging and undercited families, plus a bridge preview/diagnostics surface
-- Paper Detail with metadata, topic labels, ranking placement, and embedding-backed neighbors when `NEXT_PUBLIC_EMBEDDING_VERSION` is pinned
-- Trends over the curated corpus (not OpenAlex-wide)
+- Search over title and abstract text
+- Recommended feeds for emerging and undercited papers, plus bridge preview/diagnostics
+- Paper Detail with metadata, topic labels, ranking placement, and optional similar papers
+- Trends over the curated corpus
 - Evaluation comparing ranked output against citation/date baselines
 
-Current limits: corpus is intentionally narrow (currently TISMIR + JAES), evaluation is proxy-only, and bridge remains experimental.
+Current corpus scope is intentionally narrow: TISMIR + JAES. `Idea Graph` is explicitly out of scope for V1.
 
-For a short reviewer-oriented proof map, see `docs/reviewer-brief.md`. The full planning log remains in `docs/roadmap.md`.
+## Demo
 
-**Bootstrap corpus (implemented):** OpenAlex ingest is wired for the venues in `services/pipeline/pipeline/policy.py` (currently **TISMIR** and **JAES**). The broader venue list in `docs/build-brief.md` is product intent; expand `policy.py` when adding sources.
+- Live app: [radar.mmaitland.dev](https://radar.mmaitland.dev)
+- Recommended emerging papers: [recommended?family=emerging](https://radar.mmaitland.dev/recommended?family=emerging)
+- Paper detail example: [OpenAlex W3093121331](https://radar.mmaitland.dev/papers/https%3A%2F%2Fopenalex.org%2FW3093121331)
+- Trends: [trends](https://radar.mmaitland.dev/trends)
+- Evaluation: [evaluation?family=emerging](https://radar.mmaitland.dev/evaluation?family=emerging)
 
-### Embedding versions and the web UI
+## Run Locally
 
-Multiple rows in `embeddings` can coexist: each vector is keyed by `(work_id, embedding_version)`. Typical workflow:
-
-- Run `embed-works` with one label (e.g. `v1-title-abstract-1536`).
-- After text normalization or model changes, run again with a **new** label (e.g. `v1-title-abstract-1536-cleantext`) so Pass 1 / Pass 2 retrieval reviews stay comparable without overwriting prior vectors.
-
-`NEXT_PUBLIC_EMBEDDING_VERSION` selects which label the **paper detail** “Similar papers” block calls (`GET /api/v1/papers/{id}/similar?embedding_version=...`). Match it to the version you are demoing or reviewing so UI and ML1d worksheets do not drift. The API always accepts an explicit `embedding_version` query parameter for scripts and reviews.
-
-## Quickstart vertical slice (works now)
-
-This repo supports a complete local path: bootstrap a small corpus, start the API/web apps, and inspect live Search + Recommended + Trends + Evaluation surfaces backed by Postgres.
-
-### Fast path commands
+This path bootstraps a small corpus, starts the API and web apps, and lets you inspect Search, Recommended, Trends, and Evaluation backed by Postgres.
 
 ```bash
 docker compose up -d
@@ -81,24 +49,54 @@ npm run dev:web
 
 Open `http://localhost:3000/search`.
 
-After ingest, you can persist a Step-2 stub ranking run (writes `ranking_runs` + `paper_scores`):
-
-`python -m pipeline.cli ranking-run --ranking-version v0-heuristic-no-embeddings`
-
-You can also materialize one embedding per included work from `title + abstract` (stored text; cleantext normalization runs at ingest in `normalize.py` / `openalex_text.py`):
-
-`python -m pipeline.cli embed-works --embedding-version v1-title-abstract-1536`
-
-Use a **distinct** `--embedding-version` string for each comparable retrieval experiment (e.g. cleantext follow-up) so both vector sets remain in Postgres.
-
 ### Required env vars
 
 - `DATABASE_URL` or equivalent `PG*` vars (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`)
 - `OPENALEX_MAILTO`
 - `OPENAI_API_KEY` for `embed-works`
 - `API_BASE_URL` or `NEXT_PUBLIC_API_BASE_URL` (optional; default API target is `http://localhost:8000`)
-- `NEXT_PUBLIC_EMBEDDING_VERSION` (optional; pins which `embedding_version` the Similar papers UI uses; must match a row set you have written — see “Embedding versions and the web UI” above)
+- `NEXT_PUBLIC_EMBEDDING_VERSION` (optional; pins which `embedding_version` the Similar papers UI uses)
 - `OPENAI_BASE_URL` (optional; defaults to `https://api.openai.com/v1`)
+
+## Evidence
+
+- Reviewer proof map: [docs/reviewer-brief.md](docs/reviewer-brief.md)
+- Ranked recommendation API tests: [apps/api/tests/test_recommendations_ranked.py](apps/api/tests/test_recommendations_ranked.py)
+- Evaluation API tests: [apps/api/tests/test_evaluation_compare.py](apps/api/tests/test_evaluation_compare.py)
+- Ranked explanation surface: [apps/web/app/recommended/page.tsx](apps/web/app/recommended/page.tsx)
+- CI validates the web build and pipeline/API tests through `npm run validate`.
+
+## Limits
+
+- The corpus is intentionally narrow and currently wired to TISMIR + JAES.
+- Evaluation is proxy-only, not a human-labeled relevance benchmark.
+- Bridge remains experimental; bridge diagnostics are review evidence, not default-readiness proof.
+- Embedding-backed similar papers require stored vectors and a matching `NEXT_PUBLIC_EMBEDDING_VERSION`.
+- The broader venue list in [docs/build-brief.md](docs/build-brief.md) is product intent; expand `services/pipeline/pipeline/policy.py` when adding sources.
+
+## Repo Layout
+
+- `apps/web` - Next.js frontend for search, recommendations, trends, and evaluation
+- `apps/api` - FastAPI service for metadata, rankings, and explanation endpoints
+- `services/pipeline` - Python ETL, bootstrap ingest planning, and ranking jobs
+- `infra/db` - PostgreSQL + pgvector schema
+- `docs` - build brief, roadmap, reviewer brief, and implementation notes
+
+## Quickstart Details
+
+After ingest, you can persist a Step-2 stub ranking run, which writes `ranking_runs` and `paper_scores`:
+
+```bash
+python -m pipeline.cli ranking-run --ranking-version v0-heuristic-no-embeddings
+```
+
+You can also materialize one embedding per included work from stored `title + abstract` text:
+
+```bash
+python -m pipeline.cli embed-works --embedding-version v1-title-abstract-1536
+```
+
+Use a distinct `--embedding-version` string for each comparable retrieval experiment so vector sets remain side by side in Postgres.
 
 ### What to expect
 
@@ -107,13 +105,13 @@ Use a **distinct** `--embedding-version` string for each comparable retrieval ex
 - Pipeline unit tests run in CI
 - Web build runs in CI
 
-### Pre-merge checks (local)
+### Pre-merge checks
 
-From the repo root, with Node and (for Python) the same interpreter CI uses:
+From the repo root, with Node and the same Python interpreter CI uses:
 
-- `npm run validate:web` — `lint:web` and `build:web`
-- `npm run validate:py` — `python -m pytest services/pipeline/tests apps/api/tests -q` (same paths as `.github/workflows/ci.yml`)
-- `npm run validate` — both of the above (skips or fails the Python step if `python` is not on `PATH`; run the two commands separately in that case)
+- `npm run validate:web` - `lint:web` and `build:web`
+- `npm run validate:py` - `python -m pytest services/pipeline/tests apps/api/tests -q`
+- `npm run validate` - both of the above
 
 ### If it fails, check
 
@@ -122,8 +120,42 @@ From the repo root, with Node and (for Python) the same interpreter CI uses:
 - `ingest_runs` in Postgres
 - API startup logs for DB connection errors
 
-If you change ranking tables in `infra/db/schema.sql` after the DB was first initialized, recreate the Postgres volume (or apply the DDL manually) so `ranking_runs` and `paper_scores` stay in sync.
+If you change ranking tables in `infra/db/schema.sql` after the DB was first initialized, recreate the Postgres volume or apply the DDL manually so `ranking_runs` and `paper_scores` stay in sync.
 
-For more detailed bootstrap failure checkpoints, see `docs/bootstrap-run-tutorial.md`.
+For more detailed bootstrap failure checkpoints, see [docs/bootstrap-run-tutorial.md](docs/bootstrap-run-tutorial.md).
 
-For frozen low-citation candidate semantics (before ranking changes), see `docs/candidate-pool-low-cite.md`.
+For frozen low-citation candidate semantics before ranking changes, see [docs/candidate-pool-low-cite.md](docs/candidate-pool-low-cite.md).
+
+## Design Scope
+
+The V1 thesis is:
+
+> Find emerging and undercited papers in audio ML, while exposing bridge-candidate diagnostics as an experimental bridge review arm. Default readiness and stronger recommender claims require further evidence: scaled evaluation, labeling, and policy. Those claims need more than bridge weighting alone.
+
+V1 is scoped to `MIR + audio representation learning`, with `neural audio effects` and `music/audio generation` deferred to a controlled edge slice in `V1.1` unless a paper clearly connects back to the core corpus.
+
+## Product Surfaces
+
+- `Search`
+- `Recommended`
+- `Paper Detail`
+- `Trends`
+- `Evaluation`
+
+## Engineering Principles
+
+- Ranking is the product, not graph visualization.
+- Every recommendation should be explainable with per-signal breakdowns.
+- Bootstrap the curated corpus through the OpenAlex API before any snapshot-scale ingestion.
+- Raw OpenAlex payloads and normalized rows are both retained.
+- Snapshot versions, ingest runs, and watermarks are first-class state.
+- Evaluation is included from the first usable web version instead of being postponed.
+
+## Embedding Versions and the Web UI
+
+Multiple rows in `embeddings` can coexist: each vector is keyed by `(work_id, embedding_version)`. Typical workflow:
+
+- Run `embed-works` with one label, such as `v1-title-abstract-1536`.
+- After text normalization or model changes, run again with a new label, such as `v1-title-abstract-1536-cleantext`, so retrieval reviews stay comparable without overwriting prior vectors.
+
+`NEXT_PUBLIC_EMBEDDING_VERSION` selects which label the Paper Detail "Similar papers" block calls through `GET /api/v1/papers/{id}/similar?embedding_version=...`. Match it to the version you are demoing or reviewing so the UI and ML worksheets do not drift. The API always accepts an explicit `embedding_version` query parameter for scripts and reviews.
