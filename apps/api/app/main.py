@@ -53,6 +53,22 @@ from app.contracts import (
     UndercitedRecommendationsResponse,
     utc_now,
 )
+from app.demo_fixtures import (
+    fixture_bridge_distinctness,
+    fixture_cluster_inspection,
+    fixture_evaluation_compare,
+    fixture_mode_enabled,
+    fixture_paper_detail,
+    fixture_paper_ranking,
+    fixture_papers,
+    fixture_product_summary,
+    fixture_ranked_recommendations,
+    fixture_readiness,
+    fixture_search,
+    fixture_similar_papers,
+    fixture_topic_trends,
+    fixture_undercited_recommendations,
+)
 from app.clusters_repo import load_cluster_inspection
 from app.bridge_distinctness_repo import load_bridge_distinctness_report
 from app.evaluation_repo import EvalListArm, load_evaluation_compare
@@ -136,6 +152,8 @@ def health_check() -> HealthResponse:
 
 @app.get("/readyz", response_model=ReadinessResponse)
 def readiness() -> ReadinessResponse:
+    if fixture_mode_enabled():
+        return fixture_readiness()
     try:
         with psycopg.connect(database_url_from_env()) as conn:
             conn.execute("SELECT 1").fetchone()
@@ -146,6 +164,8 @@ def readiness() -> ReadinessResponse:
 
 @app.get("/api/v1/meta/product", response_model=ProductSummary)
 def get_product_summary() -> ProductSummary:
+    if fixture_mode_enabled():
+        return fixture_product_summary()
     materialized = None
     try:
         row = fetch_latest_materialized_ranking_for_meta()
@@ -195,6 +215,12 @@ def get_recommendations_undercited(
     Global query (not corpus-snapshot scoped). For snapshot-scoped comparisons, use
     GET /api/v1/evaluation/compare?family=undercited. Not a trained ranking model.
     """
+    if fixture_mode_enabled():
+        return fixture_undercited_recommendations(
+            limit=limit,
+            min_year=min_year,
+            max_citations=max_citations,
+        )
     try:
         rows = list_undercited_heuristic_v0(
             limit=limit,
@@ -255,6 +281,12 @@ def get_recommendations_ranked(
     Read persisted paper_scores for a succeeded ranking run (latest for snapshot unless
     ranking_run_id or ranking_version narrows the choice).
     """
+    if fixture_mode_enabled():
+        return fixture_ranked_recommendations(
+            family=family,
+            limit=limit,
+            bridge_eligible_only=bridge_eligible_only,
+        )
     try:
         resolved = list_ranked_recommendations(
             family=family,
@@ -377,6 +409,8 @@ def get_evaluation_compare(
     Evaluation v0: ranked family vs citation-ordered and date-ordered baselines on the same pool.
     Proxy stats only — see response disclaimer.
     """
+    if fixture_mode_enabled():
+        return fixture_evaluation_compare(family=family, limit=limit)
     try:
         payload = load_evaluation_compare(
             database_url=database_url_from_env(),
@@ -444,6 +478,8 @@ def get_bridge_distinctness(
             detail="ranking_run_id is required and must not be blank.",
         )
     rid = ranking_run_id.strip()
+    if fixture_mode_enabled():
+        return fixture_bridge_distinctness(k=k)
     try:
         payload = load_bridge_distinctness_report(
             database_url=database_url_from_env(),
@@ -510,6 +546,12 @@ def get_topic_trends(
     min_works: int = Query(default=2, ge=1, le=10_000),
     corpus_snapshot_version: str | None = Query(default=None),
 ) -> TopicTrendsResponse:
+    if fixture_mode_enabled():
+        return fixture_topic_trends(
+            limit=limit,
+            since_year=since_year,
+            min_works=min_works,
+        )
     try:
         result = list_topic_trends(
             limit=limit,
@@ -553,6 +595,8 @@ def get_cluster_inspection(
     Inspect cluster assignments for a clustering run: per-cluster size and sample paper titles.
     Clustering uses kmeans-l2 on stored vectors; similar-papers uses cosine distance (see metric_note).
     """
+    if fixture_mode_enabled():
+        return fixture_cluster_inspection(sample_per_cluster=sample_per_cluster)
     try:
         payload = load_cluster_inspection(
             cluster_version=cluster_version,
@@ -610,6 +654,15 @@ def get_paper_similar(
     """
     Nearest included neighbors by cosine similarity on persisted vectors for embedding_version.
     """
+    if fixture_mode_enabled():
+        fixture_result = fixture_similar_papers(
+            paper_id=paper_id,
+            embedding_version=embedding_version,
+            limit=limit,
+        )
+        if fixture_result is None:
+            raise HTTPException(status_code=404, detail="Paper not found in fixture corpus.")
+        return fixture_result
     try:
         result = list_similar_papers(
             paper_id=paper_id,
@@ -659,6 +712,11 @@ def get_paper_ranking(
     ranking_run_id: str | None = Query(default=None),
     ranking_version: str | None = Query(default=None),
 ) -> PaperRankingResponse:
+    if fixture_mode_enabled():
+        fixture_result = fixture_paper_ranking(paper_id=paper_id, top_n=top_n)
+        if fixture_result is None:
+            raise HTTPException(status_code=404, detail="Paper not found in fixture corpus.")
+        return fixture_result
     try:
         paper = get_paper_detail_row(paper_id)
     except Exception as exc:
@@ -748,6 +806,11 @@ def get_paper_ranking(
 
 @app.get("/api/v1/papers/{paper_id:path}", response_model=PaperDetail)
 def get_paper_detail(paper_id: str) -> PaperDetail:
+    if fixture_mode_enabled():
+        fixture_result = fixture_paper_detail(paper_id)
+        if fixture_result is None:
+            raise HTTPException(status_code=404, detail="Paper not found in fixture corpus.")
+        return fixture_result
     try:
         paper = get_paper_detail_row(paper_id)
     except Exception as exc:
@@ -775,6 +838,8 @@ def get_papers(
     q: str | None = Query(default=None, min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
 ) -> PaperListResponse:
+    if fixture_mode_enabled():
+        return fixture_papers(q=q, limit=limit)
     try:
         papers = list_papers(limit=limit, q=q)
     except Exception as exc:
@@ -816,6 +881,20 @@ def get_search(
     ranking_run_id: str | None = Query(default=None),
     ranking_version: str | None = Query(default=None),
 ) -> SearchResponse:
+    if fixture_mode_enabled():
+        return fixture_search(
+            q=q,
+            limit=limit,
+            offset=offset,
+            year_from=year_from,
+            year_to=year_to,
+            included_scope=included_scope,
+            source_slug=source_slug,
+            topic=topic,
+            family_hint=family_hint,
+            ranking_run_id=ranking_run_id,
+            ranking_version=ranking_version,
+        )
     try:
         payload = search_papers(
             q=q,

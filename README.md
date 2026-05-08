@@ -30,7 +30,28 @@ Current corpus scope is intentionally narrow: TISMIR + JAES. `Idea Graph` is exp
 - Trends: [trends](https://radar.mmaitland.dev/trends)
 - Evaluation: [evaluation?family=emerging](https://radar.mmaitland.dev/evaluation?family=emerging)
 
-## Run Locally
+## No-Key Local Demo
+
+Use this path when you want to inspect the UI/API quickly without Postgres,
+pgvector, OpenAlex, or OpenAI credentials. It starts the same FastAPI and Next.js
+apps, but sets `RESEARCH_RADAR_DATA_MODE=fixture` so API responses come from a
+tiny checked-in fixture corpus.
+
+```bash
+pip install -e ./apps/api
+npm install
+npm run demo:local
+```
+
+Open `http://localhost:3000/search`, then try Recommended, Trends, Evaluation,
+and a paper detail page. Fixture mode is for reviewer walkthroughs only; it is
+not live ranking data and should not be cited as model validation. The launcher
+also pins fixture ranking and embedding versions so the UI stays deterministic.
+For API-shape compatibility, fixture mode accepts parameters such as
+`ranking_run_id`, `corpus_snapshot_version`, and `cluster_version`, but it always
+resolves them to the checked-in fixture run metadata.
+
+## Full Postgres Run Locally
 
 This path bootstraps a small corpus, starts the API and web apps, and lets you inspect Search, Recommended, Trends, and Evaluation backed by Postgres.
 
@@ -49,7 +70,7 @@ npm run dev:web
 
 Open `http://localhost:3000/search`.
 
-### Required env vars
+### Required env vars for the full Postgres path
 
 - `DATABASE_URL` or equivalent `PG*` vars (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`)
 - `OPENALEX_MAILTO`
