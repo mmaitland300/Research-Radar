@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev",
+    "demo:local": "node scripts/demo-local.mjs",
     "build:web": "npm --workspace apps/web run build",
     "lint:web": "npm --workspace apps/web run lint",
     "validate:web": "npm run lint:web && npm run build:web",
