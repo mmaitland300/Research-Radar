@@ -47,6 +47,9 @@ Open `http://localhost:3000/search`, then try Recommended, Trends, Evaluation,
 and a paper detail page. Fixture mode is for reviewer walkthroughs only; it is
 not live ranking data and should not be cited as model validation. The launcher
 also pins fixture ranking and embedding versions so the UI stays deterministic.
+For API-shape compatibility, fixture mode accepts parameters such as
+`ranking_run_id`, `corpus_snapshot_version`, and `cluster_version`, but it always
+resolves them to the checked-in fixture run metadata.
 
 ## Full Postgres Run Locally
 
