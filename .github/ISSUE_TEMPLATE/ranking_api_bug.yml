@@ -1,0 +1,86 @@
+name: Ranking or API bug
+description: Report a reproducible ranking, evaluation, trends, cluster, or API-contract issue.
+title: "[Ranking/API]: "
+labels: ["bug", "api"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when a response shape, ranking result, evaluation result,
+        or route behavior looks wrong. Prefer fixture-mode reproductions when
+        possible so the bug can be checked without private keys or a database.
+  - type: dropdown
+    id: endpoint_area
+    attributes:
+      label: Endpoint area
+      options:
+        - Recommendations ranked
+        - Recommendations undercited
+        - Evaluation
+        - Trends
+        - Paper detail
+        - Similar papers
+        - Cluster inspect
+        - Bridge distinctness
+        - Search
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: route
+    attributes:
+      label: Route or command
+      placeholder: GET /api/v1/recommendations/ranked?family=bridge&limit=20
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Reproduction mode
+      options:
+        - Fixture demo, no keys/no DB
+        - Full Postgres path
+        - Deployed site
+        - CI
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Relevant run/artifact identifiers
+      description: Fill in any values that apply; leave unknown values blank.
+      placeholder: |
+        ranking_run_id:
+        ranking_version:
+        corpus_snapshot_version:
+        embedding_version:
+        cluster_version:
+  - type: textarea
+    id: request
+    attributes:
+      label: Request details
+      description: Include query params, request body, or CLI args.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: response
+    attributes:
+      label: Observed response or output
+      description: Redact any sensitive data before posting.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Explain the contract or ranking behavior you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Include related docs, tests, screenshots, or suspected files.

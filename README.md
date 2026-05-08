@@ -91,9 +91,18 @@ Open `http://localhost:3000/search`.
 
 - The corpus is intentionally narrow and currently wired to TISMIR + JAES.
 - Evaluation is proxy-only, not a human-labeled relevance benchmark.
-- Bridge remains experimental; bridge diagnostics are review evidence, not default-readiness proof.
+- Bridge remains experimental; diagnostics should not be read as default-readiness claims.
 - Embedding-backed similar papers require stored vectors and a matching `NEXT_PUBLIC_EMBEDDING_VERSION`.
 - The broader venue list in [docs/build-brief.md](docs/build-brief.md) is product intent; expand `services/pipeline/pipeline/policy.py` when adding sources.
+
+## Contributing And Security
+
+Focused issue reports and small PRs are welcome for reproducible API/ranking
+bugs, fixture demo issues, tests, and documentation corrections. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+Do not post API keys, database URLs, `.env` files, private database dumps, or
+unredacted provider payloads in issues or PRs. See [SECURITY.md](SECURITY.md).
 
 ## Repo Layout
 

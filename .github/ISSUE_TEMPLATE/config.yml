@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security reports
+    url: https://github.com/mmaitland300/Research-Radar/blob/main/SECURITY.md
+    about: Please do not post secrets or exploit details in public issues.
+  - name: Contribution guide
+    url: https://github.com/mmaitland300/Research-Radar/blob/main/CONTRIBUTING.md
+    about: Start here for local setup, checks, and contribution scope.

@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a reproducible Research Radar bug.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping tighten Research Radar. Please do not include API
+        keys, database URLs, private dumps, or unredacted provider payloads.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - No-key fixture demo
+        - Web app
+        - API
+        - Pipeline
+        - Database/schema
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Run mode
+      options:
+        - Fixture demo, no keys/no DB
+        - Full Postgres path
+        - Deployed site
+        - CI
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit or branch
+      placeholder: main, feature branch, or commit SHA
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include commands, routes, or clicks needed to reproduce.
+      placeholder: |
+        1. Run `npm run demo:local`
+        2. Open `/recommended?family=emerging`
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste only redacted logs. Do not include secrets or private data.
+      render: shell
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, Node version, Python version, browser, database mode
