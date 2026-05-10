@@ -81,7 +81,8 @@ Open `http://localhost:3000/search`.
 
 ## Evidence
 
-- Reviewer proof map: [docs/reviewer-brief.md](docs/reviewer-brief.md)
+- Evaluation status: [EVALUATION.md](EVALUATION.md)
+- Reviewer brief: [docs/reviewer-brief.md](docs/reviewer-brief.md)
 - Ranked recommendation API tests: [apps/api/tests/test_recommendations_ranked.py](apps/api/tests/test_recommendations_ranked.py)
 - Evaluation API tests: [apps/api/tests/test_evaluation_compare.py](apps/api/tests/test_evaluation_compare.py)
 - Ranked explanation surface: [apps/web/app/recommended/page.tsx](apps/web/app/recommended/page.tsx)
