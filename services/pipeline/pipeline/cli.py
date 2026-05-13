@@ -1285,6 +1285,52 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_source_split_error_parser = subparsers.add_parser(
+        "ml-source-split-error-analysis",
+        help="Offline blind-row error analysis for the frozen source-split tiny baseline",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--source-split-artifact",
+        required=True,
+        help="Path to ml-source-split-tiny-baseline JSON artifact",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id, must match source artifact provenance",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--family",
+        required=True,
+        choices=["emerging"],
+        help="Score family, must match source artifact provenance",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write error-analysis JSON",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write error-analysis Markdown",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--top-n",
+        type=int,
+        default=10,
+        help="Max detail rows per list (default 10)",
+    )
+    ml_source_split_error_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     ml_tiny_baseline_rollup_parser = subparsers.add_parser(
         "ml-tiny-baseline-rollup",
         help="Offline emerging rollup: fold robustness + ablations vs heuristic (read-only DB)",
@@ -1806,6 +1852,41 @@ def main() -> None:
             )
         except MLSourceSplitTinyBaselineError as e:
             print(f"ml-source-split-tiny-baseline: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-source-split-error-analysis":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_source_split_error_analysis import (
+            MLSourceSplitErrorAnalysisError,
+            run_ml_source_split_error_analysis_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        top_n = int(getattr(args, "top_n", 10) or 10)
+        if top_n < 1 or top_n > 100:
+            parser.error("--top-n must be between 1 and 100")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_source_split_error_analysis_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                source_split_artifact_path=Path(args.source_split_artifact),
+                ranking_run_id=rid,
+                family=str(args.family),
+                output_json=out_json,
+                markdown_output=out_md,
+                top_n=top_n,
+            )
+        except MLSourceSplitErrorAnalysisError as e:
+            print(f"ml-source-split-error-analysis: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
