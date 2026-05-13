@@ -43,6 +43,9 @@ BLIND_SNAPSHOT_REVIEW_V2_REVIEW_COLUMNS = {
 HARD_NEGATIVE_REVIEW_V1_WORKSHEET_VERSION = "ml-hard-negative-review-v1"
 HARD_NEGATIVE_REVIEW_V1_EXPECTED_ROWS = 7
 HARD_NEGATIVE_REVIEW_POOL_VARIANT = "ml_hard_negative_audit"
+EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION = "ml-external-near-miss-review-v1"
+EXTERNAL_NEAR_MISS_REVIEW_V1_EXPECTED_ROWS = 60
+EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT = "ml_external_near_miss_audit"
 ALLOWED_RELEVANCE_LABELS = {"good", "acceptable", "miss", "irrelevant"}
 ALLOWED_NOVELTY_LABELS = {"surprising", "useful", "obvious", "not_useful", "neither"}
 ALLOWED_BRIDGE_LIKE_LABELS = {"yes", "partial", "no", "not_applicable"}
@@ -375,6 +378,16 @@ def stable_hard_negative_v1_row_id(
     return _sha256_text(payload)
 
 
+def stable_external_near_miss_v1_row_id(
+    *,
+    worksheet_version: str,
+    sample_seed: int | str,
+    paper_id: str,
+) -> str:
+    payload = f"{worksheet_version}|{sample_seed}|{paper_id}"
+    return _sha256_text(payload)
+
+
 def _load_json_object(path: Path) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -431,13 +444,49 @@ def _validate_nonempty_allowed_labels(row: dict[str, str], *, source_row_number:
     for field, allowed in checks:
         value = _norm_label_token(row.get(field))
         if not value:
-            raise MLLabelDatasetError(f"v2 labeled CSV row {source_row_number} has blank {field}")
+            raise MLLabelDatasetError(f"labeled CSV row {source_row_number} has blank {field}")
         if value not in allowed:
             raise MLLabelDatasetError(
-                f"v2 labeled CSV row {source_row_number} has unsupported {field}={row.get(field)!r}"
+                f"labeled CSV row {source_row_number} has unsupported {field}={row.get(field)!r}"
             )
     if not _norm_ws(row.get("reviewer_notes")):
-        raise MLLabelDatasetError(f"v2 labeled CSV row {source_row_number} has blank reviewer_notes")
+        raise MLLabelDatasetError(f"labeled CSV row {source_row_number} has blank reviewer_notes")
+
+
+def _norm_path_text(value: Any) -> str:
+    return _norm_ws(value).replace("\\", "/").lstrip("./")
+
+
+def _validate_sidecar_base_dataset_provenance(
+    *,
+    sidecar_provenance: dict[str, Any],
+    base_path: Path,
+    repo_root: Path,
+) -> tuple[str, str]:
+    base_sha = sha256_file(base_path)
+    sidecar_base_sha = _norm_ws(sidecar_provenance.get("label_dataset_sha256"))
+    if not sidecar_base_sha:
+        raise MLLabelDatasetError("external near-miss sidecar missing provenance.label_dataset_sha256")
+    if sidecar_base_sha != base_sha:
+        raise MLLabelDatasetError(
+            f"sidecar label_dataset_sha256 does not match base dataset SHA; sidecar={sidecar_base_sha}, base={base_sha}"
+        )
+
+    sidecar_base_path = _norm_path_text(sidecar_provenance.get("label_dataset_path"))
+    if not sidecar_base_path:
+        raise MLLabelDatasetError("external near-miss sidecar missing provenance.label_dataset_path")
+    base_rel = _repo_relative(base_path, repo_root=repo_root)
+    allowed = {
+        _norm_path_text(base_rel),
+        _norm_path_text(base_path.resolve().as_posix()),
+        _norm_path_text(base_path.name),
+    }
+    if sidecar_base_path not in allowed and not sidecar_base_path.endswith("/" + _norm_path_text(base_rel)):
+        raise MLLabelDatasetError(
+            "external near-miss sidecar label_dataset_path does not point to the base dataset; "
+            f"sidecar={sidecar_provenance.get('label_dataset_path')!r}, base={base_rel!r}"
+        )
+    return base_sha, sidecar_base_sha
 
 
 def _validate_labeled_matches_blank_template(
@@ -1252,6 +1301,257 @@ def build_ml_label_dataset_v6_hard_negative_ingest(
     )
 
 
+def build_ml_label_dataset_v7_external_near_miss_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    dataset_version: str = "ml-label-dataset-v7",
+) -> dict[str, Any]:
+    """Build v7 as v6 rows unchanged plus the validated external near-miss labeled slice."""
+    root = repo_root.resolve()
+    base_path = base_dataset_path.resolve()
+    blank_path = blank_worksheet_path.resolve()
+    labeled_path = labeled_worksheet_path.resolve()
+    sidecar_path = context_sidecar_path.resolve()
+    conflict_path = conflict_policy_path.resolve()
+    for path in (base_path, blank_path, labeled_path, sidecar_path, conflict_path):
+        if not path.is_file():
+            raise MLLabelDatasetError(f"required input not found: {path}")
+
+    base_payload = _load_json_object(base_path)
+    base_rows_raw = base_payload.get("rows")
+    if not isinstance(base_rows_raw, list):
+        raise MLLabelDatasetError(f"{base_path} missing rows array")
+    base_rows: list[dict[str, Any]] = copy.deepcopy(base_rows_raw)
+
+    blank_fieldnames, blank_rows = _read_csv_rows(blank_path)
+    labeled_fieldnames, labeled_rows = _read_csv_rows(labeled_path)
+    if len(labeled_rows) != EXTERNAL_NEAR_MISS_REVIEW_V1_EXPECTED_ROWS:
+        raise MLLabelDatasetError(
+            f"expected {EXTERNAL_NEAR_MISS_REVIEW_V1_EXPECTED_ROWS} external near-miss labeled rows, "
+            f"found {len(labeled_rows)}"
+        )
+
+    _validate_labeled_matches_blank_template(
+        blank_path=blank_path,
+        blank_fieldnames=blank_fieldnames,
+        blank_rows=blank_rows,
+        labeled_path=labeled_path,
+        labeled_fieldnames=labeled_fieldnames,
+        labeled_rows=labeled_rows,
+    )
+
+    sidecar_payload, sidecar_by_id = _read_v2_sidecar_rows(sidecar_path)
+    labeled_ids = {_norm_ws(r.get("row_id")) for r in labeled_rows}
+    if set(sidecar_by_id) != labeled_ids:
+        missing = sorted(labeled_ids - set(sidecar_by_id))
+        extra = sorted(set(sidecar_by_id) - labeled_ids)
+        raise MLLabelDatasetError(
+            f"external near-miss sidecar row_id set differs from labeled CSV; missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    sidecar_provenance = sidecar_payload.get("provenance") if isinstance(sidecar_payload.get("provenance"), dict) else {}
+    base_sha, sidecar_base_sha = _validate_sidecar_base_dataset_provenance(
+        sidecar_provenance=sidecar_provenance,
+        base_path=base_path,
+        repo_root=root,
+    )
+    sidecar_ws_version = _norm_ws(sidecar_provenance.get("worksheet_version"))
+    if sidecar_ws_version and sidecar_ws_version != EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION:
+        raise MLLabelDatasetError(
+            f"sidecar worksheet_version={sidecar_ws_version!r} does not match "
+            f"{EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION!r}"
+        )
+    sidecar_pool = _norm_ws(sidecar_provenance.get("review_pool_variant"))
+    if sidecar_pool and sidecar_pool != EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT:
+        raise MLLabelDatasetError(
+            f"sidecar review_pool_variant={sidecar_pool!r} does not match {EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT!r}"
+        )
+
+    source_rel = _repo_relative(labeled_path, repo_root=root)
+    source_sha = sha256_file(labeled_path)
+    external_rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    labeled_names = _fieldnames_set(labeled_fieldnames)
+    for source_row_number, row in enumerate(labeled_rows, start=2):
+        row_id = _norm_ws(row.get("row_id"))
+        if row_id in seen:
+            raise MLLabelDatasetError(f"duplicate external near-miss labeled row_id {row_id}")
+        seen.add(row_id)
+        _validate_nonempty_allowed_labels(row, source_row_number=source_row_number)
+
+        worksheet_version = _norm_ws(row.get("worksheet_version"))
+        if worksheet_version != EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION:
+            raise MLLabelDatasetError(
+                f"external near-miss labeled row {source_row_number} has worksheet_version={worksheet_version!r}"
+            )
+        review_pool_variant = _norm_ws(row.get("review_pool_variant"))
+        if review_pool_variant != EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT:
+            raise MLLabelDatasetError(
+                f"external near-miss labeled row {source_row_number} has review_pool_variant={review_pool_variant!r}"
+            )
+
+        paper_id = _norm_ws(row.get("paper_id"))
+        openalex_work_id = _norm_ws(row.get("openalex_work_id"))
+        work_id = _norm_ws(row.get("work_id"))
+        expected_work_id = paper_id_to_work_id(paper_id)
+        if not expected_work_id:
+            raise MLLabelDatasetError(
+                f"external near-miss labeled row {source_row_number} has non-OpenAlex paper_id={paper_id!r}"
+            )
+        if work_id != expected_work_id or openalex_work_id != expected_work_id:
+            raise MLLabelDatasetError(
+                "external near-miss labeled row "
+                f"{source_row_number} must keep OpenAlex W token in work_id/openalex_work_id"
+            )
+        if work_id.isdigit():
+            raise MLLabelDatasetError(
+                f"external near-miss labeled row {source_row_number} has numeric work_id={work_id!r}"
+            )
+
+        context_row = copy.deepcopy(sidecar_by_id[row_id])
+        if _norm_ws(context_row.get("paper_id")) != paper_id:
+            raise MLLabelDatasetError(f"external near-miss sidecar paper_id mismatch for row_id={row_id}")
+        if _norm_ws(context_row.get("openalex_work_id")) != openalex_work_id:
+            raise MLLabelDatasetError(f"external near-miss sidecar openalex_work_id mismatch for row_id={row_id}")
+
+        sample_seed = context_row.get("sample_seed", sidecar_provenance.get("sample_seed"))
+        expected_row_id = stable_external_near_miss_v1_row_id(
+            worksheet_version=worksheet_version,
+            sample_seed=sample_seed,
+            paper_id=paper_id,
+        )
+        if row_id != expected_row_id:
+            raise MLLabelDatasetError(
+                "external near-miss labeled row "
+                f"{source_row_number} row_id does not match worksheet_version|sample_seed|paper_id"
+            )
+
+        rel_l = _norm_ws(row.get("relevance_label")) or None
+        nov_l = _norm_ws(row.get("novelty_label")) or None
+        br_l = _norm_ws(row.get("bridge_like_label")) or None
+        notes = _norm_ws(row.get("reviewer_notes")) or None
+        family = _norm_ws(row.get("family")) or None if "family" in labeled_names else None
+        out: dict[str, Any] = {
+            "dataset_version": dataset_version,
+            "row_id": row_id,
+            "paper_id": paper_id,
+            "work_id": work_id,
+            "title": _norm_ws(row.get("title")) or None,
+            "year": _norm_ws(row.get("year")) or None,
+            "citation_count": _norm_ws(row.get("citation_count")) or None,
+            "source_slug": _norm_ws(row.get("source_slug")) or None,
+            "ranking_run_id": None,
+            "ranking_version": None,
+            "corpus_snapshot_version": None,
+            "embedding_version": None,
+            "cluster_version": None,
+            "family": family,
+            "review_pool_variant": review_pool_variant,
+            "rank": None,
+            "experiment_rank": None,
+            "source_worksheet_path": source_rel,
+            "source_worksheet_sha256": source_sha,
+            "source_row_number": source_row_number,
+            "relevance_label": rel_l,
+            "novelty_label": nov_l,
+            "bridge_like_label": br_l,
+            "reviewer_notes": notes,
+            "label_provenance": "manual_review_worksheet_csv",
+            "split": "audit_only",
+            "good_or_acceptable": good_or_acceptable(rel_l),
+            "surprising_or_useful": surprising_or_useful(nov_l),
+            "bridge_like_yes_or_partial": bridge_like_yes_or_partial(br_l),
+            "worksheet_version": worksheet_version,
+            "sample_seed": sample_seed,
+            "sample_reason": context_row.get("sample_reason") or _norm_ws(row.get("sample_reason")) or None,
+            "cluster_id": context_row.get("cluster_id") or _norm_ws(row.get("cluster_id")) or None,
+            "topics": _norm_ws(row.get("topics")) or None,
+            "abstract_preview": _norm_ws(row.get("abstract_preview")) or None,
+            "openalex_work_id": openalex_work_id,
+            "internal_work_id": context_row.get("internal_work_id"),
+            "external_near_miss_context": context_row,
+        }
+        external_rows.append(out)
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    metadata_in = base_payload.get("metadata") if isinstance(base_payload.get("metadata"), dict) else {}
+    source_worksheets = list(base_payload.get("source_worksheets") or [])
+    source_worksheets.append(source_rel)
+    source_sha256 = dict(base_payload.get("source_worksheet_sha256") or {})
+    source_sha256[source_rel] = source_sha
+    row_counts_by_source = dict(metadata_in.get("row_counts_by_source") or {})
+    row_counts_by_source[source_rel] = len(labeled_rows)
+    included_by_source = dict(metadata_in.get("included_labeled_row_counts_by_source") or {})
+    included_by_source[source_rel] = len(external_rows)
+    blank_rows_by_source = dict(metadata_in.get("skipped_blank_row_counts_by_source") or {})
+    blank_rows_by_source[source_rel] = 0
+    skipped_blank_worksheets = list(metadata_in.get("skipped_blank_worksheets") or [])
+    skipped_malformed_rows = copy.deepcopy(metadata_in.get("skipped_malformed_rows") or [])
+    manual_review_dir_rel = str(metadata_in.get("manual_review_dir") or "docs/audit/manual-review")
+
+    previous_ingests = {
+        key: copy.deepcopy(value)
+        for key, value in metadata_in.items()
+        if key.endswith("_ingest") or key.startswith("previous_")
+    }
+    extra_metadata = {
+        **previous_ingests,
+        "external_near_miss_v1_ingest": {
+            "base_dataset_path": _repo_relative(base_path, repo_root=root),
+            "base_dataset_sha256": base_sha,
+            "blank_template_path": _repo_relative(blank_path, repo_root=root),
+            "blank_template_sha256": sha256_file(blank_path),
+            "labeled_worksheet_path": source_rel,
+            "labeled_worksheet_sha256": source_sha,
+            "context_sidecar_path": _repo_relative(sidecar_path, repo_root=root),
+            "context_sidecar_sha256": sha256_file(sidecar_path),
+            "conflict_policy_path": _repo_relative(conflict_path, repo_root=root),
+            "conflict_policy_sha256": sha256_file(conflict_path),
+            "worksheet_version": EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION,
+            "review_pool_variant": EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT,
+            "canonical_row_id_source": "external near-miss labeled CSV row_id column",
+            "row_id_formula": "sha256(worksheet_version|sample_seed|paper_id)",
+            "base_row_count": len(base_rows),
+            "external_near_miss_rows_appended": len(external_rows),
+            "sidecar_label_dataset_sha256": sidecar_base_sha,
+            "validation_summary": {
+                "expected_labeled_rows": EXTERNAL_NEAR_MISS_REVIEW_V1_EXPECTED_ROWS,
+                "labeled_rows_found": len(labeled_rows),
+                "sidecar_row_ids_matched": True,
+                "blank_template_identity_columns_matched": True,
+                "sidecar_base_dataset_sha256_matched": True,
+                "sidecar_base_dataset_path_matched": True,
+                "non_review_columns_unchanged": True,
+                "review_columns_required_non_empty": True,
+            },
+        },
+    }
+    extra_caveats = [
+        "External near-miss context is preserved for audit provenance only and is not label evidence.",
+        "The external near-miss review pool remains distinct from blind snapshot and hard-negative pools unless a later experiment explicitly pools it.",
+    ]
+    return _assemble_dataset_payload_from_rows(
+        dataset_version=dataset_version,
+        generated_at=generated_at,
+        source_worksheets=source_worksheets,
+        source_sha256=source_sha256,
+        all_rows=base_rows + external_rows,
+        manual_review_dir_rel=manual_review_dir_rel,
+        row_counts_by_source=row_counts_by_source,
+        included_by_source=included_by_source,
+        blank_rows_by_source=blank_rows_by_source,
+        skipped_blank_worksheets=skipped_blank_worksheets,
+        skipped_malformed_rows=skipped_malformed_rows,
+        extra_metadata=extra_metadata,
+        extra_caveats=extra_caveats,
+    )
+
+
 def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     meta = payload["metadata"]
     dup = meta["duplicate_paper_id_report"]
@@ -1260,7 +1560,18 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     inferred_n = meta.get("inferred_family_count", 0)
     v5_ingest = meta.get("reviewer_blind_v2_ingest")
     v6_ingest = meta.get("hard_negative_v1_ingest")
-    if isinstance(v6_ingest, dict):
+    v7_ingest = meta.get("external_near_miss_v1_ingest")
+    if isinstance(v7_ingest, dict):
+        regenerate_command = (
+            "Machine-readable export: regenerate via `python -m pipeline.cli "
+            "ml-label-dataset-v7-external-near-miss-ingest "
+            f"--base-dataset {v7_ingest['base_dataset_path']} "
+            f"--blank-worksheet {v7_ingest['blank_template_path']} "
+            f"--labeled-worksheet {v7_ingest['labeled_worksheet_path']} "
+            f"--context-sidecar {v7_ingest['context_sidecar_path']} "
+            f"--conflict-policy {v7_ingest['conflict_policy_path']} --output <path>.json`."
+        )
+    elif isinstance(v6_ingest, dict):
         regenerate_command = (
             "Machine-readable export: regenerate via `python -m pipeline.cli "
             "ml-label-dataset-v6-hard-negative-ingest "
@@ -1361,6 +1672,16 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "provides a family column, and preserve sidecar provenance in nested `hard_negative_context`. That context "
         "may include hidden score/rank features and selection signals, but derived targets are still computed only "
         "from explicit manual labels.",
+        "",
+        "## External near-miss context fields",
+        "",
+        "Rows from worksheets with `review_pool_variant=ml_external_near_miss_audit` remain a distinct audit pool for "
+        "negative-boundary labels acquired outside the current curated corpus snapshot. They have `split=audit_only`, "
+        "`family=null` unless a worksheet explicitly provides a family column, and no top-level ranking or corpus snapshot "
+        "identity because they were not sampled from a persisted ranking run. The nested `external_near_miss_context` "
+        "preserves OpenAlex query provenance, outside-217 exclusion checks, and reviewer-hidden acquisition metadata. "
+        "Those context fields are **not labels** and must not be pooled with blind or hard-negative rows unless a later "
+        "experiment explicitly says so.",
         "",
         "## Duplicate and conflicting labels",
         "",
@@ -1474,6 +1795,35 @@ def write_ml_label_dataset_v6_hard_negative_ingest(
         blank_worksheet_path=blank_worksheet_path,
         labeled_worksheet_path=labeled_worksheet_path,
         context_sidecar_path=context_sidecar_path,
+        dataset_version=dataset_version,
+    )
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    if markdown_path is not None:
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(markdown_from_ml_label_dataset(payload), encoding="utf-8")
+    return payload
+
+
+def write_ml_label_dataset_v7_external_near_miss_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    json_path: Path,
+    markdown_path: Path | None,
+    dataset_version: str = "ml-label-dataset-v7",
+) -> dict[str, Any]:
+    payload = build_ml_label_dataset_v7_external_near_miss_ingest(
+        repo_root=repo_root,
+        base_dataset_path=base_dataset_path,
+        blank_worksheet_path=blank_worksheet_path,
+        labeled_worksheet_path=labeled_worksheet_path,
+        context_sidecar_path=context_sidecar_path,
+        conflict_policy_path=conflict_policy_path,
         dataset_version=dataset_version,
     )
     json_path.parent.mkdir(parents=True, exist_ok=True)

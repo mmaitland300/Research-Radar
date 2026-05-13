@@ -13,6 +13,8 @@ import pytest
 
 from pipeline.ml_label_dataset import (
     BLIND_SNAPSHOT_REVIEW_V2_WORKSHEET_VERSION,
+    EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT,
+    EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION,
     HARD_NEGATIVE_REVIEW_POOL_VARIANT,
     HARD_NEGATIVE_REVIEW_V1_WORKSHEET_VERSION,
     MLLabelDatasetError,
@@ -21,6 +23,7 @@ from pipeline.ml_label_dataset import (
     build_ml_label_dataset,
     build_ml_label_dataset_v5_reviewer_blind_ingest,
     build_ml_label_dataset_v6_hard_negative_ingest,
+    build_ml_label_dataset_v7_external_near_miss_ingest,
     discover_manual_review_csvs,
     good_or_acceptable,
     markdown_from_ml_label_dataset,
@@ -28,6 +31,7 @@ from pipeline.ml_label_dataset import (
     row_has_explicit_label,
     sha256_file,
     stable_blind_snapshot_v2_row_id,
+    stable_external_near_miss_v1_row_id,
     stable_hard_negative_v1_row_id,
     stable_row_id,
     surprising_or_useful,
@@ -1091,3 +1095,261 @@ def test_v6_hard_negative_assembly_and_derived_targets_from_explicit_labels_only
     assert payload["metadata"]["total_explicit_labeled_rows"] == 8
     assert payload["metadata"]["hard_negative_v1_ingest"]["base_row_count"] == 1
     assert payload["metadata"]["hard_negative_v1_ingest"]["hard_negative_rows_appended"] == 7
+
+
+def _base_v6_payload() -> dict[str, object]:
+    payload = _base_v5_payload()
+    payload["dataset_version"] = "ml-label-dataset-v6"
+    payload["metadata"]["previous_reviewer_blind_v2_ingest"] = {"v2_rows_appended": 60}
+    payload["metadata"]["hard_negative_v1_ingest"] = {"hard_negative_rows_appended": 7}
+    return payload
+
+
+def _write_base_v6_dataset(root: Path) -> Path:
+    base_path = root / "docs" / "audit" / "ml-label-dataset-v6.json"
+    base_path.parent.mkdir(parents=True, exist_ok=True)
+    base_path.write_text(json.dumps(_base_v6_payload(), indent=2) + "\n", encoding="utf-8")
+    return base_path
+
+
+def _external_near_miss_row(index: int, *, labels: bool) -> dict[str, str]:
+    work_id = f"W{9000000000 + index}"
+    paper_id = f"https://openalex.org/{work_id}"
+    row_id = stable_external_near_miss_v1_row_id(
+        worksheet_version=EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION,
+        sample_seed=20260514,
+        paper_id=paper_id,
+    )
+    row = {
+        "row_id": row_id,
+        "worksheet_version": EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION,
+        "review_pool_variant": EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT,
+        "paper_id": paper_id,
+        "openalex_work_id": work_id,
+        "work_id": work_id,
+        "title": f"External near-miss title {index}",
+        "year": "2025",
+        "citation_count": str(index),
+        "source_slug": "external_fixture",
+        "topics": f"external topic {index % 4}",
+        "abstract_preview": f"external abstract {index}",
+        "sample_reason": "adjacent_audio_not_mir" if index % 2 else "recommender_not_music_specific",
+        "cluster_id": "ext",
+        "relevance_label": "",
+        "novelty_label": "",
+        "bridge_like_label": "",
+        "reviewer_notes": "",
+    }
+    if labels:
+        row.update(
+            {
+                "relevance_label": "irrelevant" if index % 3 == 0 else "miss",
+                "novelty_label": "not_useful" if index % 4 else "neither",
+                "bridge_like_label": "not_applicable" if index % 5 else "no",
+                "reviewer_notes": f"external review note {index}",
+            }
+        )
+    return row
+
+
+def _external_near_miss_sidecar(rows: list[dict[str, str]], *, base_sha: str) -> dict[str, object]:
+    sidecar_rows = []
+    for index, row in enumerate(rows, start=1):
+        sidecar_rows.append(
+            {
+                "row_id": row["row_id"],
+                "paper_id": row["paper_id"],
+                "openalex_work_id": row["openalex_work_id"],
+                "internal_work_id": 5000 + index,
+                "sample_seed": 20260514,
+                "sample_reason": row["sample_reason"],
+                "cluster_id": row["cluster_id"],
+                "source_query": "fixture audio query",
+                "normalized_query": "fixture audio query",
+                "exclusion_checks_passed": {
+                    "outside_source_snapshot_217": True,
+                    "not_v6_labeled": True,
+                    "not_v6_seen_unlabeled": True,
+                },
+                "hidden_diagnostics": {"fixture_score_like_field": 999.0},
+            }
+        )
+    return {
+        "artifact_type": "ml_external_near_miss_review_v1_context",
+        "provenance": {
+            "worksheet_version": EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION,
+            "review_pool_variant": EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT,
+            "sample_seed": 20260514,
+            "row_id_formula": "sha256(worksheet_version|sample_seed|paper_id)",
+            "label_dataset_path": "docs/audit/ml-label-dataset-v6.json",
+            "label_dataset_sha256": base_sha,
+            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+        },
+        "rows": sidecar_rows,
+    }
+
+
+def _write_external_near_miss_ingest_fixture(root: Path) -> tuple[Path, Path, Path, Path, Path, list[dict[str, str]]]:
+    base_path = _write_base_v6_dataset(root)
+    blank_rows = [_external_near_miss_row(i, labels=False) for i in range(1, 61)]
+    labeled_rows = [_external_near_miss_row(i, labels=True) for i in range(1, 61)]
+    manual = root / "docs" / "audit" / "manual-review"
+    blank_path = manual / "ml_external_near_miss_review_v1.csv"
+    labeled_path = manual / "ml_external_near_miss_review_v1_labeled_2026-05-13.csv"
+    sidecar_path = manual / "ml_external_near_miss_review_v1_context.json"
+    conflict_path = root / "docs" / "audit" / "ml-label-conflict-policy.md"
+    _write_csv(blank_path, blank_rows)
+    _write_csv(labeled_path, labeled_rows)
+    sidecar_path.write_text(
+        json.dumps(_external_near_miss_sidecar(labeled_rows, base_sha=sha256_file(base_path)), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    conflict_path.parent.mkdir(parents=True, exist_ok=True)
+    conflict_path.write_text("# conflict policy\n", encoding="utf-8")
+    return base_path, blank_path, labeled_path, sidecar_path, conflict_path, labeled_rows
+
+
+def test_v7_external_near_miss_row_id_is_csv_canonical_and_context_preserved(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, labeled_rows = _write_external_near_miss_ingest_fixture(root)
+    payload = build_ml_label_dataset_v7_external_near_miss_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+        conflict_policy_path=conflict_path,
+    )
+
+    assert len(payload["rows"]) == 61
+    assert payload["rows"][0] == _base_v6_payload()["rows"][0]
+    row = payload["rows"][1]
+    assert row["row_id"] == labeled_rows[0]["row_id"]
+    old_style_id = stable_row_id(
+        source_rel="docs/audit/manual-review/ml_external_near_miss_review_v1_labeled_2026-05-13.csv",
+        source_row_number=2,
+        paper_id=labeled_rows[0]["paper_id"],
+        ranking_run_id=None,
+        rank_key=None,
+        experiment_rank=None,
+    )
+    assert row["row_id"] != old_style_id
+    assert row["dataset_version"] == "ml-label-dataset-v7"
+    assert row["family"] is None
+    assert row["review_pool_variant"] == EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT
+    assert row["work_id"] == labeled_rows[0]["work_id"]
+    assert row["openalex_work_id"] == labeled_rows[0]["openalex_work_id"]
+    assert row["internal_work_id"] == 5001
+    assert row["internal_work_id"] != row["work_id"]
+    assert row["external_near_miss_context"]["hidden_diagnostics"]["fixture_score_like_field"] == 999.0
+    assert row["source_worksheet_path"] == "docs/audit/manual-review/ml_external_near_miss_review_v1_labeled_2026-05-13.csv"
+    assert payload["metadata"]["external_near_miss_v1_ingest"]["external_near_miss_rows_appended"] == 60
+
+
+def test_v7_external_near_miss_sidecar_mismatch_fails(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_external_near_miss_ingest_fixture(root)
+    payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    payload["rows"] = payload["rows"][1:]
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(MLLabelDatasetError, match="sidecar row_id set differs"):
+        build_ml_label_dataset_v7_external_near_miss_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+
+def test_v7_external_near_miss_sidecar_base_dataset_sha_mismatch_fails(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_external_near_miss_ingest_fixture(root)
+    payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    payload["provenance"]["label_dataset_sha256"] = "not-the-base-sha"
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(MLLabelDatasetError, match="label_dataset_sha256 does not match"):
+        build_ml_label_dataset_v7_external_near_miss_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+
+def test_v7_external_near_miss_template_comparison_ignores_only_review_columns(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_external_near_miss_ingest_fixture(root)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["title"] = "Changed external title"
+    _write_csv(labeled_path, rows)
+    with pytest.raises(MLLabelDatasetError, match="changed non-review template field"):
+        build_ml_label_dataset_v7_external_near_miss_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+
+def test_v7_external_near_miss_assembly_and_derived_targets_from_explicit_labels_only(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_external_near_miss_ingest_fixture(root)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["relevance_label"] = "good"
+    rows[0]["novelty_label"] = "surprising"
+    rows[0]["bridge_like_label"] = "yes"
+    rows[0]["reviewer_notes"] = "explicit positive labels despite near-miss context"
+    _write_csv(labeled_path, rows)
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    sidecar["rows"][0]["hidden_diagnostics"]["fixture_score_like_field"] = -999.0
+    sidecar_path.write_text(json.dumps(sidecar), encoding="utf-8")
+    _write(
+        root / "docs" / "audit" / "manual-review" / "unrelated_labeled.csv",
+        HEADER_STANDARD + _std_data_row(relevance="good", novelty="useful", bridge_like="yes", notes="do not glob"),
+    )
+
+    payload = build_ml_label_dataset_v7_external_near_miss_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+        conflict_policy_path=conflict_path,
+    )
+    assert len(payload["rows"]) == 61
+    assert payload["rows"][:1] == _base_v6_payload()["rows"]
+    assert "docs/audit/manual-review/unrelated_labeled.csv" not in set(payload["source_worksheets"])
+    appended = payload["rows"][1:]
+    assert all(r["dataset_version"] == "ml-label-dataset-v7" for r in appended)
+    assert all(r["review_pool_variant"] == EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT for r in appended)
+    assert appended[0]["family"] is None
+    assert appended[0]["good_or_acceptable"] is True
+    assert appended[0]["surprising_or_useful"] is True
+    assert appended[0]["bridge_like_yes_or_partial"] is True
+    assert payload["metadata"]["total_explicit_labeled_rows"] == 61
+    assert payload["metadata"]["external_near_miss_v1_ingest"]["base_row_count"] == 1
+    assert payload["metadata"]["external_near_miss_v1_ingest"]["validation_summary"]["sidecar_base_dataset_sha256_matched"] is True
+    assert payload["metadata"]["external_near_miss_v1_ingest"]["external_near_miss_rows_appended"] == 60
+
+
+def test_v7_markdown_regeneration_hint_names_external_near_miss_command(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_external_near_miss_ingest_fixture(root)
+    payload = build_ml_label_dataset_v7_external_near_miss_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+        conflict_policy_path=conflict_path,
+    )
+    md = markdown_from_ml_label_dataset(payload)
+    assert "ml-label-dataset-v7-external-near-miss-ingest" in md
+    assert "ml_external_near_miss_audit" in md
+    assert "external_near_miss_context" in md
