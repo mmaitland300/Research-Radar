@@ -9,6 +9,11 @@ It records the baseline run, objective experiment run, eligibility mode, labeled
 
 Policy for duplicate paper labels, conflicting labels, blind-source labels, and future train/dev/test eligibility is in `docs/audit/ml-label-conflict-policy.md`.
 
+## Blind v2 reviewer handoff
+
+Reviewer-blind worksheet v2 handoff and guardrails are recorded in `docs/audit/ml-blind-v2-review-handoff-2026-05-13.md`.
+Use only `docs/audit/manual-review/ml_blind_snapshot_review_v2.csv` for human review; keep the context sidecar internal for merge/provenance.
+
 ## `semantic_coverage_baseline.sql`
 
 Baseline for the **semantic v1 coverage** milestone: one reference `ranking_run_id` (or latest succeeded run), the run's `corpus_snapshot_version` and `embedding_version`, and tabular counts for `paper_scores` + `embeddings`.
