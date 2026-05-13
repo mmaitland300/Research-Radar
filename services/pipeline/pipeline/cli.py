@@ -1350,6 +1350,40 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_external_feature_coverage_parser = subparsers.add_parser(
+        "ml-external-feature-coverage",
+        help="Read-only feature coverage diagnostic for ml_external_near_miss_audit rows (no training, no ranking writes)",
+    )
+    ml_external_feature_coverage_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON (e.g. docs/audit/ml-label-dataset-v7.json)",
+    )
+    ml_external_feature_coverage_parser.add_argument(
+        "--context-sidecar",
+        default=None,
+        help="Optional external near-miss context sidecar JSON for SHA and row_id parity checks",
+    )
+    ml_external_feature_coverage_parser.add_argument(
+        "--embedding-version",
+        default="v2-title-abstract-1536-cleantext-r1",
+        help="Embedding version to check in embeddings table (default: v2-title-abstract-1536-cleantext-r1)",
+    )
+    ml_external_feature_coverage_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+    ml_external_feature_coverage_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write feature coverage JSON",
+    )
+    ml_external_feature_coverage_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -2274,6 +2308,37 @@ def main() -> None:
             )
         except MLOfflineBaselineEvalError as e:
             print(f"ml-offline-baseline-eval: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-external-feature-coverage":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_external_feature_coverage import (
+            MLExternalFeatureCoverageError,
+            run_ml_external_feature_coverage_cli,
+        )
+
+        emb = (args.embedding_version or "").strip()
+        if not emb:
+            parser.error("--embedding-version must be non-empty")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        sidecar = Path(args.context_sidecar) if args.context_sidecar else None
+        try:
+            run_ml_external_feature_coverage_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                context_sidecar_path=sidecar,
+                embedding_version=emb,
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLExternalFeatureCoverageError as e:
+            print(f"ml-external-feature-coverage: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
