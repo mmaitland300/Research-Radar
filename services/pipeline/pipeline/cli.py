@@ -1832,6 +1832,71 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_external_near_miss_ws_parser = subparsers.add_parser(
+        "ml-external-near-miss-review-worksheet",
+        help=(
+            "Write reviewer-blind external near-miss CSV plus hidden sidecar "
+            "(OpenAlex read-only; outside committed snapshot; no training)"
+        ),
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v6 JSON used to exclude already labeled or seen works",
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to label conflict policy Markdown (provenance only; no conflict resolution)",
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--corpus-snapshot-version",
+        default="source-snapshot-v2-candidate-plan-20260428",
+        help=(
+            "Committed source snapshot identity used for outside-217 exclusion "
+            "(default: source-snapshot-v2-candidate-plan-20260428)"
+        ),
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--source-snapshot-candidate-plan",
+        default=None,
+        help=(
+            "Candidate-plan manifest containing selected_candidates[].openalex_id for the 217-work exclusion set "
+            "(default: docs/audit/corpus-v2-candidate-plan-20260428.json)"
+        ),
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--rows",
+        type=int,
+        default=60,
+        help="Target worksheet row count (1-500; emits fewer on credible-pool shortfall)",
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--seed",
+        type=int,
+        default=20260514,
+        help="Deterministic sampling seed (default 20260514)",
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--output",
+        required=True,
+        help="Reviewer CSV output path (e.g. docs/audit/manual-review/ml_external_near_miss_review_v1.csv)",
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--context-output",
+        required=True,
+        help="Hidden context sidecar JSON path (e.g. docs/audit/manual-review/ml_external_near_miss_review_v1_context.json)",
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Companion Markdown path",
+    )
+    ml_external_near_miss_ws_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Contact for OpenAlex User-Agent (default: OPENALEX_MAILTO env or local development placeholder)",
+    )
 
     args = parser.parse_args()
 
@@ -1979,6 +2044,46 @@ def main() -> None:
             )
         except MLHardNegativeReviewWorksheetError as e:
             print(f"ml-hard-negative-review-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_csv.resolve(), file=sys.stderr)
+        print(out_ctx.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(int(debug.get("achieved_rows", 0)))
+        return
+
+    if args.command == "ml-external-near-miss-review-worksheet":
+        from pipeline.ml_external_near_miss_review_worksheet import (
+            MAX_ROWS as _EXT_MAX_ROWS,
+            MIN_ROWS as _EXT_MIN_ROWS,
+            MLExternalNearMissReviewWorksheetError,
+            run_ml_external_near_miss_review_worksheet_cli,
+        )
+
+        snap = (args.corpus_snapshot_version or "").strip()
+        if not snap:
+            parser.error("--corpus-snapshot-version is required and must be non-empty")
+        nrows = int(args.rows)
+        if nrows < _EXT_MIN_ROWS or nrows > _EXT_MAX_ROWS:
+            parser.error(f"--rows must be between {_EXT_MIN_ROWS} and {_EXT_MAX_ROWS}")
+        candidate_plan = Path(args.source_snapshot_candidate_plan) if args.source_snapshot_candidate_plan else None
+        out_csv = Path(args.output)
+        out_ctx = Path(args.context_output)
+        out_md = Path(args.markdown_output)
+        try:
+            debug = run_ml_external_near_miss_review_worksheet_cli(
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                corpus_snapshot_version=snap,
+                candidate_plan_path=candidate_plan,
+                rows=nrows,
+                seed=int(args.seed),
+                csv_output_path=out_csv,
+                context_output_path=out_ctx,
+                markdown_output_path=out_md,
+                mailto=args.mailto,
+            )
+        except MLExternalNearMissReviewWorksheetError as e:
+            print(f"ml-external-near-miss-review-worksheet: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_csv.resolve(), file=sys.stderr)
         print(out_ctx.resolve(), file=sys.stderr)
