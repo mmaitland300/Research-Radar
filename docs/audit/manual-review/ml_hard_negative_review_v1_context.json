@@ -1,0 +1,497 @@
+{
+  "artifact_type": "ml_hard_negative_review_v1_context",
+  "generated_at": "2026-05-13T17:58:38Z",
+  "provenance": {
+    "worksheet_version": "ml-hard-negative-review-v1",
+    "review_pool_variant": "ml_hard_negative_audit",
+    "sample_seed": 20260513,
+    "row_id_formula": "sha256(worksheet_version|sample_seed|paper_id)",
+    "label_dataset_path": "docs/audit/ml-label-dataset-v5.json",
+    "label_dataset_sha256": "0dde7a62d4e7d628aa7626f5501c0982603188e1542bc381ec054e615b1ff6d7",
+    "conflict_policy_path": "docs/audit/ml-label-conflict-policy.md",
+    "conflict_policy_sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841",
+    "ranking_run_id": "rank-ee2ba6c816",
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+    "requested_rows": 60,
+    "achieved_rows": 7
+  },
+  "schema": {
+    "key": "row_id",
+    "hidden_from_reviewer_csv": [
+      "ranking_run_id",
+      "ranking_run_id_context",
+      "corpus_snapshot_version",
+      "embedding_version",
+      "cluster_version",
+      "internal_work_id",
+      "final_score",
+      "semantic_score",
+      "citation_velocity_score",
+      "topic_growth_score",
+      "diversity_penalty",
+      "bridge_score",
+      "ranking_context_family_scores_json",
+      "ranking_context_family_ranks_json",
+      "learned_logit",
+      "model_prediction"
+    ],
+    "notes": "Reviewer CSV stores OpenAlex W tokens in work_id. Postgres works.id and all ranking/score context appear only in this sidecar."
+  },
+  "sampling_policy": {
+    "exclusion_rule": "Exclude a work if any v5 row for that OpenAlex work has any non-empty manual label among relevance_label, novelty_label, or bridge_like_label.",
+    "allowed_sample_reasons": [
+      "off_slice_topic_metadata",
+      "weak_music_audio_context",
+      "broad_audio_not_mir",
+      "education_or_health_surface_match",
+      "industrial_or_bioacoustic_surface_match",
+      "low_family_score_near_miss",
+      "lexical_music_surface_match",
+      "fallback_seeded_fill"
+    ],
+    "csv_ordering": "seeded hash shuffle over selected rows; not final_score order"
+  },
+  "sampling_debug": {
+    "requested_rows": 60,
+    "target_rows": 7,
+    "achieved_rows": 7,
+    "shortfall_count": 53,
+    "raw_candidate_pool_size": 217,
+    "eligible_pool_size": 7,
+    "any_labeled_excluded_count": 210,
+    "credible_candidate_pool_size": 7,
+    "fallback_candidate_pool_size": 0,
+    "low_score_threshold": 0.170017,
+    "sample_reason_counts": {
+      "education_or_health_surface_match": 1,
+      "industrial_or_bioacoustic_surface_match": 1,
+      "lexical_music_surface_match": 2,
+      "low_family_score_near_miss": 2,
+      "weak_music_audio_context": 1
+    },
+    "cluster_ids": [
+      "c000",
+      "c003",
+      "c010"
+    ],
+    "pool_supported_requested_rows": false,
+    "selection_note": "Shortfall: conservative v5 exclusion left fewer credible hard-negative / near-miss candidates than requested."
+  },
+  "rows": [
+    {
+      "row_id": "c0de4b8bc2cc801cca913ed9fecf689e3c1be3ca9820e7d79d2d0cd18b8bda11",
+      "paper_id": "https://openalex.org/W7155391647",
+      "openalex_work_id": "W7155391647",
+      "internal_work_id": 2352,
+      "sample_seed": 20260513,
+      "sample_reason": "education_or_health_surface_match",
+      "hard_negative_signals": [
+        "lexical_music",
+        "core_mir_hook",
+        "education_or_health_terms",
+        "low_emerging_final_score"
+      ],
+      "selection_auxiliary_scores": {
+        "emerging_final_score": 0.170017,
+        "emerging_semantic_score": 0.850085,
+        "emerging_topic_growth_score": 0.0,
+        "low_score_threshold": 0.170017,
+        "has_music_terms": true,
+        "has_audio_terms": false,
+        "has_core_mir_terms": true,
+        "topic_names": []
+      },
+      "cluster_id": "c010",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_context_family_scores_json": "{\"bridge\": -0.2, \"emerging\": 0.170017}",
+      "ranking_context_family_ranks_json": "{\"bridge\": 148, \"emerging\": 125}",
+      "emerging_paper_scores": {
+        "family": "emerging",
+        "final_score": 0.170017,
+        "semantic_score": 0.850085,
+        "citation_velocity_score": 0.0,
+        "topic_growth_score": 0.0,
+        "diversity_penalty": 0.0,
+        "bridge_score": null
+      },
+      "paper_scores_by_family": {
+        "bridge": {
+          "family": "bridge",
+          "final_score": -0.2,
+          "semantic_score": null,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 1.0,
+          "bridge_score": 0.827341
+        },
+        "emerging": {
+          "family": "emerging",
+          "final_score": 0.170017,
+          "semantic_score": 0.850085,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 0.0,
+          "bridge_score": null
+        }
+      }
+    },
+    {
+      "row_id": "344a27009fc685a10d0137c20279e63e1d33b052c871ab73a8ea7bdeca2a7fd0",
+      "paper_id": "https://openalex.org/W7140187162",
+      "openalex_work_id": "W7140187162",
+      "internal_work_id": 2302,
+      "sample_seed": 20260513,
+      "sample_reason": "low_family_score_near_miss",
+      "hard_negative_signals": [
+        "lexical_music",
+        "lexical_audio",
+        "core_mir_hook",
+        "low_emerging_final_score"
+      ],
+      "selection_auxiliary_scores": {
+        "emerging_final_score": 0.166341,
+        "emerging_semantic_score": 0.831703,
+        "emerging_topic_growth_score": 0.0,
+        "low_score_threshold": 0.170017,
+        "has_music_terms": true,
+        "has_audio_terms": true,
+        "has_core_mir_terms": true,
+        "topic_names": []
+      },
+      "cluster_id": "c010",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_context_family_scores_json": "{\"bridge\": -0.2, \"emerging\": 0.166341}",
+      "ranking_context_family_ranks_json": "{\"bridge\": 102, \"emerging\": 158}",
+      "emerging_paper_scores": {
+        "family": "emerging",
+        "final_score": 0.166341,
+        "semantic_score": 0.831703,
+        "citation_velocity_score": 0.0,
+        "topic_growth_score": 0.0,
+        "diversity_penalty": 0.0,
+        "bridge_score": null
+      },
+      "paper_scores_by_family": {
+        "bridge": {
+          "family": "bridge",
+          "final_score": -0.2,
+          "semantic_score": null,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 1.0,
+          "bridge_score": 0.816506
+        },
+        "emerging": {
+          "family": "emerging",
+          "final_score": 0.166341,
+          "semantic_score": 0.831703,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 0.0,
+          "bridge_score": null
+        }
+      }
+    },
+    {
+      "row_id": "1bcf5db8d997c05da0c0e7fc71d2d9b1e58ec11cf1e9b43d2b40228c7fbbea18",
+      "paper_id": "https://openalex.org/W7138257873",
+      "openalex_work_id": "W7138257873",
+      "internal_work_id": 2421,
+      "sample_seed": 20260513,
+      "sample_reason": "industrial_or_bioacoustic_surface_match",
+      "hard_negative_signals": [
+        "lexical_audio",
+        "industrial_or_bioacoustic_terms"
+      ],
+      "selection_auxiliary_scores": {
+        "emerging_final_score": 0.173349,
+        "emerging_semantic_score": 0.866746,
+        "emerging_topic_growth_score": 0.0,
+        "low_score_threshold": 0.170017,
+        "has_music_terms": false,
+        "has_audio_terms": true,
+        "has_core_mir_terms": false,
+        "topic_names": []
+      },
+      "cluster_id": "c003",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_context_family_scores_json": "{\"bridge\": -0.2, \"emerging\": 0.173349}",
+      "ranking_context_family_ranks_json": "{\"bridge\": 213, \"emerging\": 102}",
+      "emerging_paper_scores": {
+        "family": "emerging",
+        "final_score": 0.173349,
+        "semantic_score": 0.866746,
+        "citation_velocity_score": 0.0,
+        "topic_growth_score": 0.0,
+        "diversity_penalty": 0.0,
+        "bridge_score": null
+      },
+      "paper_scores_by_family": {
+        "bridge": {
+          "family": "bridge",
+          "final_score": -0.2,
+          "semantic_score": null,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 1.0,
+          "bridge_score": 0.766643
+        },
+        "emerging": {
+          "family": "emerging",
+          "final_score": 0.173349,
+          "semantic_score": 0.866746,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 0.0,
+          "bridge_score": null
+        }
+      }
+    },
+    {
+      "row_id": "c3079c7ccc4ca5a82dba27fc6ca1ef90c24ba34cf7a709e9f3a464f2fff68c53",
+      "paper_id": "https://openalex.org/W4417222068",
+      "openalex_work_id": "W4417222068",
+      "internal_work_id": 2329,
+      "sample_seed": 20260513,
+      "sample_reason": "lexical_music_surface_match",
+      "hard_negative_signals": [
+        "lexical_music",
+        "lexical_audio",
+        "core_mir_hook"
+      ],
+      "selection_auxiliary_scores": {
+        "emerging_final_score": 0.226305,
+        "emerging_semantic_score": 0.904254,
+        "emerging_topic_growth_score": 0.0,
+        "low_score_threshold": 0.170017,
+        "has_music_terms": true,
+        "has_audio_terms": true,
+        "has_core_mir_terms": true,
+        "topic_names": []
+      },
+      "cluster_id": "c010",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_context_family_scores_json": "{\"bridge\": -0.168182, \"emerging\": 0.226305}",
+      "ranking_context_family_ranks_json": "{\"bridge\": 86, \"emerging\": 85}",
+      "emerging_paper_scores": {
+        "family": "emerging",
+        "final_score": 0.226305,
+        "semantic_score": 0.904254,
+        "citation_velocity_score": 0.090909,
+        "topic_growth_score": 0.0,
+        "diversity_penalty": 0.0,
+        "bridge_score": null
+      },
+      "paper_scores_by_family": {
+        "bridge": {
+          "family": "bridge",
+          "final_score": -0.168182,
+          "semantic_score": null,
+          "citation_velocity_score": 0.090909,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 1.0,
+          "bridge_score": 0.996747
+        },
+        "emerging": {
+          "family": "emerging",
+          "final_score": 0.226305,
+          "semantic_score": 0.904254,
+          "citation_velocity_score": 0.090909,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 0.0,
+          "bridge_score": null
+        }
+      }
+    },
+    {
+      "row_id": "b7a1f178c7b8451f34922c821f4cc65e3f710355abd87841a5dab522baa8150a",
+      "paper_id": "https://openalex.org/W7133546792",
+      "openalex_work_id": "W7133546792",
+      "internal_work_id": 2384,
+      "sample_seed": 20260513,
+      "sample_reason": "low_family_score_near_miss",
+      "hard_negative_signals": [
+        "lexical_music",
+        "core_mir_hook",
+        "low_emerging_final_score"
+      ],
+      "selection_auxiliary_scores": {
+        "emerging_final_score": 0.168684,
+        "emerging_semantic_score": 0.84342,
+        "emerging_topic_growth_score": 0.0,
+        "low_score_threshold": 0.170017,
+        "has_music_terms": true,
+        "has_audio_terms": false,
+        "has_core_mir_terms": true,
+        "topic_names": []
+      },
+      "cluster_id": "c010",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_context_family_scores_json": "{\"bridge\": -0.2, \"emerging\": 0.168684}",
+      "ranking_context_family_ranks_json": "{\"bridge\": 178, \"emerging\": 136}",
+      "emerging_paper_scores": {
+        "family": "emerging",
+        "final_score": 0.168684,
+        "semantic_score": 0.84342,
+        "citation_velocity_score": 0.0,
+        "topic_growth_score": 0.0,
+        "diversity_penalty": 0.0,
+        "bridge_score": null
+      },
+      "paper_scores_by_family": {
+        "bridge": {
+          "family": "bridge",
+          "final_score": -0.2,
+          "semantic_score": null,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 1.0,
+          "bridge_score": 0.879925
+        },
+        "emerging": {
+          "family": "emerging",
+          "final_score": 0.168684,
+          "semantic_score": 0.84342,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 0.0,
+          "bridge_score": null
+        }
+      }
+    },
+    {
+      "row_id": "272abdbbb5fb00153fe909bb8920e985d0ec738dfd3ec35c9265349980c3663a",
+      "paper_id": "https://openalex.org/W7125249220",
+      "openalex_work_id": "W7125249220",
+      "internal_work_id": 2321,
+      "sample_seed": 20260513,
+      "sample_reason": "lexical_music_surface_match",
+      "hard_negative_signals": [
+        "lexical_music",
+        "lexical_audio",
+        "core_mir_hook"
+      ],
+      "selection_auxiliary_scores": {
+        "emerging_final_score": 0.170531,
+        "emerging_semantic_score": 0.852656,
+        "emerging_topic_growth_score": 0.0,
+        "low_score_threshold": 0.170017,
+        "has_music_terms": true,
+        "has_audio_terms": true,
+        "has_core_mir_terms": true,
+        "topic_names": []
+      },
+      "cluster_id": "c000",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_context_family_scores_json": "{\"bridge\": -0.2, \"emerging\": 0.170531}",
+      "ranking_context_family_ranks_json": "{\"bridge\": 121, \"emerging\": 123}",
+      "emerging_paper_scores": {
+        "family": "emerging",
+        "final_score": 0.170531,
+        "semantic_score": 0.852656,
+        "citation_velocity_score": 0.0,
+        "topic_growth_score": 0.0,
+        "diversity_penalty": 0.0,
+        "bridge_score": null
+      },
+      "paper_scores_by_family": {
+        "bridge": {
+          "family": "bridge",
+          "final_score": -0.2,
+          "semantic_score": null,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 1.0,
+          "bridge_score": 0.866764
+        },
+        "emerging": {
+          "family": "emerging",
+          "final_score": 0.170531,
+          "semantic_score": 0.852656,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 0.0,
+          "bridge_score": null
+        }
+      }
+    },
+    {
+      "row_id": "ab7143c961a6f41071eea6fc0c82d81edfb2057ea387e184112ddbe57194eece",
+      "paper_id": "https://openalex.org/W4415230193",
+      "openalex_work_id": "W4415230193",
+      "internal_work_id": 2349,
+      "sample_seed": 20260513,
+      "sample_reason": "weak_music_audio_context",
+      "hard_negative_signals": [
+        "lexical_music",
+        "lexical_audio"
+      ],
+      "selection_auxiliary_scores": {
+        "emerging_final_score": 0.173275,
+        "emerging_semantic_score": 0.866377,
+        "emerging_topic_growth_score": 0.0,
+        "low_score_threshold": 0.170017,
+        "has_music_terms": true,
+        "has_audio_terms": true,
+        "has_core_mir_terms": false,
+        "topic_names": []
+      },
+      "cluster_id": "c010",
+      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+      "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+      "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "ranking_context_family_scores_json": "{\"bridge\": -0.2, \"emerging\": 0.173275}",
+      "ranking_context_family_ranks_json": "{\"bridge\": 145, \"emerging\": 104}",
+      "emerging_paper_scores": {
+        "family": "emerging",
+        "final_score": 0.173275,
+        "semantic_score": 0.866377,
+        "citation_velocity_score": 0.0,
+        "topic_growth_score": 0.0,
+        "diversity_penalty": 0.0,
+        "bridge_score": null
+      },
+      "paper_scores_by_family": {
+        "bridge": {
+          "family": "bridge",
+          "final_score": -0.2,
+          "semantic_score": null,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 1.0,
+          "bridge_score": 0.928601
+        },
+        "emerging": {
+          "family": "emerging",
+          "final_score": 0.173275,
+          "semantic_score": 0.866377,
+          "citation_velocity_score": 0.0,
+          "topic_growth_score": 0.0,
+          "diversity_penalty": 0.0,
+          "bridge_score": null
+        }
+      }
+    }
+  ]
+}
