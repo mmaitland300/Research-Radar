@@ -1245,6 +1245,46 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_source_split_tiny_baseline_parser = subparsers.add_parser(
+        "ml-source-split-tiny-baseline",
+        help="Offline source-split tiny baseline: train emerging rank-shaped labels, test blind rows",
+    )
+    ml_source_split_tiny_baseline_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON",
+    )
+    ml_source_split_tiny_baseline_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to label conflict policy Markdown",
+    )
+    ml_source_split_tiny_baseline_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Explicit ranking_run_id",
+    )
+    ml_source_split_tiny_baseline_parser.add_argument(
+        "--family",
+        required=True,
+        choices=["emerging"],
+        help="Family context and paper_scores lookup family for blind rows",
+    )
+    ml_source_split_tiny_baseline_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write source-split JSON",
+    )
+    ml_source_split_tiny_baseline_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write source-split Markdown",
+    )
+    ml_source_split_tiny_baseline_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     ml_tiny_baseline_rollup_parser = subparsers.add_parser(
         "ml-tiny-baseline-rollup",
         help="Offline emerging rollup: fold robustness + ablations vs heuristic (read-only DB)",
@@ -1735,6 +1775,37 @@ def main() -> None:
             )
         except MLTinyBaselineError as e:
             print(f"ml-tiny-baseline: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-source-split-tiny-baseline":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_source_split_tiny_baseline import (
+            MLSourceSplitTinyBaselineError,
+            run_ml_source_split_tiny_baseline_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_source_split_tiny_baseline_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                ranking_run_id=rid,
+                family=str(args.family),
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLSourceSplitTinyBaselineError as e:
+            print(f"ml-source-split-tiny-baseline: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:

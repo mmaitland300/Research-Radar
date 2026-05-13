@@ -1,0 +1,461 @@
+{
+  "artifact_type": "ml_source_split_tiny_baseline",
+  "generated_at": "2026-05-13T03:05:38Z",
+  "provenance": {
+    "ranking_run_id": "rank-ee2ba6c816",
+    "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
+    "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+    "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+    "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+    "label_dataset_path": "docs/audit/ml-label-dataset-v4.json",
+    "label_dataset_version": "ml-label-dataset-v4",
+    "label_dataset_sha256": "88a3067b48f52b6a99295c51e75da54dd03b2b84bd43b9edc674755a28f92288",
+    "conflict_policy_path": "docs/audit/ml-label-conflict-policy.md",
+    "conflict_policy_sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841",
+    "family_context": "emerging",
+    "score_family_for_blind_rows": "emerging",
+    "targets": [
+      "good_or_acceptable",
+      "surprising_or_useful"
+    ]
+  },
+  "conflict_policy_summary": {
+    "observation_level_rows": true,
+    "no_silent_merge": true,
+    "no_automatic_conflict_resolution": true,
+    "blind_rows_test_only": true
+  },
+  "caveats": [
+    "This is not validation.",
+    "Blind labels reduce but do not eliminate selection bias.",
+    "This is a source-split offline diagnostic, not a production train/test policy.",
+    "Results must not change production ranking defaults.",
+    "No production model artifact is produced."
+  ],
+  "source_split_policy": {
+    "observation_level_rows": true,
+    "duplicate_merging": "none",
+    "conflict_resolution": "none",
+    "train_slice": {
+      "family": "emerging",
+      "ranking_run_id": "rank-ee2ba6c816",
+      "review_pool_variants": [
+        "full_family_top_k",
+        "ml_contrastive_offline_audit",
+        "ml_emerging_target_gap_audit:good_or_acceptable"
+      ]
+    },
+    "test_slice": {
+      "family": null,
+      "ranking_run_id": "rank-ee2ba6c816",
+      "review_pool_variant": "ml_blind_snapshot_audit",
+      "paper_scores_lookup_family": "emerging"
+    }
+  },
+  "row_counts": {
+    "audit_rows_for_ranking_run": 190,
+    "train": {
+      "total": 60,
+      "by_review_pool_variant": {
+        "full_family_top_k": 20,
+        "ml_contrastive_offline_audit": 15,
+        "ml_emerging_target_gap_audit:good_or_acceptable": 25
+      }
+    },
+    "test": {
+      "total": 60,
+      "by_review_pool_variant": {
+        "ml_blind_snapshot_audit": 60
+      }
+    }
+  },
+  "feature_coverage": {
+    "train": {
+      "selected_row_count": 60,
+      "joined_feature_row_count": 60,
+      "missing_feature_row_count": 0,
+      "coverage_rate": 1.0,
+      "feature_non_null_counts": {
+        "final_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "semantic_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "citation_velocity_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "topic_growth_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "diversity_penalty": {
+          "non_null": 60,
+          "null": 0
+        }
+      }
+    },
+    "test": {
+      "selected_row_count": 60,
+      "joined_feature_row_count": 60,
+      "missing_feature_row_count": 0,
+      "coverage_rate": 1.0,
+      "feature_non_null_counts": {
+        "final_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "semantic_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "citation_velocity_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "topic_growth_score": {
+          "non_null": 60,
+          "null": 0
+        },
+        "diversity_penalty": {
+          "non_null": 60,
+          "null": 0
+        }
+      }
+    },
+    "missing_feature_rows": {
+      "train": [],
+      "test": []
+    }
+  },
+  "leakage_checks": {
+    "blind_rows_selected_for_train_count": 0,
+    "blind_rows_selected_for_train_keys": [],
+    "train_test_observation_key_overlap_count": 0,
+    "train_test_observation_key_overlap": [],
+    "blind_test_rows_family_null_count": 60,
+    "blind_test_rows_family_non_null_count": 0
+  },
+  "targets": {
+    "good_or_acceptable": {
+      "target": "good_or_acceptable",
+      "selected_row_counts": {
+        "train": {
+          "positive": 45,
+          "negative": 15,
+          "null": 0,
+          "total": 60
+        },
+        "test": {
+          "positive": 51,
+          "negative": 9,
+          "null": 0,
+          "total": 60
+        }
+      },
+      "rows_used_for_training_or_metrics": {
+        "train_boolean_joined_feature_rows": 60,
+        "test_boolean_joined_feature_rows": 60
+      },
+      "excluded_rows": {
+        "train_missing_target_count": 0,
+        "test_missing_target_count": 0,
+        "train_missing_feature_count": 0,
+        "test_missing_feature_count": 0,
+        "test_missing_final_score_count_for_heuristic": 0,
+        "reasons": {
+          "missing_target": "target is not a JSON boolean",
+          "missing_feature": "no paper_scores row joined for the required score family and ranking_run_id",
+          "missing_final_score": "paper_scores row joined but final_score was null or non-numeric"
+        }
+      },
+      "preprocessing": {
+        "fit_on": "train rows only with boolean target and joined paper_scores features",
+        "feature_names": [
+          "final_score",
+          "semantic_score",
+          "citation_velocity_score",
+          "topic_growth_score",
+          "diversity_penalty"
+        ],
+        "medians": [
+          0.2997915,
+          0.836306,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "means": [
+          0.35890151666666664,
+          0.8232958166666666,
+          0.09848476666666667,
+          0.48333333333333334,
+          0.0
+        ],
+        "stds": [
+          0.2040390228132429,
+          0.046497820864169426,
+          0.17192121423105086,
+          0.49972214501883166,
+          0.0
+        ],
+        "by_feature": {
+          "final_score": {
+            "impute_median": 0.2997915,
+            "mean_after_imputation": 0.35890151666666664,
+            "std_after_imputation": 0.2040390228132429
+          },
+          "semantic_score": {
+            "impute_median": 0.836306,
+            "mean_after_imputation": 0.8232958166666666,
+            "std_after_imputation": 0.046497820864169426
+          },
+          "citation_velocity_score": {
+            "impute_median": 0.0,
+            "mean_after_imputation": 0.09848476666666667,
+            "std_after_imputation": 0.17192121423105086
+          },
+          "topic_growth_score": {
+            "impute_median": 0.0,
+            "mean_after_imputation": 0.48333333333333334,
+            "std_after_imputation": 0.49972214501883166
+          },
+          "diversity_penalty": {
+            "impute_median": 0.0,
+            "mean_after_imputation": 0.0,
+            "std_after_imputation": 0.0
+          }
+        }
+      },
+      "learned_model": {
+        "trained": true,
+        "model": "l2_logistic_regression_gradient_descent_pure_python",
+        "feature_names": [
+          "final_score",
+          "semantic_score",
+          "citation_velocity_score",
+          "topic_growth_score",
+          "diversity_penalty"
+        ],
+        "training_positive_count": 45,
+        "training_negative_count": 15,
+        "coefficients_standardized_space": {
+          "intercept": 3.9141758614738333,
+          "weights": {
+            "final_score": 1.1607651401289338,
+            "semantic_score": 1.8367213491475272,
+            "citation_velocity_score": -1.459195176269877,
+            "topic_growth_score": 2.302596213401502,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      "blind_test_metrics": {
+        "heuristic_final_score": {
+          "scored_labeled_row_count": 60,
+          "positive_count": 51,
+          "negative_count": 9,
+          "roc_auc_mann_whitney": 0.6775599128540305,
+          "roc_auc_reason": null,
+          "precision_at_k": {
+            "5": {
+              "value": 1.0,
+              "reason": null
+            },
+            "10": {
+              "value": 1.0,
+              "reason": null
+            },
+            "20": {
+              "value": 1.0,
+              "reason": null
+            }
+          }
+        },
+        "learned_model": {
+          "scored_labeled_row_count": 60,
+          "positive_count": 51,
+          "negative_count": 9,
+          "roc_auc_mann_whitney": 0.6666666666666666,
+          "roc_auc_reason": null,
+          "precision_at_k": {
+            "5": {
+              "value": 1.0,
+              "reason": null
+            },
+            "10": {
+              "value": 1.0,
+              "reason": null
+            },
+            "20": {
+              "value": 1.0,
+              "reason": null
+            }
+          }
+        }
+      }
+    },
+    "surprising_or_useful": {
+      "target": "surprising_or_useful",
+      "selected_row_counts": {
+        "train": {
+          "positive": 43,
+          "negative": 17,
+          "null": 0,
+          "total": 60
+        },
+        "test": {
+          "positive": 46,
+          "negative": 14,
+          "null": 0,
+          "total": 60
+        }
+      },
+      "rows_used_for_training_or_metrics": {
+        "train_boolean_joined_feature_rows": 60,
+        "test_boolean_joined_feature_rows": 60
+      },
+      "excluded_rows": {
+        "train_missing_target_count": 0,
+        "test_missing_target_count": 0,
+        "train_missing_feature_count": 0,
+        "test_missing_feature_count": 0,
+        "test_missing_final_score_count_for_heuristic": 0,
+        "reasons": {
+          "missing_target": "target is not a JSON boolean",
+          "missing_feature": "no paper_scores row joined for the required score family and ranking_run_id",
+          "missing_final_score": "paper_scores row joined but final_score was null or non-numeric"
+        }
+      },
+      "preprocessing": {
+        "fit_on": "train rows only with boolean target and joined paper_scores features",
+        "feature_names": [
+          "final_score",
+          "semantic_score",
+          "citation_velocity_score",
+          "topic_growth_score",
+          "diversity_penalty"
+        ],
+        "medians": [
+          0.2997915,
+          0.836306,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "means": [
+          0.35890151666666664,
+          0.8232958166666666,
+          0.09848476666666667,
+          0.48333333333333334,
+          0.0
+        ],
+        "stds": [
+          0.2040390228132429,
+          0.046497820864169426,
+          0.17192121423105086,
+          0.49972214501883166,
+          0.0
+        ],
+        "by_feature": {
+          "final_score": {
+            "impute_median": 0.2997915,
+            "mean_after_imputation": 0.35890151666666664,
+            "std_after_imputation": 0.2040390228132429
+          },
+          "semantic_score": {
+            "impute_median": 0.836306,
+            "mean_after_imputation": 0.8232958166666666,
+            "std_after_imputation": 0.046497820864169426
+          },
+          "citation_velocity_score": {
+            "impute_median": 0.0,
+            "mean_after_imputation": 0.09848476666666667,
+            "std_after_imputation": 0.17192121423105086
+          },
+          "topic_growth_score": {
+            "impute_median": 0.0,
+            "mean_after_imputation": 0.48333333333333334,
+            "std_after_imputation": 0.49972214501883166
+          },
+          "diversity_penalty": {
+            "impute_median": 0.0,
+            "mean_after_imputation": 0.0,
+            "std_after_imputation": 0.0
+          }
+        }
+      },
+      "learned_model": {
+        "trained": true,
+        "model": "l2_logistic_regression_gradient_descent_pure_python",
+        "feature_names": [
+          "final_score",
+          "semantic_score",
+          "citation_velocity_score",
+          "topic_growth_score",
+          "diversity_penalty"
+        ],
+        "training_positive_count": 43,
+        "training_negative_count": 17,
+        "coefficients_standardized_space": {
+          "intercept": 1.5080582514234326,
+          "weights": {
+            "final_score": 0.32136173236556503,
+            "semantic_score": 1.4390175017606954,
+            "citation_velocity_score": -0.3296413106648358,
+            "topic_growth_score": 0.5371444848085578,
+            "diversity_penalty": 0.0
+          }
+        }
+      },
+      "blind_test_metrics": {
+        "heuristic_final_score": {
+          "scored_labeled_row_count": 60,
+          "positive_count": 46,
+          "negative_count": 14,
+          "roc_auc_mann_whitney": 0.6009316770186336,
+          "roc_auc_reason": null,
+          "precision_at_k": {
+            "5": {
+              "value": 1.0,
+              "reason": null
+            },
+            "10": {
+              "value": 1.0,
+              "reason": null
+            },
+            "20": {
+              "value": 0.85,
+              "reason": null
+            }
+          }
+        },
+        "learned_model": {
+          "scored_labeled_row_count": 60,
+          "positive_count": 46,
+          "negative_count": 14,
+          "roc_auc_mann_whitney": 0.4798136645962733,
+          "roc_auc_reason": null,
+          "precision_at_k": {
+            "5": {
+              "value": 0.8,
+              "reason": null
+            },
+            "10": {
+              "value": 0.7,
+              "reason": null
+            },
+            "20": {
+              "value": 0.8,
+              "reason": null
+            }
+          }
+        }
+      }
+    }
+  },
+  "interpretation_note": "This fixed source split asks whether a tiny logistic model trained only on rank-shaped emerging labels transfers to blind-source labels. It is an offline diagnostic only and must not be described as validation or used to alter production ranking defaults."
+}

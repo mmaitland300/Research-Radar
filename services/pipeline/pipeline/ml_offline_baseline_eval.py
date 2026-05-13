@@ -185,6 +185,26 @@ def join_label_row_to_score(
     fam = label.get("family")
     if not isinstance(fam, str) or fam not in VALID_FAMILIES:
         return None
+    return join_label_row_to_score_family(label, by_work, by_wtoken, score_family=fam)
+
+
+def join_label_row_to_score_family(
+    label: dict[str, Any],
+    by_work: dict[tuple[str, int], dict],
+    by_wtoken: dict[tuple[str, str], dict],
+    *,
+    score_family: str,
+) -> dict[str, Any] | None:
+    """Join a label row to a score row using an explicit score family.
+
+    This is for source-split diagnostics where the label provenance family can
+    intentionally be null (for example blind snapshot labels), but the feature
+    source must still come from a concrete recommendation family in paper_scores.
+    The label row itself is not rewritten.
+    """
+    fam = str(score_family or "")
+    if fam not in VALID_FAMILIES:
+        return None
     work_id_raw = label.get("work_id")
     paper_id = label.get("paper_id")
     score: dict[str, Any] | None = None
