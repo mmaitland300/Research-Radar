@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import csv
+import hashlib
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -10,15 +12,20 @@ from unittest.mock import patch
 import pytest
 
 from pipeline.ml_label_dataset import (
+    BLIND_SNAPSHOT_REVIEW_V2_WORKSHEET_VERSION,
+    MLLabelDatasetError,
     VERBATIM_CAVEATS,
     bridge_like_yes_or_partial,
     build_ml_label_dataset,
+    build_ml_label_dataset_v5_reviewer_blind_ingest,
     discover_manual_review_csvs,
     good_or_acceptable,
     markdown_from_ml_label_dataset,
     parse_manual_review_worksheet,
     row_has_explicit_label,
     sha256_file,
+    stable_blind_snapshot_v2_row_id,
+    stable_row_id,
     surprising_or_useful,
     write_ml_label_dataset,
     worksheet_has_label_schema,
@@ -543,3 +550,322 @@ def test_ranking_run_id_context_used_when_ranking_run_id_missing(tmp_path: Path)
     _write(mr / "blind_like.csv", header + row)
     payload = build_ml_label_dataset(repo_root=root, manual_review_dir=mr)
     assert payload["rows"][0]["ranking_run_id"] == "rank-ee2ba6c816"
+
+
+V2_FIELDS = [
+    "row_id",
+    "worksheet_version",
+    "review_pool_variant",
+    "paper_id",
+    "openalex_work_id",
+    "work_id",
+    "title",
+    "year",
+    "citation_count",
+    "source_slug",
+    "topics",
+    "abstract_preview",
+    "sample_reason",
+    "cluster_id",
+    "relevance_label",
+    "novelty_label",
+    "bridge_like_label",
+    "reviewer_notes",
+]
+
+
+def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=V2_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+
+def _base_v4_payload() -> dict[str, object]:
+    base_row = {
+        "dataset_version": "ml-label-dataset-v4",
+        "row_id": "base-row-1",
+        "paper_id": "https://openalex.org/W100",
+        "work_id": "W100",
+        "title": "Base row",
+        "ranking_run_id": "rank-ee2ba6c816",
+        "ranking_version": "rv",
+        "corpus_snapshot_version": "snapshot",
+        "family": "emerging",
+        "review_pool_variant": "full_family_top_k",
+        "rank": "1",
+        "experiment_rank": None,
+        "source_worksheet_path": "docs/audit/manual-review/base.csv",
+        "source_worksheet_sha256": "base-sha",
+        "source_row_number": 2,
+        "relevance_label": "good",
+        "novelty_label": "useful",
+        "bridge_like_label": "yes",
+        "reviewer_notes": "base note",
+        "label_provenance": "manual_review_worksheet_csv",
+        "split": "audit_only",
+        "good_or_acceptable": True,
+        "surprising_or_useful": True,
+        "bridge_like_yes_or_partial": True,
+    }
+    return {
+        "dataset_version": "ml-label-dataset-v4",
+        "generated_at": "2026-05-12T00:00:00Z",
+        "caveats": list(VERBATIM_CAVEATS),
+        "source_worksheets": ["docs/audit/manual-review/base.csv"],
+        "source_worksheet_sha256": {"docs/audit/manual-review/base.csv": "base-sha"},
+        "rows": [base_row],
+        "metadata": {
+            "manual_review_dir": "docs/audit/manual-review",
+            "row_counts_by_source": {"docs/audit/manual-review/base.csv": 1},
+            "included_labeled_row_counts_by_source": {"docs/audit/manual-review/base.csv": 1},
+            "skipped_blank_row_counts_by_source": {"docs/audit/manual-review/base.csv": 0},
+            "skipped_blank_worksheets": [],
+            "skipped_malformed_rows": [],
+        },
+    }
+
+
+def _write_base_dataset(root: Path) -> Path:
+    base_path = root / "docs" / "audit" / "ml-label-dataset-v4.json"
+    base_path.parent.mkdir(parents=True, exist_ok=True)
+    base_path.write_text(json.dumps(_base_v4_payload(), indent=2) + "\n", encoding="utf-8")
+    return base_path
+
+
+def _v2_row(index: int, *, labels: bool) -> dict[str, str]:
+    work_id = f"W{7000000000 + index}"
+    paper_id = f"https://openalex.org/{work_id}"
+    row_id = stable_blind_snapshot_v2_row_id(
+        worksheet_version=BLIND_SNAPSHOT_REVIEW_V2_WORKSHEET_VERSION,
+        sample_seed=20260512,
+        paper_id=paper_id,
+    )
+    row = {
+        "row_id": row_id,
+        "worksheet_version": BLIND_SNAPSHOT_REVIEW_V2_WORKSHEET_VERSION,
+        "review_pool_variant": "ml_blind_snapshot_audit",
+        "paper_id": paper_id,
+        "openalex_work_id": work_id,
+        "work_id": work_id,
+        "title": f"Blind v2 title {index}",
+        "year": "2026",
+        "citation_count": str(index),
+        "source_slug": "openalex",
+        "topics": f"topic {index % 3}",
+        "abstract_preview": f"abstract {index}",
+        "sample_reason": "cluster_stratified_seeded",
+        "cluster_id": f"c{index % 4:03d}",
+        "relevance_label": "",
+        "novelty_label": "",
+        "bridge_like_label": "",
+        "reviewer_notes": "",
+    }
+    if labels:
+        row.update(
+            {
+                "relevance_label": "good" if index % 2 else "miss",
+                "novelty_label": "surprising" if index % 3 else "neither",
+                "bridge_like_label": "partial" if index % 5 else "no",
+                "reviewer_notes": f"review note {index}",
+            }
+        )
+    return row
+
+
+def _sidecar_for_rows(rows: list[dict[str, str]], *, base_sha: str) -> dict[str, object]:
+    sidecar_rows = []
+    for index, row in enumerate(rows, start=1):
+        sidecar_rows.append(
+            {
+                "row_id": row["row_id"],
+                "paper_id": row["paper_id"],
+                "openalex_work_id": row["openalex_work_id"],
+                "internal_work_id": 9000 + index,
+                "sample_seed": 20260512,
+                "sample_reason": row["sample_reason"],
+                "cluster_id": row["cluster_id"],
+                "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+                "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+                "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+                "ranking_run_id": "rank-ee2ba6c816",
+                "ranking_context_family_scores_json": '{"bridge": -0.2, "emerging": 0.1}',
+                "ranking_context_family_ranks_json": '{"bridge": 10, "emerging": 20}',
+                "emerging_paper_scores": {
+                    "family": "emerging",
+                    "final_score": 0.1,
+                    "semantic_score": 0.2,
+                    "citation_velocity_score": 0.0,
+                    "topic_growth_score": 0.0,
+                    "diversity_penalty": 0.0,
+                    "bridge_score": 0.0,
+                },
+                "paper_scores_by_family": {"emerging": {"final_score": 0.1}},
+            }
+        )
+    return {
+        "artifact_type": "ml_blind_snapshot_review_v2_context",
+        "provenance": {
+            "worksheet_version": BLIND_SNAPSHOT_REVIEW_V2_WORKSHEET_VERSION,
+            "review_pool_variant": "ml_blind_snapshot_audit",
+            "sample_seed": 20260512,
+            "row_id_formula": "sha256(worksheet_version|sample_seed|paper_id)",
+            "label_dataset_path": "docs/audit/ml-label-dataset-v4.json",
+            "label_dataset_sha256": base_sha,
+            "ranking_run_id": "rank-ee2ba6c816",
+            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
+            "embedding_version": "v2-title-abstract-1536-cleantext-r1",
+            "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
+        },
+        "rows": sidecar_rows,
+    }
+
+
+def _write_v2_ingest_fixture(root: Path) -> tuple[Path, Path, Path, Path, list[dict[str, str]]]:
+    base_path = _write_base_dataset(root)
+    blank_rows = [_v2_row(i, labels=False) for i in range(1, 61)]
+    labeled_rows = [_v2_row(i, labels=True) for i in range(1, 61)]
+    manual = root / "docs" / "audit" / "manual-review"
+    blank_path = manual / "ml_blind_snapshot_review_v2.csv"
+    labeled_path = manual / "ml_blind_snapshot_review_v2_labeled_2026-05-13.csv"
+    sidecar_path = manual / "ml_blind_snapshot_review_v2_context.json"
+    _write_csv(blank_path, blank_rows)
+    _write_csv(labeled_path, labeled_rows)
+    sidecar_path.write_text(
+        json.dumps(_sidecar_for_rows(labeled_rows, base_sha=sha256_file(base_path)), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return base_path, blank_path, labeled_path, sidecar_path, labeled_rows
+
+
+def test_v5_ingest_uses_v2_csv_row_id_as_canonical_and_preserves_sidecar(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, labeled_rows = _write_v2_ingest_fixture(root)
+    payload = build_ml_label_dataset_v5_reviewer_blind_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+    )
+
+    assert len(payload["rows"]) == 61
+    assert payload["rows"][0] == _base_v4_payload()["rows"][0]
+    row = payload["rows"][1]
+    expected = labeled_rows[0]["row_id"]
+    assert row["row_id"] == expected
+    old_style_id = stable_row_id(
+        source_rel="docs/audit/manual-review/ml_blind_snapshot_review_v2_labeled_2026-05-13.csv",
+        source_row_number=2,
+        paper_id=labeled_rows[0]["paper_id"],
+        ranking_run_id="rank-ee2ba6c816",
+        rank_key=None,
+        experiment_rank=None,
+    )
+    assert row["row_id"] != old_style_id
+    assert row["family"] is None
+    assert row["work_id"] == labeled_rows[0]["work_id"]
+    assert row["openalex_work_id"] == labeled_rows[0]["openalex_work_id"]
+    assert row["internal_work_id"] == 9001
+    assert row["internal_work_id"] != row["work_id"]
+    assert row["blind_snapshot_context"]["emerging_paper_scores"]["final_score"] == 0.1
+    assert row["blind_snapshot_context"]["internal_work_id"] == 9001
+    assert row["source_worksheet_path"] == "docs/audit/manual-review/ml_blind_snapshot_review_v2_labeled_2026-05-13.csv"
+    assert row["source_row_number"] == 2
+    assert payload["metadata"]["reviewer_blind_v2_ingest"]["v2_rows_appended"] == 60
+
+
+def test_v5_ingest_missing_or_extra_sidecar_rows_fail(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, _rows = _write_v2_ingest_fixture(root)
+    payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    payload["rows"] = payload["rows"][1:]
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(MLLabelDatasetError, match="sidecar row_id set differs"):
+        build_ml_label_dataset_v5_reviewer_blind_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+        )
+
+    base_path, blank_path, labeled_path, sidecar_path, _rows = _write_v2_ingest_fixture(root)
+    payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    extra = dict(payload["rows"][0])
+    extra["row_id"] = hashlib.sha256(b"extra").hexdigest()
+    payload["rows"].append(extra)
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(MLLabelDatasetError, match="sidecar row_id set differs"):
+        build_ml_label_dataset_v5_reviewer_blind_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+        )
+
+
+def test_v5_labeled_csv_template_comparison_ignores_only_review_columns(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, _rows = _write_v2_ingest_fixture(root)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["title"] = "Changed title"
+    _write_csv(labeled_path, rows)
+    with pytest.raises(MLLabelDatasetError, match="changed non-review template field"):
+        build_ml_label_dataset_v5_reviewer_blind_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+        )
+
+
+def test_v5_derived_targets_from_explicit_labels_only(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, _rows = _write_v2_ingest_fixture(root)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["relevance_label"] = "miss"
+    rows[0]["novelty_label"] = "neither"
+    rows[0]["bridge_like_label"] = "no"
+    rows[0]["reviewer_notes"] = "negative explicit labels despite high context"
+    _write_csv(labeled_path, rows)
+    payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["emerging_paper_scores"]["final_score"] = 999.0
+    sidecar_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    out = build_ml_label_dataset_v5_reviewer_blind_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+    )
+    row = out["rows"][1]
+    assert row["good_or_acceptable"] is False
+    assert row["surprising_or_useful"] is False
+    assert row["bridge_like_yes_or_partial"] is False
+
+
+def test_v5_assembly_is_base_plus_exact_v2_slice_no_glob_drift(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, _rows = _write_v2_ingest_fixture(root)
+    _write(
+        root / "docs" / "audit" / "manual-review" / "unrelated_labeled.csv",
+        HEADER_STANDARD + _std_data_row(relevance="good", novelty="useful", bridge_like="yes", notes="do not glob"),
+    )
+    payload = build_ml_label_dataset_v5_reviewer_blind_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+    )
+    source_paths = set(payload["source_worksheets"])
+    assert "docs/audit/manual-review/unrelated_labeled.csv" not in source_paths
+    assert payload["metadata"]["total_explicit_labeled_rows"] == 61
+    assert payload["metadata"]["reviewer_blind_v2_ingest"]["base_row_count"] == 1
+    assert payload["metadata"]["reviewer_blind_v2_ingest"]["v2_rows_appended"] == 60
