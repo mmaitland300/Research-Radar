@@ -12,6 +12,7 @@ artifacts/
 .codex-pydeps/
 *.egg-info/
 .DS_Store
+.vscode/
 docs/audit/out/
 services/pipeline/tests/_sim_artifacts/
 
