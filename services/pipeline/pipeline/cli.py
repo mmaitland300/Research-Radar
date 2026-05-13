@@ -1611,6 +1611,67 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_blind_ws_v2_parser = subparsers.add_parser(
+        "ml-blind-snapshot-review-worksheet-v2",
+        help="Write reviewer-blind v2 CSV plus ranking-context JSON sidecar (read-only DB; no labels inferred)",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON used to exclude already fully labeled work_ids",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--corpus-snapshot-version",
+        required=True,
+        help="Explicit source_snapshot_versions.source_snapshot_version (sample pool source)",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--embedding-version",
+        required=True,
+        help="Explicit embedding artifact version (must match cluster + ranking run)",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--cluster-version",
+        required=True,
+        help="Explicit succeeded clustering_runs.cluster_version for cluster strata",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Ranking run id used only for hidden sidecar context and off-worksheet sampling strata",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--rows",
+        type=int,
+        default=60,
+        help="Target worksheet row count (1-500; default 60)",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--seed",
+        type=int,
+        default=20260512,
+        help="Deterministic sampling seed (default 20260512; distinct from v1)",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--output",
+        required=True,
+        help="Reviewer CSV output path (e.g. docs/audit/manual-review/ml_blind_snapshot_review_v2.csv)",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--context-output",
+        required=True,
+        help="Hidden context sidecar JSON path (e.g. docs/audit/manual-review/ml_blind_snapshot_review_v2_context.json)",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Companion Markdown path",
+    )
+    ml_blind_ws_v2_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
 
     args = parser.parse_args()
 
@@ -1658,6 +1719,57 @@ def main() -> None:
             print(f"ml-blind-snapshot-review-worksheet: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_csv.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(int(debug.get("achieved_rows", 0)))
+        return
+
+    if args.command == "ml-blind-snapshot-review-worksheet-v2":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_blind_snapshot_review_worksheet import (
+            MAX_ROWS as _BLIND_MAX_ROWS,
+            MIN_ROWS as _BLIND_MIN_ROWS,
+            MLBlindSnapshotReviewWorksheetError,
+        )
+        from pipeline.ml_blind_snapshot_review_worksheet_v2 import run_ml_blind_snapshot_review_worksheet_v2_cli
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        snap = (args.corpus_snapshot_version or "").strip()
+        if not snap:
+            parser.error("--corpus-snapshot-version is required and must be non-empty")
+        emb = (args.embedding_version or "").strip()
+        if not emb:
+            parser.error("--embedding-version is required and must be non-empty")
+        clv = (args.cluster_version or "").strip()
+        if not clv:
+            parser.error("--cluster-version is required and must be non-empty")
+        nrows = int(args.rows)
+        if nrows < _BLIND_MIN_ROWS or nrows > _BLIND_MAX_ROWS:
+            parser.error(f"--rows must be between {_BLIND_MIN_ROWS} and {_BLIND_MAX_ROWS}")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_csv = Path(args.output)
+        out_ctx = Path(args.context_output)
+        out_md = Path(args.markdown_output)
+        try:
+            debug = run_ml_blind_snapshot_review_worksheet_v2_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                corpus_snapshot_version=snap,
+                embedding_version=emb,
+                cluster_version=clv,
+                ranking_run_id=rid,
+                rows=nrows,
+                seed=int(args.seed),
+                csv_output_path=out_csv,
+                context_output_path=out_ctx,
+                markdown_output_path=out_md,
+            )
+        except MLBlindSnapshotReviewWorksheetError as e:
+            print(f"ml-blind-snapshot-review-worksheet-v2: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_csv.resolve(), file=sys.stderr)
+        print(out_ctx.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(int(debug.get("achieved_rows", 0)))
         return
