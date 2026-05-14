@@ -1459,6 +1459,42 @@ def main() -> None:
         action="store_true",
         help="Skip live OpenAI and emit deterministic fake vectors for tests/dry runs",
     )
+    ml_text_only_baseline_parser = subparsers.add_parser(
+        "ml-text-only-baseline",
+        help="Offline text-only diagnostic over frozen external embeddings and v7 labels (no DB, no ranking)",
+    )
+    ml_text_only_baseline_parser.add_argument(
+        "--embeddings",
+        required=True,
+        help="Path to ml-external-text-embeddings-v7 JSON",
+    )
+    ml_text_only_baseline_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v7 JSON",
+    )
+    ml_text_only_baseline_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write text-only baseline JSON",
+    )
+    ml_text_only_baseline_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_text_only_baseline_parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=0,
+        help="Random seed for shuffled stratified CV and random baseline (default: 0)",
+    )
+    ml_text_only_baseline_parser.add_argument(
+        "--cv-folds",
+        type=int,
+        default=5,
+        help="Requested stratified CV folds (reduced to min class count per target; default: 5)",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -2466,6 +2502,31 @@ def main() -> None:
             )
         except MLExternalTextEmbeddingsError as e:
             print(f"ml-external-text-embeddings: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-text-only-baseline":
+        from pipeline.ml_text_only_baseline import (
+            MLTextOnlyBaselineError,
+            write_ml_text_only_baseline,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            write_ml_text_only_baseline(
+                embeddings_path=Path(args.embeddings),
+                label_dataset_path=Path(args.label_dataset),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                random_seed=int(args.random_seed),
+                cv_folds=int(args.cv_folds),
+            )
+        except MLTextOnlyBaselineError as e:
+            print(f"ml-text-only-baseline: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:

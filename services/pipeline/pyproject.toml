@@ -9,6 +9,7 @@ description = "ETL and ranking pipeline for Research Radar."
 requires-python = ">=3.12"
 dependencies = [
     "psycopg[binary]>=3.2",
+    "scikit-learn>=1.4",
 ]
 
 [tool.setuptools.packages.find]
