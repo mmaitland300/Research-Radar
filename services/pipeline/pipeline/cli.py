@@ -1625,6 +1625,40 @@ def main() -> None:
         default=0,
         help="Random seed for shuffled stratified CV (default: 0)",
     )
+    ml_text_transfer_readiness_parser = subparsers.add_parser(
+        "ml-text-transfer-readiness",
+        help="Read-only synthesis of text transfer audit artifacts (no DB, embeddings, ranking, or training)",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--cross-pool",
+        required=True,
+        help="Path to ml-text-baseline-cross-pool-v1 JSON",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v7 JSON",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--text-corpus-v2",
+        default=None,
+        help="Optional path to ml-labeled-text-corpus-v2 JSON for text-format evidence",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--embeddings-v1",
+        default=None,
+        help="Optional path to ml-labeled-text-embeddings-v1 JSON for provenance only",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write text transfer readiness JSON",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -2756,6 +2790,33 @@ def main() -> None:
             )
         except MLTextBaselineCrossPoolError as e:
             print(f"ml-text-baseline-cross-pool: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-text-transfer-readiness":
+        from pipeline.ml_text_transfer_readiness import (
+            MLTextTransferReadinessError,
+            write_ml_text_transfer_readiness,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        text_corpus_v2 = Path(args.text_corpus_v2) if args.text_corpus_v2 else None
+        embeddings_v1 = Path(args.embeddings_v1) if args.embeddings_v1 else None
+        try:
+            write_ml_text_transfer_readiness(
+                cross_pool_path=Path(args.cross_pool),
+                label_dataset_path=Path(args.label_dataset),
+                text_corpus_v2_path=text_corpus_v2,
+                embeddings_v1_path=embeddings_v1,
+                output_path=out_json,
+                markdown_output_path=out_md,
+            )
+        except MLTextTransferReadinessError as e:
+            print(f"ml-text-transfer-readiness: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
