@@ -1458,6 +1458,25 @@ def main() -> None:
         default=None,
         help="Optional cap on selected labeled audit rows for dev/CI; omit for full corpus",
     )
+    ml_labeled_text_corpus_normalize_parser = subparsers.add_parser(
+        "ml-labeled-text-corpus-normalize",
+        help="Normalize ml-labeled-text-corpus-v1 into canonical title+abstract text v2 (no DB, HTTP, embeddings, or ranking)",
+    )
+    ml_labeled_text_corpus_normalize_parser.add_argument(
+        "--source-corpus",
+        required=True,
+        help="Path to ml-labeled-text-corpus-v1 JSON",
+    )
+    ml_labeled_text_corpus_normalize_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write normalized labeled text corpus JSON",
+    )
+    ml_labeled_text_corpus_normalize_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
     ml_external_text_embeddings_parser = subparsers.add_parser(
         "ml-external-text-embeddings",
         help="Vectorize a frozen external text corpus artifact into an offline embedding artifact (no DB, no ranking)",
@@ -2614,6 +2633,28 @@ def main() -> None:
             )
         except MLLabeledTextCorpusError as e:
             print(f"ml-labeled-text-corpus: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-labeled-text-corpus-normalize":
+        from pipeline.ml_labeled_text_corpus_normalize import (
+            MLLabeledTextCorpusNormalizeError,
+            write_ml_labeled_text_corpus_normalize,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            write_ml_labeled_text_corpus_normalize(
+                source_corpus_path=Path(args.source_corpus),
+                output_path=out_json,
+                markdown_output_path=out_md,
+            )
+        except MLLabeledTextCorpusNormalizeError as e:
+            print(f"ml-labeled-text-corpus-normalize: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
