@@ -427,7 +427,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
         <div className="panel-header">
           <div>
             <p className={`eyebrow family-${family}`}>Evaluation</p>
-            <h1>Evidence v0: ranked feed vs naive baselines</h1>
+            <h1>Evaluation v0: ranked feed vs simple baselines</h1>
           </div>
           <div className="stamp-row">
             <span className={`stamp stamp-family stamp-family-${family}`}>
@@ -536,7 +536,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             <div className="panel-header">
               <div>
                 <p className="eyebrow eyebrow-muted">Interpretation guardrails</p>
-                <h2>Disclaimer</h2>
+                <h2>Interpretation notes</h2>
               </div>
             </div>
             <p className="result-title">{data.disclaimer.headline}</p>
@@ -599,7 +599,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                     {bridgeDistinctness.detail ? (
                       <>
                         {" "}
-                        <span className="metric-value-mono">— {bridgeDistinctness.detail}</span>
+                        <span className="metric-value-mono">- {bridgeDistinctness.detail}</span>
                       </>
                     ) : null}
                   </p>

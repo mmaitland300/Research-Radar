@@ -7,7 +7,7 @@ const cards = [
   {
     title: "Bridge preview",
     body:
-      "Inspect cross-cluster candidates and the signal evidence recorded for the selected run. Bridge is experimental and separate from the default recommendation path."
+      "Inspect cross-cluster candidates and the signal notes recorded for the selected run. Bridge is experimental and separate from the default recommendation path."
   },
   {
     title: "Explainable Ranking",
@@ -137,14 +137,14 @@ export default function HomePage() {
             </p>
           </article>
           <article className="brief-card">
-            <h3>Bridge with evidence</h3>
+            <h3>Bridge with notes</h3>
             <p>
-              The bridge view shows cluster context and recorded evidence without
+              The bridge view shows cluster context and recorded signal notes without
               presenting the signal as a validated recommender.
             </p>
           </article>
           <article className="brief-card">
-            <h3>Evidence in the interface</h3>
+            <h3>Signals in the interface</h3>
             <p>
               Ranking weights, snapshot versions, and topic signals should read
               like instrument output, not hidden implementation detail.

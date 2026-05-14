@@ -292,7 +292,7 @@ function explanationSummary(explanations: RankedSignalExplanation[]): string {
   return parts.length > 0 ? parts.join(" | ") : "No signal breakdown";
 }
 
-function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanation; rankingVersion: string }) {
+function EmergingHowPanel({ expl }: { expl: RankedListExplanation }) {
   return (
     <div className="ranking-how-panel">
       <h3>{expl.headline}</h3>
@@ -312,16 +312,16 @@ function EmergingHowPanel({ expl, rankingVersion }: { expl: RankedListExplanatio
           </>
         ) : null}
         <br />
-        <span className="muted-inline">Pinned run label: {rankingVersion}</span>
+        <span className="muted-inline">Full run details are available in Technical run metadata.</span>
       </p>
     </div>
   );
 }
 
 function bridgeEligibilityLabel(bridgeEligible: boolean | null): string {
-  if (bridgeEligible === true) return "Bridge eligible";
-  if (bridgeEligible === false) return "Not bridge eligible";
-  return "Bridge eligibility not recorded";
+  if (bridgeEligible === true) return "Bridge gate passed";
+  if (bridgeEligible === false) return "Bridge gate not passed";
+  return "Bridge gate not recorded";
 }
 
 function bridgeSignalOrderingLine(explanations: RankedSignalExplanation[]): string | null {
@@ -344,9 +344,9 @@ function bridgeOrderingState(explanations: RankedSignalExplanation[]): "used" | 
   return "not computed";
 }
 
-function bridgeEligibilityState(bridgeEligible: boolean | null): "passed" | "failed" | "not recorded" {
+function bridgeEligibilityState(bridgeEligible: boolean | null): "passed" | "not passed" | "not recorded" {
   if (bridgeEligible === true) return "passed";
-  if (bridgeEligible === false) return "failed";
+  if (bridgeEligible === false) return "not passed";
   return "not recorded";
 }
 
@@ -357,7 +357,14 @@ function bridgeRationaleLine(item: RankedItem): string {
     item.signals.bridge != null && Number.isFinite(item.signals.bridge)
       ? item.signals.bridge.toFixed(3)
       : "n/a";
-  return `Bridge signal: ${ordering}. Eligibility: ${eligibility}. Bridge score: ${bridgeScore}.`;
+  return `Bridge signal: ${ordering}. Bridge gate: ${eligibility}. Bridge score: ${bridgeScore}.`;
+}
+
+function compactSnapshotLabel(snapshotVersion: string): string {
+  const match = snapshotVersion.match(/(\d{8})/);
+  if (!match) return "Current corpus snapshot";
+  const raw = match[1];
+  return `Snapshot ${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
 }
 
 function BridgeSignalOrderingParagraph({ explanations }: { explanations: RankedSignalExplanation[] }) {
@@ -676,8 +683,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             {data ? (
               <div className="hero-metrics" aria-label="Ranking run summary">
                 <article className="metric-card">
-                  <p className="metric-label">Run label</p>
-                  <p className="metric-value metric-value-mono">{data.ranking_version}</p>
+                  <p className="metric-label">Run context</p>
+                  <p className="metric-value">{rankingRunId || RANKING_VERSION ? "Pinned" : "Latest"}</p>
                 </article>
                 <article className="metric-card">
                   <p className="metric-label">Rows surfaced</p>
@@ -690,17 +697,15 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   </p>
                 </article>
                 <article className="metric-card">
-                  <p className="metric-label">Rows with topic labels</p>
-                  <p className="metric-value">{surfacedWithTopics}</p>
+                  <p className="metric-label">Snapshot</p>
+                  <p className="metric-value">{compactSnapshotLabel(data.corpus_snapshot_version)}</p>
                 </article>
               </div>
             ) : null}
             {data ? (
               <p className="muted-inline">
-                <strong>{data.ranking_version}</strong> | run{" "}
-                <code>{data.ranking_run_id}</code> | snapshot{" "}
-                <code>{data.corpus_snapshot_version}</code> | {data.total}{" "}
-                {data.total === 1 ? "paper" : "papers"}
+                Showing {data.total} {data.total === 1 ? "paper" : "papers"} from a materialized{" "}
+                {FAMILY_LABEL[family].toLowerCase()} ranking run; {surfacedWithTopics} include topic labels.
               </p>
             ) : null}
             <p className="muted-inline">
@@ -722,6 +727,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             ) : null}
             <details className="ranking-why-details">
               <summary>Technical run metadata</summary>
+              <p className="result-breakdown">
+                Resolved run label: <code>{data?.ranking_version ?? "unavailable"}</code>.
+              </p>
               <p className="result-breakdown">
                 {RANKING_VERSION ? (
                   <>
@@ -805,8 +813,14 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <span className="stamp">Limit: {limit}</span>
             </div>
           </div>
+          {family === "bridge" ? (
+            <p className="muted-inline">
+              Bridge preview shows measured cross-cluster signal for the resolved run. Some rows may not
+              pass the optional bridge gate; use the eligible-only view when you want to hide those rows.
+            </p>
+          ) : null}
           {family === "emerging" || family === "bridge" ? (
-            <EmergingHowPanel expl={data.list_explanation} rankingVersion={data.ranking_version} />
+            <EmergingHowPanel expl={data.list_explanation} />
           ) : null}
           {data.items.length === 0 ? (
             <p>No rows for this family in the selected run.</p>
