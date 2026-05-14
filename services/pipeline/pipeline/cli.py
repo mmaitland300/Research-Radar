@@ -1384,6 +1384,40 @@ def main() -> None:
         default=None,
         help="Optional path to write companion Markdown summary",
     )
+    ml_external_text_corpus_parser = subparsers.add_parser(
+        "ml-external-text-corpus",
+        help="Hydrate ml_external_near_miss_audit rows from OpenAlex into a read-only text corpus artifact",
+    )
+    ml_external_text_corpus_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON (e.g. docs/audit/ml-label-dataset-v7.json)",
+    )
+    ml_external_text_corpus_parser.add_argument(
+        "--context-sidecar",
+        default=None,
+        help="Optional external near-miss context sidecar JSON for SHA and row_id parity checks",
+    )
+    ml_external_text_corpus_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write hydrated text corpus JSON",
+    )
+    ml_external_text_corpus_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_external_text_corpus_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Contact for OpenAlex User-Agent (default: OPENALEX_MAILTO env or local placeholder)",
+    )
+    ml_external_text_corpus_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Skip live OpenAlex HTTP and build deterministic mock hydration from dataset/context previews",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -2339,6 +2373,32 @@ def main() -> None:
             )
         except MLExternalFeatureCoverageError as e:
             print(f"ml-external-feature-coverage: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-external-text-corpus":
+        from pipeline.ml_external_text_corpus import (
+            MLExternalTextCorpusError,
+            run_ml_external_text_corpus_cli,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        sidecar = Path(args.context_sidecar) if args.context_sidecar else None
+        try:
+            run_ml_external_text_corpus_cli(
+                label_dataset_path=Path(args.label_dataset),
+                context_sidecar_path=sidecar,
+                output_json=out_json,
+                markdown_output=out_md,
+                mailto=args.mailto,
+                mock_openalex=bool(args.mock_openalex),
+            )
+        except MLExternalTextCorpusError as e:
+            print(f"ml-external-text-corpus: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
