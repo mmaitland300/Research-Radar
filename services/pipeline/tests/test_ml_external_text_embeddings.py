@@ -185,10 +185,13 @@ def test_markdown_has_caveats_and_no_vectors(tmp_path: Path) -> None:
 
 
 def test_no_database_flag_or_psycopg_dependency() -> None:
-    module_source = Path("pipeline/ml_external_text_embeddings.py").read_text(encoding="utf-8")
+    package_root = Path(__file__).resolve().parents[1]
+    module_source = (
+        package_root / "pipeline" / "ml_external_text_embeddings.py"
+    ).read_text(encoding="utf-8")
     assert "psycopg" not in module_source.lower()
 
-    cli_source = Path("pipeline/cli.py").read_text(encoding="utf-8")
+    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
     start = cli_source.index('"ml-external-text-embeddings"')
     end = cli_source.index("ml_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]
