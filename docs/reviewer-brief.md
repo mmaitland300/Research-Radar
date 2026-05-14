@@ -12,7 +12,7 @@
 
 - Corpus is intentionally narrow and currently wired to TISMIR + JAES
 - Evaluation is proxy/distributional and not a human-labeled relevance benchmark
-- Bridge remains experimental; treat `/recommended?family=bridge` as diagnostic notes, not a validated bridge recommender. Default readiness and stronger product claims require more review, not bridge weighting alone (`ready_for_default=false` in audit artifacts).
+- Bridge remains experimental; treat `/recommended?family=bridge` as diagnostic evidence, not a validated bridge recommender. Default readiness and stronger product claims require more review, not bridge weighting alone (`ready_for_default=false` in audit artifacts).
 - General query-semantic search is not yet shipped; some pinned **emerging** runs may use embedding **slice-fit** as one bounded feature when labeled in the UI
 
 ## Recommended bridge guardrails
@@ -33,7 +33,7 @@ To inspect the current experimental bridge review view locally, set `NEXT_PUBLIC
 
 `http://localhost:3000/recommended?family=bridge&ranking_run_id=rank-60910a47b4&bridge_eligible_only=true`
 
-When this view is exposed, it is still experimental and must be read with the page copy: "Experimental bridge review view; not validated or default." and "Single-reviewer, top-20, offline audit notes only."
+When this view is exposed, it is still experimental and must be read with the page copy: "Experimental bridge review view; not validated or default." and "Single-reviewer, top-20, offline audit evidence only."
 
 ## Ranking run pinning
 
@@ -44,9 +44,9 @@ The current bridge objective experiment uses:
 - Baseline bridge run: `rank-ee2ba6c816`
 - Objective experiment run: `rank-60910a47b4`
 - Eligibility mode: `top50_cross040_exclude_persistent_shared_v1`
-- Notes index: `docs/audit/bridge-evidence-summary.md`
+- Evidence index: `docs/audit/bridge-evidence-summary.md`
 
-Eligible-only bridge remains experimental because the supporting notes are single-reviewer, top-20, offline audit material only. It is not validation, not a superiority claim, and not default readiness.
+Eligible-only bridge remains experimental because the supporting evidence is single-reviewer, top-20, offline audit material only. It is not validation, not a superiority claim, and not default readiness.
 
 ## Best supporting links
 

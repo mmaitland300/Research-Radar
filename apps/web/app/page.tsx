@@ -7,7 +7,7 @@ const cards = [
   {
     title: "Bridge preview",
     body:
-      "Inspect cross-cluster candidates and the signal notes recorded for the selected run. Bridge is experimental and separate from the default recommendation path."
+      "Inspect cross-cluster candidates and the signal evidence recorded for the selected run. Bridge is experimental and separate from the default recommendation path."
   },
   {
     title: "Explainable Ranking",
@@ -137,9 +137,9 @@ export default function HomePage() {
             </p>
           </article>
           <article className="brief-card">
-            <h3>Bridge with notes</h3>
+            <h3>Bridge with context</h3>
             <p>
-              The bridge view shows cluster context and recorded signal notes without
+              The bridge view shows cluster context and recorded signal evidence without
               presenting the signal as a validated recommender.
             </p>
           </article>
