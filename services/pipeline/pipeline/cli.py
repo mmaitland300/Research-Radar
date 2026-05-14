@@ -1418,6 +1418,46 @@ def main() -> None:
         action="store_true",
         help="Skip live OpenAlex HTTP and build deterministic mock hydration from dataset/context previews",
     )
+    ml_labeled_text_corpus_parser = subparsers.add_parser(
+        "ml-labeled-text-corpus",
+        help="Build observation-level text corpus for explicitly labeled audit rows (no DB, embeddings, or ranking)",
+    )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON",
+    )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--external-text-corpus",
+        default=None,
+        help="Optional frozen external text corpus JSON for row_id reuse",
+    )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write labeled text corpus JSON",
+    )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Contact for OpenAlex User-Agent (default: OPENALEX_MAILTO env or local placeholder)",
+    )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Skip live OpenAlex HTTP and build deterministic mock hydration for non-reused rows",
+    )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--max-rows",
+        type=int,
+        default=None,
+        help="Optional cap on selected labeled audit rows for dev/CI; omit for full corpus",
+    )
     ml_external_text_embeddings_parser = subparsers.add_parser(
         "ml-external-text-embeddings",
         help="Vectorize a frozen external text corpus artifact into an offline embedding artifact (no DB, no ranking)",
@@ -2476,6 +2516,33 @@ def main() -> None:
             )
         except MLExternalTextCorpusError as e:
             print(f"ml-external-text-corpus: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-labeled-text-corpus":
+        from pipeline.ml_labeled_text_corpus import (
+            MLLabeledTextCorpusError,
+            write_ml_labeled_text_corpus,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        external = Path(args.external_text_corpus) if args.external_text_corpus else None
+        try:
+            write_ml_labeled_text_corpus(
+                label_dataset_path=Path(args.label_dataset),
+                external_text_corpus_path=external,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                mailto=args.mailto,
+                mock_openalex=bool(args.mock_openalex),
+                max_rows=args.max_rows,
+            )
+        except MLLabeledTextCorpusError as e:
+            print(f"ml-labeled-text-corpus: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
