@@ -1418,6 +1418,47 @@ def main() -> None:
         action="store_true",
         help="Skip live OpenAlex HTTP and build deterministic mock hydration from dataset/context previews",
     )
+    ml_external_text_embeddings_parser = subparsers.add_parser(
+        "ml-external-text-embeddings",
+        help="Vectorize a frozen external text corpus artifact into an offline embedding artifact (no DB, no ranking)",
+    )
+    ml_external_text_embeddings_parser.add_argument(
+        "--text-corpus",
+        required=True,
+        help="Path to frozen external text corpus JSON (e.g. docs/audit/ml-external-text-corpus-v7.json)",
+    )
+    ml_external_text_embeddings_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write external text embeddings JSON",
+    )
+    ml_external_text_embeddings_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_external_text_embeddings_parser.add_argument(
+        "--embedding-model",
+        default="text-embedding-3-small",
+        help="Embedding model name (default: text-embedding-3-small)",
+    )
+    ml_external_text_embeddings_parser.add_argument(
+        "--expected-dimensions",
+        type=int,
+        default=1536,
+        help="Expected embedding vector dimensions (default: 1536)",
+    )
+    ml_external_text_embeddings_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=16,
+        help="Embedding batch size (default: 16)",
+    )
+    ml_external_text_embeddings_parser.add_argument(
+        "--mock-embeddings",
+        action="store_true",
+        help="Skip live OpenAI and emit deterministic fake vectors for tests/dry runs",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -2399,6 +2440,32 @@ def main() -> None:
             )
         except MLExternalTextCorpusError as e:
             print(f"ml-external-text-corpus: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-external-text-embeddings":
+        from pipeline.ml_external_text_embeddings import (
+            MLExternalTextEmbeddingsError,
+            write_external_text_embeddings,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            write_external_text_embeddings(
+                text_corpus_path=Path(args.text_corpus),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                embedding_model=str(args.embedding_model),
+                expected_dimensions=int(args.expected_dimensions),
+                batch_size=int(args.batch_size),
+                mock_embeddings=bool(args.mock_embeddings),
+            )
+        except MLExternalTextEmbeddingsError as e:
+            print(f"ml-external-text-embeddings: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
