@@ -39,6 +39,7 @@ def _row(index: int, *, row_id: str | None = None, text: str | None = None) -> d
         "row_id": row_id or f"row-{index:03d}",
         "paper_id": f"https://openalex.org/{token}",
         "openalex_work_id": token,
+        "work_id": token,
         "text_for_embedding": text if text is not None else f"Title {index}\n\nAbstract body {index}.",
     }
 
@@ -83,6 +84,7 @@ def test_build_payload_sorts_rows_and_hashes_exact_text(tmp_path: Path) -> None:
     first_text = "Title 1\n\nText with  exact spacing."
     assert out_rows[0]["text_sha256"] == hashlib.sha256(first_text.encode("utf-8")).hexdigest()
     assert out_rows[0]["text_length"] == len(first_text)
+    assert out_rows[0]["work_id"] == "W800001"
     assert out_rows[0]["embedding_status"] == "ok"
     assert provider.calls[0][0] == first_text
 
@@ -121,6 +123,11 @@ def test_rejects_wrong_shape_version_pool_or_count(tmp_path: Path) -> None:
     with pytest.raises(MLExternalTextEmbeddingsError, match="metadata object"):
         build_external_text_embeddings_payload(text_corpus_path=_write_corpus(tmp_path, {"rows": []}), mock_embeddings=True)
 
+    bad_type = _corpus_payload()
+    bad_type["metadata"]["artifact_type"] = "wrong_artifact"
+    with pytest.raises(MLExternalTextEmbeddingsError, match="artifact_type"):
+        build_external_text_embeddings_payload(text_corpus_path=_write_corpus(tmp_path, bad_type), mock_embeddings=True)
+
     bad_version = _corpus_payload(version="ml-external-text-corpus-v6")
     with pytest.raises(MLExternalTextEmbeddingsError, match="corpus_version"):
         build_external_text_embeddings_payload(text_corpus_path=_write_corpus(tmp_path, bad_version), mock_embeddings=True)
@@ -134,6 +141,11 @@ def test_rejects_wrong_shape_version_pool_or_count(tmp_path: Path) -> None:
     short["metadata"]["strict_expected_external_row_count"] = 59
     with pytest.raises(MLExternalTextEmbeddingsError, match="exactly 60"):
         build_external_text_embeddings_payload(text_corpus_path=_write_corpus(tmp_path, short), mock_embeddings=True)
+
+    dupes = _corpus_payload(rows=[_row(i) for i in range(1, 61)])
+    dupes["rows"][1]["row_id"] = dupes["rows"][0]["row_id"]
+    with pytest.raises(MLExternalTextEmbeddingsError, match="duplicate row_id"):
+        build_external_text_embeddings_payload(text_corpus_path=_write_corpus(tmp_path, dupes), mock_embeddings=True)
 
 
 def test_empty_text_and_dimension_mismatch_fail(tmp_path: Path) -> None:

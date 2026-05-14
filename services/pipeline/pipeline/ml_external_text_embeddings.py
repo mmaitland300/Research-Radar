@@ -37,8 +37,9 @@ CAVEATS = (
     "Frozen vectorization of frozen text corpus only; vectors are not production ranking signals.",
     "No Postgres reads or writes; not joinable to paper_scores unless a future explicit step adds ranked rows.",
     (
-        "Verbatim text_for_embedding was embedded; cross-pool comparison to DB title+abstract format may require "
-        "a documented transform in a later experiment, not silent relabeling here."
+        "Verbatim text_for_embedding was embedded; cross-pool comparison to DB corpus-v2 embedding string "
+        'format (e.g. "Title: ... Abstract: ...") requires a documented transform in a later experiment, '
+        "not silent relabeling here."
     ),
 )
 
@@ -238,6 +239,7 @@ def build_external_text_embeddings_payload(
                 "row_id": row.get("row_id"),
                 "paper_id": row.get("paper_id"),
                 "openalex_work_id": row.get("openalex_work_id"),
+                "work_id": row.get("work_id"),
                 "text_sha256": item["text_sha256"],
                 "text_length": len(text),
                 "embedding": vector,
