@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import statistics
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -15,6 +14,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from pipeline.bootstrap_loader import database_url_from_env
+from pipeline.openalex_ids import normalize_w_token
 from pipeline.recommendation_review_worksheet import cluster_version_from_config
 from pipeline.repo_paths import portable_repo_path
 
@@ -29,9 +29,6 @@ FEATURE_FIELDS = (
     "diversity_penalty",
 )
 
-_W_TOKEN = re.compile(r"(W\d+)", re.IGNORECASE)
-
-
 class MLOfflineBaselineEvalError(Exception):
     def __init__(self, message: str, *, code: int = 2) -> None:
         super().__init__(message)
@@ -44,15 +41,6 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
-
-
-def normalize_w_token(value: str | None) -> str | None:
-    if not value:
-        return None
-    m = _W_TOKEN.search(str(value).strip())
-    if not m:
-        return None
-    return m.group(1).upper()
 
 
 def _parse_config_json(raw: Any) -> dict[str, Any]:

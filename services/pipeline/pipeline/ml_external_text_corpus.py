@@ -15,7 +15,7 @@ from typing import Any, Mapping
 from urllib.parse import urlencode
 
 from pipeline.ml_label_dataset import sha256_file
-from pipeline.ml_offline_baseline_eval import normalize_w_token
+from pipeline.openalex_ids import normalize_w_token
 from pipeline.openalex import OPENALEX_WORKS_URL, build_work_select_clause
 from pipeline.openalex_client import (
     compute_contact_provenance,

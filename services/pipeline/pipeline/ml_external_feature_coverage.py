@@ -17,7 +17,7 @@ from psycopg.rows import dict_row
 
 from pipeline.bootstrap_loader import database_url_from_env
 from pipeline.ml_label_dataset import sha256_file
-from pipeline.ml_offline_baseline_eval import normalize_w_token
+from pipeline.openalex_ids import normalize_w_token
 from pipeline.repo_paths import portable_repo_path
 
 REVIEW_POOL_VARIANT = "ml_external_near_miss_audit"
