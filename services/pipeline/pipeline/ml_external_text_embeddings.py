@@ -173,8 +173,11 @@ def build_external_text_embeddings_payload(
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     corpus_path = Path(text_corpus_path)
-    source_sha = sha256_file(corpus_path)
     corpus_payload = _load_json_object(corpus_path)
+    try:
+        source_sha = sha256_file(corpus_path)
+    except OSError as exc:
+        raise MLExternalTextEmbeddingsError(f"Failed to hash text corpus {corpus_path}: {exc}") from exc
     source_metadata, corpus_rows = validate_text_corpus_payload(corpus_payload)
 
     row_inputs: list[dict[str, Any]] = []

@@ -120,6 +120,9 @@ def test_mock_vectors_are_deterministic(tmp_path: Path) -> None:
 
 
 def test_rejects_wrong_shape_version_pool_or_count(tmp_path: Path) -> None:
+    with pytest.raises(MLExternalTextEmbeddingsError, match="Failed to load JSON"):
+        build_external_text_embeddings_payload(text_corpus_path=tmp_path / "missing.json", mock_embeddings=True)
+
     with pytest.raises(MLExternalTextEmbeddingsError, match="metadata object"):
         build_external_text_embeddings_payload(text_corpus_path=_write_corpus(tmp_path, {"rows": []}), mock_embeddings=True)
 
