@@ -1576,6 +1576,36 @@ def main() -> None:
         action="store_true",
         help="Skip live OpenAI and emit deterministic fake vectors for tests/dry runs",
     )
+    ml_text_baseline_cross_pool_parser = subparsers.add_parser(
+        "ml-text-baseline-cross-pool",
+        help="Offline source-transfer diagnostic over labeled text embeddings and v7 labels (no DB, no ranking)",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--embeddings",
+        required=True,
+        help="Path to ml-labeled-text-embeddings-v1 JSON",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v7 JSON",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write cross-pool baseline JSON",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=0,
+        help="Random seed for shuffled stratified CV (default: 0)",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -2661,6 +2691,30 @@ def main() -> None:
             )
         except MLLabeledTextEmbeddingsError as e:
             print(f"ml-labeled-text-embeddings: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-text-baseline-cross-pool":
+        from pipeline.ml_text_baseline_cross_pool import (
+            MLTextBaselineCrossPoolError,
+            write_ml_text_baseline_cross_pool,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            write_ml_text_baseline_cross_pool(
+                embeddings_path=Path(args.embeddings),
+                label_dataset_path=Path(args.label_dataset),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                random_seed=int(args.random_seed),
+            )
+        except MLTextBaselineCrossPoolError as e:
+            print(f"ml-text-baseline-cross-pool: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
