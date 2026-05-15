@@ -1659,6 +1659,50 @@ def main() -> None:
         default=None,
         help="Optional path to write companion Markdown summary",
     )
+    ml_production_readiness_plan_parser = subparsers.add_parser(
+        "ml-production-readiness-plan",
+        help="Write a deterministic production ML gate/spec artifact (no DB, training, embeddings, ranking, or splits)",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--transfer-readiness",
+        required=True,
+        help="Path to ml-text-transfer-readiness-v1 JSON",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v7 JSON",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--conflict-policy",
+        default=None,
+        help="Optional conflict policy Markdown path (default: docs/audit/ml-label-conflict-policy.md)",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--cross-pool",
+        default=None,
+        help="Optional ml-text-baseline-cross-pool-v1 JSON for provenance validation",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--text-corpus-v2",
+        default=None,
+        help="Optional ml-labeled-text-corpus-v2 JSON for provenance validation",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--embeddings-v1",
+        default=None,
+        help="Optional ml-labeled-text-embeddings-v1 JSON for provenance validation only",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write production readiness plan JSON",
+    )
+    ml_production_readiness_plan_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -2817,6 +2861,37 @@ def main() -> None:
             )
         except MLTextTransferReadinessError as e:
             print(f"ml-text-transfer-readiness: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-production-readiness-plan":
+        from pipeline.ml_production_readiness_plan import (
+            MLProductionReadinessPlanError,
+            write_ml_production_readiness_plan,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        conflict_policy = Path(args.conflict_policy) if args.conflict_policy else None
+        cross_pool = Path(args.cross_pool) if args.cross_pool else None
+        text_corpus_v2 = Path(args.text_corpus_v2) if args.text_corpus_v2 else None
+        embeddings_v1 = Path(args.embeddings_v1) if args.embeddings_v1 else None
+        try:
+            write_ml_production_readiness_plan(
+                transfer_readiness_path=Path(args.transfer_readiness),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=conflict_policy,
+                cross_pool_path=cross_pool,
+                text_corpus_v2_path=text_corpus_v2,
+                embeddings_v1_path=embeddings_v1,
+                output_path=out_json,
+                markdown_output_path=out_md,
+            )
+        except MLProductionReadinessPlanError as e:
+            print(f"ml-production-readiness-plan: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
