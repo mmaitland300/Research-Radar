@@ -1744,6 +1744,51 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_transfer_gap_review_parser = subparsers.add_parser(
+        "ml-transfer-gap-review-worksheet",
+        help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
+    )
+    ml_transfer_gap_review_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_transfer_gap_review_parser.add_argument("--label-dataset", required=True, help="Path to ml-label-dataset-v7 JSON")
+    ml_transfer_gap_review_parser.add_argument("--conflict-policy", required=True, help="Path to conflict policy Markdown")
+    ml_transfer_gap_review_parser.add_argument("--output", required=True, help="Path to write reviewer CSV")
+    ml_transfer_gap_review_parser.add_argument("--context-output", required=True, help="Path to write row_id-keyed sidecar JSON")
+    ml_transfer_gap_review_parser.add_argument("--markdown-output", required=True, help="Path to write Markdown handoff")
+    ml_transfer_gap_review_parser.add_argument("--rows", type=int, default=60, help="Requested rows, 1-120 (default: 60)")
+    ml_transfer_gap_review_parser.add_argument("--seed", type=int, default=20260515, help="Deterministic sample seed")
+    ml_transfer_gap_review_parser.add_argument(
+        "--source-snapshot-candidate-plan",
+        default=None,
+        help="Optional corpus-v2 candidate plan manifest for outside-snapshot exclusion",
+    )
+    ml_transfer_gap_review_parser.add_argument(
+        "--corpus-snapshot-version",
+        required=True,
+        help="Corpus snapshot version for external exclusion and optional DB channel",
+    )
+    ml_transfer_gap_review_parser.add_argument("--mailto", default=None, help="Optional OpenAlex polite-pool mailto")
+    ml_transfer_gap_review_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Use deterministic mock OpenAlex responses for tests/dry runs",
+    )
+    ml_transfer_gap_review_parser.add_argument("--ranking-run-id", default=None, help="Optional ranking run id for P3 DB channel")
+    ml_transfer_gap_review_parser.add_argument("--embedding-version", default=None, help="Optional embedding version for P3 DB channel")
+    ml_transfer_gap_review_parser.add_argument("--cluster-version", default=None, help="Optional cluster version for P3 DB channel")
+    ml_transfer_gap_review_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Optional Postgres URL for read-only P3 DB channel (default: DATABASE_URL/PG env if set)",
+    )
+    ml_transfer_gap_review_parser.add_argument(
+        "--mock-db",
+        action="store_true",
+        help="Use deterministic mock DB candidates for tests/dry runs",
+    )
     ml_source_split_tiny_baseline_parser = subparsers.add_parser(
         "ml-source-split-tiny-baseline",
         help="Offline source-split tiny baseline: train emerging rank-shaped labels, test blind rows",
@@ -2896,6 +2941,41 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
             print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-transfer-gap-review-worksheet":
+        from pipeline.ml_transfer_gap_review_worksheet import (
+            MLTransferGapReviewWorksheetError,
+            run_ml_transfer_gap_review_worksheet_cli,
+        )
+
+        source_plan = Path(args.source_snapshot_candidate_plan) if args.source_snapshot_candidate_plan else None
+        try:
+            run_ml_transfer_gap_review_worksheet_cli(
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=Path(args.output),
+                context_output_path=Path(args.context_output),
+                markdown_output_path=Path(args.markdown_output),
+                rows=int(args.rows),
+                seed=int(args.seed),
+                source_snapshot_candidate_plan_path=source_plan,
+                corpus_snapshot_version=str(args.corpus_snapshot_version),
+                mailto=args.mailto,
+                mock_openalex=bool(args.mock_openalex),
+                ranking_run_id=args.ranking_run_id,
+                embedding_version=args.embedding_version,
+                cluster_version=args.cluster_version,
+                database_url=args.database_url,
+                mock_db=bool(args.mock_db),
+            )
+        except MLTransferGapReviewWorksheetError as e:
+            print(f"ml-transfer-gap-review-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.context_output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
         return
 
     if args.command == "ml-tiny-baseline":
