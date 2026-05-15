@@ -48,6 +48,21 @@ explicitly out of scope for V1.
 - Trends: [trends](https://radar.mmaitland.dev/trends)
 - Evaluation: [evaluation?family=emerging](https://radar.mmaitland.dev/evaluation?family=emerging)
 
+## Live App vs Archived Baseline
+
+Research Radar has a live demo surface and archived evaluation records. Read
+them as different kinds of evidence:
+
+| Surface | Use it for | Stability |
+| --- | --- | --- |
+| Live app | Interactive walkthrough of the current deployed UI, ranking pages, and visible run metadata | Moving surface; deployment config and data pins can change |
+| Archived baseline | Stable reference for documented evaluation boundaries and single-reviewer audit notes | Frozen on `2026-04-25`; use for repeatable claims and comparisons |
+| No-key fixture demo | Local UI/API walkthrough without Postgres, OpenAlex, or OpenAI credentials | Deterministic toy data; not live ranking data or model validation |
+
+For exact review or comparison work, use the pinned baseline in
+[EVALUATION.md](EVALUATION.md) or add a `ranking_run_id` parameter to inspect a
+specific materialized run.
+
 ## No-Key Local Demo
 
 Use this path when you want to inspect the UI/API quickly without Postgres,

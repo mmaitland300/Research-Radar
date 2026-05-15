@@ -18,6 +18,23 @@ support as a model-quality claim.
   benchmark claims are deferred until corpus expansion and a larger review
   protocol.
 
+## Current Live Run vs Archived Baseline
+
+The public app can show the current deployed run, while this document records
+the stable baseline used for repeatable review.
+
+| Reference | What it means | How to use it |
+| --- | --- | --- |
+| Live app | Current deployed UI and API behavior, including whatever run the deployment config resolves | Good for interactive review; read the visible run metadata before comparing results |
+| Pinned baseline | Frozen `2026-04-25` run stack recorded below and in the audit folder | Use for documented claims, screenshots, and stable comparisons |
+| URL-pinned run | A specific `ranking_run_id` supplied in the URL or API request | Use when checking one materialized run without relying on latest-run resolution |
+| Fixture mode | Checked-in toy data behind `npm run demo:local` | Use for setup and route-shape checks only; do not cite as ranking validation |
+
+If the live app and the archived baseline differ, treat that as expected unless
+the deployment is supposed to be pinned to the same run. Record the visible
+`ranking_run_id`, `ranking_version`, `corpus_snapshot_version`, and
+`embedding_version` before drawing conclusions.
+
 ## Current Pinned Baseline
 
 The latest checked-in baseline freeze is dated `2026-04-25`.
