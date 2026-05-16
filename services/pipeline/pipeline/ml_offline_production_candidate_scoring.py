@@ -1,0 +1,1087 @@
+"""Production-candidate offline scoring diagnostic over an existing paper_scores pool.
+
+This command is read-only: it reuses a completed ranking run, joins v8 audit
+labels by canonical OpenAlex work id, and reports heuristic final_score metrics
+for the labeled overlap. It does not run ranking, train on product candidates,
+or write a model artifact.
+"""
+
+from __future__ import annotations
+
+import json
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+from urllib.parse import urlparse
+
+import psycopg
+from psycopg.rows import dict_row
+
+from pipeline.ml_label_split_policy import canonical_openalex_work_id
+from pipeline.ml_offline_baseline_eval import (
+    MLOfflineBaselineEvalError,
+    fetch_ranking_run_row,
+    precision_at_k,
+    roc_auc_mann_whitney,
+    sha256_file,
+)
+from pipeline.recommendation_review_worksheet import cluster_version_from_config
+from pipeline.repo_paths import default_repo_root, portable_repo_path
+
+ARTIFACT_TYPE = "ml_offline_production_candidate_scoring"
+EXPERIMENT_VERSION = "ml-offline-production-candidate-scoring-v1"
+LABEL_DATASET_VERSION = "ml-label-dataset-v8"
+SPLIT_POLICY_ARTIFACT_TYPE = "ml_label_split_policy"
+SPLIT_POLICY_VERSION = "ml-label-split-policy-v1"
+METRIC_GATES_ARTIFACT_TYPE = "ml_offline_metric_gates"
+METRIC_GATES_VERSION = "ml-offline-metric-gates-v1"
+RANKER_ARTIFACT_TYPE = "ml_offline_ranker_experiment"
+RANKER_VERSION = "ml-offline-ranker-experiment-v1"
+EMBEDDINGS_ARTIFACT_TYPE = "ml_labeled_text_embeddings"
+EMBEDDINGS_VERSION = "ml-labeled-text-embeddings-v3"
+TARGET_GOOD = "good_or_acceptable"
+FORBIDDEN_TARGET = "surprising_or_useful"
+DEFAULT_FAMILY = "emerging"
+ALLOWED_FAMILIES = frozenset({DEFAULT_FAMILY})
+SCORING_MODE_HEURISTIC = "heuristic_and_coverage_only"
+LEARNED_UNAVAILABLE_REASON = (
+    "ml-offline-ranker-experiment-v1 contains per-fold coefficients only; "
+    "no frozen full-fit audit scorer export exists."
+)
+K_VALUES = (5, 10, 20)
+RANK_BUCKETS: tuple[tuple[int, int | None], ...] = ((1, 5), (6, 10), (11, 20), (21, 50), (51, 100), (101, None))
+
+CAVEATS = (
+    "Not validation.",
+    "Product-candidate offline diagnostic only.",
+    "Existing ranking run reused read-only; no new ranking was run.",
+    "Single-reviewer audit labels.",
+    "Label coverage is incomplete and may bias metrics.",
+    "No production model artifact.",
+    "No shadow scoring or production default change.",
+)
+
+BLOCKERS_TO_SHADOW = (
+    "product-candidate metric gates not yet evaluated",
+    "no ml-shadow-scorer-v1 contract exists",
+    "production default blocked by readiness plan",
+    "no production model artifact exists",
+)
+
+
+class MLOfflineProductionCandidateScoringError(Exception):
+    def __init__(self, message: str, *, code: int = 2) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def _now_iso_z() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise MLOfflineProductionCandidateScoringError(f"Failed to load JSON {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise MLOfflineProductionCandidateScoringError(f"Expected JSON object in {path}")
+    return payload
+
+
+def _metadata(payload: Mapping[str, Any], *, name: str) -> Mapping[str, Any]:
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, Mapping):
+        raise MLOfflineProductionCandidateScoringError(f"{name} JSON missing metadata object")
+    return metadata
+
+
+def _input_record(name: str, path: Path, *, repo_root: Path) -> dict[str, str]:
+    resolved = Path(path).resolve()
+    if not resolved.exists():
+        raise MLOfflineProductionCandidateScoringError(f"Input {name} does not exist: {path}")
+    return {
+        "name": name,
+        "path": portable_repo_path(resolved, repo_root=repo_root),
+        "sha256": sha256_file(resolved),
+    }
+
+
+def _input_by_name(payload: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
+    metadata = payload.get("metadata")
+    inputs = metadata.get("inputs") if isinstance(metadata, Mapping) else None
+    if not isinstance(inputs, Sequence) or isinstance(inputs, (str, bytes)):
+        return None
+    for item in inputs:
+        if isinstance(item, Mapping) and item.get("name") == name:
+            return item
+    return None
+
+
+def _validate_label_dataset(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
+    if payload.get("dataset_version") != LABEL_DATASET_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected label dataset_version={LABEL_DATASET_VERSION!r}, got {payload.get('dataset_version')!r}"
+        )
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise MLOfflineProductionCandidateScoringError("label dataset missing rows array")
+    return [dict(row) for row in rows if isinstance(row, Mapping)]
+
+
+def _validate_split_policy(payload: Mapping[str, Any]) -> None:
+    metadata = _metadata(payload, name="split-policy")
+    if metadata.get("artifact_type") != SPLIT_POLICY_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected split policy metadata.artifact_type={SPLIT_POLICY_ARTIFACT_TYPE!r}, "
+            f"got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("policy_version") != SPLIT_POLICY_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected split policy metadata.policy_version={SPLIT_POLICY_VERSION!r}, "
+            f"got {metadata.get('policy_version')!r}"
+        )
+    if payload.get("allowed_targets_for_v1_split") != [TARGET_GOOD]:
+        raise MLOfflineProductionCandidateScoringError("split policy allowed_targets_for_v1_split must be ['good_or_acceptable']")
+    forbidden = payload.get("forbidden_targets")
+    if not isinstance(forbidden, list) or FORBIDDEN_TARGET not in forbidden:
+        raise MLOfflineProductionCandidateScoringError("split policy forbidden_targets must include surprising_or_useful")
+
+
+def _validate_metric_gates(
+    payload: Mapping[str, Any],
+    *,
+    audit_ranker_experiment_path: Path,
+    audit_ranker_experiment_sha256: str,
+    repo_root: Path,
+) -> None:
+    metadata = _metadata(payload, name="metric-gates")
+    if metadata.get("artifact_type") != METRIC_GATES_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected metric gates metadata.artifact_type={METRIC_GATES_ARTIFACT_TYPE!r}, "
+            f"got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("gates_version") != METRIC_GATES_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected metric gates metadata.gates_version={METRIC_GATES_VERSION!r}, got {metadata.get('gates_version')!r}"
+        )
+    if payload.get("audit_ranker_gates_passed") is not True:
+        raise MLOfflineProductionCandidateScoringError("metric gates audit_ranker_gates_passed must be true")
+    if payload.get("recommended_next_stage") != "proceed_to_production_candidate_offline_scoring":
+        raise MLOfflineProductionCandidateScoringError(
+            "metric gates recommended_next_stage must be proceed_to_production_candidate_offline_scoring"
+        )
+    if payload.get("shadow_scoring_allowed") is not False:
+        raise MLOfflineProductionCandidateScoringError("metric gates shadow_scoring_allowed must be false")
+    if payload.get("production_default_allowed") is not False:
+        raise MLOfflineProductionCandidateScoringError("metric gates production_default_allowed must be false")
+
+    inputs = metadata.get("inputs")
+    if not isinstance(inputs, Sequence) or isinstance(inputs, (str, bytes)):
+        raise MLOfflineProductionCandidateScoringError("metric gates metadata.inputs must include ranker_experiment")
+    portable_ranker_path = portable_repo_path(audit_ranker_experiment_path.resolve(), repo_root=repo_root)
+    ranker_inputs = [
+        item
+        for item in inputs
+        if isinstance(item, Mapping)
+        and (
+            item.get("name") in {"ranker_experiment", "audit_ranker_experiment"}
+            or str(item.get("path") or "").endswith("ml-offline-ranker-experiment-v1.json")
+        )
+    ]
+    if not ranker_inputs:
+        raise MLOfflineProductionCandidateScoringError("metric gates inputs missing ranker experiment record")
+    consistent = any(
+        item.get("sha256") == audit_ranker_experiment_sha256 or item.get("path") == portable_ranker_path
+        for item in ranker_inputs
+    )
+    if not consistent:
+        raise MLOfflineProductionCandidateScoringError("metric gates ranker experiment input SHA/path does not match supplied audit ranker experiment")
+
+
+def _validate_audit_ranker_experiment(payload: Mapping[str, Any]) -> None:
+    metadata = _metadata(payload, name="audit-ranker-experiment")
+    if metadata.get("artifact_type") != RANKER_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected audit ranker metadata.artifact_type={RANKER_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("experiment_version") != RANKER_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected audit ranker metadata.experiment_version={RANKER_VERSION!r}, got {metadata.get('experiment_version')!r}"
+        )
+
+
+def _validate_embeddings(
+    payload: Mapping[str, Any],
+    *,
+    label_dataset_sha256: str,
+    label_dataset_version: str,
+) -> dict[str, dict[str, Any]]:
+    metadata = _metadata(payload, name="embeddings")
+    if metadata.get("artifact_type") != EMBEDDINGS_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected embeddings metadata.artifact_type={EMBEDDINGS_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("embedding_artifact_version") != EMBEDDINGS_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected embeddings metadata.embedding_artifact_version={EMBEDDINGS_VERSION!r}, "
+            f"got {metadata.get('embedding_artifact_version')!r}"
+        )
+    if metadata.get("source_label_dataset_sha256") != label_dataset_sha256:
+        raise MLOfflineProductionCandidateScoringError("embeddings source_label_dataset_sha256 must match supplied label dataset")
+    if metadata.get("source_label_dataset_version") != label_dataset_version:
+        raise MLOfflineProductionCandidateScoringError("embeddings source_label_dataset_version must match supplied label dataset")
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise MLOfflineProductionCandidateScoringError("embeddings missing rows array")
+    by_id: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        row_id = str(row.get("row_id") or "").strip()
+        if not row_id:
+            continue
+        if row_id in by_id:
+            raise MLOfflineProductionCandidateScoringError(f"embeddings contains duplicate row_id: {row_id}")
+        by_id[row_id] = dict(row)
+    return by_id
+
+
+def _validate_target_and_family(*, target: str, family: str) -> tuple[str, str]:
+    normalized_target = str(target or "").strip()
+    if normalized_target != TARGET_GOOD:
+        raise MLOfflineProductionCandidateScoringError("ml-offline-production-candidate-scoring-v1 supports only good_or_acceptable")
+    normalized_family = str(family or "").strip().lower()
+    if normalized_family not in ALLOWED_FAMILIES:
+        raise MLOfflineProductionCandidateScoringError("ml-offline-production-candidate-scoring-v1 supports only family=emerging")
+    return normalized_target, normalized_family
+
+
+def assert_local_database_url(database_url: str) -> dict[str, Any]:
+    text = str(database_url or "").strip()
+    if not text:
+        raise MLOfflineProductionCandidateScoringError("database URL is required")
+    lower = text.lower()
+    forbidden = ("railway", "rlwy", "render.com", "amazonaws", "neon.tech", "supabase", "herokuapp", "azure.com")
+    matched_forbidden = [token for token in forbidden if token in lower]
+    if matched_forbidden:
+        raise MLOfflineProductionCandidateScoringError(
+            "database URL must target local Docker Postgres, not hosted production infrastructure"
+        )
+    parsed = urlparse(text)
+    host = parsed.hostname
+    local_hosts = {None, "", "localhost", "127.0.0.1", "::1", "host.docker.internal"}
+    if host not in local_hosts and not str(host).endswith(".local"):
+        raise MLOfflineProductionCandidateScoringError(
+            f"database URL must target local Docker Postgres; host {host!r} is not allowed"
+        )
+    return {
+        "local_database_url_confirmed": True,
+        "database_url_host": host or "(local socket)",
+        "database_url_port": parsed.port,
+        "database_name": (parsed.path or "").lstrip("/") or None,
+        "read_only_contract": "SELECT-only queries; no Postgres writes",
+    }
+
+
+def _parse_config_json(raw: Any) -> dict[str, Any]:
+    if raw is None:
+        return {}
+    if isinstance(raw, Mapping):
+        return dict(raw)
+    if isinstance(raw, str):
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return dict(payload) if isinstance(payload, Mapping) else {}
+    return {}
+
+
+def _float_or_none(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _candidate_canonical(row: Mapping[str, Any]) -> str | None:
+    return canonical_openalex_work_id({"paper_id": row.get("openalex_id")})
+
+
+def fetch_product_candidate_pool(
+    conn: psycopg.Connection,
+    *,
+    ranking_run_id: str,
+    family: str,
+) -> list[dict[str, Any]]:
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT
+                ps.work_id AS internal_work_id,
+                ps.recommendation_family,
+                ps.semantic_score,
+                ps.citation_velocity_score,
+                ps.topic_growth_score,
+                ps.bridge_score,
+                ps.diversity_penalty,
+                ps.final_score,
+                ps.bridge_eligible,
+                ps.reason_short,
+                w.openalex_id,
+                w.title,
+                w.year,
+                w.citation_count
+            FROM paper_scores ps
+            JOIN works w ON w.id = ps.work_id
+            WHERE ps.ranking_run_id = %s
+              AND ps.recommendation_family = %s
+            ORDER BY ps.final_score DESC, ps.work_id ASC
+            """,
+            (ranking_run_id, family),
+        )
+        raw_rows = [dict(row) for row in cur.fetchall()]
+
+    out: list[dict[str, Any]] = []
+    for index, row in enumerate(raw_rows, start=1):
+        canonical = _candidate_canonical(row)
+        out.append(
+            {
+                "ranking_run_id": ranking_run_id,
+                "family": row.get("recommendation_family"),
+                "heuristic_rank": index,
+                "internal_work_id": row.get("internal_work_id"),
+                "openalex_id": row.get("openalex_id"),
+                "canonical_openalex_work_id": canonical,
+                "title": row.get("title"),
+                "year": row.get("year"),
+                "citation_count": row.get("citation_count"),
+                "final_score": _float_or_none(row.get("final_score")),
+                "semantic_score": _float_or_none(row.get("semantic_score")),
+                "citation_velocity_score": _float_or_none(row.get("citation_velocity_score")),
+                "topic_growth_score": _float_or_none(row.get("topic_growth_score")),
+                "diversity_penalty": _float_or_none(row.get("diversity_penalty")),
+                "bridge_score": _float_or_none(row.get("bridge_score")),
+                "bridge_eligible": row.get("bridge_eligible"),
+                "reason_short": row.get("reason_short"),
+            }
+        )
+    return out
+
+
+def _best_candidate_by_work(candidate_rows: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    by_work: dict[str, dict[str, Any]] = {}
+    for row in candidate_rows:
+        canonical = row.get("canonical_openalex_work_id")
+        score = _float_or_none(row.get("final_score"))
+        if not canonical or score is None:
+            continue
+        current = by_work.get(str(canonical))
+        if current is None:
+            by_work[str(canonical)] = dict(row)
+            continue
+        current_score = _float_or_none(current.get("final_score"))
+        current_rank = int(current.get("heuristic_rank") or 10**12)
+        row_rank = int(row.get("heuristic_rank") or 10**12)
+        if current_score is None or score > current_score or (score == current_score and row_rank < current_rank):
+            by_work[str(canonical)] = dict(row)
+    return by_work
+
+
+def _explicit_target_label_rows(label_rows: Sequence[Mapping[str, Any]], target: str) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    rows: list[dict[str, Any]] = []
+    missing_canonical = 0
+    missing_target = 0
+    for row in label_rows:
+        canonical = canonical_openalex_work_id(row)
+        if canonical is None:
+            missing_canonical += 1
+            continue
+        if not isinstance(row.get(target), bool):
+            missing_target += 1
+            continue
+        labeled = dict(row)
+        labeled["canonical_openalex_work_id"] = canonical
+        rows.append(labeled)
+    return rows, {
+        "label_rows_without_canonical_work_id": missing_canonical,
+        "label_rows_without_boolean_target": missing_target,
+    }
+
+
+def _join_labels_to_candidates(
+    explicit_label_rows: Sequence[Mapping[str, Any]],
+    *,
+    candidates_by_work: Mapping[str, Mapping[str, Any]],
+    embeddings_by_row_id: Mapping[str, Mapping[str, Any]],
+    target: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    joined: list[dict[str, Any]] = []
+    missing_embeddings: list[str] = []
+    for label in explicit_label_rows:
+        canonical = str(label["canonical_openalex_work_id"])
+        candidate = candidates_by_work.get(canonical)
+        if candidate is None:
+            continue
+        row_id = str(label.get("row_id") or "").strip()
+        embedding = embeddings_by_row_id.get(row_id)
+        embedding_present = embedding is not None and str(embedding.get("embedding_status") or "ok") in {"ok", "mock"}
+        if not embedding_present:
+            missing_embeddings.append(row_id or f"(missing row_id for {canonical})")
+        joined.append(
+            {
+                "row_id": row_id or None,
+                "canonical_openalex_work_id": canonical,
+                "paper_id": label.get("paper_id"),
+                "label_work_id": label.get("work_id"),
+                "label_ranking_run_id": label.get("ranking_run_id"),
+                "label_family": label.get("family"),
+                "review_pool_variant": label.get("review_pool_variant"),
+                "source_worksheet_path": label.get("source_worksheet_path"),
+                "target": target,
+                "target_value": bool(label[target]),
+                "candidate_internal_work_id": candidate.get("internal_work_id"),
+                "candidate_openalex_id": candidate.get("openalex_id"),
+                "candidate_heuristic_rank": candidate.get("heuristic_rank"),
+                "candidate_final_score": candidate.get("final_score"),
+                "embedding_present": embedding_present,
+            }
+        )
+    summary = {
+        "labeled_candidate_observation_count": len(joined),
+        "labeled_candidate_unique_work_count": len({row["canonical_openalex_work_id"] for row in joined}),
+        "missing_embedding_count": len(missing_embeddings),
+        "missing_embedding_row_ids": missing_embeddings[:50],
+    }
+    return joined, summary
+
+
+def _majority_label(pos: int, neg: int) -> bool | None:
+    if pos > neg:
+        return True
+    if neg > pos:
+        return False
+    return None
+
+
+def _build_labeled_eval_subset(
+    joined_observations: Sequence[Mapping[str, Any]],
+    *,
+    candidates_by_work: Mapping[str, Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    observations_by_work: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for row in joined_observations:
+        observations_by_work[str(row["canonical_openalex_work_id"])].append(row)
+
+    eval_rows: list[dict[str, Any]] = []
+    conflict_work_ids: list[str] = []
+    duplicate_work_ids: list[str] = []
+    majority_counts = Counter()
+    for canonical, observations in sorted(observations_by_work.items()):
+        candidate = candidates_by_work[canonical]
+        pos = sum(1 for row in observations if row.get("target_value") is True)
+        neg = sum(1 for row in observations if row.get("target_value") is False)
+        if len(observations) > 1:
+            duplicate_work_ids.append(canonical)
+        if pos > 0 and neg > 0:
+            conflict_work_ids.append(canonical)
+        majority = _majority_label(pos, neg)
+        majority_counts["positive" if majority is True else "negative" if majority is False else "tie"] += 1
+        eval_rows.append(
+            {
+                "canonical_openalex_work_id": canonical,
+                "candidate_internal_work_id": candidate.get("internal_work_id"),
+                "candidate_openalex_id": candidate.get("openalex_id"),
+                "heuristic_rank": candidate.get("heuristic_rank"),
+                "final_score": candidate.get("final_score"),
+                "label_any_positive": pos > 0,
+                "positive_observation_count": pos,
+                "negative_observation_count": neg,
+                "observation_count": len(observations),
+                "majority_vote_label": majority,
+                "conflicting_target_observations": pos > 0 and neg > 0,
+                "row_ids": [row.get("row_id") for row in observations],
+            }
+        )
+
+    eval_rows.sort(key=lambda row: (-(float(row.get("final_score") or 0.0)), int(row.get("heuristic_rank") or 10**12)))
+    diagnostics = {
+        "observation_level_labels_preserved": True,
+        "duplicate_labeled_work_count": len(duplicate_work_ids),
+        "duplicate_labeled_work_ids_preview": duplicate_work_ids[:25],
+        "conflicting_target_work_count": len(conflict_work_ids),
+        "conflicting_target_work_ids_preview": conflict_work_ids[:25],
+        "majority_vote_label_counts": {
+            "positive": majority_counts["positive"],
+            "negative": majority_counts["negative"],
+            "tie": majority_counts["tie"],
+        },
+    }
+    return eval_rows, diagnostics
+
+
+def average_precision(scores_labels_desc: Sequence[tuple[float, bool]]) -> float | None:
+    positives = sum(1 for _score, label in scores_labels_desc if label)
+    if positives == 0:
+        return None
+    running_pos = 0
+    precision_sum = 0.0
+    for idx, (_score, label) in enumerate(scores_labels_desc, start=1):
+        if label:
+            running_pos += 1
+            precision_sum += running_pos / idx
+    return precision_sum / positives
+
+
+def _precision_recall_at_k(scores_labels_desc: Sequence[tuple[float, bool]], k: int) -> dict[str, Any]:
+    total = len(scores_labels_desc)
+    positives = sum(1 for _score, label in scores_labels_desc if label)
+    if total < k:
+        reason = f"requires at least {k} labeled candidate works"
+        return {
+            "precision": None,
+            "recall": None,
+            "reason": reason,
+            "labeled_work_count": total,
+            "positive_count": positives,
+            "negative_count": total - positives,
+        }
+    top = list(scores_labels_desc[:k])
+    top_pos = sum(1 for _score, label in top if label)
+    recall = (top_pos / positives) if positives else None
+    return {
+        "precision": precision_at_k(list(scores_labels_desc), k),
+        "recall": recall,
+        "reason": None if positives else "recall requires at least one positive labeled candidate work",
+        "labeled_work_count": total,
+        "positive_count": positives,
+        "negative_count": total - positives,
+        "top_k_labeled_positive_count": top_pos,
+        "top_k_labeled_negative_count": k - top_pos,
+    }
+
+
+def _heuristic_metrics(eval_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    scores_labels = [
+        (float(row["final_score"]), bool(row["label_any_positive"]))
+        for row in eval_rows
+        if _float_or_none(row.get("final_score")) is not None
+    ]
+    scores_labels_desc = sorted(scores_labels, key=lambda item: (-item[0], item[1]))
+    positives = sum(1 for _score, label in scores_labels if label)
+    negatives = len(scores_labels) - positives
+    auc = roc_auc_mann_whitney(scores_labels)
+    if not scores_labels:
+        auc_reason = "no labeled candidate works with final_score"
+    elif positives == 0 or negatives == 0:
+        auc_reason = "ROC-AUC requires at least one positive and one negative labeled candidate work"
+    else:
+        auc_reason = None
+    ap = average_precision(scores_labels_desc)
+    ap_reason = None if ap is not None else "average precision requires at least one positive labeled candidate work"
+    return {
+        "metric_level": "canonical_work_labeled_eval_subset",
+        "scored_labeled_work_count": len(scores_labels),
+        "positive_work_count": positives,
+        "negative_work_count": negatives,
+        "roc_auc_mann_whitney": auc,
+        "roc_auc_reason": auc_reason,
+        "average_precision": ap,
+        "average_precision_reason": ap_reason,
+        "precision_recall_at_k": {str(k): _precision_recall_at_k(scores_labels_desc, k) for k in K_VALUES},
+        "comparison_note": (
+            "This extends ml-offline-baseline-eval-rank-ee2ba6c816-v8 with pool-first framing; "
+            "heuristic numbers may match v8 eval on joined rows."
+        ),
+    }
+
+
+def _top_k_tables(
+    candidate_rows: Sequence[Mapping[str, Any]],
+    *,
+    eval_by_work: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    top_k: dict[str, Any] = {}
+    for k in K_VALUES:
+        rows = [row for row in candidate_rows if row.get("canonical_openalex_work_id")][:k]
+        labeled = [row for row in rows if str(row.get("canonical_openalex_work_id")) in eval_by_work]
+        positives = [
+            row
+            for row in labeled
+            if eval_by_work[str(row.get("canonical_openalex_work_id"))].get("label_any_positive") is True
+        ]
+        negatives = len(labeled) - len(positives)
+        top_k[str(k)] = {
+            "candidate_work_count": len(rows),
+            "labeled_work_count": len(labeled),
+            "unlabeled_work_count": len(rows) - len(labeled),
+            "label_coverage_rate": (len(labeled) / len(rows)) if rows else None,
+            "labeled_positive_work_count": len(positives),
+            "labeled_negative_work_count": negatives,
+            "positive_rate_among_labeled": (len(positives) / len(labeled)) if labeled else None,
+        }
+    return top_k
+
+
+def _coverage_by_rank_bucket(
+    candidate_rows: Sequence[Mapping[str, Any]],
+    *,
+    eval_by_work: Mapping[str, Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    canonical_rows = [row for row in candidate_rows if row.get("canonical_openalex_work_id")]
+    for start, end in RANK_BUCKETS:
+        if end is None:
+            bucket_rows = [row for row in canonical_rows if int(row.get("heuristic_rank") or 0) >= start]
+            label = f"{start}+"
+        else:
+            bucket_rows = [
+                row
+                for row in canonical_rows
+                if start <= int(row.get("heuristic_rank") or 0) <= end
+            ]
+            label = f"{start}-{end}"
+        labeled = [row for row in bucket_rows if str(row.get("canonical_openalex_work_id")) in eval_by_work]
+        positives = [
+            row
+            for row in labeled
+            if eval_by_work[str(row.get("canonical_openalex_work_id"))].get("label_any_positive") is True
+        ]
+        conflicts = [
+            row
+            for row in labeled
+            if eval_by_work[str(row.get("canonical_openalex_work_id"))].get("conflicting_target_observations") is True
+        ]
+        out.append(
+            {
+                "rank_bucket": label,
+                "candidate_work_count": len(bucket_rows),
+                "labeled_work_count": len(labeled),
+                "unlabeled_work_count": len(bucket_rows) - len(labeled),
+                "label_coverage_rate": (len(labeled) / len(bucket_rows)) if bucket_rows else None,
+                "positive_work_count": len(positives),
+                "negative_work_count": len(labeled) - len(positives),
+                "conflicting_target_work_count": len(conflicts),
+            }
+        )
+    return out
+
+
+def _candidate_pool_summary(candidate_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    canonical = [str(row.get("canonical_openalex_work_id")) for row in candidate_rows if row.get("canonical_openalex_work_id")]
+    internal_ids = [str(row.get("internal_work_id")) for row in candidate_rows if row.get("internal_work_id") is not None]
+    return {
+        "paper_scores_row_count": len(candidate_rows),
+        "candidate_unique_internal_work_count": len(set(internal_ids)),
+        "candidate_unique_canonical_work_count": len(set(canonical)),
+        "candidate_rows_without_canonical_work_id": len(candidate_rows) - len(canonical),
+    }
+
+
+def _label_join_summary(
+    *,
+    label_rows: Sequence[Mapping[str, Any]],
+    explicit_label_rows: Sequence[Mapping[str, Any]],
+    joined_observations: Sequence[Mapping[str, Any]],
+    excluded_counts: Mapping[str, int],
+    eval_rows: Sequence[Mapping[str, Any]],
+    candidate_unique_canonical_work_count: int,
+) -> dict[str, Any]:
+    labeled_work_count = len({row["canonical_openalex_work_id"] for row in joined_observations})
+    return {
+        "label_dataset_row_count": len(label_rows),
+        "explicit_target_observation_count": len(explicit_label_rows),
+        "label_rows_without_canonical_work_id": int(excluded_counts.get("label_rows_without_canonical_work_id") or 0),
+        "label_rows_without_boolean_target": int(excluded_counts.get("label_rows_without_boolean_target") or 0),
+        "joined_labeled_observation_count": len(joined_observations),
+        "joined_labeled_unique_work_count": labeled_work_count,
+        "labeled_eval_subset_work_count": len(eval_rows),
+        "labeled_eval_subset_positive_work_count": sum(1 for row in eval_rows if row.get("label_any_positive") is True),
+        "labeled_eval_subset_negative_work_count": sum(1 for row in eval_rows if row.get("label_any_positive") is False),
+        "candidate_overlap_rate_by_explicit_observation": (
+            len(joined_observations) / len(explicit_label_rows) if explicit_label_rows else None
+        ),
+        "candidate_work_labeled_coverage_rate": (
+            labeled_work_count / candidate_unique_canonical_work_count if candidate_unique_canonical_work_count else None
+        ),
+        "candidate_work_unlabeled_count": max(candidate_unique_canonical_work_count - labeled_work_count, 0),
+    }
+
+
+def _scoring_mode_details() -> dict[str, Any]:
+    return {
+        "scoring_mode": SCORING_MODE_HEURISTIC,
+        "learned_product_scores_produced": False,
+        "reason": LEARNED_UNAVAILABLE_REASON,
+        "no_fold_coefficient_averaging": True,
+        "no_refit_in_this_command": True,
+        "product_candidate_rows_used_for_training": 0,
+    }
+
+
+def _learned_metrics_null() -> dict[str, Any]:
+    return {
+        "metrics": None,
+        "reason": LEARNED_UNAVAILABLE_REASON,
+        "learned_product_scores_produced": False,
+        "audit_embedding_scorer_export_present": False,
+    }
+
+
+def build_ml_offline_production_candidate_scoring_payload(
+    conn: psycopg.Connection,
+    *,
+    label_dataset_path: Path,
+    split_policy_path: Path,
+    metric_gates_path: Path,
+    audit_ranker_experiment_path: Path,
+    embeddings_path: Path,
+    ranking_run_id: str,
+    family: str = DEFAULT_FAMILY,
+    target: str = TARGET_GOOD,
+    experiment_version: str = EXPERIMENT_VERSION,
+    database_url: str | None = None,
+    repo_root: Path | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    target, family = _validate_target_and_family(target=target, family=family)
+    root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
+    label_path = Path(label_dataset_path).resolve()
+    policy_path = Path(split_policy_path).resolve()
+    gates_path = Path(metric_gates_path).resolve()
+    ranker_path = Path(audit_ranker_experiment_path).resolve()
+    emb_path = Path(embeddings_path).resolve()
+
+    label_payload = _load_json_object(label_path)
+    policy_payload = _load_json_object(policy_path)
+    gates_payload = _load_json_object(gates_path)
+    ranker_payload = _load_json_object(ranker_path)
+    emb_payload = _load_json_object(emb_path)
+
+    label_rows = _validate_label_dataset(label_payload)
+    _validate_split_policy(policy_payload)
+    _validate_audit_ranker_experiment(ranker_payload)
+
+    label_sha = sha256_file(label_path)
+    ranker_sha = sha256_file(ranker_path)
+    _validate_metric_gates(
+        gates_payload,
+        audit_ranker_experiment_path=ranker_path,
+        audit_ranker_experiment_sha256=ranker_sha,
+        repo_root=root,
+    )
+    embeddings_by_row_id = _validate_embeddings(
+        emb_payload,
+        label_dataset_sha256=label_sha,
+        label_dataset_version=LABEL_DATASET_VERSION,
+    )
+
+    database_summary = assert_local_database_url(database_url) if database_url is not None else {
+        "local_database_url_confirmed": None,
+        "read_only_contract": "SELECT-only queries; no Postgres writes",
+    }
+
+    rid = str(ranking_run_id or "").strip()
+    if not rid:
+        raise MLOfflineProductionCandidateScoringError("ranking_run_id must be non-empty")
+    try:
+        run_row = fetch_ranking_run_row(conn, ranking_run_id=rid)
+    except MLOfflineBaselineEvalError as exc:
+        raise MLOfflineProductionCandidateScoringError(str(exc), code=exc.code) from exc
+
+    candidate_rows = fetch_product_candidate_pool(conn, ranking_run_id=rid, family=family)
+    if not candidate_rows:
+        raise MLOfflineProductionCandidateScoringError(
+            f"ranking_run_id {rid!r} has no paper_scores rows for family {family!r}; local DB lacks the required run/scores"
+        )
+
+    candidates_by_work = _best_candidate_by_work(candidate_rows)
+    explicit_label_rows, excluded_counts = _explicit_target_label_rows(label_rows, target)
+    joined_observations, embedding_join_summary = _join_labels_to_candidates(
+        explicit_label_rows,
+        candidates_by_work=candidates_by_work,
+        embeddings_by_row_id=embeddings_by_row_id,
+        target=target,
+    )
+    eval_rows, conflict_diagnostics = _build_labeled_eval_subset(joined_observations, candidates_by_work=candidates_by_work)
+    eval_by_work = {str(row["canonical_openalex_work_id"]): row for row in eval_rows}
+
+    cfg = _parse_config_json(run_row.get("config_json"))
+    generated = generated_at or _now_iso_z()
+    inputs = [
+        _input_record("label_dataset", label_path, repo_root=root),
+        _input_record("split_policy", policy_path, repo_root=root),
+        _input_record("metric_gates", gates_path, repo_root=root),
+        _input_record("audit_ranker_experiment", ranker_path, repo_root=root),
+        _input_record("embeddings", emb_path, repo_root=root),
+    ]
+
+    return {
+        "metadata": {
+            "artifact_type": ARTIFACT_TYPE,
+            "experiment_version": experiment_version,
+            "generated_at": generated,
+            "inputs": inputs,
+            "ranking_run_id": rid,
+            "family": family,
+            "target": target,
+            "scoring_mode": SCORING_MODE_HEURISTIC,
+            "caveats": list(CAVEATS),
+        },
+        "preflight_db_summary": {
+            **database_summary,
+            "ranking_run_id": rid,
+            "ranking_run_status": run_row.get("status"),
+            "ranking_version": run_row.get("ranking_version"),
+            "corpus_snapshot_version": run_row.get("corpus_snapshot_version"),
+            "embedding_version": run_row.get("embedding_version"),
+            "cluster_version": cluster_version_from_config(cfg) or "",
+            "paper_scores_rows_for_family": len(candidate_rows),
+            "ranking_run_succeeded": run_row.get("status") == "succeeded",
+        },
+        "candidate_pool_definition": {
+            "source": "existing paper_scores rows joined to works",
+            "ranking_run_id": rid,
+            "family": family,
+            "filters": {
+                "paper_scores.ranking_run_id": rid,
+                "paper_scores.recommendation_family": family,
+            },
+            "ordering": "final_score DESC, work_id ASC",
+            "no_new_ranking_run": True,
+            "postgres_write_allowed": False,
+        },
+        "candidate_pool_summary": _candidate_pool_summary(candidate_rows),
+        "label_join_summary": _label_join_summary(
+            label_rows=label_rows,
+            explicit_label_rows=explicit_label_rows,
+            joined_observations=joined_observations,
+            excluded_counts=excluded_counts,
+            eval_rows=eval_rows,
+            candidate_unique_canonical_work_count=len(candidates_by_work),
+        ),
+        "embedding_join_summary": {
+            "embedding_rows_available": len(embeddings_by_row_id),
+            **embedding_join_summary,
+        },
+        "scoring_mode_details": _scoring_mode_details(),
+        "heuristic_metrics": _heuristic_metrics(eval_rows),
+        "learned_or_embedding_metrics": _learned_metrics_null(),
+        "top_k_tables": _top_k_tables(candidate_rows, eval_by_work=eval_by_work),
+        "coverage_by_rank_bucket": _coverage_by_rank_bucket(candidate_rows, eval_by_work=eval_by_work),
+        "duplicate_conflict_diagnostics": conflict_diagnostics,
+        "blockers_to_shadow": list(BLOCKERS_TO_SHADOW),
+        "interpretation": {
+            "summary": (
+                "This artifact measures label overlap and current heuristic final_score behavior on a product-like "
+                "candidate pool that already exists in paper_scores."
+            ),
+            "readiness": "diagnostic_only_not_shadow_ready",
+            "not_claimed": [
+                "validation",
+                "production readiness",
+                "shadow-scoring readiness",
+                "production ranking improvement",
+            ],
+            "next_step": (
+                "Run product-candidate metric gates v1 if the coverage and top-k diagnostics are credible; "
+                "otherwise collect targeted product-pool labels."
+            ),
+        },
+        "candidate_pool_rows": candidate_rows,
+        "labeled_candidate_observations": joined_observations,
+        "labeled_eval_subset": eval_rows,
+    }
+
+
+def _fmt(value: Any) -> str:
+    if value is None:
+        return "n/a"
+    if isinstance(value, float):
+        return f"{value:.3f}"
+    return str(value)
+
+
+def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, Any]) -> str:
+    metadata = payload["metadata"]
+    pool = payload["candidate_pool_summary"]
+    labels = payload["label_join_summary"]
+    embeddings = payload["embedding_join_summary"]
+    metrics = payload["heuristic_metrics"]
+    learned = payload["learned_or_embedding_metrics"]
+    top_k = payload["top_k_tables"]
+
+    lines = [
+        f"# Production-Candidate Offline Scoring ({metadata['experiment_version']})",
+        "",
+        "## Executive Summary",
+        "",
+        "Offline product-candidate diagnostic over an existing ranking run. No ranking was run, no product scores were written, and no model artifact was produced.",
+        "",
+        f"- **ranking_run_id:** `{metadata['ranking_run_id']}`",
+        f"- **family:** `{metadata['family']}`",
+        f"- **target:** `{metadata['target']}`",
+        f"- **scoring_mode:** `{metadata['scoring_mode']}`",
+        f"- **candidate rows:** {pool['paper_scores_row_count']}",
+        f"- **labeled eval works:** {labels['labeled_eval_subset_work_count']}",
+        "",
+        "## Candidate Pool Definition",
+        "",
+        "Existing `paper_scores` rows filtered by explicit `ranking_run_id` and `recommendation_family`, ordered by persisted `final_score` descending. This command is SELECT-only and reuses the materialized pool.",
+        "",
+        "## Label/Embedding Coverage",
+        "",
+        f"- **explicit target observations:** {labels['explicit_target_observation_count']}",
+        f"- **joined labeled observations:** {labels['joined_labeled_observation_count']}",
+        f"- **joined labeled works:** {labels['joined_labeled_unique_work_count']}",
+        f"- **candidate work label coverage:** {_fmt(labels['candidate_work_labeled_coverage_rate'])}",
+        f"- **unlabeled candidate works:** {labels['candidate_work_unlabeled_count']}",
+        f"- **candidate overlap rate by observation:** {_fmt(labels['candidate_overlap_rate_by_explicit_observation'])}",
+        f"- **embeddings present for joined observations:** {embeddings['labeled_candidate_observation_count'] - embeddings['missing_embedding_count']}",
+        f"- **missing embeddings among joined observations:** {embeddings['missing_embedding_count']}",
+        "",
+        "## Heuristic Final_Score Metrics",
+        "",
+        "| Metric | Value | Note |",
+        "| --- | ---: | --- |",
+        f"| ROC-AUC (Mann-Whitney) | {_fmt(metrics['roc_auc_mann_whitney'])} | {metrics.get('roc_auc_reason') or ''} |",
+        f"| Average precision | {_fmt(metrics['average_precision'])} | {metrics.get('average_precision_reason') or ''} |",
+    ]
+    for k in K_VALUES:
+        block = metrics["precision_recall_at_k"][str(k)]
+        lines.append(f"| Precision@{k} | {_fmt(block['precision'])} | {block.get('reason') or ''} |")
+        lines.append(f"| Recall@{k} | {_fmt(block['recall'])} | {block.get('reason') or ''} |")
+
+    lines.extend(
+        [
+            "",
+            "## Learned/Embedding Metric Status",
+            "",
+            f"`{metadata['scoring_mode']}`: learned product scores were not produced. {learned['reason']}",
+            "",
+            "## Top-K Labeled Coverage",
+            "",
+            "| k | Candidate works | Labeled works | Coverage | Labeled positives | Labeled negatives |",
+            "| ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+    )
+    for k in K_VALUES:
+        block = top_k[str(k)]
+        lines.append(
+            f"| {k} | {block['candidate_work_count']} | {block['labeled_work_count']} | "
+            f"{_fmt(block['label_coverage_rate'])} | {block['labeled_positive_work_count']} | "
+            f"{block['labeled_negative_work_count']} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Not Shadow / Not Production",
+            "",
+            "- This is not shadow scoring.",
+            "- This is not production scoring.",
+            "- Production defaults remain blocked.",
+            "- No `ml-shadow-scorer-v1` contract exists.",
+            "- No production model artifact exists.",
+            "",
+            "## Caveats",
+            "",
+            *[f"- {caveat}" for caveat in metadata.get("caveats", [])],
+            "",
+            "## Next Step",
+            "",
+            "Product-candidate metric gates v1 if results are credible; otherwise targeted product-pool labels.",
+            "",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_ml_offline_production_candidate_scoring(
+    conn: psycopg.Connection,
+    *,
+    label_dataset_path: Path,
+    split_policy_path: Path,
+    metric_gates_path: Path,
+    audit_ranker_experiment_path: Path,
+    embeddings_path: Path,
+    ranking_run_id: str,
+    family: str,
+    target: str,
+    output_path: Path,
+    markdown_output_path: Path,
+    experiment_version: str = EXPERIMENT_VERSION,
+    database_url: str | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    payload = build_ml_offline_production_candidate_scoring_payload(
+        conn,
+        label_dataset_path=label_dataset_path,
+        split_policy_path=split_policy_path,
+        metric_gates_path=metric_gates_path,
+        audit_ranker_experiment_path=audit_ranker_experiment_path,
+        embeddings_path=embeddings_path,
+        ranking_run_id=ranking_run_id,
+        family=family,
+        target=target,
+        experiment_version=experiment_version,
+        database_url=database_url,
+        repo_root=repo_root,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    markdown_output_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_output_path.write_text(markdown_from_ml_offline_production_candidate_scoring(payload), encoding="utf-8")
+    return payload
+
+
+def run_ml_offline_production_candidate_scoring_cli(
+    *,
+    database_url: str,
+    label_dataset_path: Path,
+    split_policy_path: Path,
+    metric_gates_path: Path,
+    audit_ranker_experiment_path: Path,
+    embeddings_path: Path,
+    ranking_run_id: str,
+    family: str,
+    target: str,
+    output_path: Path,
+    markdown_output_path: Path,
+    experiment_version: str = EXPERIMENT_VERSION,
+    repo_root: Path | None = None,
+) -> None:
+    assert_local_database_url(database_url)
+    with psycopg.connect(database_url) as conn:
+        write_ml_offline_production_candidate_scoring(
+            conn,
+            label_dataset_path=label_dataset_path,
+            split_policy_path=split_policy_path,
+            metric_gates_path=metric_gates_path,
+            audit_ranker_experiment_path=audit_ranker_experiment_path,
+            embeddings_path=embeddings_path,
+            ranking_run_id=ranking_run_id,
+            family=family,
+            target=target,
+            output_path=output_path,
+            markdown_output_path=markdown_output_path,
+            experiment_version=experiment_version,
+            database_url=database_url,
+            repo_root=repo_root,
+        )
+
+
+__all__ = [
+    "MLOfflineProductionCandidateScoringError",
+    "assert_local_database_url",
+    "average_precision",
+    "build_ml_offline_production_candidate_scoring_payload",
+    "fetch_product_candidate_pool",
+    "markdown_from_ml_offline_production_candidate_scoring",
+    "run_ml_offline_production_candidate_scoring_cli",
+    "write_ml_offline_production_candidate_scoring",
+]

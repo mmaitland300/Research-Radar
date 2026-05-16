@@ -2000,6 +2000,76 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_offline_production_candidate_scoring_parser = subparsers.add_parser(
+        "ml-offline-production-candidate-scoring",
+        help="Read-only production-candidate offline scoring diagnostic over an existing paper_scores pool",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--metric-gates",
+        required=True,
+        help="Path to ml-offline-metric-gates-v1 JSON",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--audit-ranker-experiment",
+        required=True,
+        help="Path to ml-offline-ranker-experiment-v1 JSON",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--embeddings",
+        required=True,
+        help="Path to ml-labeled-text-embeddings-v3 JSON",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Existing ranking_run_id to inspect (no new ranking run)",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--family",
+        default="emerging",
+        choices=["emerging"],
+        help="Candidate recommendation family (default: emerging; v1 supports only emerging)",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write production-candidate scoring JSON",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--target",
+        default="good_or_acceptable",
+        help="Target to evaluate (default: good_or_acceptable; v1 supports only this target)",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--experiment-version",
+        default="ml-offline-production-candidate-scoring-v1",
+        help="Experiment version string to write (default: ml-offline-production-candidate-scoring-v1)",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -3285,6 +3355,43 @@ def main() -> None:
             )
         except MLOfflineMetricGatesError as e:
             print(f"ml-offline-metric-gates: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-production-candidate-scoring":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_offline_production_candidate_scoring import (
+            MLOfflineProductionCandidateScoringError,
+            run_ml_offline_production_candidate_scoring_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            run_ml_offline_production_candidate_scoring_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                split_policy_path=Path(args.split_policy),
+                metric_gates_path=Path(args.metric_gates),
+                audit_ranker_experiment_path=Path(args.audit_ranker_experiment),
+                embeddings_path=Path(args.embeddings),
+                ranking_run_id=rid,
+                family=str(args.family),
+                target=str(args.target),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                experiment_version=str(args.experiment_version),
+                repo_root=repo_root,
+            )
+        except MLOfflineProductionCandidateScoringError as e:
+            print(f"ml-offline-production-candidate-scoring: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
