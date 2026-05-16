@@ -1864,6 +1864,57 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_offline_ranker_experiment_parser = subparsers.add_parser(
+        "ml-offline-ranker-experiment",
+        help="Run offline grouped-CV ranker experiment over frozen labeled text embeddings (no DB/ranking/production output)",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--embeddings",
+        required=True,
+        help="Path to ml-labeled-text-embeddings-v3 JSON",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write offline ranker experiment JSON",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--target",
+        default="good_or_acceptable",
+        help="Target to evaluate; v1 supports only good_or_acceptable",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=None,
+        help="Random seed; default uses split policy recommended seed, else 0",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--cv-folds",
+        type=int,
+        default=5,
+        help="Requested grouped CV folds (default: 5)",
+    )
+    ml_offline_ranker_experiment_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -3137,6 +3188,34 @@ def main() -> None:
             )
         except MLLabelSplitPolicyError as e:
             print(f"ml-label-split-policy: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-ranker-experiment":
+        from pipeline.ml_offline_ranker_experiment import (
+            MLOfflineRankerExperimentError,
+            write_ml_offline_ranker_experiment,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_offline_ranker_experiment(
+                label_dataset_path=Path(args.label_dataset),
+                split_policy_path=Path(args.split_policy),
+                embeddings_path=Path(args.embeddings),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                target=str(args.target),
+                random_seed=args.random_seed,
+                cv_folds=int(args.cv_folds),
+                repo_root=repo_root,
+            )
+        except MLOfflineRankerExperimentError as e:
+            print(f"ml-offline-ranker-experiment: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
