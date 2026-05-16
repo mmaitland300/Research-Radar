@@ -1915,6 +1915,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_offline_metric_gates_parser = subparsers.add_parser(
+        "ml-offline-metric-gates",
+        help="Evaluate machine-checkable offline metric gates over an audit-pool ranker experiment (no training/ranking/DB)",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--ranker-experiment",
+        required=True,
+        help="Path to ml-offline-ranker-experiment-v1 JSON",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--transfer-readiness",
+        default=None,
+        help="Optional ml-text-transfer-readiness-v8 JSON for advisory evidence only",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write offline metric gates JSON",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--gates-version",
+        default="ml-offline-metric-gates-v1",
+        help="Gates version string to write (default: ml-offline-metric-gates-v1)",
+    )
+    ml_offline_metric_gates_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -3216,6 +3260,31 @@ def main() -> None:
             )
         except MLOfflineRankerExperimentError as e:
             print(f"ml-offline-ranker-experiment: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-metric-gates":
+        from pipeline.ml_offline_metric_gates import MLOfflineMetricGatesError, write_ml_offline_metric_gates
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        transfer_readiness = Path(args.transfer_readiness) if args.transfer_readiness else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_offline_metric_gates(
+                ranker_experiment_path=Path(args.ranker_experiment),
+                split_policy_path=Path(args.split_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                transfer_readiness_path=transfer_readiness,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                gates_version=str(args.gates_version),
+                repo_root=repo_root,
+            )
+        except MLOfflineMetricGatesError as e:
+            print(f"ml-offline-metric-gates: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)

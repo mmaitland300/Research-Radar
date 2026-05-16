@@ -1,0 +1,3532 @@
+{
+  "audit_ranker_gates_passed": true,
+  "blocked_reasons": [],
+  "gates": [
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G01_target_scope",
+      "observed_value": {
+        "allowed_targets_for_v1_split": [
+          "good_or_acceptable"
+        ],
+        "forbidden_targets": [
+          "surprising_or_useful"
+        ],
+        "target": "good_or_acceptable"
+      },
+      "rationale": "v1 gates only evaluate good_or_acceptable and require surprising_or_useful to remain excluded.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.metadata.target",
+        "split_policy.allowed_targets_for_v1_split",
+        "split_policy.forbidden_targets"
+      ],
+      "status": "pass",
+      "threshold": {
+        "allowed_targets_for_v1_split": [
+          "good_or_acceptable"
+        ],
+        "forbidden_targets_include": "surprising_or_useful",
+        "target": "good_or_acceptable"
+      },
+      "title": "Target Scope"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G02_policy_compliance",
+      "observed_value": {
+        "allowed_target_verified": true,
+        "forbidden_targets_verified": true,
+        "grouped_split_used": true,
+        "leakage_checks_passed": true,
+        "production_artifact_written": false,
+        "row_level_random_split_used": false
+      },
+      "rationale": "The ranker experiment must prove it followed the split policy and wrote no production artifact.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.policy_compliance.grouped_split_used",
+        "ranker.policy_compliance.row_level_random_split_used",
+        "ranker.policy_compliance.production_artifact_written",
+        "ranker.policy_compliance.leakage_checks_passed",
+        "ranker.policy_compliance.allowed_target_verified",
+        "ranker.policy_compliance.forbidden_targets_verified"
+      ],
+      "status": "pass",
+      "threshold": {
+        "allowed_target_verified": true,
+        "forbidden_targets_verified": true,
+        "grouped_split_used": true,
+        "leakage_checks_passed": true,
+        "production_artifact_written": false,
+        "row_level_random_split_used": false
+      },
+      "title": "Policy Compliance"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "leakage",
+      "gate_id": "G03_leakage_zero",
+      "observed_value": {
+        "global_leakage_work_overlap_count": 0,
+        "global_zero_assertion": true,
+        "per_fold_leakage_work_overlap_counts": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "rationale": "No canonical work may appear in both train and eval folds.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.leakage_report.global_leakage_work_overlap_count",
+        "ranker.leakage_report.global_zero_assertion",
+        "ranker.leakage_report.per_fold[].leakage_work_overlap_count"
+      ],
+      "status": "pass",
+      "threshold": {
+        "global": 0,
+        "per_fold": 0
+      },
+      "title": "Zero Work Leakage"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "data",
+      "gate_id": "G04_minimum_work_groups",
+      "observed_value": {
+        "negative_work_groups": 114,
+        "positive_work_groups": 228
+      },
+      "rationale": "Grouped CV needs at least two positive and two negative canonical work groups.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.dataset_inventory.target_class_counts.work_group_reporting_level.any_positive.positive",
+        "ranker.dataset_inventory.target_class_counts.work_group_reporting_level.any_positive.negative",
+        "ranker.metadata.group_level_stratification_class_counts"
+      ],
+      "status": "pass",
+      "threshold": {
+        "negative_work_groups_min": 2,
+        "positive_work_groups_min": 2
+      },
+      "title": "Minimum Work Groups"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment"
+      ],
+      "category": "data",
+      "gate_id": "G05_class_balance_floor",
+      "observed_value": {
+        "eligible_observations": 427,
+        "observation_negative": 118,
+        "observation_positive": 309,
+        "work_any_negative": 114,
+        "work_any_positive": 228
+      },
+      "rationale": "The audit experiment needs enough observations and grouped positives/negatives to be worth interpreting.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.dataset_inventory.eligible_observations",
+        "ranker.dataset_inventory.target_class_counts.observation_level.positive",
+        "ranker.dataset_inventory.target_class_counts.observation_level.negative",
+        "ranker.dataset_inventory.target_class_counts.work_group_reporting_level.any_positive.positive",
+        "ranker.dataset_inventory.target_class_counts.work_group_reporting_level.any_positive.negative"
+      ],
+      "status": "pass",
+      "threshold": {
+        "eligible_observations_min": 300,
+        "observation_negative_min": 30,
+        "observation_positive_min": 50,
+        "work_any_negative_min": 20,
+        "work_any_positive_min": 40
+      },
+      "title": "Class Balance Floor"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "metric",
+      "gate_id": "G06_majority_baseline_margin",
+      "observed_value": {
+        "embedding_logistic_balanced_accuracy": 0.8536607423416795,
+        "majority_class_balanced_accuracy": 0.5,
+        "margin": 0.35366074234167955
+      },
+      "rationale": "The embedding classifier must clear the trivial majority baseline by a meaningful balanced-accuracy margin.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.models.embedding_logistic.aggregate.observation_metrics_mean_std.balanced_accuracy.mean",
+        "ranker.models.majority_class.aggregate.observation_metrics_mean_std.balanced_accuracy.mean"
+      ],
+      "status": "pass",
+      "threshold": {
+        "balanced_accuracy_margin_min": 0.15
+      },
+      "title": "Majority Baseline Margin"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "metric",
+      "gate_id": "G07_roc_auc_floor",
+      "observed_value": {
+        "effective_cv_folds": 5,
+        "folds_skipped": 0,
+        "roc_auc_mean": 0.9393930728316434,
+        "roc_auc_n": 5
+      },
+      "rationale": "Every fold must produce evaluable ROC-AUC above the audit threshold.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.models.embedding_logistic.aggregate.observation_metrics_mean_std.roc_auc.mean",
+        "ranker.models.embedding_logistic.aggregate.observation_metrics_mean_std.roc_auc.n",
+        "ranker.models.embedding_logistic.aggregate.folds_skipped",
+        "ranker.metadata.effective_cv_folds"
+      ],
+      "status": "pass",
+      "threshold": {
+        "roc_auc_mean_min": 0.7,
+        "roc_auc_n_equals_effective_folds": true
+      },
+      "title": "ROC-AUC Floor"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "metric",
+      "gate_id": "G08_average_precision_floor",
+      "observed_value": {
+        "average_precision_mean": 0.975089064732973
+      },
+      "rationale": "The embedding classifier must produce strong precision-recall ranking signal on audit folds.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.models.embedding_logistic.aggregate.observation_metrics_mean_std.average_precision.mean"
+      ],
+      "status": "pass",
+      "threshold": {
+        "average_precision_mean_min": 0.75
+      },
+      "title": "Average Precision Floor"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "metric",
+      "gate_id": "G09_fold_stability",
+      "observed_value": {
+        "balanced_accuracy_std": 0.030595292013019686,
+        "effective_cv_folds": 5,
+        "folds_evaluated": 5,
+        "folds_skipped": 0
+      },
+      "rationale": "Audit performance must be reasonably stable across grouped folds.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.models.embedding_logistic.aggregate.observation_metrics_mean_std.balanced_accuracy.std",
+        "ranker.models.embedding_logistic.aggregate.folds_evaluated",
+        "ranker.models.embedding_logistic.aggregate.folds_skipped",
+        "ranker.metadata.effective_cv_folds"
+      ],
+      "status": "pass",
+      "threshold": {
+        "balanced_accuracy_std_max": 0.08,
+        "folds_skipped": 0
+      },
+      "title": "Fold Stability"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_experiment"
+      ],
+      "category": "reporting",
+      "gate_id": "G10_duplicate_pressure_reported",
+      "observed_value": {
+        "conflicting_target_work_group_count": 3,
+        "duplicate_observation_pressure": 85,
+        "eligible_observations": 427,
+        "expected_duplicate_observation_pressure": 85,
+        "unique_eligible_canonical_work_count": 342
+      },
+      "rationale": "Duplicate/conflicting observations may exist; this gate only checks that their pressure is visible.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.dataset_inventory.duplicate_observation_pressure",
+        "ranker.dataset_inventory.eligible_observations",
+        "ranker.dataset_inventory.unique_eligible_canonical_work_count",
+        "ranker.dataset_inventory.target_class_counts.work_group_reporting_level.conflicting_target_work_group_count"
+      ],
+      "status": "pass",
+      "threshold": {
+        "conflicting_target_work_group_count_present": true,
+        "duplicate_observation_pressure_equals_eligible_minus_unique_work_count": true
+      },
+      "title": "Duplicate Pressure Reported"
+    },
+    {
+      "advisory_text": "High audit-pool CV metrics do not imply product-candidate or live ranking success.",
+      "blocking_for": [
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "scope",
+      "gate_id": "G11_audit_pool_scope_acknowledged",
+      "observed_value": {
+        "nonzero_review_pool_variant_bucket_count": 9,
+        "review_pool_variant_counts": {
+          "(null)": 65,
+          "bridge_eligible_only": 20,
+          "full_family_top_k": 40,
+          "ml_blind_snapshot_audit": 120,
+          "ml_contrastive_offline_audit": 45,
+          "ml_emerging_target_gap_audit:good_or_acceptable": 25,
+          "ml_external_near_miss_audit": 60,
+          "ml_hard_negative_audit": 7,
+          "ml_transfer_gap_audit": 45
+        }
+      },
+      "rationale": "The input is a mixed audit-pool experiment, not a product-candidate ranking experiment.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "ranker.dataset_inventory.review_pool_variant_counts"
+      ],
+      "status": "pass",
+      "threshold": {
+        "minimum_nonzero_review_pool_variant_buckets": 2
+      },
+      "title": "Audit Pool Scope Acknowledged"
+    },
+    {
+      "blocking_for": [
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "scope",
+      "gate_id": "G12_product_candidate_experiment_required",
+      "next_action": "run production-candidate offline scoring experiment before shadow scoring",
+      "observed_value": {
+        "product_candidate_offline_ranker_artifact_present": false
+      },
+      "rationale": "Product-shaped candidate pool and ranking-relevant workflow metrics have not been measured by this audit experiment.",
+      "required_for": [
+        "product_candidate_experiment",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "source_field_paths": [],
+      "status": "not_evaluated",
+      "threshold": null,
+      "title": "Product-Candidate Experiment Required"
+    },
+    {
+      "blocking_for": [
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G13_production_readiness_plan_alignment",
+      "observed_value": {
+        "good_or_acceptable": {
+          "allowed_next_stage": "offline_ranker_research_only",
+          "production_eligible": false,
+          "status": "primary_candidate"
+        },
+        "overall_status": "research_only",
+        "surprising_or_useful": {
+          "production_eligible": false,
+          "status": "deferred"
+        }
+      },
+      "rationale": "Audit gates may advance offline research only when the production plan still blocks production eligibility.",
+      "required_for": [
+        "audit_gate_pass",
+        "product_candidate_experiment"
+      ],
+      "source_field_paths": [
+        "production_readiness_plan.metadata.overall_status",
+        "production_readiness_plan.targets.good_or_acceptable.status",
+        "production_readiness_plan.targets.good_or_acceptable.allowed_next_stage",
+        "production_readiness_plan.targets.good_or_acceptable.production_eligible",
+        "production_readiness_plan.targets.surprising_or_useful.status",
+        "production_readiness_plan.targets.surprising_or_useful.production_eligible"
+      ],
+      "status": "pass",
+      "threshold": {
+        "good_or_acceptable_production_eligible": false,
+        "good_or_acceptable_research_candidate": true,
+        "surprising_or_useful_deferred_or_excluded": true,
+        "surprising_or_useful_production_eligible": false
+      },
+      "title": "Production Readiness Plan Alignment"
+    },
+    {
+      "blocking_for": [
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "advisory",
+      "gate_id": "G14_transfer_readiness_advisory",
+      "observed_value": {
+        "good_or_acceptable_cross_pool_synthesis": {
+          "eligible_row_count": 427,
+          "excluded_count": 0,
+          "excluded_row_ids": [],
+          "in_pool_cv": {
+            "blind_snapshot": {
+              "comparison_name": "blind_snapshot",
+              "comparison_type": "in_pool_cv",
+              "effective_cv_folds": 5,
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.9083333333333333,
+                  "balanced_accuracy": 0.4954545454545455,
+                  "confusion": {
+                    "fn": 1,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 109
+                  },
+                  "macro_f1": 0.4759825327510917,
+                  "roc_auc": 0.67,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 120,
+                  "train_neg": 10,
+                  "train_pos": 110
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.9166666666666666,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 110
+                  },
+                  "macro_f1": 0.4782608695652174,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "majority baseline has no row-specific probabilistic scores.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 120,
+                  "train_neg": 10,
+                  "train_pos": 110
+                },
+                "metadata_sample_reason_logistic": {
+                  "accuracy": 0.9166666666666666,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 110
+                  },
+                  "macro_f1": 0.4782608695652174,
+                  "roc_auc": 0.27045454545454545,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 120,
+                  "train_neg": 10,
+                  "train_pos": 110
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.9166666666666666,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 110
+                  },
+                  "macro_f1": 0.4782608695652174,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 120,
+                  "train_neg": 10,
+                  "train_pos": 110
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              }
+            },
+            "external_near_miss": {
+              "comparison_name": "external_near_miss",
+              "comparison_type": "in_pool_cv",
+              "effective_cv_folds": 5,
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.85,
+                  "balanced_accuracy": 0.7708618331053352,
+                  "confusion": {
+                    "fn": 7,
+                    "fp": 2,
+                    "tn": 41,
+                    "tp": 10
+                  },
+                  "macro_f1": 0.7953770367563471,
+                  "roc_auc": 0.9439124487004104,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 60,
+                  "train_neg": 43,
+                  "train_pos": 17
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.7166666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 17,
+                    "fp": 0,
+                    "tn": 43,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.4174757281553398,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "majority baseline has no row-specific probabilistic scores.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 60,
+                  "train_neg": 43,
+                  "train_pos": 17
+                },
+                "metadata_sample_reason_logistic": {
+                  "accuracy": 0.6833333333333333,
+                  "balanced_accuracy": 0.47674418604651164,
+                  "confusion": {
+                    "fn": 17,
+                    "fp": 2,
+                    "tn": 41,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.40594059405940597,
+                  "roc_auc": 0.6169630642954856,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 60,
+                  "train_neg": 43,
+                  "train_pos": 17
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.7166666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 17,
+                    "fp": 0,
+                    "tn": 43,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.4174757281553398,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 60,
+                  "train_neg": 43,
+                  "train_pos": 17
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              }
+            },
+            "hard_negative": {
+              "comparison_name": "hard_negative",
+              "comparison_type": "in_pool_cv",
+              "models": {},
+              "skip_reason": "slice lacks enough rows in both classes for stratified CV",
+              "skipped": true,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 7
+                },
+                "family": {
+                  "(null)": 7
+                },
+                "review_pool_variant": {
+                  "ml_hard_negative_audit": 7
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 7
+                },
+                "family": {
+                  "(null)": 7
+                },
+                "review_pool_variant": {
+                  "ml_hard_negative_audit": 7
+                }
+              }
+            },
+            "legacy_or_uncategorized": {
+              "comparison_name": "legacy_or_uncategorized",
+              "comparison_type": "in_pool_cv",
+              "models": {},
+              "skip_reason": "slice lacks enough rows in both classes for stratified CV",
+              "skipped": true,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 65
+                },
+                "family": {
+                  "bridge": 25,
+                  "emerging": 20,
+                  "undercited": 20
+                },
+                "review_pool_variant": {
+                  "(null)": 65
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 65
+                },
+                "family": {
+                  "bridge": 25,
+                  "emerging": 20,
+                  "undercited": 20
+                },
+                "review_pool_variant": {
+                  "(null)": 65
+                }
+              }
+            },
+            "rank_shaped_family": {
+              "comparison_name": "rank_shaped_family",
+              "comparison_type": "in_pool_cv",
+              "effective_cv_folds": 5,
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.9153846153846154,
+                  "balanced_accuracy": 0.7957623416339012,
+                  "confusion": {
+                    "fn": 3,
+                    "fp": 8,
+                    "tn": 13,
+                    "tp": 106
+                  },
+                  "macro_f1": 0.8266876742213065,
+                  "roc_auc": 0.9619921363040629,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 130,
+                  "test_neg": 21,
+                  "test_pos": 109,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.8384615384615385,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 21,
+                    "tn": 0,
+                    "tp": 109
+                  },
+                  "macro_f1": 0.4560669456066946,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "majority baseline has no row-specific probabilistic scores.",
+                  "test_n": 130,
+                  "test_neg": 21,
+                  "test_pos": 109,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                },
+                "metadata_sample_reason_logistic": {
+                  "accuracy": 0.8384615384615385,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 21,
+                    "tn": 0,
+                    "tp": 109
+                  },
+                  "macro_f1": 0.4560669456066946,
+                  "roc_auc": 0.47728265618173876,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 130,
+                  "test_neg": 21,
+                  "test_pos": 109,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.8384615384615385,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 21,
+                    "tn": 0,
+                    "tp": 109
+                  },
+                  "macro_f1": 0.4560669456066946,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 130,
+                  "test_neg": 21,
+                  "test_pos": 109,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              }
+            },
+            "transfer_gap": {
+              "comparison_name": "transfer_gap",
+              "comparison_type": "in_pool_cv",
+              "models": {},
+              "skip_reason": "slice lacks enough rows in both classes for stratified CV",
+              "skipped": true,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 45
+                },
+                "family": {
+                  "(null)": 45
+                },
+                "review_pool_variant": {
+                  "ml_transfer_gap_audit": 45
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 45
+                },
+                "family": {
+                  "(null)": 45
+                },
+                "review_pool_variant": {
+                  "ml_transfer_gap_audit": 45
+                }
+              }
+            }
+          },
+          "skipped_reason_counts": {
+            "slice lacks enough rows in both classes for stratified CV": 3
+          },
+          "slice_counts": {
+            "blind_snapshot": {
+              "n": 120,
+              "negative": 10,
+              "positive": 110
+            },
+            "external_near_miss": {
+              "n": 60,
+              "negative": 43,
+              "positive": 17
+            },
+            "hard_negative": {
+              "n": 7,
+              "negative": 0,
+              "positive": 7
+            },
+            "legacy_or_uncategorized": {
+              "n": 65,
+              "negative": 0,
+              "positive": 65
+            },
+            "rank_shaped_family": {
+              "n": 130,
+              "negative": 21,
+              "positive": 109
+            },
+            "transfer_gap": {
+              "n": 45,
+              "negative": 44,
+              "positive": 1
+            }
+          },
+          "source_transfer": {
+            "all_not_blind_snapshot_to_blind_snapshot": {
+              "comparison_name": "all_not_blind_snapshot_to_blind_snapshot",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.7833333333333333,
+                  "balanced_accuracy": 0.7,
+                  "confusion": {
+                    "fn": 22,
+                    "fp": 4,
+                    "tn": 6,
+                    "tp": 88
+                  },
+                  "macro_f1": 0.5935383011985409,
+                  "roc_auc": 0.8136363636363637,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 307,
+                  "train_neg": 108,
+                  "train_pos": 199
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.9166666666666666,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 110
+                  },
+                  "macro_f1": 0.4782608695652174,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 307,
+                  "train_neg": 108,
+                  "train_pos": 199
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.9166666666666666,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 110
+                  },
+                  "macro_f1": 0.4782608695652174,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 307,
+                  "train_neg": 108,
+                  "train_pos": 199
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 307
+                },
+                "family": {
+                  "(null)": 112,
+                  "bridge": 60,
+                  "emerging": 80,
+                  "undercited": 55
+                },
+                "review_pool_variant": {
+                  "(null)": 65,
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25,
+                  "ml_external_near_miss_audit": 60,
+                  "ml_hard_negative_audit": 7,
+                  "ml_transfer_gap_audit": 45
+                }
+              }
+            },
+            "all_not_external_near_miss_to_external_near_miss": {
+              "comparison_name": "all_not_external_near_miss_to_external_near_miss",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.8,
+                  "balanced_accuracy": 0.771545827633379,
+                  "confusion": {
+                    "fn": 5,
+                    "fp": 7,
+                    "tn": 36,
+                    "tp": 12
+                  },
+                  "macro_f1": 0.7619047619047619,
+                  "roc_auc": 0.8645690834473326,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 367,
+                  "train_neg": 75,
+                  "train_pos": 292
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.2833333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 43,
+                    "tn": 0,
+                    "tp": 17
+                  },
+                  "macro_f1": 0.22077922077922077,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 367,
+                  "train_neg": 75,
+                  "train_pos": 292
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.2833333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 43,
+                    "tn": 0,
+                    "tp": 17
+                  },
+                  "macro_f1": 0.22077922077922077,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 367,
+                  "train_neg": 75,
+                  "train_pos": 292
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 367
+                },
+                "family": {
+                  "(null)": 172,
+                  "bridge": 60,
+                  "emerging": 80,
+                  "undercited": 55
+                },
+                "review_pool_variant": {
+                  "(null)": 65,
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_blind_snapshot_audit": 120,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25,
+                  "ml_hard_negative_audit": 7,
+                  "ml_transfer_gap_audit": 45
+                }
+              }
+            },
+            "blind_snapshot_to_external_near_miss": {
+              "comparison_name": "blind_snapshot_to_external_near_miss",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.36666666666666664,
+                  "balanced_accuracy": 0.5581395348837209,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 38,
+                    "tn": 5,
+                    "tp": 17
+                  },
+                  "macro_f1": 0.3402777777777778,
+                  "roc_auc": 0.7674418604651163,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 120,
+                  "train_neg": 10,
+                  "train_pos": 110
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.2833333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 43,
+                    "tn": 0,
+                    "tp": 17
+                  },
+                  "macro_f1": 0.22077922077922077,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 120,
+                  "train_neg": 10,
+                  "train_pos": 110
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.2833333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 43,
+                    "tn": 0,
+                    "tp": 17
+                  },
+                  "macro_f1": 0.22077922077922077,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 120,
+                  "train_neg": 10,
+                  "train_pos": 110
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              }
+            },
+            "external_near_miss_plus_blind_snapshot_to_rank_shaped_family": {
+              "comparison_name": "external_near_miss_plus_blind_snapshot_to_rank_shaped_family",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.8692307692307693,
+                  "balanced_accuracy": 0.6336828309305373,
+                  "confusion": {
+                    "fn": 2,
+                    "fp": 15,
+                    "tn": 6,
+                    "tp": 107
+                  },
+                  "macro_f1": 0.6701000149276012,
+                  "roc_auc": 0.7612494539100043,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 130,
+                  "test_neg": 21,
+                  "test_pos": 109,
+                  "train_n": 180,
+                  "train_neg": 53,
+                  "train_pos": 127
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.8384615384615385,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 21,
+                    "tn": 0,
+                    "tp": 109
+                  },
+                  "macro_f1": 0.4560669456066946,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 130,
+                  "test_neg": 21,
+                  "test_pos": 109,
+                  "train_n": 180,
+                  "train_neg": 53,
+                  "train_pos": 127
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.8384615384615385,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 21,
+                    "tn": 0,
+                    "tp": 109
+                  },
+                  "macro_f1": 0.4560669456066946,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 130,
+                  "test_neg": 21,
+                  "test_pos": 109,
+                  "train_n": 180,
+                  "train_neg": 53,
+                  "train_pos": 127
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 180
+                },
+                "family": {
+                  "(null)": 180
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120,
+                  "ml_external_near_miss_audit": 60
+                }
+              }
+            },
+            "external_near_miss_to_blind_snapshot": {
+              "comparison_name": "external_near_miss_to_blind_snapshot",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.43333333333333335,
+                  "balanced_accuracy": 0.6909090909090909,
+                  "confusion": {
+                    "fn": 68,
+                    "fp": 0,
+                    "tn": 10,
+                    "tp": 42
+                  },
+                  "macro_f1": 0.3899521531100479,
+                  "roc_auc": 0.7636363636363636,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 60,
+                  "train_neg": 43,
+                  "train_pos": 17
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.08333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 110,
+                    "fp": 0,
+                    "tn": 10,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.07692307692307693,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 60,
+                  "train_neg": 43,
+                  "train_pos": 17
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.08333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 110,
+                    "fp": 0,
+                    "tn": 10,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.07692307692307693,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 60,
+                  "train_neg": 43,
+                  "train_pos": 17
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              }
+            },
+            "rank_shaped_family_to_blind_snapshot": {
+              "comparison_name": "rank_shaped_family_to_blind_snapshot",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.8916666666666667,
+                  "balanced_accuracy": 0.5772727272727273,
+                  "confusion": {
+                    "fn": 5,
+                    "fp": 8,
+                    "tn": 2,
+                    "tp": 105
+                  },
+                  "macro_f1": 0.5884990767607492,
+                  "roc_auc": 0.6527272727272727,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.9166666666666666,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 110
+                  },
+                  "macro_f1": 0.4782608695652174,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.9166666666666666,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 10,
+                    "tn": 0,
+                    "tp": 110
+                  },
+                  "macro_f1": 0.4782608695652174,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 10,
+                  "test_pos": 110,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              }
+            },
+            "rank_shaped_family_to_external_near_miss": {
+              "comparison_name": "rank_shaped_family_to_external_near_miss",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.5166666666666667,
+                  "balanced_accuracy": 0.5560875512995896,
+                  "confusion": {
+                    "fn": 6,
+                    "fp": 23,
+                    "tn": 20,
+                    "tp": 11
+                  },
+                  "macro_f1": 0.5055413469735721,
+                  "roc_auc": 0.6415868673050616,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.2833333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 43,
+                    "tn": 0,
+                    "tp": 17
+                  },
+                  "macro_f1": 0.22077922077922077,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.2833333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 43,
+                    "tn": 0,
+                    "tp": 17
+                  },
+                  "macro_f1": 0.22077922077922077,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 43,
+                  "test_pos": 17,
+                  "train_n": 130,
+                  "train_neg": 21,
+                  "train_pos": 109
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "good_or_acceptable",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              }
+            }
+          },
+          "target": "good_or_acceptable"
+        },
+        "good_or_acceptable_flags": {
+          "external_blind_transfer_weak": {
+            "evidence": [],
+            "value": false
+          },
+          "in_pool_signal_strong": {
+            "evidence": [
+              {
+                "comparison_or_slice": "external_near_miss",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "good_or_acceptable",
+                "threshold": 0.7,
+                "threshold_name": "strong_in_pool_balanced_accuracy_threshold",
+                "value": 0.7708618331053352
+              },
+              {
+                "comparison_or_slice": "external_near_miss",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "good_or_acceptable",
+                "threshold": 0.8,
+                "threshold_name": "strong_in_pool_roc_auc_threshold",
+                "value": 0.9439124487004104
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "good_or_acceptable",
+                "threshold": 0.7,
+                "threshold_name": "strong_in_pool_balanced_accuracy_threshold",
+                "value": 0.7957623416339012
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "good_or_acceptable",
+                "threshold": 0.8,
+                "threshold_name": "strong_in_pool_roc_auc_threshold",
+                "value": 0.9619921363040629
+              }
+            ],
+            "value": true
+          },
+          "needs_more_labels": {
+            "evidence": [
+              {
+                "comparison_or_slice": "(null)",
+                "false_count": 0,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 65,
+                "value": 0
+              },
+              {
+                "comparison_or_slice": "bridge_eligible_only",
+                "false_count": 1,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 19,
+                "value": 1
+              },
+              {
+                "comparison_or_slice": "full_family_top_k",
+                "false_count": 1,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 39,
+                "value": 1
+              },
+              {
+                "comparison_or_slice": "ml_blind_snapshot_audit",
+                "false_count": 10,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 110,
+                "value": 10
+              },
+              {
+                "comparison_or_slice": "ml_contrastive_offline_audit",
+                "false_count": 4,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 41,
+                "value": 4
+              },
+              {
+                "comparison_or_slice": "ml_emerging_target_gap_audit:good_or_acceptable",
+                "false_count": 15,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 10,
+                "value": 10
+              },
+              {
+                "comparison_or_slice": "ml_external_near_miss_audit",
+                "false_count": 43,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 17,
+                "value": 17
+              },
+              {
+                "comparison_or_slice": "ml_hard_negative_audit",
+                "false_count": 0,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 7,
+                "value": 0
+              },
+              {
+                "comparison_or_slice": "ml_transfer_gap_audit",
+                "false_count": 44,
+                "metric_name": "min_class_count",
+                "target": "good_or_acceptable",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 1,
+                "value": 1
+              },
+              {
+                "comparison_or_slice": "hard_negative",
+                "metric_name": "skipped",
+                "reason": "slice lacks enough rows in both classes for stratified CV",
+                "target": "good_or_acceptable",
+                "threshold": true,
+                "threshold_name": "requires_evaluable_slice",
+                "value": true
+              },
+              {
+                "comparison_or_slice": "transfer_gap",
+                "metric_name": "skipped",
+                "reason": "slice lacks enough rows in both classes for stratified CV",
+                "target": "good_or_acceptable",
+                "threshold": true,
+                "threshold_name": "requires_evaluable_slice",
+                "value": true
+              },
+              {
+                "comparison_or_slice": "legacy_or_uncategorized",
+                "metric_name": "skipped",
+                "reason": "slice lacks enough rows in both classes for stratified CV",
+                "target": "good_or_acceptable",
+                "threshold": true,
+                "threshold_name": "requires_evaluable_slice",
+                "value": true
+              }
+            ],
+            "value": true
+          },
+          "production_ready": {
+            "evidence": [
+              {
+                "comparison_or_slice": "production",
+                "metric_name": "production_ready",
+                "target": "good_or_acceptable",
+                "threshold": true,
+                "threshold_name": "offline_audit_only",
+                "value": false
+              }
+            ],
+            "value": false
+          },
+          "transfer_inconsistent": {
+            "evidence": [],
+            "value": false
+          }
+        },
+        "production_recommender_missing_gates": [
+          "multi-reviewer or adjudication policy",
+          "deliberate split policy",
+          "product-matched candidate pools",
+          "top-k workflow metrics",
+          "leakage controls",
+          "shadow/flagged experiment plan"
+        ],
+        "readiness_version": "ml-text-transfer-readiness-v8",
+        "surprising_or_useful_cross_pool_synthesis": {
+          "eligible_row_count": 427,
+          "excluded_count": 0,
+          "excluded_row_ids": [],
+          "in_pool_cv": {
+            "blind_snapshot": {
+              "comparison_name": "blind_snapshot",
+              "comparison_type": "in_pool_cv",
+              "effective_cv_folds": 5,
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.8333333333333334,
+                  "balanced_accuracy": 0.5377800937988535,
+                  "confusion": {
+                    "fn": 3,
+                    "fp": 17,
+                    "tn": 2,
+                    "tp": 98
+                  },
+                  "macro_f1": 0.5370370370370371,
+                  "roc_auc": 0.7608129233976029,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 120,
+                  "train_neg": 19,
+                  "train_pos": 101
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "majority baseline has no row-specific probabilistic scores.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 120,
+                  "train_neg": 19,
+                  "train_pos": 101
+                },
+                "metadata_sample_reason_logistic": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": 0.4353830119854091,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 120,
+                  "train_neg": 19,
+                  "train_pos": 101
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 120,
+                  "train_neg": 19,
+                  "train_pos": 101
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              }
+            },
+            "external_near_miss": {
+              "comparison_name": "external_near_miss",
+              "comparison_type": "in_pool_cv",
+              "effective_cv_folds": 5,
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.7833333333333333,
+                  "balanced_accuracy": 0.7523923444976077,
+                  "confusion": {
+                    "fn": 5,
+                    "fp": 8,
+                    "tn": 14,
+                    "tp": 33
+                  },
+                  "macro_f1": 0.7591849336214882,
+                  "roc_auc": 0.8397129186602871,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 60,
+                  "train_neg": 22,
+                  "train_pos": 38
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "majority baseline has no row-specific probabilistic scores.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 60,
+                  "train_neg": 22,
+                  "train_pos": 38
+                },
+                "metadata_sample_reason_logistic": {
+                  "accuracy": 0.75,
+                  "balanced_accuracy": 0.6782296650717703,
+                  "confusion": {
+                    "fn": 2,
+                    "fp": 13,
+                    "tn": 9,
+                    "tp": 36
+                  },
+                  "macro_f1": 0.6865203761755485,
+                  "roc_auc": 0.7254784688995215,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 60,
+                  "train_neg": 22,
+                  "train_pos": 38
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 60,
+                  "train_neg": 22,
+                  "train_pos": 38
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              }
+            },
+            "hard_negative": {
+              "comparison_name": "hard_negative",
+              "comparison_type": "in_pool_cv",
+              "models": {},
+              "skip_reason": "slice lacks enough rows in both classes for stratified CV",
+              "skipped": true,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 7
+                },
+                "family": {
+                  "(null)": 7
+                },
+                "review_pool_variant": {
+                  "ml_hard_negative_audit": 7
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 7
+                },
+                "family": {
+                  "(null)": 7
+                },
+                "review_pool_variant": {
+                  "ml_hard_negative_audit": 7
+                }
+              }
+            },
+            "legacy_or_uncategorized": {
+              "comparison_name": "legacy_or_uncategorized",
+              "comparison_type": "in_pool_cv",
+              "models": {},
+              "skip_reason": "slice lacks enough rows in both classes for stratified CV",
+              "skipped": true,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 65
+                },
+                "family": {
+                  "bridge": 25,
+                  "emerging": 20,
+                  "undercited": 20
+                },
+                "review_pool_variant": {
+                  "(null)": 65
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 65
+                },
+                "family": {
+                  "bridge": 25,
+                  "emerging": 20,
+                  "undercited": 20
+                },
+                "review_pool_variant": {
+                  "(null)": 65
+                }
+              }
+            },
+            "rank_shaped_family": {
+              "comparison_name": "rank_shaped_family",
+              "comparison_type": "in_pool_cv",
+              "effective_cv_folds": 5,
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.8384615384615385,
+                  "balanced_accuracy": 0.7156862745098039,
+                  "confusion": {
+                    "fn": 7,
+                    "fp": 14,
+                    "tn": 14,
+                    "tp": 95
+                  },
+                  "macro_f1": 0.7359512525389302,
+                  "roc_auc": 0.8685224089635855,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 130,
+                  "test_neg": 28,
+                  "test_pos": 102,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.7846153846153846,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 28,
+                    "tn": 0,
+                    "tp": 102
+                  },
+                  "macro_f1": 0.4396551724137931,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "majority baseline has no row-specific probabilistic scores.",
+                  "test_n": 130,
+                  "test_neg": 28,
+                  "test_pos": 102,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                },
+                "metadata_sample_reason_logistic": {
+                  "accuracy": 0.7846153846153846,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 28,
+                    "tn": 0,
+                    "tp": 102
+                  },
+                  "macro_f1": 0.4396551724137931,
+                  "roc_auc": 0.47268907563025214,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 130,
+                  "test_neg": 28,
+                  "test_pos": 102,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.7846153846153846,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 28,
+                    "tn": 0,
+                    "tp": 102
+                  },
+                  "macro_f1": 0.4396551724137931,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 130,
+                  "test_neg": 28,
+                  "test_pos": 102,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              }
+            },
+            "transfer_gap": {
+              "comparison_name": "transfer_gap",
+              "comparison_type": "in_pool_cv",
+              "effective_cv_folds": 5,
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.8,
+                  "balanced_accuracy": 0.7373271889400921,
+                  "confusion": {
+                    "fn": 6,
+                    "fp": 3,
+                    "tn": 28,
+                    "tp": 8
+                  },
+                  "macro_f1": 0.7507692307692309,
+                  "roc_auc": 0.8479262672811061,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 45,
+                  "test_neg": 31,
+                  "test_pos": 14,
+                  "train_n": 45,
+                  "train_neg": 31,
+                  "train_pos": 14
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.6888888888888889,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 14,
+                    "fp": 0,
+                    "tn": 31,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.40789473684210525,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "majority baseline has no row-specific probabilistic scores.",
+                  "test_n": 45,
+                  "test_neg": 31,
+                  "test_pos": 14,
+                  "train_n": 45,
+                  "train_neg": 31,
+                  "train_pos": 14
+                },
+                "metadata_sample_reason_logistic": {
+                  "accuracy": 0.6888888888888889,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 14,
+                    "fp": 0,
+                    "tn": 31,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.40789473684210525,
+                  "roc_auc": 0.5172811059907835,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 45,
+                  "test_neg": 31,
+                  "test_pos": 14,
+                  "train_n": 45,
+                  "train_neg": 31,
+                  "train_pos": 14
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.6888888888888889,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 14,
+                    "fp": 0,
+                    "tn": 31,
+                    "tp": 0
+                  },
+                  "macro_f1": 0.40789473684210525,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 45,
+                  "test_neg": 31,
+                  "test_pos": 14,
+                  "train_n": 45,
+                  "train_neg": 31,
+                  "train_pos": 14
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 45
+                },
+                "family": {
+                  "(null)": 45
+                },
+                "review_pool_variant": {
+                  "ml_transfer_gap_audit": 45
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 45
+                },
+                "family": {
+                  "(null)": 45
+                },
+                "review_pool_variant": {
+                  "ml_transfer_gap_audit": 45
+                }
+              }
+            }
+          },
+          "skipped_reason_counts": {
+            "slice lacks enough rows in both classes for stratified CV": 2
+          },
+          "slice_counts": {
+            "blind_snapshot": {
+              "n": 120,
+              "negative": 19,
+              "positive": 101
+            },
+            "external_near_miss": {
+              "n": 60,
+              "negative": 22,
+              "positive": 38
+            },
+            "hard_negative": {
+              "n": 7,
+              "negative": 1,
+              "positive": 6
+            },
+            "legacy_or_uncategorized": {
+              "n": 65,
+              "negative": 0,
+              "positive": 65
+            },
+            "rank_shaped_family": {
+              "n": 130,
+              "negative": 28,
+              "positive": 102
+            },
+            "transfer_gap": {
+              "n": 45,
+              "negative": 31,
+              "positive": 14
+            }
+          },
+          "source_transfer": {
+            "all_not_blind_snapshot_to_blind_snapshot": {
+              "comparison_name": "all_not_blind_snapshot_to_blind_snapshot",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.775,
+                  "balanced_accuracy": 0.4817613340281397,
+                  "confusion": {
+                    "fn": 9,
+                    "fp": 18,
+                    "tn": 1,
+                    "tp": 92
+                  },
+                  "macro_f1": 0.47050171596666124,
+                  "roc_auc": 0.49973944762897343,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 307,
+                  "train_neg": 82,
+                  "train_pos": 225
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 307,
+                  "train_neg": 82,
+                  "train_pos": 225
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 307,
+                  "train_neg": 82,
+                  "train_pos": 225
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 307
+                },
+                "family": {
+                  "(null)": 112,
+                  "bridge": 60,
+                  "emerging": 80,
+                  "undercited": 55
+                },
+                "review_pool_variant": {
+                  "(null)": 65,
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25,
+                  "ml_external_near_miss_audit": 60,
+                  "ml_hard_negative_audit": 7,
+                  "ml_transfer_gap_audit": 45
+                }
+              }
+            },
+            "all_not_external_near_miss_to_external_near_miss": {
+              "comparison_name": "all_not_external_near_miss_to_external_near_miss",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.6666666666666666,
+                  "balanced_accuracy": 0.6889952153110048,
+                  "confusion": {
+                    "fn": 15,
+                    "fp": 5,
+                    "tn": 17,
+                    "tp": 23
+                  },
+                  "macro_f1": 0.6632996632996633,
+                  "roc_auc": 0.7870813397129187,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 367,
+                  "train_neg": 79,
+                  "train_pos": 288
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 367,
+                  "train_neg": 79,
+                  "train_pos": 288
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 367,
+                  "train_neg": 79,
+                  "train_pos": 288
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 367
+                },
+                "family": {
+                  "(null)": 172,
+                  "bridge": 60,
+                  "emerging": 80,
+                  "undercited": 55
+                },
+                "review_pool_variant": {
+                  "(null)": 65,
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_blind_snapshot_audit": 120,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25,
+                  "ml_hard_negative_audit": 7,
+                  "ml_transfer_gap_audit": 45
+                }
+              }
+            },
+            "blind_snapshot_to_external_near_miss": {
+              "comparison_name": "blind_snapshot_to_external_near_miss",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.6166666666666667,
+                  "balanced_accuracy": 0.5059808612440191,
+                  "confusion": {
+                    "fn": 3,
+                    "fp": 20,
+                    "tn": 2,
+                    "tp": 35
+                  },
+                  "macro_f1": 0.45041816009557945,
+                  "roc_auc": 0.395933014354067,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 120,
+                  "train_neg": 19,
+                  "train_pos": 101
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 120,
+                  "train_neg": 19,
+                  "train_pos": 101
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 120,
+                  "train_neg": 19,
+                  "train_pos": 101
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              }
+            },
+            "external_near_miss_plus_blind_snapshot_to_rank_shaped_family": {
+              "comparison_name": "external_near_miss_plus_blind_snapshot_to_rank_shaped_family",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.8384615384615385,
+                  "balanced_accuracy": 0.6509103641456583,
+                  "confusion": {
+                    "fn": 2,
+                    "fp": 19,
+                    "tn": 9,
+                    "tp": 100
+                  },
+                  "macro_f1": 0.6832579185520362,
+                  "roc_auc": 0.7027310924369747,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 130,
+                  "test_neg": 28,
+                  "test_pos": 102,
+                  "train_n": 180,
+                  "train_neg": 41,
+                  "train_pos": 139
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.7846153846153846,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 28,
+                    "tn": 0,
+                    "tp": 102
+                  },
+                  "macro_f1": 0.4396551724137931,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 130,
+                  "test_neg": 28,
+                  "test_pos": 102,
+                  "train_n": 180,
+                  "train_neg": 41,
+                  "train_pos": 139
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.7846153846153846,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 28,
+                    "tn": 0,
+                    "tp": 102
+                  },
+                  "macro_f1": 0.4396551724137931,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 130,
+                  "test_neg": 28,
+                  "test_pos": 102,
+                  "train_n": 180,
+                  "train_neg": 41,
+                  "train_pos": 139
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 180
+                },
+                "family": {
+                  "(null)": 180
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120,
+                  "ml_external_near_miss_audit": 60
+                }
+              }
+            },
+            "external_near_miss_to_blind_snapshot": {
+              "comparison_name": "external_near_miss_to_blind_snapshot",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.825,
+                  "balanced_accuracy": 0.4900990099009901,
+                  "confusion": {
+                    "fn": 2,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 99
+                  },
+                  "macro_f1": 0.4520547945205479,
+                  "roc_auc": 0.43147472642001045,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 60,
+                  "train_neg": 22,
+                  "train_pos": 38
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 60,
+                  "train_neg": 22,
+                  "train_pos": 38
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 60,
+                  "train_neg": 22,
+                  "train_pos": 38
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              }
+            },
+            "rank_shaped_family_to_blind_snapshot": {
+              "comparison_name": "rank_shaped_family_to_blind_snapshot",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.75,
+                  "balanced_accuracy": 0.5096404377279833,
+                  "confusion": {
+                    "fn": 14,
+                    "fp": 16,
+                    "tn": 3,
+                    "tp": 87
+                  },
+                  "macro_f1": 0.5098039215686274,
+                  "roc_auc": 0.48827514330380406,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.8416666666666667,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 19,
+                    "tn": 0,
+                    "tp": 101
+                  },
+                  "macro_f1": 0.45701357466063347,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 120,
+                  "test_neg": 19,
+                  "test_pos": 101,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 120
+                },
+                "family": {
+                  "(null)": 120
+                },
+                "review_pool_variant": {
+                  "ml_blind_snapshot_audit": 120
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              }
+            },
+            "rank_shaped_family_to_external_near_miss": {
+              "comparison_name": "rank_shaped_family_to_external_near_miss",
+              "comparison_type": "source_transfer",
+              "models": {
+                "embedding_logistic": {
+                  "accuracy": 0.75,
+                  "balanced_accuracy": 0.7547846889952152,
+                  "confusion": {
+                    "fn": 10,
+                    "fp": 5,
+                    "tn": 17,
+                    "tp": 28
+                  },
+                  "macro_f1": 0.7413049726933026,
+                  "roc_auc": 0.8133971291866029,
+                  "roc_auc_skip_reason": null,
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                },
+                "majority_train_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "ROC-AUC requires both test classes and non-constant scores.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                },
+                "train_prevalence_score_baseline": {
+                  "accuracy": 0.6333333333333333,
+                  "balanced_accuracy": 0.5,
+                  "confusion": {
+                    "fn": 0,
+                    "fp": 22,
+                    "tn": 0,
+                    "tp": 38
+                  },
+                  "macro_f1": 0.3877551020408163,
+                  "roc_auc": null,
+                  "roc_auc_skip_reason": "constant train-prevalence score is not an informative ranking score.",
+                  "test_n": 60,
+                  "test_neg": 22,
+                  "test_pos": 38,
+                  "train_n": 130,
+                  "train_neg": 28,
+                  "train_pos": 102
+                }
+              },
+              "skip_reason": null,
+              "skipped": false,
+              "target": "surprising_or_useful",
+              "test_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 60
+                },
+                "family": {
+                  "(null)": 60
+                },
+                "review_pool_variant": {
+                  "ml_external_near_miss_audit": 60
+                }
+              },
+              "train_histograms": {
+                "embedding_text_format_version": {
+                  "labeled_text_corpus_v2_canonical_title_abstract": 130
+                },
+                "family": {
+                  "bridge": 35,
+                  "emerging": 60,
+                  "undercited": 35
+                },
+                "review_pool_variant": {
+                  "bridge_eligible_only": 20,
+                  "full_family_top_k": 40,
+                  "ml_contrastive_offline_audit": 45,
+                  "ml_emerging_target_gap_audit:good_or_acceptable": 25
+                }
+              }
+            }
+          },
+          "target": "surprising_or_useful"
+        },
+        "surprising_or_useful_flags": {
+          "external_blind_transfer_weak": {
+            "evidence": [
+              {
+                "comparison_or_slice": "external_near_miss_to_blind_snapshot",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.55,
+                "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                "value": 0.4900990099009901
+              },
+              {
+                "comparison_or_slice": "external_near_miss_to_blind_snapshot",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "weak_transfer_roc_auc_threshold",
+                "value": 0.43147472642001045
+              },
+              {
+                "comparison_or_slice": "blind_snapshot_to_external_near_miss",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.55,
+                "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                "value": 0.5059808612440191
+              },
+              {
+                "comparison_or_slice": "blind_snapshot_to_external_near_miss",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "weak_transfer_roc_auc_threshold",
+                "value": 0.395933014354067
+              }
+            ],
+            "value": true
+          },
+          "in_pool_signal_strong": {
+            "evidence": [
+              {
+                "comparison_or_slice": "external_near_miss",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.7,
+                "threshold_name": "strong_in_pool_balanced_accuracy_threshold",
+                "value": 0.7523923444976077
+              },
+              {
+                "comparison_or_slice": "external_near_miss",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.8,
+                "threshold_name": "strong_in_pool_roc_auc_threshold",
+                "value": 0.8397129186602871
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.7,
+                "threshold_name": "strong_in_pool_balanced_accuracy_threshold",
+                "value": 0.7156862745098039
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.8,
+                "threshold_name": "strong_in_pool_roc_auc_threshold",
+                "value": 0.8685224089635855
+              },
+              {
+                "comparison_or_slice": "transfer_gap",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.7,
+                "threshold_name": "strong_in_pool_balanced_accuracy_threshold",
+                "value": 0.7373271889400921
+              },
+              {
+                "comparison_or_slice": "transfer_gap",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.8,
+                "threshold_name": "strong_in_pool_roc_auc_threshold",
+                "value": 0.8479262672811061
+              }
+            ],
+            "value": true
+          },
+          "needs_more_labels": {
+            "evidence": [
+              {
+                "comparison_or_slice": "(null)",
+                "false_count": 0,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 65,
+                "value": 0
+              },
+              {
+                "comparison_or_slice": "bridge_eligible_only",
+                "false_count": 2,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 18,
+                "value": 2
+              },
+              {
+                "comparison_or_slice": "full_family_top_k",
+                "false_count": 4,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 36,
+                "value": 4
+              },
+              {
+                "comparison_or_slice": "ml_blind_snapshot_audit",
+                "false_count": 19,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 101,
+                "value": 19
+              },
+              {
+                "comparison_or_slice": "ml_contrastive_offline_audit",
+                "false_count": 7,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 38,
+                "value": 7
+              },
+              {
+                "comparison_or_slice": "ml_emerging_target_gap_audit:good_or_acceptable",
+                "false_count": 15,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 10,
+                "value": 10
+              },
+              {
+                "comparison_or_slice": "ml_hard_negative_audit",
+                "false_count": 1,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 6,
+                "value": 1
+              },
+              {
+                "comparison_or_slice": "ml_transfer_gap_audit",
+                "false_count": 31,
+                "metric_name": "min_class_count",
+                "target": "surprising_or_useful",
+                "threshold": 20,
+                "threshold_name": "sparse_class_min_count_threshold",
+                "true_count": 14,
+                "value": 14
+              },
+              {
+                "comparison_or_slice": "hard_negative",
+                "metric_name": "skipped",
+                "reason": "slice lacks enough rows in both classes for stratified CV",
+                "target": "surprising_or_useful",
+                "threshold": true,
+                "threshold_name": "requires_evaluable_slice",
+                "value": true
+              },
+              {
+                "comparison_or_slice": "legacy_or_uncategorized",
+                "metric_name": "skipped",
+                "reason": "slice lacks enough rows in both classes for stratified CV",
+                "target": "surprising_or_useful",
+                "threshold": true,
+                "threshold_name": "requires_evaluable_slice",
+                "value": true
+              },
+              {
+                "comparison_or_slice": "source_transfer",
+                "metric_name": "transfer_inconsistent",
+                "moderate_examples": [
+                  {
+                    "comparison_or_slice": "rank_shaped_family_to_external_near_miss",
+                    "metric_name": "balanced_accuracy",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.6,
+                    "threshold_name": "moderate_transfer_balanced_accuracy_threshold",
+                    "value": 0.7547846889952152
+                  },
+                  {
+                    "comparison_or_slice": "rank_shaped_family_to_external_near_miss",
+                    "metric_name": "roc_auc",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.7,
+                    "threshold_name": "moderate_transfer_roc_auc_threshold",
+                    "value": 0.8133971291866029
+                  },
+                  {
+                    "comparison_or_slice": "external_near_miss_plus_blind_snapshot_to_rank_shaped_family",
+                    "metric_name": "balanced_accuracy",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.6,
+                    "threshold_name": "moderate_transfer_balanced_accuracy_threshold",
+                    "value": 0.6509103641456583
+                  },
+                  {
+                    "comparison_or_slice": "external_near_miss_plus_blind_snapshot_to_rank_shaped_family",
+                    "metric_name": "roc_auc",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.7,
+                    "threshold_name": "moderate_transfer_roc_auc_threshold",
+                    "value": 0.7027310924369747
+                  },
+                  {
+                    "comparison_or_slice": "all_not_external_near_miss_to_external_near_miss",
+                    "metric_name": "balanced_accuracy",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.6,
+                    "threshold_name": "moderate_transfer_balanced_accuracy_threshold",
+                    "value": 0.6889952153110048
+                  },
+                  {
+                    "comparison_or_slice": "all_not_external_near_miss_to_external_near_miss",
+                    "metric_name": "roc_auc",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.7,
+                    "threshold_name": "moderate_transfer_roc_auc_threshold",
+                    "value": 0.7870813397129187
+                  }
+                ],
+                "target": "surprising_or_useful",
+                "threshold": true,
+                "threshold_name": "weak_and_moderate_transfer_both_present",
+                "value": true,
+                "weak_examples": [
+                  {
+                    "comparison_or_slice": "external_near_miss_to_blind_snapshot",
+                    "metric_name": "balanced_accuracy",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.55,
+                    "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                    "value": 0.4900990099009901
+                  },
+                  {
+                    "comparison_or_slice": "external_near_miss_to_blind_snapshot",
+                    "metric_name": "roc_auc",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.6,
+                    "threshold_name": "weak_transfer_roc_auc_threshold",
+                    "value": 0.43147472642001045
+                  },
+                  {
+                    "comparison_or_slice": "blind_snapshot_to_external_near_miss",
+                    "metric_name": "balanced_accuracy",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.55,
+                    "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                    "value": 0.5059808612440191
+                  },
+                  {
+                    "comparison_or_slice": "blind_snapshot_to_external_near_miss",
+                    "metric_name": "roc_auc",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.6,
+                    "threshold_name": "weak_transfer_roc_auc_threshold",
+                    "value": 0.395933014354067
+                  },
+                  {
+                    "comparison_or_slice": "rank_shaped_family_to_blind_snapshot",
+                    "metric_name": "balanced_accuracy",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.55,
+                    "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                    "value": 0.5096404377279833
+                  },
+                  {
+                    "comparison_or_slice": "rank_shaped_family_to_blind_snapshot",
+                    "metric_name": "roc_auc",
+                    "model": "embedding_logistic",
+                    "target": "surprising_or_useful",
+                    "threshold": 0.6,
+                    "threshold_name": "weak_transfer_roc_auc_threshold",
+                    "value": 0.48827514330380406
+                  }
+                ]
+              }
+            ],
+            "value": true
+          },
+          "production_ready": {
+            "evidence": [
+              {
+                "comparison_or_slice": "production",
+                "metric_name": "production_ready",
+                "target": "surprising_or_useful",
+                "threshold": true,
+                "threshold_name": "offline_audit_only",
+                "value": false
+              }
+            ],
+            "value": false
+          },
+          "transfer_inconsistent": {
+            "evidence": [
+              {
+                "comparison_or_slice": "external_near_miss_to_blind_snapshot",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.55,
+                "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                "value": 0.4900990099009901
+              },
+              {
+                "comparison_or_slice": "external_near_miss_to_blind_snapshot",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "weak_transfer_roc_auc_threshold",
+                "value": 0.43147472642001045
+              },
+              {
+                "comparison_or_slice": "blind_snapshot_to_external_near_miss",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.55,
+                "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                "value": 0.5059808612440191
+              },
+              {
+                "comparison_or_slice": "blind_snapshot_to_external_near_miss",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "weak_transfer_roc_auc_threshold",
+                "value": 0.395933014354067
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family_to_blind_snapshot",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.55,
+                "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                "value": 0.5096404377279833
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family_to_blind_snapshot",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "weak_transfer_roc_auc_threshold",
+                "value": 0.48827514330380406
+              },
+              {
+                "comparison_or_slice": "all_not_blind_snapshot_to_blind_snapshot",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.55,
+                "threshold_name": "weak_transfer_balanced_accuracy_threshold",
+                "value": 0.4817613340281397
+              },
+              {
+                "comparison_or_slice": "all_not_blind_snapshot_to_blind_snapshot",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "weak_transfer_roc_auc_threshold",
+                "value": 0.49973944762897343
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family_to_external_near_miss",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "moderate_transfer_balanced_accuracy_threshold",
+                "value": 0.7547846889952152
+              },
+              {
+                "comparison_or_slice": "rank_shaped_family_to_external_near_miss",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.7,
+                "threshold_name": "moderate_transfer_roc_auc_threshold",
+                "value": 0.8133971291866029
+              },
+              {
+                "comparison_or_slice": "external_near_miss_plus_blind_snapshot_to_rank_shaped_family",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "moderate_transfer_balanced_accuracy_threshold",
+                "value": 0.6509103641456583
+              },
+              {
+                "comparison_or_slice": "external_near_miss_plus_blind_snapshot_to_rank_shaped_family",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.7,
+                "threshold_name": "moderate_transfer_roc_auc_threshold",
+                "value": 0.7027310924369747
+              },
+              {
+                "comparison_or_slice": "all_not_external_near_miss_to_external_near_miss",
+                "metric_name": "balanced_accuracy",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.6,
+                "threshold_name": "moderate_transfer_balanced_accuracy_threshold",
+                "value": 0.6889952153110048
+              },
+              {
+                "comparison_or_slice": "all_not_external_near_miss_to_external_near_miss",
+                "metric_name": "roc_auc",
+                "model": "embedding_logistic",
+                "target": "surprising_or_useful",
+                "threshold": 0.7,
+                "threshold_name": "moderate_transfer_roc_auc_threshold",
+                "value": 0.7870813397129187
+              }
+            ],
+            "value": true
+          }
+        }
+      },
+      "rationale": "Transfer-readiness is recorded as advisory context. Audit ranker gates do not treat transfer-readiness as pass/fail evidence in v1.",
+      "required_for": [],
+      "source_field_paths": [
+        "transfer_readiness.metadata.readiness_version",
+        "transfer_readiness.heuristic_readiness_flags.good_or_acceptable",
+        "transfer_readiness.heuristic_readiness_flags.surprising_or_useful",
+        "transfer_readiness.cross_pool_synthesis.good_or_acceptable",
+        "transfer_readiness.cross_pool_synthesis.surprising_or_useful",
+        "transfer_readiness.production_recommender_missing_gates"
+      ],
+      "status": "advisory_warn",
+      "threshold": null,
+      "title": "Transfer Readiness Advisory"
+    }
+  ],
+  "metadata": {
+    "artifact_type": "ml_offline_metric_gates",
+    "caveats": [
+      "Not validation.",
+      "Audit pools only.",
+      "Single-reviewer labels.",
+      "Production blocked.",
+      "Shadow blocked.",
+      "No ranking/API/web changes."
+    ],
+    "experiment_scope": "audit_pool_offline_ranker",
+    "gates_version": "ml-offline-metric-gates-v1",
+    "generated_at": "2026-05-16T12:47:22Z",
+    "inputs": [
+      {
+        "name": "ranker_experiment",
+        "path": "docs/audit/ml-offline-ranker-experiment-v1.json",
+        "sha256": "3cf8f445135b33b78c813218fd4dba99bf7d6a6aa6b643f2f0df1579083b759a"
+      },
+      {
+        "name": "split_policy",
+        "path": "docs/audit/ml-label-split-policy-v1.json",
+        "sha256": "0141d03a1c7822d6c6065483aae0ec7aff31c6d73e329da0880e3b39de993c08"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      },
+      {
+        "name": "transfer_readiness",
+        "path": "docs/audit/ml-text-transfer-readiness-v8.json",
+        "sha256": "7b03c900b7aa364affef7875cdbb9537deba2913857113e794e8ed3ba86eb782"
+      }
+    ],
+    "production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "ranker_experiment_version": "ml-offline-ranker-experiment-v1",
+    "split_policy_version": "ml-label-split-policy-v1",
+    "strategic_framing": {
+      "input_experiment_scope": "audit_pool_offline_ranker",
+      "input_uses": [
+        "mixed review pools",
+        "observation-level labels",
+        "text embeddings",
+        "classification metrics",
+        "grouped CV"
+      ],
+      "not_live_recommender_validation": true,
+      "not_product_ranking_experiment": true,
+      "passing_audit_gates_recommends_only": "proceeding to a production-candidate offline scoring experiment",
+      "production_default_blocked_in_v1": true,
+      "shadow_scoring_blocked_until": [
+        "audit gates pass",
+        "product-candidate experiment gates pass in a future artifact",
+        "ml-shadow-scorer-v1 exists in a future artifact"
+      ]
+    },
+    "thresholds": {
+      "embedding_logistic_average_precision_floor": 0.75,
+      "embedding_logistic_balanced_accuracy_std_ceiling": 0.08,
+      "embedding_logistic_roc_auc_floor": 0.7,
+      "majority_baseline_balanced_accuracy_margin": 0.15,
+      "minimum_eligible_observations": 300,
+      "minimum_negative_work_groups": 2,
+      "minimum_observation_negative_count": 30,
+      "minimum_observation_positive_count": 50,
+      "minimum_positive_work_groups": 2,
+      "minimum_work_any_negative_count": 20,
+      "minimum_work_any_positive_count": 40
+    },
+    "thresholds_version": "ml-offline-metric-gates-v1-thresholds",
+    "transfer_readiness_version": "ml-text-transfer-readiness-v8"
+  },
+  "product_candidate_experiment_requirements": [
+    "product-shaped candidate pool",
+    "ranking-relevant metrics such as top-k precision/recall, PR@k, calibration, and comparison to current heuristic ranking",
+    "candidate pool definition",
+    "no audit-only pool mixing without citation",
+    "no production default change"
+  ],
+  "production_default_allowed": false,
+  "recommended_next_stage": "proceed_to_production_candidate_offline_scoring",
+  "shadow_blockers": [
+    "G12_product_candidate_experiment_required",
+    "missing ml-shadow-scorer-v1",
+    "production default blocked by readiness plan"
+  ],
+  "shadow_scoring_allowed": false
+}
