@@ -1820,6 +1820,50 @@ def main() -> None:
         default=None,
         help="Optional path to write companion Markdown summary",
     )
+    ml_label_split_policy_parser = subparsers.add_parser(
+        "ml-label-split-policy",
+        help="Write a machine-checkable offline ML label split policy spec (no folds, DB, training, or ranking)",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy.md",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--transfer-readiness",
+        default=None,
+        help="Optional transfer-readiness JSON for evidence-only provenance",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write split policy JSON",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--policy-version",
+        default="ml-label-split-policy-v1",
+        help="Policy version string to write (default: ml-label-split-policy-v1)",
+    )
+    ml_label_split_policy_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_tiny_baseline_parser = subparsers.add_parser(
         "ml-tiny-baseline",
         help="Offline-only emerging tiny baseline (stratified CV vs final_score heuristic; read-only DB)",
@@ -3071,6 +3115,31 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
             print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-label-split-policy":
+        from pipeline.ml_label_split_policy import MLLabelSplitPolicyError, write_ml_label_split_policy
+
+        transfer_readiness = Path(args.transfer_readiness) if args.transfer_readiness else None
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_label_split_policy(
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                transfer_readiness_path=transfer_readiness,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                policy_version=str(args.policy_version),
+                repo_root=repo_root,
+            )
+        except MLLabelSplitPolicyError as e:
+            print(f"ml-label-split-policy: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
         return
 
     if args.command == "ml-transfer-gap-review-worksheet":

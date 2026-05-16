@@ -1,0 +1,517 @@
+{
+  "allowed_targets_for_v1_split": [
+    "good_or_acceptable"
+  ],
+  "conflict_preservation": {
+    "conflicts_remain_observable": true,
+    "downstream_experiments_must_report_conflict_counts": true,
+    "downstream_experiments_must_report_exclusions": true
+  },
+  "dataset_inventory": {
+    "duplicate_conflict_rollups": {
+      "derived_target_conflict_count": 11,
+      "duplicate_paper_id_count": 55,
+      "raw_conflicting_label_count": 83
+    },
+    "duplicate_work_group_count": 55,
+    "duplicate_work_groups_preview": [
+      {
+        "canonical_openalex_work_id": "W2890376498",
+        "row_count": 2,
+        "row_ids": [
+          "716410fdf24b35c28a28cd848ee9fd7c2b180dd972d2a20e5e177d662c2d647a",
+          "e280fa753caccc231d14b4468d5976ebe42e80b6a10964a2ae07efa23332e7a2"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W3016069856",
+        "row_count": 2,
+        "row_ids": [
+          "2f69a2de1588c0b450e6cd9096c5a622318291dc2a0a4f4a29850dbb18912fad",
+          "f5fc76223f73003644164adb05fdb6d70b4306ee879cb42655af141aa4051c51"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W3036517071",
+        "row_count": 2,
+        "row_ids": [
+          "bbcf5214cafa0430cbb77ab9acf92d05457ad8b74b8ff5123cb6250ea6e0dd81",
+          "3f486e95cf84fccaef7d24c6d13e6e22c52d83705c92c87b7920962fdab60b25"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W3092976109",
+        "row_count": 2,
+        "row_ids": [
+          "5b68cd8189b0e96e8050cfadd2b11b772517b4bcc9b0b6e664c7cb0198c49d3b",
+          "b1d7355d1c855f2c60bf15a30f1ed1d43f2ae041e6cc25c825ad6be32f522dea"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W3093121331",
+        "row_count": 2,
+        "row_ids": [
+          "458e29de4e75292e3cbcd8131d970f39f13675b60c43abafc0c735d89e65451e",
+          "d614257c73db69b391be42454bfa854a7e6e2c8d2de15eb2bba1a7369ce72b0a"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W3129917041",
+        "row_count": 2,
+        "row_ids": [
+          "4bbd580ac28507e8ddecc953762a0ae4115791a33355e78e609f933d5a7db89b",
+          "349a07e9c98afc1bd75230e4ec214a6a109b6bb4cd5e4071eff7a3092f0f5da6"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W3209617794",
+        "row_count": 2,
+        "row_ids": [
+          "9dd788950e0c826418b8e27793dbd0cfa4fdd6a1a5a36f4131d5037c37411cd5",
+          "c1dcae726156e414c7a3128e60bdd55f75d247551813e88b3070ab60e65237a5"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W3215381343",
+        "row_count": 2,
+        "row_ids": [
+          "ecd465596ddf104b296af205cb877bb197f664cbf7eea2282e5691eecdfdc152",
+          "e02213d8105c4a47d2052b8366d370e4ae29719f6a4369786984902268404945"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4312805589",
+        "row_count": 2,
+        "row_ids": [
+          "d97859cb785540be904e5aeb30f13dd10dbc629e34e44c1a8b53c4f44794eb7e",
+          "ecc683dac91fe7050b4efb9bc71e12bef28a902525a8f73d6a5c96eb935f0e95"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4386773472",
+        "row_count": 3,
+        "row_ids": [
+          "d6a6ee9f522855aba7c7bc7fe0296b78629a2fe4997f3edae6011bd97f5b1395",
+          "10a2a04a2a82aa4a3004cf54b5efb732c1e0348675746ff514ddbf5e8e78d1a9",
+          "143726fba0f7143492aba9026491f4d6b6740fb32120eb328c89511caaadc317"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4387375972",
+        "row_count": 3,
+        "row_ids": [
+          "0c8e63b5a67f95f9f1320d55e7d40a27fe6901ad534c3fbbf4938320e6a5ba0c",
+          "67915063f35b0ef304b0f285e614fd68c882f581f3d9b7964841c7aceb7af33b",
+          "3bb8a87769abd789029dfa28abb019d607b7db483dd12264b8b19523b97102ab"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4387943290",
+        "row_count": 2,
+        "row_ids": [
+          "032506b08380a3e31dc29822cd694c10aea40a4794df23c40e9de9358cdf080c",
+          "3932a24ba695e5a39e430596df311876b92c23d3c5e66a738e1a6406a4bbe51a"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4394916053",
+        "row_count": 3,
+        "row_ids": [
+          "8afd300bcb57ba814a4cfb0dc250b8e053525a0c043e1071fe611a639a149e8a",
+          "8734dd8e6132d010ebc2c60ae26f7cb07a6764e2b3ee574bff6ad15a8ed6dd7e",
+          "94950cd83a27bf408ccc6c03bba96a46976a651ae4f4be0c4694b09cc610052c"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4401237242",
+        "row_count": 2,
+        "row_ids": [
+          "74b6140892712b39f30db7e46fe3c47c688e46618c4e6f61fb78efe310c2ea5c",
+          "d4855e3c188eabdb716240b2ee85723d2614b83342509ed514dc5b5facf1396d"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4407236737",
+        "row_count": 3,
+        "row_ids": [
+          "5f91f59c0d8d93bf08a809e00d463602259fabf085521547496c9524b4bf6a6a",
+          "b895416428089dc5d1f1f1f648e31724e8121220ce059814981b3b71761f8041",
+          "7cc315ac6e2446a75521dee48af38069b2a97454bee984119fd84c4e9290296d"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4408635446",
+        "row_count": 3,
+        "row_ids": [
+          "6875a6d330d5f34d882bb7a79b13012eeac48d738a1d1326b772f2a7e9354b87",
+          "39c04ddc2d25b83ce2d0bbaf8419491f96895c7e7a7c36613b1e0d8a28292b25",
+          "196f3f8ac11c52598caf2d7aa7a285da5b643e9525ad0706c434b895e738432d"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4408772031",
+        "row_count": 5,
+        "row_ids": [
+          "17ed16c58e01b9414d264467a36bb135acff5e2ecb97e0983d8df6a76c5e301f",
+          "a5aa044ba20a7ae1ac9b4fd7198a8e3b3bdbd8ee3bf08064697db86ff3136686",
+          "6e44f19aca2999b26891fd108b72a0e6ca9415d2c15f870627837b5e1bc9c6a9",
+          "e7e09c5190b04535153c6e08c648ab2ebd646201a1ba48c535a6c7f0beebc715",
+          "708b610008aa288459376b451af56e1ce36a27ae38ae45435810d3744244706f"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4409215215",
+        "row_count": 3,
+        "row_ids": [
+          "4f7ca29d955aba0d8fc2024aeb1543f3032c6ffe4928dfdb9af8d8307ac6f61c",
+          "6b90d1fc6dbe895e6346e33f403e6bd608bcead4a98cf5d2d5371c189c0a7b7b",
+          "4058aa01bb657b39315e478da4f450d38cbab0bbef66281ed44df69aafac2ed9"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4409215217",
+        "row_count": 2,
+        "row_ids": [
+          "98b519badcbbfe11ec27d1002ae582f98b1b47a961286aa45473a60539bc1800",
+          "5699cfe761d3885bd50659554579a39805fe29476b5a3a84503c2be3bdf0212c"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4409967775",
+        "row_count": 5,
+        "row_ids": [
+          "d0003a5406f848f27b951215c3b731abe55f97b98da4c2fe1818dfec48d3abab",
+          "c854271c150d99f2141b59b79f98910dcce5e180ecf0f08eb5369919fb1cf44a",
+          "7569b8f04b1d20bc6d39b6a9d79638cc2cac5bbb40de045a73884134800c8b26",
+          "8ac3e01f17c315d1359bd088e693674fe21da3a16d26898de92b12ad379b64af",
+          "ca08bedc9745fbe1b6c6899bce1b0da201b8744721a23778246c5c3a7dd211c7"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4410025358",
+        "row_count": 2,
+        "row_ids": [
+          "997db4d500cf31c3665a701cb9952340220f5f003d2396cb6428797d4442899a",
+          "65826ee5deedeff48d81fa2a8752771d679ad0c68d5eb801cb4a718a45857a7c"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4410025413",
+        "row_count": 3,
+        "row_ids": [
+          "9397ab2df6b9d54daa3499e2916abae099879d1cf7ad8ecdaaad2f12eed6d438",
+          "8559b515aa304ff74cf5100c58eca27c64cdfbf1a3314bc1301da0b7650a89eb",
+          "8408119f7fe6babe11ce6b320f0ea3e0b1aaec3c9640ecefcb404f41ae4c8749"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4410033452",
+        "row_count": 4,
+        "row_ids": [
+          "3e54a55cd9cafd523db53762e27094cffc91041856a62a1af88d982b8bf4ef24",
+          "49c9c95610c3eff062185344ffd2f8869f096864def714f01563074b764abc06",
+          "be7900acbd8d5bc7b340172003611bdad02234760b1068d99743331a95aaa48f",
+          "271e2171df5e5ce1d7c96a6883d3dd1efd8a0fe462a44a97111afeb4755c99ca"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4410091503",
+        "row_count": 5,
+        "row_ids": [
+          "04f16b374be89ad692d4d7e321d66715c28905c748fdb030a231bcb6357ee40c",
+          "df493f2b2742c2b2bf6b57c7607320366e048054ddeb78a6f0ef84ddfd59a8ce",
+          "1aba5ee3bd5a6178b8165b70dcaf6a0ae6a9a5bf407b68ad53dc3d905a2ea3a3",
+          "34f72fe080520b31274213e6840ba9c13ec374576bffd7839f0ee5e8286bf2db",
+          "1d95313c8e74cbd30cf8d02aa9827ffa3dfe517d368d850f603c8312ebc788ac"
+        ]
+      },
+      {
+        "canonical_openalex_work_id": "W4410784756",
+        "row_count": 2,
+        "row_ids": [
+          "4c6700f48de4cfb8a785b4d32ac35e9f05bcae6e07a76c0a6ff6c6c047c2af50",
+          "6a33f4792fbe05b6ac7a2b8d64e308b83d263c109604af51e9b35a0eab624eda"
+        ]
+      }
+    ],
+    "duplicate_work_observation_pressure_count": 85,
+    "explicit_audit_labeled_rows": 427,
+    "explicit_labeled_rows": 427,
+    "inventory_scope": {
+      "target_counts": "all rows in the label dataset",
+      "total_observation_rows": "all rows in the label dataset",
+      "work_group_counts": "explicit audit_only rows with at least one manual label"
+    },
+    "rows_by_family": {
+      "(null)": 232,
+      "bridge": 60,
+      "emerging": 80,
+      "undercited": 55
+    },
+    "rows_by_review_pool_variant": {
+      "(null)": 65,
+      "bridge_eligible_only": 20,
+      "full_family_top_k": 40,
+      "ml_blind_snapshot_audit": 120,
+      "ml_contrastive_offline_audit": 45,
+      "ml_emerging_target_gap_audit:good_or_acceptable": 25,
+      "ml_external_near_miss_audit": 60,
+      "ml_hard_negative_audit": 7,
+      "ml_transfer_gap_audit": 45
+    },
+    "rows_missing_canonical_work_id": 0,
+    "targets": {
+      "good_or_acceptable": {
+        "by_review_pool_variant": {
+          "(null)": {
+            "false": 0,
+            "null": 0,
+            "total": 65,
+            "true": 65
+          },
+          "bridge_eligible_only": {
+            "false": 1,
+            "null": 0,
+            "total": 20,
+            "true": 19
+          },
+          "full_family_top_k": {
+            "false": 1,
+            "null": 0,
+            "total": 40,
+            "true": 39
+          },
+          "ml_blind_snapshot_audit": {
+            "false": 10,
+            "null": 0,
+            "total": 120,
+            "true": 110
+          },
+          "ml_contrastive_offline_audit": {
+            "false": 4,
+            "null": 0,
+            "total": 45,
+            "true": 41
+          },
+          "ml_emerging_target_gap_audit:good_or_acceptable": {
+            "false": 15,
+            "null": 0,
+            "total": 25,
+            "true": 10
+          },
+          "ml_external_near_miss_audit": {
+            "false": 43,
+            "null": 0,
+            "total": 60,
+            "true": 17
+          },
+          "ml_hard_negative_audit": {
+            "false": 0,
+            "null": 0,
+            "total": 7,
+            "true": 7
+          },
+          "ml_transfer_gap_audit": {
+            "false": 44,
+            "null": 0,
+            "total": 45,
+            "true": 1
+          }
+        },
+        "overall": {
+          "false": 118,
+          "null": 0,
+          "total": 427,
+          "true": 309
+        }
+      },
+      "surprising_or_useful": {
+        "by_review_pool_variant": {
+          "(null)": {
+            "false": 0,
+            "null": 0,
+            "total": 65,
+            "true": 65
+          },
+          "bridge_eligible_only": {
+            "false": 2,
+            "null": 0,
+            "total": 20,
+            "true": 18
+          },
+          "full_family_top_k": {
+            "false": 4,
+            "null": 0,
+            "total": 40,
+            "true": 36
+          },
+          "ml_blind_snapshot_audit": {
+            "false": 19,
+            "null": 0,
+            "total": 120,
+            "true": 101
+          },
+          "ml_contrastive_offline_audit": {
+            "false": 7,
+            "null": 0,
+            "total": 45,
+            "true": 38
+          },
+          "ml_emerging_target_gap_audit:good_or_acceptable": {
+            "false": 15,
+            "null": 0,
+            "total": 25,
+            "true": 10
+          },
+          "ml_external_near_miss_audit": {
+            "false": 22,
+            "null": 0,
+            "total": 60,
+            "true": 38
+          },
+          "ml_hard_negative_audit": {
+            "false": 1,
+            "null": 0,
+            "total": 7,
+            "true": 6
+          },
+          "ml_transfer_gap_audit": {
+            "false": 31,
+            "null": 0,
+            "total": 45,
+            "true": 14
+          }
+        },
+        "overall": {
+          "false": 101,
+          "null": 0,
+          "total": 427,
+          "true": 326
+        }
+      }
+    },
+    "total_observation_rows": 427,
+    "unique_canonical_work_count": 342,
+    "v1_good_or_acceptable_split_eligible_observation_rows": 427
+  },
+  "duplicate_paper_policy": {
+    "conflict_policy_citation_required": true,
+    "conflict_policy_path": "docs/audit/ml-label-conflict-policy.md",
+    "duplicate_conflicting_observations_are_preserved": true,
+    "duplicate_work_groups_assigned_as_unit": true,
+    "silent_label_merge_allowed": false
+  },
+  "eligibility_rules": {
+    "do_not_dedupe_for_modeling_convenience": true,
+    "exclude_rows_with_missing_canonical_work_id": true,
+    "preserve_observation_rows": true,
+    "require_explicit_manual_labels": true,
+    "require_good_or_acceptable_boolean": true,
+    "required_split": "audit_only",
+    "review_pool_variant_handling": {
+      "external_blind_transfer_gap_pools": "remain audit evidence unless the offline ranker experiment explicitly opts into them",
+      "policy_citation_required_for_pooling": true,
+      "rank_shaped_family_pools": "may be eligible only under future experiment-specific candidate-pool rules",
+      "silent_pooling_allowed": false
+    }
+  },
+  "forbidden_targets": [
+    "surprising_or_useful"
+  ],
+  "grouping_policy": {
+    "grouping_key_name": "canonical_openalex_work_id",
+    "leakage_rule": "all rows with the same canonical_openalex_work_id must share the same future split assignment",
+    "normalization_rules": [
+      "accept W tokens and https://openalex.org/W... URLs",
+      "strip whitespace",
+      "normalize to uppercase W token",
+      "reject missing/non-OpenAlex identifiers from split eligibility"
+    ],
+    "source_fields_checked_in_order": [
+      "work_id",
+      "openalex_work_id",
+      "paper_id"
+    ]
+  },
+  "leakage_rules": [
+    "no canonical work may appear in both train and eval",
+    "no row_id-level splitting without work grouping",
+    "no target may use labels from its eval group in feature construction or sampling",
+    "audit-only labels do not authorize production behavior"
+  ],
+  "metadata": {
+    "artifact_type": "ml_label_split_policy",
+    "caveats": [
+      "Not validation.",
+      "Not production.",
+      "Single-reviewer audit labels.",
+      "No fold assignment yet.",
+      "No ranking/API/web changes.",
+      "No production ranking change implied."
+    ],
+    "conflict_policy_sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841",
+    "generated_at": "2026-05-16T04:52:03Z",
+    "inputs": [
+      {
+        "name": "label_dataset",
+        "path": "docs/audit/ml-label-dataset-v8.json",
+        "sha256": "ea65b114cfef6e22e3299bf4e54d320b6ba13a66185ac0908700528a1846948c"
+      },
+      {
+        "name": "conflict_policy",
+        "path": "docs/audit/ml-label-conflict-policy.md",
+        "sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      },
+      {
+        "name": "transfer_readiness",
+        "path": "docs/audit/ml-text-transfer-readiness-v8.json",
+        "sha256": "7b03c900b7aa364affef7875cdbb9537deba2913857113e794e8ed3ba86eb782"
+      }
+    ],
+    "label_dataset_version": "ml-label-dataset-v8",
+    "policy_version": "ml-label-split-policy-v1",
+    "production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "transfer_readiness_version": "ml-text-transfer-readiness-v8"
+  },
+  "policy_assertions": {
+    "permits_row_level_random_split": false,
+    "permits_silent_conflict_resolution": false,
+    "production_default_change_allowed": false,
+    "requires_grouped_split_by_work": true,
+    "surprising_or_useful_allowed_for_v1_split": false
+  },
+  "randomness_policy": {
+    "assigns_folds": false,
+    "future_split_generation_must_declare": [
+      "seed",
+      "grouping key",
+      "stratification fields",
+      "leakage report"
+    ],
+    "no_row_receives_split_id_here": true,
+    "recommended_default_seed": 20260515
+  },
+  "target_policy": {
+    "good_or_acceptable": {
+      "allowed_next_stage": "offline_ranker_research_only",
+      "production_eligible": false,
+      "reason": "Current evidence supports treating good_or_acceptable as the only v1 offline research target.",
+      "status": "eligible_for_offline_ranker_research"
+    },
+    "surprising_or_useful": {
+      "production_eligible": false,
+      "reason": "Hard exclusion from v1 split eligibility because current evidence shows weak/inconsistent transfer and rubric instability.",
+      "status": "excluded_from_v1_split"
+    }
+  },
+  "transfer_readiness_note": {
+    "note": "Transfer-readiness is evidence-only in this policy; it is not used as a hard gate except where policy metadata explicitly states target eligibility.",
+    "provided": true,
+    "transfer_readiness_version": "ml-text-transfer-readiness-v8"
+  }
+}
