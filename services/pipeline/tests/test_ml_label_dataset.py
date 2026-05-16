@@ -18,12 +18,16 @@ from pipeline.ml_label_dataset import (
     HARD_NEGATIVE_REVIEW_POOL_VARIANT,
     HARD_NEGATIVE_REVIEW_V1_WORKSHEET_VERSION,
     MLLabelDatasetError,
+    TRANSFER_GAP_REVIEW_POOL_VARIANT,
+    TRANSFER_GAP_REVIEW_V1_CONTEXT_ARTIFACT_TYPE,
+    TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION,
     VERBATIM_CAVEATS,
     bridge_like_yes_or_partial,
     build_ml_label_dataset,
     build_ml_label_dataset_v5_reviewer_blind_ingest,
     build_ml_label_dataset_v6_hard_negative_ingest,
     build_ml_label_dataset_v7_external_near_miss_ingest,
+    build_ml_label_dataset_v8_transfer_gap_ingest,
     discover_manual_review_csvs,
     good_or_acceptable,
     markdown_from_ml_label_dataset,
@@ -1353,3 +1357,318 @@ def test_v7_markdown_regeneration_hint_names_external_near_miss_command(tmp_path
     assert "ml-label-dataset-v7-external-near-miss-ingest" in md
     assert "ml_external_near_miss_audit" in md
     assert "external_near_miss_context" in md
+
+
+def _base_v7_payload() -> dict[str, object]:
+    payload = _base_v6_payload()
+    payload["dataset_version"] = "ml-label-dataset-v7"
+    payload["metadata"]["external_near_miss_v1_ingest"] = {"external_near_miss_rows_appended": 60}
+    payload["rows"].append(
+        {
+            "dataset_version": "ml-label-dataset-v7",
+            "row_id": "base-v7-row",
+            "paper_id": "https://openalex.org/W777",
+            "work_id": "W777",
+            "title": "Base v7 row",
+            "ranking_run_id": None,
+            "ranking_version": None,
+            "corpus_snapshot_version": None,
+            "family": None,
+            "review_pool_variant": EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT,
+            "rank": None,
+            "experiment_rank": None,
+            "source_worksheet_path": "docs/audit/manual-review/base_v7.csv",
+            "source_worksheet_sha256": "base-v7-sha",
+            "source_row_number": 2,
+            "relevance_label": "miss",
+            "novelty_label": "not_useful",
+            "bridge_like_label": "no",
+            "reviewer_notes": "base v7 note",
+            "label_provenance": "manual_review_worksheet_csv",
+            "split": "audit_only",
+            "good_or_acceptable": False,
+            "surprising_or_useful": False,
+            "bridge_like_yes_or_partial": False,
+        }
+    )
+    return payload
+
+
+def _write_base_v7_dataset(root: Path) -> Path:
+    base_path = root / "docs" / "audit" / "ml-label-dataset-v7.json"
+    base_path.parent.mkdir(parents=True, exist_ok=True)
+    base_path.write_text(json.dumps(_base_v7_payload(), indent=2) + "\n", encoding="utf-8")
+    return base_path
+
+
+def _stable_transfer_gap_row_id(*, paper_id: str, sample_seed: int = 20260515) -> str:
+    payload = f"{TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION}|{sample_seed}|{paper_id}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _transfer_gap_row(index: int, *, labels: bool) -> dict[str, str]:
+    work_id = f"W{7100000000 + index}"
+    paper_id = f"https://openalex.org/{work_id}"
+    row = {
+        "row_id": _stable_transfer_gap_row_id(paper_id=paper_id),
+        "worksheet_version": TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION,
+        "review_pool_variant": TRANSFER_GAP_REVIEW_POOL_VARIANT,
+        "paper_id": paper_id,
+        "openalex_work_id": work_id,
+        "work_id": work_id,
+        "title": f"Transfer gap title {index}",
+        "year": "2026",
+        "citation_count": str(index),
+        "source_slug": "transfer_fixture",
+        "topics": f"transfer topic {index % 3}",
+        "abstract_preview": f"transfer abstract {index}",
+        "sample_reason": "transfer_gap_external_blind_balance" if index % 2 else "transfer_gap_good_or_acceptable_balance",
+        "cluster_id": "xfer",
+        "relevance_label": "",
+        "novelty_label": "",
+        "bridge_like_label": "",
+        "reviewer_notes": "",
+    }
+    if labels:
+        row.update(
+            {
+                "relevance_label": "miss" if index % 2 else "good",
+                "novelty_label": "obvious" if index % 2 else "useful",
+                "bridge_like_label": "partial" if index % 2 else "no",
+                "reviewer_notes": f"transfer gap review note {index}",
+            }
+        )
+    return row
+
+
+def _transfer_gap_sidecar(rows: list[dict[str, str]]) -> dict[str, object]:
+    sidecar_rows = []
+    for index, row in enumerate(rows, start=1):
+        sidecar_rows.append(
+            {
+                "row_id": row["row_id"],
+                "paper_id": row["paper_id"],
+                "openalex_work_id": row["openalex_work_id"],
+                "work_id": row["work_id"],
+                "gap_priority": "P1" if index % 2 else "P2",
+                "target_hint": "surprising_or_useful" if index % 2 else "good_or_acceptable",
+                "acquisition_channel": "openalex_external",
+                "sample_reason": row["sample_reason"],
+                "gap_source_pool": None,
+                "source_query": "fixture transfer query",
+                "ranking_context": None,
+                "exclusion_checks_passed": {"not_v7_explicitly_labeled": True},
+                "v7_label_snapshot_if_same_work": [],
+            }
+        )
+    return {
+        "artifact_type": TRANSFER_GAP_REVIEW_V1_CONTEXT_ARTIFACT_TYPE,
+        "provenance": {
+            "worksheet_version": TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION,
+            "review_pool_variant": TRANSFER_GAP_REVIEW_POOL_VARIANT,
+            "sample_seed": 20260515,
+            "row_id_formula": "sha256(worksheet_version|sample_seed|paper_id)",
+            "inputs": [
+                {
+                    "name": "label_dataset",
+                    "path": "docs/audit/ml-label-dataset-v7.json",
+                    "sha256": "fixture-base-sha",
+                }
+            ],
+        },
+        "rows": sidecar_rows,
+    }
+
+
+def _write_transfer_gap_ingest_fixture(root: Path) -> tuple[Path, Path, Path, Path, Path, list[dict[str, str]]]:
+    base_path = _write_base_v7_dataset(root)
+    blank_rows = [_transfer_gap_row(i, labels=False) for i in range(1, 4)]
+    labeled_rows = [_transfer_gap_row(i, labels=True) for i in range(1, 4)]
+    manual = root / "docs" / "audit" / "manual-review"
+    blank_path = manual / "ml_transfer_gap_review_v1.csv"
+    labeled_path = manual / "ml_transfer_gap_review_v1_labeled_2026-05-15.csv"
+    sidecar_path = manual / "ml_transfer_gap_review_v1_context.json"
+    conflict_path = root / "docs" / "audit" / "ml-label-conflict-policy.md"
+    _write_csv(blank_path, blank_rows)
+    _write_csv(labeled_path, labeled_rows)
+    sidecar_path.write_text(json.dumps(_transfer_gap_sidecar(labeled_rows), indent=2) + "\n", encoding="utf-8")
+    conflict_path.parent.mkdir(parents=True, exist_ok=True)
+    conflict_path.write_text("# conflict policy\n", encoding="utf-8")
+    return base_path, blank_path, labeled_path, sidecar_path, conflict_path, labeled_rows
+
+
+def test_v8_transfer_gap_ingest_appends_csv_canonical_rows_and_preserves_context(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, labeled_rows = _write_transfer_gap_ingest_fixture(root)
+    base_payload = _base_v7_payload()
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+
+    payload = build_ml_label_dataset_v8_transfer_gap_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+        conflict_policy_path=conflict_path,
+    )
+
+    assert payload["dataset_version"] == "ml-label-dataset-v8"
+    assert payload["rows"][: len(base_payload["rows"])] == base_payload["rows"]
+    appended = payload["rows"][len(base_payload["rows"]) :]
+    assert len(appended) == 3
+    row = appended[0]
+    assert row["row_id"] == labeled_rows[0]["row_id"]
+    old_style_id = stable_row_id(
+        source_rel="docs/audit/manual-review/ml_transfer_gap_review_v1_labeled_2026-05-15.csv",
+        source_row_number=2,
+        paper_id=labeled_rows[0]["paper_id"],
+        ranking_run_id=None,
+        rank_key=None,
+        experiment_rank=None,
+    )
+    assert row["row_id"] != old_style_id
+    assert row["dataset_version"] == "ml-label-dataset-v8"
+    assert row["source_row_number"] == 2
+    assert row["source_worksheet_path"] == "docs/audit/manual-review/ml_transfer_gap_review_v1_labeled_2026-05-15.csv"
+    assert row["review_pool_variant"] == TRANSFER_GAP_REVIEW_POOL_VARIANT
+    assert row["worksheet_version"] == TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION
+    assert row["family"] is None
+    assert row["split"] == "audit_only"
+    assert row["work_id"] == labeled_rows[0]["work_id"]
+    assert row["work_id"].startswith("W")
+    assert row["internal_work_id"] is None
+    assert row["transfer_gap_context"] == sidecar["rows"][0]
+    assert row["good_or_acceptable"] is False
+    assert row["surprising_or_useful"] is False
+    assert row["bridge_like_yes_or_partial"] is True
+    assert payload["metadata"]["transfer_gap_v1_ingest"]["row_count_appended"] == 3
+    assert payload["metadata"]["transfer_gap_v1_ingest"]["label_distribution"]["relevance_label"] == {"good": 1, "miss": 2}
+    assert "splits" not in payload
+
+
+def test_v8_transfer_gap_sidecar_keyed_map_supported(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, labeled_rows = _write_transfer_gap_ingest_fixture(root)
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    keyed = {k: v for k, v in sidecar.items() if k != "rows"}
+    keyed.update({row["row_id"]: row for row in sidecar["rows"]})
+    sidecar_path.write_text(json.dumps(keyed), encoding="utf-8")
+
+    payload = build_ml_label_dataset_v8_transfer_gap_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+        conflict_policy_path=conflict_path,
+    )
+
+    appended = payload["rows"][-len(labeled_rows) :]
+    assert {row["row_id"] for row in appended} == {row["row_id"] for row in labeled_rows}
+
+
+def test_v8_transfer_gap_sidecar_row_id_mismatch_fails(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_transfer_gap_ingest_fixture(root)
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    sidecar["rows"] = sidecar["rows"][1:]
+    sidecar_path.write_text(json.dumps(sidecar), encoding="utf-8")
+
+    with pytest.raises(MLLabelDatasetError, match="sidecar row_id set differs"):
+        build_ml_label_dataset_v8_transfer_gap_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+
+def test_v8_transfer_gap_template_comparison_ignores_only_review_columns(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_transfer_gap_ingest_fixture(root)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["title"] = "Changed transfer gap title"
+    _write_csv(labeled_path, rows)
+
+    with pytest.raises(MLLabelDatasetError, match="changed non-review template field"):
+        build_ml_label_dataset_v8_transfer_gap_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+
+def test_v8_transfer_gap_missing_notes_and_invalid_labels_fail(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_transfer_gap_ingest_fixture(root)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["reviewer_notes"] = ""
+    _write_csv(labeled_path, rows)
+    with pytest.raises(MLLabelDatasetError, match="blank reviewer_notes"):
+        build_ml_label_dataset_v8_transfer_gap_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+    _write_transfer_gap_ingest_fixture(root)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["relevance_label"] = "maybe"
+    _write_csv(labeled_path, rows)
+    with pytest.raises(MLLabelDatasetError, match="unsupported relevance_label"):
+        build_ml_label_dataset_v8_transfer_gap_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+
+def test_v8_transfer_gap_rejects_numeric_work_id(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_transfer_gap_ingest_fixture(root)
+    blank_rows = list(csv.DictReader(blank_path.read_text(encoding="utf-8").splitlines()))
+    blank_rows[0]["work_id"] = "123"
+    _write_csv(blank_path, blank_rows)
+    rows = list(csv.DictReader(labeled_path.read_text(encoding="utf-8").splitlines()))
+    rows[0]["work_id"] = "123"
+    _write_csv(labeled_path, rows)
+
+    with pytest.raises(MLLabelDatasetError, match="must keep OpenAlex W token"):
+        build_ml_label_dataset_v8_transfer_gap_ingest(
+            repo_root=root,
+            base_dataset_path=base_path,
+            blank_worksheet_path=blank_path,
+            labeled_worksheet_path=labeled_path,
+            context_sidecar_path=sidecar_path,
+            conflict_policy_path=conflict_path,
+        )
+
+
+def test_v8_transfer_gap_markdown_documents_command_and_caveats(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    base_path, blank_path, labeled_path, sidecar_path, conflict_path, _rows = _write_transfer_gap_ingest_fixture(root)
+    payload = build_ml_label_dataset_v8_transfer_gap_ingest(
+        repo_root=root,
+        base_dataset_path=base_path,
+        blank_worksheet_path=blank_path,
+        labeled_worksheet_path=labeled_path,
+        context_sidecar_path=sidecar_path,
+        conflict_policy_path=conflict_path,
+    )
+    md = markdown_from_ml_label_dataset(payload)
+    assert "ml-label-dataset-v8-transfer-gap-ingest" in md
+    assert "ml_transfer_gap_audit" in md
+    assert "transfer_gap_context" in md
+    assert "first data row = 2" in md
+    assert "not representative validation" in md

@@ -46,6 +46,9 @@ HARD_NEGATIVE_REVIEW_POOL_VARIANT = "ml_hard_negative_audit"
 EXTERNAL_NEAR_MISS_REVIEW_V1_WORKSHEET_VERSION = "ml-external-near-miss-review-v1"
 EXTERNAL_NEAR_MISS_REVIEW_V1_EXPECTED_ROWS = 60
 EXTERNAL_NEAR_MISS_REVIEW_POOL_VARIANT = "ml_external_near_miss_audit"
+TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION = "ml-transfer-gap-review-v1"
+TRANSFER_GAP_REVIEW_POOL_VARIANT = "ml_transfer_gap_audit"
+TRANSFER_GAP_REVIEW_V1_CONTEXT_ARTIFACT_TYPE = "ml_transfer_gap_review_v1_context"
 ALLOWED_RELEVANCE_LABELS = {"good", "acceptable", "miss", "irrelevant"}
 ALLOWED_NOVELTY_LABELS = {"surprising", "useful", "obvious", "not_useful", "neither"}
 ALLOWED_BRIDGE_LIKE_LABELS = {"yes", "partial", "no", "not_applicable"}
@@ -388,6 +391,13 @@ def stable_external_near_miss_v1_row_id(
     return _sha256_text(payload)
 
 
+def _raw_csv_or_none(row: dict[str, str], field: str) -> str | None:
+    value = row.get(field)
+    if value is None or value == "":
+        return None
+    return value
+
+
 def _load_json_object(path: Path) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -413,6 +423,72 @@ def _read_v2_sidecar_rows(context_sidecar_path: Path) -> tuple[dict[str, Any], d
         if row_id in by_id:
             raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
         by_id[row_id] = row
+    return payload, by_id
+
+
+def _index_transfer_gap_sidecar_rows(
+    *,
+    context_sidecar_path: Path,
+    rows_value: Any,
+    top_level: bool = False,
+) -> dict[str, dict[str, Any]]:
+    if isinstance(rows_value, list):
+        by_id: dict[str, dict[str, Any]] = {}
+        for idx, row in enumerate(rows_value, start=1):
+            if not isinstance(row, dict):
+                raise MLLabelDatasetError(f"{context_sidecar_path} sidecar row {idx} is not an object")
+            row_id = _norm_ws(row.get("row_id"))
+            if not row_id:
+                raise MLLabelDatasetError(f"{context_sidecar_path} sidecar row {idx} has blank row_id")
+            if row_id in by_id:
+                raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
+            by_id[row_id] = row
+        return by_id
+
+    if isinstance(rows_value, dict):
+        by_id = {}
+        skipped_keys = {"artifact_type", "generated_at", "provenance", "schema", "metadata", "caveats"}
+        items = rows_value.items()
+        if top_level:
+            items = ((k, v) for k, v in rows_value.items() if k not in skipped_keys)
+        for key, row in items:
+            if not isinstance(row, dict):
+                if top_level:
+                    continue
+                raise MLLabelDatasetError(f"{context_sidecar_path} sidecar map value for {key!r} is not an object")
+            key_id = _norm_ws(key)
+            row_id = _norm_ws(row.get("row_id")) or key_id
+            if not row_id:
+                raise MLLabelDatasetError(f"{context_sidecar_path} sidecar map entry {key!r} has blank row_id")
+            if key_id and key_id != row_id:
+                raise MLLabelDatasetError(
+                    f"{context_sidecar_path} sidecar map key {key_id!r} does not match row_id {row_id!r}"
+                )
+            if row_id in by_id:
+                raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
+            by_id[row_id] = row
+        if by_id:
+            return by_id
+
+    raise MLLabelDatasetError(f"{context_sidecar_path} missing transfer-gap sidecar rows")
+
+
+def _read_transfer_gap_sidecar_rows(context_sidecar_path: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    payload = _load_json_object(context_sidecar_path)
+    artifact_type = _norm_ws(payload.get("artifact_type"))
+    if artifact_type != TRANSFER_GAP_REVIEW_V1_CONTEXT_ARTIFACT_TYPE:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} artifact_type={artifact_type!r} does not match "
+            f"{TRANSFER_GAP_REVIEW_V1_CONTEXT_ARTIFACT_TYPE!r}"
+        )
+    if "rows" in payload:
+        by_id = _index_transfer_gap_sidecar_rows(context_sidecar_path=context_sidecar_path, rows_value=payload["rows"])
+    else:
+        by_id = _index_transfer_gap_sidecar_rows(
+            context_sidecar_path=context_sidecar_path,
+            rows_value=payload,
+            top_level=True,
+        )
     return payload, by_id
 
 
@@ -556,10 +632,14 @@ def _assemble_dataset_payload_from_rows(
     source_worksheets_sorted = sorted(set(source_worksheets))
 
     by_family: Counter[str] = Counter()
+    by_review_pool_variant: Counter[str] = Counter()
     for r in all_rows:
         fam = r.get("family")
         key = str(fam) if fam is not None else "(null)"
         by_family[key] += 1
+        pool = r.get("review_pool_variant")
+        pool_key = str(pool) if pool is not None and str(pool).strip() else "(null)"
+        by_review_pool_variant[pool_key] += 1
 
     inferred_family_count = sum(1 for r in all_rows if r.get("family_inferred") is True)
     inferred_family_by_source: Counter[str] = Counter()
@@ -656,6 +736,7 @@ def _assemble_dataset_payload_from_rows(
         "skipped_blank_row_counts_by_source": {k: blank_rows_by_source[k] for k in sorted(blank_rows_by_source)},
         "skipped_blank_worksheets": sorted(set(skipped_blank_worksheets)),
         "row_counts_by_family": dict(by_family),
+        "row_counts_by_review_pool_variant": dict(by_review_pool_variant),
         "row_counts_by_label_completeness": dict(completeness),
         "duplicate_paper_id_report": duplicate_paper_report,
         "conflicting_label_report": {
@@ -1552,6 +1633,279 @@ def build_ml_label_dataset_v7_external_near_miss_ingest(
     )
 
 
+def _appended_label_distribution(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    def _bool_key(value: Any) -> str:
+        if value is True:
+            return "true"
+        if value is False:
+            return "false"
+        return "null"
+
+    out: dict[str, dict[str, int]] = {}
+    for field in LABEL_FIELDS:
+        counts: Counter[str] = Counter()
+        for row in rows:
+            value = row.get(field)
+            key = _norm_label_token(str(value)) if value is not None else ""
+            counts[key or "(null)"] += 1
+        out[field] = dict(sorted(counts.items()))
+    for field in DERIVED_TARGET_FIELDS:
+        counts = Counter(_bool_key(row.get(field)) for row in rows)
+        out[field] = {key: counts.get(key, 0) for key in ("true", "false", "null")}
+    return out
+
+
+def build_ml_label_dataset_v8_transfer_gap_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    dataset_version: str = "ml-label-dataset-v8",
+) -> dict[str, Any]:
+    """Build v8 as v7 rows unchanged plus the validated transfer-gap labeled slice."""
+    root = repo_root.resolve()
+    base_path = base_dataset_path.resolve()
+    blank_path = blank_worksheet_path.resolve()
+    labeled_path = labeled_worksheet_path.resolve()
+    sidecar_path = context_sidecar_path.resolve()
+    conflict_path = conflict_policy_path.resolve()
+    for path in (base_path, blank_path, labeled_path, sidecar_path, conflict_path):
+        if not path.is_file():
+            raise MLLabelDatasetError(f"required input not found: {path}")
+
+    base_payload = _load_json_object(base_path)
+    base_metadata = base_payload.get("metadata") if isinstance(base_payload.get("metadata"), dict) else {}
+    base_version = _norm_ws(base_payload.get("dataset_version") or base_metadata.get("dataset_version"))
+    if base_version != "ml-label-dataset-v7":
+        raise MLLabelDatasetError(f"{base_path} dataset_version={base_version!r}; expected 'ml-label-dataset-v7'")
+    base_rows_raw = base_payload.get("rows")
+    if not isinstance(base_rows_raw, list):
+        raise MLLabelDatasetError(f"{base_path} missing rows array")
+    base_rows: list[dict[str, Any]] = copy.deepcopy(base_rows_raw)
+
+    blank_fieldnames, blank_rows = _read_csv_rows(blank_path)
+    labeled_fieldnames, labeled_rows = _read_csv_rows(labeled_path)
+    if not labeled_rows:
+        raise MLLabelDatasetError(f"{labeled_path} has no labeled transfer-gap data rows")
+
+    _validate_labeled_matches_blank_template(
+        blank_path=blank_path,
+        blank_fieldnames=blank_fieldnames,
+        blank_rows=blank_rows,
+        labeled_path=labeled_path,
+        labeled_fieldnames=labeled_fieldnames,
+        labeled_rows=labeled_rows,
+    )
+
+    sidecar_payload, sidecar_by_id = _read_transfer_gap_sidecar_rows(sidecar_path)
+    labeled_ids = {_norm_ws(r.get("row_id")) for r in labeled_rows}
+    if set(sidecar_by_id) != labeled_ids:
+        missing = sorted(labeled_ids - set(sidecar_by_id))
+        extra = sorted(set(sidecar_by_id) - labeled_ids)
+        raise MLLabelDatasetError(
+            f"transfer-gap sidecar row_id set differs from labeled CSV; missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    sidecar_provenance = sidecar_payload.get("provenance") if isinstance(sidecar_payload.get("provenance"), dict) else {}
+    sidecar_ws_version = _norm_ws(sidecar_provenance.get("worksheet_version"))
+    if sidecar_ws_version and sidecar_ws_version != TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION:
+        raise MLLabelDatasetError(
+            f"transfer-gap sidecar worksheet_version={sidecar_ws_version!r} does not match "
+            f"{TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION!r}"
+        )
+    sidecar_pool = _norm_ws(sidecar_provenance.get("review_pool_variant"))
+    if sidecar_pool and sidecar_pool != TRANSFER_GAP_REVIEW_POOL_VARIANT:
+        raise MLLabelDatasetError(
+            f"transfer-gap sidecar review_pool_variant={sidecar_pool!r} does not match "
+            f"{TRANSFER_GAP_REVIEW_POOL_VARIANT!r}"
+        )
+
+    source_rel = _repo_relative(labeled_path, repo_root=root)
+    source_sha = sha256_file(labeled_path)
+    transfer_rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for source_row_number, row in enumerate(labeled_rows, start=2):
+        row_id = _norm_ws(row.get("row_id"))
+        if row_id in seen:
+            raise MLLabelDatasetError(f"duplicate transfer-gap labeled row_id {row_id}")
+        seen.add(row_id)
+        _validate_nonempty_allowed_labels(row, source_row_number=source_row_number)
+
+        worksheet_version = _norm_ws(row.get("worksheet_version"))
+        if worksheet_version != TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION:
+            raise MLLabelDatasetError(
+                f"transfer-gap labeled row {source_row_number} has worksheet_version={worksheet_version!r}"
+            )
+        review_pool_variant = _norm_ws(row.get("review_pool_variant"))
+        if review_pool_variant != TRANSFER_GAP_REVIEW_POOL_VARIANT:
+            raise MLLabelDatasetError(
+                f"transfer-gap labeled row {source_row_number} has review_pool_variant={review_pool_variant!r}"
+            )
+
+        paper_id = _norm_ws(row.get("paper_id"))
+        openalex_work_id = _norm_ws(row.get("openalex_work_id"))
+        work_id = _norm_ws(row.get("work_id"))
+        expected_work_id = paper_id_to_work_id(paper_id)
+        if not expected_work_id:
+            raise MLLabelDatasetError(
+                f"transfer-gap labeled row {source_row_number} has non-OpenAlex paper_id={paper_id!r}"
+            )
+        if work_id != expected_work_id or openalex_work_id != expected_work_id:
+            raise MLLabelDatasetError(
+                f"transfer-gap labeled row {source_row_number} must keep OpenAlex W token in work_id/openalex_work_id"
+            )
+        if work_id.isdigit():
+            raise MLLabelDatasetError(f"transfer-gap labeled row {source_row_number} has numeric work_id={work_id!r}")
+
+        context_row = copy.deepcopy(sidecar_by_id[row_id])
+        context_paper_id = _norm_ws(context_row.get("paper_id"))
+        if context_paper_id and context_paper_id != paper_id:
+            raise MLLabelDatasetError(f"transfer-gap sidecar paper_id mismatch for row_id={row_id}")
+        context_openalex_work_id = _norm_ws(context_row.get("openalex_work_id"))
+        if context_openalex_work_id and context_openalex_work_id != openalex_work_id:
+            raise MLLabelDatasetError(f"transfer-gap sidecar openalex_work_id mismatch for row_id={row_id}")
+        context_work_id = _norm_ws(context_row.get("work_id"))
+        if context_work_id and context_work_id != work_id:
+            raise MLLabelDatasetError(f"transfer-gap sidecar work_id mismatch for row_id={row_id}")
+
+        rel_l = _raw_csv_or_none(row, "relevance_label")
+        nov_l = _raw_csv_or_none(row, "novelty_label")
+        br_l = _raw_csv_or_none(row, "bridge_like_label")
+        notes = _raw_csv_or_none(row, "reviewer_notes")
+        sample_seed = context_row.get("sample_seed", sidecar_provenance.get("sample_seed"))
+        family = _norm_ws(context_row.get("family")) or None
+        out: dict[str, Any] = {
+            "dataset_version": dataset_version,
+            "row_id": row_id,
+            "paper_id": paper_id,
+            "work_id": work_id,
+            "title": _norm_ws(row.get("title")) or None,
+            "year": _norm_ws(row.get("year")) or None,
+            "citation_count": _norm_ws(row.get("citation_count")) or None,
+            "source_slug": _norm_ws(row.get("source_slug")) or None,
+            "ranking_run_id": None,
+            "ranking_version": None,
+            "corpus_snapshot_version": None,
+            "embedding_version": None,
+            "cluster_version": None,
+            "family": family,
+            "review_pool_variant": review_pool_variant,
+            "rank": None,
+            "experiment_rank": None,
+            "source_worksheet_path": source_rel,
+            "source_worksheet_sha256": source_sha,
+            "source_row_number": source_row_number,
+            "relevance_label": rel_l,
+            "novelty_label": nov_l,
+            "bridge_like_label": br_l,
+            "reviewer_notes": notes,
+            "label_provenance": "manual_review_worksheet_csv",
+            "split": "audit_only",
+            "good_or_acceptable": good_or_acceptable(rel_l),
+            "surprising_or_useful": surprising_or_useful(nov_l),
+            "bridge_like_yes_or_partial": bridge_like_yes_or_partial(br_l),
+            "worksheet_version": worksheet_version,
+            "sample_seed": sample_seed,
+            "sample_reason": _norm_ws(row.get("sample_reason")) or context_row.get("sample_reason") or None,
+            "cluster_id": _norm_ws(row.get("cluster_id")) or context_row.get("cluster_id") or None,
+            "topics": _norm_ws(row.get("topics")) or None,
+            "abstract_preview": _norm_ws(row.get("abstract_preview")) or None,
+            "openalex_work_id": openalex_work_id,
+            "internal_work_id": None,
+            "transfer_gap_context": context_row,
+        }
+        transfer_rows.append(out)
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    source_worksheets = list(base_payload.get("source_worksheets") or [])
+    source_worksheets.append(source_rel)
+    source_sha256 = dict(base_payload.get("source_worksheet_sha256") or {})
+    source_sha256[source_rel] = source_sha
+    row_counts_by_source = dict(base_metadata.get("row_counts_by_source") or {})
+    row_counts_by_source[source_rel] = len(labeled_rows)
+    included_by_source = dict(base_metadata.get("included_labeled_row_counts_by_source") or {})
+    included_by_source[source_rel] = len(transfer_rows)
+    blank_rows_by_source = dict(base_metadata.get("skipped_blank_row_counts_by_source") or {})
+    blank_rows_by_source[source_rel] = 0
+    skipped_blank_worksheets = list(base_metadata.get("skipped_blank_worksheets") or [])
+    skipped_malformed_rows = copy.deepcopy(base_metadata.get("skipped_malformed_rows") or [])
+    manual_review_dir_rel = str(base_metadata.get("manual_review_dir") or "docs/audit/manual-review")
+
+    previous_ingests = {
+        key: copy.deepcopy(value)
+        for key, value in base_metadata.items()
+        if key.endswith("_ingest") or key.startswith("previous_")
+    }
+    sidecar_inputs = sidecar_provenance.get("inputs") if isinstance(sidecar_provenance.get("inputs"), list) else []
+    sidecar_label_dataset_sha256 = None
+    for item in sidecar_inputs:
+        if isinstance(item, dict) and item.get("name") == "label_dataset":
+            sidecar_label_dataset_sha256 = item.get("sha256")
+            break
+
+    base_sha = sha256_file(base_path)
+    extra_metadata = {
+        **previous_ingests,
+        "dataset_version": dataset_version,
+        "previous_dataset_version": base_version,
+        "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+        "previous_dataset_sha256": base_sha,
+        "transfer_gap_v1_ingest": {
+            "base_dataset_path": _repo_relative(base_path, repo_root=root),
+            "base_dataset_sha256": base_sha,
+            "blank_template_path": _repo_relative(blank_path, repo_root=root),
+            "blank_template_sha256": sha256_file(blank_path),
+            "labeled_worksheet_path": source_rel,
+            "labeled_worksheet_sha256": source_sha,
+            "context_sidecar_path": _repo_relative(sidecar_path, repo_root=root),
+            "context_sidecar_sha256": sha256_file(sidecar_path),
+            "conflict_policy_path": _repo_relative(conflict_path, repo_root=root),
+            "conflict_policy_sha256": sha256_file(conflict_path),
+            "worksheet_version": TRANSFER_GAP_REVIEW_V1_WORKSHEET_VERSION,
+            "review_pool_variant": TRANSFER_GAP_REVIEW_POOL_VARIANT,
+            "row_count_appended": len(transfer_rows),
+            "base_row_count": len(base_rows),
+            "row_id_policy": "CSV canonical; match sidecar after normalizing rows[] or map",
+            "source_row_number_convention": "physical CSV line including header; first data row = 2",
+            "label_distribution": _appended_label_distribution(transfer_rows),
+            "sidecar_context_fields_preserved": "entire normalized sidecar row object preserved verbatim under transfer_gap_context",
+            "sidecar_label_dataset_sha256": sidecar_label_dataset_sha256,
+            "validation_summary": {
+                "labeled_rows_found": len(labeled_rows),
+                "sidecar_row_ids_matched": True,
+                "blank_template_identity_columns_matched": True,
+                "non_review_columns_unchanged": True,
+                "review_columns_required_non_empty": True,
+                "conflict_policy_recorded_as_provenance_only": True,
+            },
+        },
+    }
+    extra_caveats = [
+        "Single-reviewer audit labels remain single-reviewer evidence unless a source artifact states otherwise.",
+        "Transfer-gap labels are targeted audit evidence and are not representative validation samples.",
+        "Transfer-gap rows remain audit_only and keep review_pool_variant=ml_transfer_gap_audit as a distinct pool.",
+        "The nested transfer_gap_context is preserved for provenance only and is not label evidence.",
+    ]
+    return _assemble_dataset_payload_from_rows(
+        dataset_version=dataset_version,
+        generated_at=generated_at,
+        source_worksheets=source_worksheets,
+        source_sha256=source_sha256,
+        all_rows=base_rows + transfer_rows,
+        manual_review_dir_rel=manual_review_dir_rel,
+        row_counts_by_source=row_counts_by_source,
+        included_by_source=included_by_source,
+        blank_rows_by_source=blank_rows_by_source,
+        skipped_blank_worksheets=skipped_blank_worksheets,
+        skipped_malformed_rows=skipped_malformed_rows,
+        extra_metadata=extra_metadata,
+        extra_caveats=extra_caveats,
+    )
+
+
 def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     meta = payload["metadata"]
     dup = meta["duplicate_paper_id_report"]
@@ -1561,7 +1915,18 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     v5_ingest = meta.get("reviewer_blind_v2_ingest")
     v6_ingest = meta.get("hard_negative_v1_ingest")
     v7_ingest = meta.get("external_near_miss_v1_ingest")
-    if isinstance(v7_ingest, dict):
+    v8_ingest = meta.get("transfer_gap_v1_ingest")
+    if isinstance(v8_ingest, dict):
+        regenerate_command = (
+            "Machine-readable export: regenerate via `python -m pipeline.cli "
+            "ml-label-dataset-v8-transfer-gap-ingest "
+            f"--base-dataset {v8_ingest['base_dataset_path']} "
+            f"--blank-worksheet {v8_ingest['blank_template_path']} "
+            f"--labeled-worksheet {v8_ingest['labeled_worksheet_path']} "
+            f"--context-sidecar {v8_ingest['context_sidecar_path']} "
+            f"--conflict-policy {v8_ingest['conflict_policy_path']} --output <path>.json`."
+        )
+    elif isinstance(v7_ingest, dict):
         regenerate_command = (
             "Machine-readable export: regenerate via `python -m pipeline.cli "
             "ml-label-dataset-v7-external-near-miss-ingest "
@@ -1643,6 +2008,7 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "- **Single reviewer** per audit pass unless a source file states otherwise.",
         "- **Top-k / worksheet selection**: labels exist for papers that reached audit worksheets, not a random sample of the corpus.",
         "- **Family-specific contexts** (bridge, emerging, undercited, experiment deltas) are not interchangeable without careful experimental design.",
+        "- **Transfer-gap targeted samples** are not representative validation data.",
         "",
         "## Family inference (worksheet context)",
         "",
@@ -1683,6 +2049,29 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "Those context fields are **not labels** and must not be pooled with blind or hard-negative rows unless a later "
         "experiment explicitly says so.",
         "",
+        "## Transfer-gap context fields",
+        "",
+        "Rows from worksheets with `review_pool_variant=ml_transfer_gap_audit` remain a distinct targeted audit pool for "
+        "transfer-gap and sparse-pool labeling. They have `split=audit_only`, keep `family=null` unless the sidecar "
+        "explicitly maps a family field, and preserve the full row-id keyed sidecar object under nested "
+        "`transfer_gap_context`. The sidecar may describe gap priority, target hint, source query, or old evidence "
+        "pool being addressed; those context fields are **not labels** and do not imply production ranking readiness.",
+        "",
+        *(
+            [
+                "### Transfer-gap v1 ingest",
+                "",
+                f"- **Rows appended:** {v8_ingest['row_count_appended']}",
+                "- **Legacy rows:** copied from v7 unchanged field-for-field, including their existing per-row `dataset_version` values.",
+                f"- **Source row numbering:** {v8_ingest['source_row_number_convention']}.",
+                f"- **Raw relevance distribution:** `{v8_ingest['label_distribution']['relevance_label']}`",
+                f"- **Raw novelty distribution:** `{v8_ingest['label_distribution']['novelty_label']}`",
+                f"- **Raw bridge-like distribution:** `{v8_ingest['label_distribution']['bridge_like_label']}`",
+                "",
+            ]
+            if isinstance(v8_ingest, dict)
+            else []
+        ),
         "## Duplicate and conflicting labels",
         "",
         f"- **Duplicate `paper_id` count** (papers with more than one retained row): {dup['duplicate_paper_id_count']}",
@@ -1720,7 +2109,7 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "",
         "## Caveats (verbatim)",
         "",
-        *[f"> {c}\n" for c in VERBATIM_CAVEATS],
+        *[f"> {c}\n" for c in (payload.get("caveats") or VERBATIM_CAVEATS)],
         "",
         "## JSON artifact",
         "",
@@ -1818,6 +2207,35 @@ def write_ml_label_dataset_v7_external_near_miss_ingest(
     dataset_version: str = "ml-label-dataset-v7",
 ) -> dict[str, Any]:
     payload = build_ml_label_dataset_v7_external_near_miss_ingest(
+        repo_root=repo_root,
+        base_dataset_path=base_dataset_path,
+        blank_worksheet_path=blank_worksheet_path,
+        labeled_worksheet_path=labeled_worksheet_path,
+        context_sidecar_path=context_sidecar_path,
+        conflict_policy_path=conflict_policy_path,
+        dataset_version=dataset_version,
+    )
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    if markdown_path is not None:
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(markdown_from_ml_label_dataset(payload), encoding="utf-8")
+    return payload
+
+
+def write_ml_label_dataset_v8_transfer_gap_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    json_path: Path,
+    markdown_path: Path | None,
+    dataset_version: str = "ml-label-dataset-v8",
+) -> dict[str, Any]:
+    payload = build_ml_label_dataset_v8_transfer_gap_ingest(
         repo_root=repo_root,
         base_dataset_path=base_dataset_path,
         blank_worksheet_path=blank_worksheet_path,
