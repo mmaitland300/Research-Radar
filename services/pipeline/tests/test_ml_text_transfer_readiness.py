@@ -60,7 +60,7 @@ def _comparison(
     }
 
 
-def _cross_pool_payload() -> dict:
+def _cross_pool_payload(*, version: str = "ml-text-baseline-cross-pool-v1") -> dict:
     per_target = {}
     for target in ("good_or_acceptable", "surprising_or_useful"):
         per_target[target] = {
@@ -87,7 +87,7 @@ def _cross_pool_payload() -> dict:
     return {
         "metadata": {
             "artifact_type": "ml_text_baseline_cross_pool",
-            "baseline_version": "ml-text-baseline-cross-pool-v1",
+            "baseline_version": version,
         },
         "per_target": per_target,
     }
@@ -108,9 +108,9 @@ def _label_row(index: int, *, variant: str, paper_id: str, split: str = "audit_o
     }
 
 
-def _label_payload() -> dict:
+def _label_payload(*, version: str = "ml-label-dataset-v7") -> dict:
     return {
-        "dataset_version": "ml-label-dataset-v7",
+        "dataset_version": version,
         "rows": [
             _label_row(1, variant="ml_external_near_miss_audit", paper_id="W1"),
             _label_row(2, variant="ml_external_near_miss_audit", paper_id="W2"),
@@ -124,11 +124,11 @@ def _label_payload() -> dict:
     }
 
 
-def _text_corpus_payload(*, changed: int = 0) -> dict:
+def _text_corpus_payload(*, changed: int = 0, version: str = "ml-labeled-text-corpus-v2") -> dict:
     return {
         "metadata": {
             "artifact_type": "ml_labeled_text_corpus",
-            "corpus_version": "ml-labeled-text-corpus-v2",
+            "corpus_version": version,
             "counts_by_previous_embedding_text_format_version": {"external_text_corpus_v7_verbatim": 2},
             "counts_by_canonicalization_status": {"canonical_title_abstract": 6},
             "n_text_changed_from_v1": changed,
@@ -137,11 +137,11 @@ def _text_corpus_payload(*, changed: int = 0) -> dict:
     }
 
 
-def _embeddings_payload() -> dict:
+def _embeddings_payload(*, version: str = "ml-labeled-text-embeddings-v1") -> dict:
     return {
         "metadata": {
             "artifact_type": "ml_labeled_text_embeddings",
-            "embedding_artifact_version": "ml-labeled-text-embeddings-v1",
+            "embedding_artifact_version": version,
         },
         "rows": [{"row_id": "not inspected", "embedding_status": "mock", "embedding": ["not", "validated"]}],
     }
@@ -207,6 +207,39 @@ def test_text_changed_conclusion_recommends_v2_embeddings(tmp_path: Path) -> Non
         generated_at="2026-05-14T00:00:00Z",
     )
     assert "generate v2 embeddings" in payload["text_format_evidence"]["conclusion"]
+
+
+def test_accepts_supplied_expected_versions_and_readiness_version(tmp_path: Path) -> None:
+    payload = build_ml_text_transfer_readiness_payload(
+        cross_pool_path=_write_json(tmp_path, "cross-v8.json", _cross_pool_payload(version="ml-text-baseline-cross-pool-v8")),
+        label_dataset_path=_write_json(tmp_path, "labels-v8.json", _label_payload(version="ml-label-dataset-v8")),
+        text_corpus_v2_path=_write_json(
+            tmp_path,
+            "corpus-v3-normalized.json",
+            _text_corpus_payload(changed=0, version="ml-labeled-text-corpus-v3-normalized"),
+        ),
+        embeddings_v1_path=_write_json(
+            tmp_path,
+            "embeddings-v3.json",
+            _embeddings_payload(version="ml-labeled-text-embeddings-v3"),
+        ),
+        expected_cross_pool_version="ml-text-baseline-cross-pool-v8",
+        expected_label_dataset_version="ml-label-dataset-v8",
+        expected_text_corpus_version="ml-labeled-text-corpus-v3-normalized",
+        expected_embeddings_version="ml-labeled-text-embeddings-v3",
+        readiness_version="ml-text-transfer-readiness-v8",
+        generated_at="2026-05-14T00:00:00Z",
+    )
+
+    assert payload["metadata"]["readiness_version"] == "ml-text-transfer-readiness-v8"
+    assert payload["metadata"]["expected_versions"] == {
+        "cross_pool": "ml-text-baseline-cross-pool-v8",
+        "label_dataset": "ml-label-dataset-v8",
+        "text_corpus": "ml-labeled-text-corpus-v3-normalized",
+        "embeddings": "ml-labeled-text-embeddings-v3",
+    }
+    assert "ml-labeled-text-corpus-v3-normalized" in payload["text_format_evidence"]["conclusion"]
+    assert "ml-text-transfer-readiness-v8" in render_markdown(payload)
 
 
 def test_input_version_validation(tmp_path: Path) -> None:

@@ -103,12 +103,12 @@ def _rows() -> tuple[list[dict], list[dict]]:
     return embeddings, labels
 
 
-def _embedding_payload(rows: list[dict] | None = None) -> dict:
+def _embedding_payload(rows: list[dict] | None = None, *, version: str = "ml-labeled-text-embeddings-v1") -> dict:
     actual = rows if rows is not None else _rows()[0]
     return {
         "metadata": {
             "artifact_type": "ml_labeled_text_embeddings",
-            "embedding_artifact_version": "ml-labeled-text-embeddings-v1",
+            "embedding_artifact_version": version,
             "embedding_dimensions": 3,
         },
         "rows": actual,
@@ -169,6 +169,28 @@ def test_cross_pool_payload_reports_slices_metrics_and_histograms(tmp_path: Path
     }
     assert "metadata_sample_reason_logistic" in target["in_pool_cv"]["external_near_miss"]["models"]
     assert "metadata_sample_reason_logistic" not in transfer["models"]
+
+
+def test_accepts_supplied_embedding_label_and_baseline_versions(tmp_path: Path) -> None:
+    emb_path, label_path = _write_inputs(
+        tmp_path,
+        embeddings=_embedding_payload(version="ml-labeled-text-embeddings-v3"),
+        labels=_label_payload(version="ml-label-dataset-v8"),
+    )
+    payload = build_ml_text_baseline_cross_pool_payload(
+        embeddings_path=emb_path,
+        label_dataset_path=label_path,
+        expected_embedding_artifact_version="ml-labeled-text-embeddings-v3",
+        expected_label_dataset_version="ml-label-dataset-v8",
+        baseline_version="ml-text-baseline-cross-pool-v8",
+        random_seed=7,
+        generated_at="2026-05-14T00:00:00Z",
+    )
+
+    assert payload["metadata"]["embedding_artifact_version"] == "ml-labeled-text-embeddings-v3"
+    assert payload["metadata"]["label_dataset_version"] == "ml-label-dataset-v8"
+    assert payload["metadata"]["baseline_version"] == "ml-text-baseline-cross-pool-v8"
+    assert "ml-text-baseline-cross-pool-v8" in render_markdown(payload)
 
 
 def test_join_uniqueness_and_version_failures(tmp_path: Path) -> None:

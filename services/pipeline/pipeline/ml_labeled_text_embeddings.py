@@ -90,7 +90,11 @@ def _mock_vector(*, row_id: str, text_sha256: str, dimensions: int) -> list[floa
     return out
 
 
-def validate_text_corpus_payload(payload: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def validate_text_corpus_payload(
+    payload: Mapping[str, Any],
+    *,
+    expected_source_corpus_version: str = SOURCE_CORPUS_VERSION,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     metadata = payload.get("metadata")
     rows = payload.get("rows")
     if not isinstance(metadata, dict):
@@ -101,9 +105,10 @@ def validate_text_corpus_payload(payload: Mapping[str, Any]) -> tuple[dict[str, 
         raise MLLabeledTextEmbeddingsError(
             f"expected metadata.artifact_type={SOURCE_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
         )
-    if metadata.get("corpus_version") != SOURCE_CORPUS_VERSION:
+    if metadata.get("corpus_version") != expected_source_corpus_version:
         raise MLLabeledTextEmbeddingsError(
-            f"expected metadata.corpus_version={SOURCE_CORPUS_VERSION!r}, got {metadata.get('corpus_version')!r}"
+            "expected metadata.corpus_version="
+            f"{expected_source_corpus_version!r}, got {metadata.get('corpus_version')!r}"
         )
     expected = metadata.get("row_count")
     if isinstance(expected, int) and len(rows) != expected:
@@ -152,6 +157,8 @@ def _openai_auth_artifact_fields(*, mock_embeddings: bool) -> dict[str, Any]:
 def build_ml_labeled_text_embeddings_payload(
     *,
     text_corpus_path: Path,
+    source_corpus_version: str = SOURCE_CORPUS_VERSION,
+    embedding_artifact_version: str = EMBEDDING_ARTIFACT_VERSION,
     embedding_model: str = DEFAULT_OPENAI_EMBEDDING_MODEL,
     expected_dimensions: int = EXPECTED_EMBEDDING_DIMENSIONS,
     batch_size: int = DEFAULT_BATCH_SIZE,
@@ -165,7 +172,10 @@ def build_ml_labeled_text_embeddings_payload(
         source_sha = sha256_file(corpus_path)
     except OSError as exc:
         raise MLLabeledTextEmbeddingsError(f"Failed to hash text corpus {corpus_path}: {exc}") from exc
-    source_metadata, corpus_rows = validate_text_corpus_payload(corpus_payload)
+    source_metadata, corpus_rows = validate_text_corpus_payload(
+        corpus_payload,
+        expected_source_corpus_version=source_corpus_version,
+    )
 
     row_inputs: list[dict[str, Any]] = []
     for row in corpus_rows:
@@ -241,13 +251,15 @@ def build_ml_labeled_text_embeddings_payload(
     counts_by_format = Counter(str(row.get("embedding_text_format_version") or "(null)") for row in output_rows)
     metadata = {
         "artifact_type": ARTIFACT_TYPE,
-        "embedding_artifact_version": EMBEDDING_ARTIFACT_VERSION,
+        "embedding_artifact_version": embedding_artifact_version,
         "generated_at": generated_at or _now_iso_z(),
         "source_text_corpus_path": portable_repo_path(corpus_path),
         "source_text_corpus_sha256": source_sha,
         "source_text_corpus_version": source_metadata.get("corpus_version"),
-        "source_label_dataset_sha256": source_metadata.get("label_dataset_sha256"),
-        "source_label_dataset_version": source_metadata.get("label_dataset_version"),
+        "source_label_dataset_sha256": source_metadata.get("label_dataset_sha256")
+        or source_metadata.get("source_label_dataset_sha256"),
+        "source_label_dataset_version": source_metadata.get("label_dataset_version")
+        or source_metadata.get("source_label_dataset_version"),
         "embedding_model": embedding_model,
         "embedding_dimensions": expected_dimensions,
         "embedding_provider": "openai",
@@ -261,7 +273,11 @@ def build_ml_labeled_text_embeddings_payload(
         "counts_by_family": dict(sorted(counts_by_family.items())),
         "counts_by_embedding_text_format_version": dict(sorted(counts_by_format.items())),
         "caveats": list(CAVEATS),
-        "layering_note": LAYERING_NOTE,
+        "layering_note": (
+            f"Layering: {source_corpus_version} freezes observation-level text; "
+            f"{embedding_artifact_version} freezes vectors for that exact text; later source-transfer "
+            "or cross-pool baselines consume this artifact plus labels offline only."
+        ),
     }
     return {"metadata": metadata, "rows": output_rows}
 
@@ -269,9 +285,9 @@ def build_ml_labeled_text_embeddings_payload(
 def render_markdown(payload: Mapping[str, Any]) -> str:
     metadata = payload["metadata"]
     lines = [
-        "# Labeled Text Embeddings v1",
+        f"# Labeled Text Embeddings ({metadata.get('embedding_artifact_version')})",
         "",
-        "Frozen vectorization artifact for `ml-labeled-text-corpus-v1`.",
+        f"Frozen vectorization artifact for `{metadata.get('source_text_corpus_version')}`.",
         "",
         "## Summary",
         "",
@@ -312,6 +328,8 @@ def write_ml_labeled_text_embeddings(
     text_corpus_path: Path,
     output_path: Path,
     markdown_output_path: Path | None,
+    source_corpus_version: str = SOURCE_CORPUS_VERSION,
+    embedding_artifact_version: str = EMBEDDING_ARTIFACT_VERSION,
     embedding_model: str = DEFAULT_OPENAI_EMBEDDING_MODEL,
     expected_dimensions: int = EXPECTED_EMBEDDING_DIMENSIONS,
     batch_size: int = DEFAULT_BATCH_SIZE,
@@ -320,6 +338,8 @@ def write_ml_labeled_text_embeddings(
 ) -> dict[str, Any]:
     payload = build_ml_labeled_text_embeddings_payload(
         text_corpus_path=text_corpus_path,
+        source_corpus_version=source_corpus_version,
+        embedding_artifact_version=embedding_artifact_version,
         embedding_model=embedding_model,
         expected_dimensions=expected_dimensions,
         batch_size=batch_size,

@@ -132,6 +132,30 @@ def test_mock_vectors_are_deterministic(tmp_path: Path) -> None:
     assert left["metadata"]["n_mock"] == 4
 
 
+def test_accepts_caller_supplied_source_and_embedding_versions(tmp_path: Path) -> None:
+    corpus = _corpus_payload(version="ml-labeled-text-corpus-v3-normalized")
+    corpus["metadata"].pop("label_dataset_sha256")
+    corpus["metadata"].pop("label_dataset_version")
+    corpus["metadata"]["source_label_dataset_sha256"] = "source-label-sha"
+    corpus["metadata"]["source_label_dataset_version"] = "ml-label-dataset-v8"
+    path = _write_corpus(tmp_path, corpus)
+    payload = build_ml_labeled_text_embeddings_payload(
+        text_corpus_path=path,
+        source_corpus_version="ml-labeled-text-corpus-v3-normalized",
+        embedding_artifact_version="ml-labeled-text-embeddings-v3",
+        expected_dimensions=3,
+        mock_embeddings=True,
+        generated_at="2026-05-14T00:00:00Z",
+    )
+
+    assert payload["metadata"]["source_text_corpus_version"] == "ml-labeled-text-corpus-v3-normalized"
+    assert payload["metadata"]["source_label_dataset_sha256"] == "source-label-sha"
+    assert payload["metadata"]["source_label_dataset_version"] == "ml-label-dataset-v8"
+    assert payload["metadata"]["embedding_artifact_version"] == "ml-labeled-text-embeddings-v3"
+    assert "ml-labeled-text-embeddings-v3" in payload["metadata"]["layering_note"]
+    assert "ml-labeled-text-embeddings-v3" in render_markdown(payload)
+
+
 def test_validation_failures(tmp_path: Path) -> None:
     with pytest.raises(MLLabeledTextEmbeddingsError, match="metadata object"):
         build_ml_labeled_text_embeddings_payload(text_corpus_path=_write_corpus(tmp_path, {"rows": []}), mock_embeddings=True)

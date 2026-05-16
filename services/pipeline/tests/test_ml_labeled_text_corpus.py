@@ -203,6 +203,22 @@ def test_mock_openalex_uses_stub_without_network(tmp_path: Path) -> None:
     assert payload["rows"][0]["text_source"] == "openalex_fetch"
 
 
+def test_can_emit_caller_supplied_corpus_version(tmp_path: Path) -> None:
+    row = _label_row("versioned-row", paper_id="https://openalex.org/W778")
+    label_path = _write_json(tmp_path, "labels.json", _label_payload([row]))
+    payload = build_ml_labeled_text_corpus_payload(
+        label_dataset_path=label_path,
+        corpus_version="ml-labeled-text-corpus-v3",
+        mock_openalex=True,
+        generated_at="2026-05-14T00:00:00Z",
+    )
+
+    assert payload["metadata"]["corpus_version"] == "ml-labeled-text-corpus-v3"
+    assert payload["metadata"]["label_dataset_version"] == "ml-label-dataset-v7"
+    assert "ml-labeled-text-corpus-v3" in payload["metadata"]["layering_note"]
+    assert "ml-labeled-text-corpus-v3" in render_markdown(payload)
+
+
 def test_external_reuse_hash_mismatch_fails(tmp_path: Path) -> None:
     label_path = _write_json(
         tmp_path,

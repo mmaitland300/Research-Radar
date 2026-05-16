@@ -75,7 +75,11 @@ def _bucket(value: Any) -> str:
     return text if text else "(null)"
 
 
-def validate_source_corpus_payload(payload: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def validate_source_corpus_payload(
+    payload: Mapping[str, Any],
+    *,
+    expected_source_corpus_version: str = SOURCE_CORPUS_VERSION,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     metadata = payload.get("metadata")
     rows = payload.get("rows")
     if not isinstance(metadata, dict):
@@ -86,9 +90,10 @@ def validate_source_corpus_payload(payload: Mapping[str, Any]) -> tuple[dict[str
         raise MLLabeledTextCorpusNormalizeError(
             f"expected metadata.artifact_type={ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
         )
-    if metadata.get("corpus_version") != SOURCE_CORPUS_VERSION:
+    if metadata.get("corpus_version") != expected_source_corpus_version:
         raise MLLabeledTextCorpusNormalizeError(
-            f"expected metadata.corpus_version={SOURCE_CORPUS_VERSION!r}, got {metadata.get('corpus_version')!r}"
+            "expected metadata.corpus_version="
+            f"{expected_source_corpus_version!r}, got {metadata.get('corpus_version')!r}"
         )
     expected = metadata.get("row_count")
     if not isinstance(expected, int):
@@ -161,6 +166,8 @@ def normalize_labeled_text_corpus_row(row: Mapping[str, Any]) -> dict[str, Any]:
 def build_ml_labeled_text_corpus_normalize_payload(
     *,
     source_corpus_path: Path,
+    source_corpus_version: str = SOURCE_CORPUS_VERSION,
+    corpus_version: str = CORPUS_VERSION,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     source_path = Path(source_corpus_path).resolve()
@@ -169,7 +176,10 @@ def build_ml_labeled_text_corpus_normalize_payload(
         source_sha = sha256_file(source_path)
     except OSError as exc:
         raise MLLabeledTextCorpusNormalizeError(f"Failed to hash source corpus {source_path}: {exc}") from exc
-    source_metadata, source_rows = validate_source_corpus_payload(source_payload)
+    source_metadata, source_rows = validate_source_corpus_payload(
+        source_payload,
+        expected_source_corpus_version=source_corpus_version,
+    )
 
     output_rows = [normalize_labeled_text_corpus_row(row) for row in source_rows]
 
@@ -183,9 +193,18 @@ def build_ml_labeled_text_corpus_normalize_payload(
         1 for row in output_rows if row.get("text_sha256") != row.get("previous_text_sha256")
     )
 
+    if source_corpus_version == SOURCE_CORPUS_VERSION and corpus_version == CORPUS_VERSION:
+        layering_note = LAYERING_NOTE
+    else:
+        layering_note = (
+            f"Layering: {source_corpus_version} freezes observation-level hydrated text; "
+            f"{corpus_version} normalizes text_for_embedding into a canonical title+abstract string where available; "
+            "future ml-labeled-text-embeddings-* and cross-pool diagnostics can use this as a text-format sensitivity control."
+        )
+
     metadata = {
         "artifact_type": ARTIFACT_TYPE,
-        "corpus_version": CORPUS_VERSION,
+        "corpus_version": corpus_version,
         "generated_at": generated_at or _now_iso_z(),
         "source_corpus_path": portable_repo_path(source_path),
         "source_corpus_sha256": source_sha,
@@ -204,7 +223,7 @@ def build_ml_labeled_text_corpus_normalize_payload(
         ),
         "n_text_changed_from_v1": n_changed,
         "caveats": list(CAVEATS),
-        "layering_note": LAYERING_NOTE,
+        "layering_note": layering_note,
     }
     return {"metadata": metadata, "rows": output_rows}
 
@@ -212,9 +231,9 @@ def build_ml_labeled_text_corpus_normalize_payload(
 def render_markdown(payload: Mapping[str, Any]) -> str:
     metadata = payload["metadata"]
     lines = [
-        "# Labeled Text Corpus v2",
+        f"# Labeled Text Corpus ({metadata.get('corpus_version')})",
         "",
-        "Canonical text-format normalization for `ml-labeled-text-corpus-v1`. This is data preparation only: no OpenAlex calls, no Postgres, no embeddings, no ranking, and no label edits.",
+        f"Canonical text-format normalization for `{metadata.get('source_corpus_version')}`. This is data preparation only: no OpenAlex calls, no Postgres, no embeddings, no ranking, and no label edits.",
         "",
         "## Summary",
         "",
@@ -259,8 +278,14 @@ def write_ml_labeled_text_corpus_normalize(
     source_corpus_path: Path,
     output_path: Path,
     markdown_output_path: Path | None,
+    source_corpus_version: str = SOURCE_CORPUS_VERSION,
+    corpus_version: str = CORPUS_VERSION,
 ) -> dict[str, Any]:
-    payload = build_ml_labeled_text_corpus_normalize_payload(source_corpus_path=source_corpus_path)
+    payload = build_ml_labeled_text_corpus_normalize_payload(
+        source_corpus_path=source_corpus_path,
+        source_corpus_version=source_corpus_version,
+        corpus_version=corpus_version,
+    )
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

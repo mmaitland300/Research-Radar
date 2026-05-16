@@ -55,6 +55,7 @@ SLICE_DEFINITIONS: dict[str, str] = {
         "ml_contrastive_offline_audit, ml_emerging_target_gap_audit:good_or_acceptable}"
     ),
     "hard_negative": 'review_pool_variant == "ml_hard_negative_audit"',
+    "transfer_gap": 'review_pool_variant == "ml_transfer_gap_audit"',
     "legacy_or_uncategorized": "review_pool_variant is null, empty, or whitespace-only",
 }
 
@@ -71,12 +72,12 @@ TRANSFER_COMPARISONS = (
     ),
     (
         "all_not_external_near_miss_to_external_near_miss",
-        ("blind_snapshot", "rank_shaped_family", "hard_negative", "legacy_or_uncategorized"),
+        ("blind_snapshot", "rank_shaped_family", "hard_negative", "transfer_gap", "legacy_or_uncategorized"),
         ("external_near_miss",),
     ),
     (
         "all_not_blind_snapshot_to_blind_snapshot",
-        ("external_near_miss", "rank_shaped_family", "hard_negative", "legacy_or_uncategorized"),
+        ("external_near_miss", "rank_shaped_family", "hard_negative", "transfer_gap", "legacy_or_uncategorized"),
         ("blind_snapshot",),
     ),
 )
@@ -123,7 +124,11 @@ def _duplicate_values(values: Sequence[str]) -> list[str]:
     return sorted(k for k, v in counts.items() if v > 1)
 
 
-def _validate_embedding_payload(payload: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _validate_embedding_payload(
+    payload: Mapping[str, Any],
+    *,
+    expected_embedding_artifact_version: str = EMBEDDING_ARTIFACT_VERSION,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     metadata = payload.get("metadata")
     rows = payload.get("rows")
     if not isinstance(metadata, dict):
@@ -134,10 +139,10 @@ def _validate_embedding_payload(payload: Mapping[str, Any]) -> tuple[dict[str, A
         raise MLTextBaselineCrossPoolError(
             f"expected embedding metadata.artifact_type={EMBEDDING_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
         )
-    if metadata.get("embedding_artifact_version") != EMBEDDING_ARTIFACT_VERSION:
+    if metadata.get("embedding_artifact_version") != expected_embedding_artifact_version:
         raise MLTextBaselineCrossPoolError(
             "expected embedding metadata.embedding_artifact_version="
-            f"{EMBEDDING_ARTIFACT_VERSION!r}, got {metadata.get('embedding_artifact_version')!r}"
+            f"{expected_embedding_artifact_version!r}, got {metadata.get('embedding_artifact_version')!r}"
         )
     expected_dim = metadata.get("embedding_dimensions")
     if not isinstance(expected_dim, int) or expected_dim <= 0:
@@ -176,11 +181,15 @@ def _validate_embedding_payload(payload: Mapping[str, Any]) -> tuple[dict[str, A
     return metadata, sorted(normalized, key=lambda row: str(row["row_id"]))
 
 
-def _validate_label_payload(payload: Mapping[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+def _validate_label_payload(
+    payload: Mapping[str, Any],
+    *,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
+) -> tuple[str, list[dict[str, Any]]]:
     dataset_version = str(payload.get("dataset_version") or "")
-    if dataset_version != LABEL_DATASET_VERSION:
+    if dataset_version != expected_label_dataset_version:
         raise MLTextBaselineCrossPoolError(
-            f"expected label dataset_version={LABEL_DATASET_VERSION!r}, got {dataset_version!r}"
+            f"expected label dataset_version={expected_label_dataset_version!r}, got {dataset_version!r}"
         )
     rows = payload.get("rows")
     if not isinstance(rows, list):
@@ -213,6 +222,8 @@ def _slice_name(row: Mapping[str, Any]) -> str | None:
         return "rank_shaped_family"
     if raw == "ml_hard_negative_audit":
         return "hard_negative"
+    if raw == "ml_transfer_gap_audit":
+        return "transfer_gap"
     if not raw:
         return "legacy_or_uncategorized"
     return None
@@ -708,6 +719,9 @@ def build_ml_text_baseline_cross_pool_payload(
     *,
     embeddings_path: Path,
     label_dataset_path: Path,
+    expected_embedding_artifact_version: str = EMBEDDING_ARTIFACT_VERSION,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
+    baseline_version: str = BASELINE_VERSION,
     random_seed: int = 0,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
@@ -715,8 +729,14 @@ def build_ml_text_baseline_cross_pool_payload(
     label_path = Path(label_dataset_path)
     emb_payload = _load_json_object(emb_path)
     label_payload = _load_json_object(label_path)
-    embedding_metadata, embedding_rows = _validate_embedding_payload(emb_payload)
-    label_dataset_version, label_rows = _validate_label_payload(label_payload)
+    embedding_metadata, embedding_rows = _validate_embedding_payload(
+        emb_payload,
+        expected_embedding_artifact_version=expected_embedding_artifact_version,
+    )
+    label_dataset_version, label_rows = _validate_label_payload(
+        label_payload,
+        expected_label_dataset_version=expected_label_dataset_version,
+    )
     joined_rows, join_summary = _join_rows(embedding_rows=embedding_rows, label_rows=label_rows)
 
     per_target: dict[str, Any] = {}
@@ -765,7 +785,7 @@ def build_ml_text_baseline_cross_pool_payload(
 
     metadata = {
         "artifact_type": ARTIFACT_TYPE,
-        "baseline_version": BASELINE_VERSION,
+        "baseline_version": baseline_version,
         "generated_at": generated_at or _now_iso_z(),
         "embeddings_path": portable_repo_path(emb_path),
         "embeddings_sha256": sha256_file(emb_path),
@@ -793,9 +813,9 @@ def _fmt(value: Any) -> str:
 def render_markdown(payload: Mapping[str, Any]) -> str:
     meta = payload["metadata"]
     lines = [
-        "# Text Baseline Cross-Pool v1",
+        f"# Text Baseline Cross-Pool ({meta.get('baseline_version')})",
         "",
-        "Offline source-transfer diagnostic over frozen labeled text embeddings and v7 labels.",
+        f"Offline source-transfer diagnostic over frozen labeled text embeddings and {meta.get('label_dataset_version')} labels.",
         "",
         "## Inputs",
         "",
@@ -887,11 +907,17 @@ def write_ml_text_baseline_cross_pool(
     label_dataset_path: Path,
     output_path: Path,
     markdown_output_path: Path | None,
+    expected_embedding_artifact_version: str = EMBEDDING_ARTIFACT_VERSION,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
+    baseline_version: str = BASELINE_VERSION,
     random_seed: int = 0,
 ) -> dict[str, Any]:
     payload = build_ml_text_baseline_cross_pool_payload(
         embeddings_path=embeddings_path,
         label_dataset_path=label_dataset_path,
+        expected_embedding_artifact_version=expected_embedding_artifact_version,
+        expected_label_dataset_version=expected_label_dataset_version,
+        baseline_version=baseline_version,
         random_seed=random_seed,
     )
     out = Path(output_path)

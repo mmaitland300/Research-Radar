@@ -360,6 +360,7 @@ def build_ml_labeled_text_corpus_payload(
     *,
     label_dataset_path: Path,
     external_text_corpus_path: Path | None = None,
+    corpus_version: str = CORPUS_VERSION,
     mailto: str | None = None,
     mock_openalex: bool = False,
     max_rows: int | None = None,
@@ -399,9 +400,14 @@ def build_ml_labeled_text_corpus_payload(
     by_variant = Counter(_norm_ws(row.get("review_pool_variant")) or "(null)" for row in output_rows)
     by_family = Counter(_norm_ws(row.get("family")) or "(null)" for row in output_rows)
     by_source = Counter(_norm_ws(row.get("text_source")) or "(null)" for row in output_rows)
+    layering_note = (
+        "Layering: ml-label-dataset-* supplies observation-level labels; ml-external-text-corpus-* supplies frozen "
+        f"external text reuse; {corpus_version} freezes a labeled text substrate for future "
+        "ml-labeled-text-embeddings-* and cross-pool offline diagnostics."
+    )
     metadata = {
         "artifact_type": ARTIFACT_TYPE,
-        "corpus_version": CORPUS_VERSION,
+        "corpus_version": corpus_version,
         "generated_at": generated_at or _now_iso_z(),
         "label_dataset_path": portable_repo_path(label_path),
         "label_dataset_sha256": label_sha,
@@ -427,7 +433,7 @@ def build_ml_labeled_text_corpus_payload(
             "mock_openalex": mock_openalex,
         },
         "caveats": list(CAVEATS),
-        "layering_note": LAYERING_NOTE,
+        "layering_note": layering_note,
     }
     return {"metadata": metadata, "rows": output_rows}
 
@@ -435,7 +441,7 @@ def build_ml_labeled_text_corpus_payload(
 def render_markdown(payload: Mapping[str, Any]) -> str:
     meta = payload["metadata"]
     lines = [
-        "# Labeled Text Corpus v1",
+        f"# Labeled Text Corpus ({meta.get('corpus_version')})",
         "",
         "Observation-level text corpus for explicitly labeled audit rows. This is data preparation only: no embeddings, no model training, no ranking, and no Postgres.",
         "",
@@ -443,6 +449,8 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         "",
         f"- **label_dataset:** `{meta.get('label_dataset_path')}`",
         f"- **label_dataset_sha256:** `{meta.get('label_dataset_sha256')}`",
+        f"- **label_dataset_version:** `{meta.get('label_dataset_version')}`",
+        f"- **corpus_version:** `{meta.get('corpus_version')}`",
         f"- **external_text_corpus:** `{meta.get('external_text_corpus_path') or 'not provided'}`",
         f"- **external_text_corpus_sha256:** `{meta.get('external_text_corpus_sha256') or 'n/a'}`",
         f"- **row_count:** `{meta.get('row_count')}`",
@@ -458,7 +466,7 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         "",
         "## Intended Next Step",
         "",
-        "Generate `ml-labeled-text-embeddings-v1` from this frozen corpus, then run source-transfer or cross-pool offline diagnostics stratified by `review_pool_variant` and `family`.",
+        "Generate a matching `ml-labeled-text-embeddings-*` artifact from this frozen corpus, then run source-transfer or cross-pool offline diagnostics stratified by `review_pool_variant` and `family`.",
         "",
         "## Layering",
         "",
@@ -480,13 +488,15 @@ def write_ml_labeled_text_corpus(
     external_text_corpus_path: Path | None,
     output_path: Path,
     markdown_output_path: Path | None,
-    mailto: str | None,
-    mock_openalex: bool,
-    max_rows: int | None,
+    corpus_version: str = CORPUS_VERSION,
+    mailto: str | None = None,
+    mock_openalex: bool = False,
+    max_rows: int | None = None,
 ) -> dict[str, Any]:
     payload = build_ml_labeled_text_corpus_payload(
         label_dataset_path=label_dataset_path,
         external_text_corpus_path=external_text_corpus_path,
+        corpus_version=corpus_version,
         mailto=mailto,
         mock_openalex=mock_openalex,
         max_rows=max_rows,

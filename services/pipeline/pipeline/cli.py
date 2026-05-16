@@ -1510,6 +1510,11 @@ def main() -> None:
         default=None,
         help="Optional cap on selected labeled audit rows for dev/CI; omit for full corpus",
     )
+    ml_labeled_text_corpus_parser.add_argument(
+        "--corpus-version",
+        default="ml-labeled-text-corpus-v1",
+        help="Corpus version string to write (default: ml-labeled-text-corpus-v1)",
+    )
     ml_labeled_text_corpus_normalize_parser = subparsers.add_parser(
         "ml-labeled-text-corpus-normalize",
         help="Normalize ml-labeled-text-corpus-v1 into canonical title+abstract text v2 (no DB, HTTP, embeddings, or ranking)",
@@ -1528,6 +1533,16 @@ def main() -> None:
         "--markdown-output",
         default=None,
         help="Optional path to write companion Markdown summary",
+    )
+    ml_labeled_text_corpus_normalize_parser.add_argument(
+        "--source-corpus-version",
+        default="ml-labeled-text-corpus-v1",
+        help="Expected source corpus metadata.corpus_version (default: ml-labeled-text-corpus-v1)",
+    )
+    ml_labeled_text_corpus_normalize_parser.add_argument(
+        "--corpus-version",
+        default="ml-labeled-text-corpus-v2",
+        help="Output corpus version string (default: ml-labeled-text-corpus-v2)",
     )
     ml_external_text_embeddings_parser = subparsers.add_parser(
         "ml-external-text-embeddings",
@@ -1647,6 +1662,16 @@ def main() -> None:
         action="store_true",
         help="Skip live OpenAI and emit deterministic fake vectors for tests/dry runs",
     )
+    ml_labeled_text_embeddings_parser.add_argument(
+        "--source-corpus-version",
+        default="ml-labeled-text-corpus-v1",
+        help="Expected text corpus metadata.corpus_version (default: ml-labeled-text-corpus-v1)",
+    )
+    ml_labeled_text_embeddings_parser.add_argument(
+        "--embedding-artifact-version",
+        default="ml-labeled-text-embeddings-v1",
+        help="Embedding artifact version string to write (default: ml-labeled-text-embeddings-v1)",
+    )
     ml_text_baseline_cross_pool_parser = subparsers.add_parser(
         "ml-text-baseline-cross-pool",
         help="Offline source-transfer diagnostic over labeled text embeddings and v7 labels (no DB, no ranking)",
@@ -1676,6 +1701,21 @@ def main() -> None:
         type=int,
         default=0,
         help="Random seed for shuffled stratified CV (default: 0)",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--expected-embedding-artifact-version",
+        default="ml-labeled-text-embeddings-v1",
+        help="Expected embedding metadata.embedding_artifact_version (default: ml-labeled-text-embeddings-v1)",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--expected-label-dataset-version",
+        default="ml-label-dataset-v7",
+        help="Expected label dataset_version (default: ml-label-dataset-v7)",
+    )
+    ml_text_baseline_cross_pool_parser.add_argument(
+        "--baseline-version",
+        default="ml-text-baseline-cross-pool-v1",
+        help="Baseline version string to write (default: ml-text-baseline-cross-pool-v1)",
     )
     ml_text_transfer_readiness_parser = subparsers.add_parser(
         "ml-text-transfer-readiness",
@@ -1710,6 +1750,31 @@ def main() -> None:
         "--markdown-output",
         default=None,
         help="Optional path to write companion Markdown summary",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--expected-cross-pool-version",
+        default="ml-text-baseline-cross-pool-v1",
+        help="Expected cross-pool metadata.baseline_version (default: ml-text-baseline-cross-pool-v1)",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--expected-label-dataset-version",
+        default="ml-label-dataset-v7",
+        help="Expected label dataset_version (default: ml-label-dataset-v7)",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--expected-text-corpus-version",
+        default="ml-labeled-text-corpus-v2",
+        help="Expected text corpus metadata.corpus_version (default: ml-labeled-text-corpus-v2)",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--expected-embeddings-version",
+        default="ml-labeled-text-embeddings-v1",
+        help="Expected embeddings metadata.embedding_artifact_version (default: ml-labeled-text-embeddings-v1)",
+    )
+    ml_text_transfer_readiness_parser.add_argument(
+        "--readiness-version",
+        default="ml-text-transfer-readiness-v1",
+        help="Readiness version string to write (default: ml-text-transfer-readiness-v1)",
     )
     ml_production_readiness_plan_parser = subparsers.add_parser(
         "ml-production-readiness-plan",
@@ -2802,6 +2867,7 @@ def main() -> None:
                 external_text_corpus_path=external,
                 output_path=out_json,
                 markdown_output_path=out_md,
+                corpus_version=str(args.corpus_version),
                 mailto=args.mailto,
                 mock_openalex=bool(args.mock_openalex),
                 max_rows=args.max_rows,
@@ -2827,6 +2893,8 @@ def main() -> None:
                 source_corpus_path=Path(args.source_corpus),
                 output_path=out_json,
                 markdown_output_path=out_md,
+                source_corpus_version=str(args.source_corpus_version),
+                corpus_version=str(args.corpus_version),
             )
         except MLLabeledTextCorpusNormalizeError as e:
             print(f"ml-labeled-text-corpus-normalize: {e}", file=sys.stderr)
@@ -2900,6 +2968,8 @@ def main() -> None:
                 text_corpus_path=Path(args.text_corpus),
                 output_path=out_json,
                 markdown_output_path=out_md,
+                source_corpus_version=str(args.source_corpus_version),
+                embedding_artifact_version=str(args.embedding_artifact_version),
                 embedding_model=str(args.embedding_model),
                 expected_dimensions=int(args.expected_dimensions),
                 batch_size=int(args.batch_size),
@@ -2927,6 +2997,9 @@ def main() -> None:
                 label_dataset_path=Path(args.label_dataset),
                 output_path=out_json,
                 markdown_output_path=out_md,
+                expected_embedding_artifact_version=str(args.expected_embedding_artifact_version),
+                expected_label_dataset_version=str(args.expected_label_dataset_version),
+                baseline_version=str(args.baseline_version),
                 random_seed=int(args.random_seed),
             )
         except MLTextBaselineCrossPoolError as e:
@@ -2955,6 +3028,11 @@ def main() -> None:
                 embeddings_v1_path=embeddings_v1,
                 output_path=out_json,
                 markdown_output_path=out_md,
+                expected_cross_pool_version=str(args.expected_cross_pool_version),
+                expected_label_dataset_version=str(args.expected_label_dataset_version),
+                expected_text_corpus_version=str(args.expected_text_corpus_version),
+                expected_embeddings_version=str(args.expected_embeddings_version),
+                readiness_version=str(args.readiness_version),
             )
         except MLTextTransferReadinessError as e:
             print(f"ml-text-transfer-readiness: {e}", file=sys.stderr)

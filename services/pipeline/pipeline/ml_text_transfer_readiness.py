@@ -104,53 +104,71 @@ def _metadata(payload: Mapping[str, Any], *, name: str) -> Mapping[str, Any]:
     return metadata
 
 
-def _validate_cross_pool(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+def _validate_cross_pool(
+    payload: Mapping[str, Any],
+    *,
+    expected_cross_pool_version: str = CROSS_POOL_VERSION,
+) -> Mapping[str, Any]:
     metadata = _metadata(payload, name="cross-pool")
     if metadata.get("artifact_type") != CROSS_POOL_ARTIFACT_TYPE:
         raise MLTextTransferReadinessError(
             f"expected cross-pool metadata.artifact_type={CROSS_POOL_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
         )
-    if metadata.get("baseline_version") != CROSS_POOL_VERSION:
+    if metadata.get("baseline_version") != expected_cross_pool_version:
         raise MLTextTransferReadinessError(
-            f"expected cross-pool metadata.baseline_version={CROSS_POOL_VERSION!r}, got {metadata.get('baseline_version')!r}"
+            "expected cross-pool metadata.baseline_version="
+            f"{expected_cross_pool_version!r}, got {metadata.get('baseline_version')!r}"
         )
     if not isinstance(payload.get("per_target"), Mapping):
         raise MLTextTransferReadinessError("cross-pool JSON missing per_target object")
     return metadata
 
 
-def _validate_label_dataset(payload: Mapping[str, Any]) -> None:
-    if payload.get("dataset_version") != LABEL_DATASET_VERSION:
+def _validate_label_dataset(
+    payload: Mapping[str, Any],
+    *,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
+) -> None:
+    if payload.get("dataset_version") != expected_label_dataset_version:
         raise MLTextTransferReadinessError(
-            f"expected label dataset_version={LABEL_DATASET_VERSION!r}, got {payload.get('dataset_version')!r}"
+            f"expected label dataset_version={expected_label_dataset_version!r}, got {payload.get('dataset_version')!r}"
         )
     if not isinstance(payload.get("rows"), list):
         raise MLTextTransferReadinessError("label dataset missing rows array")
 
 
-def _validate_text_corpus_v2(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+def _validate_text_corpus_v2(
+    payload: Mapping[str, Any],
+    *,
+    expected_text_corpus_version: str = TEXT_CORPUS_V2_VERSION,
+) -> Mapping[str, Any]:
     metadata = _metadata(payload, name="text-corpus-v2")
     if metadata.get("artifact_type") != TEXT_CORPUS_ARTIFACT_TYPE:
         raise MLTextTransferReadinessError(
             f"expected text-corpus-v2 metadata.artifact_type={TEXT_CORPUS_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
         )
-    if metadata.get("corpus_version") != TEXT_CORPUS_V2_VERSION:
+    if metadata.get("corpus_version") != expected_text_corpus_version:
         raise MLTextTransferReadinessError(
-            f"expected text-corpus-v2 metadata.corpus_version={TEXT_CORPUS_V2_VERSION!r}, got {metadata.get('corpus_version')!r}"
+            "expected text-corpus-v2 metadata.corpus_version="
+            f"{expected_text_corpus_version!r}, got {metadata.get('corpus_version')!r}"
         )
     return metadata
 
 
-def _validate_embeddings_v1(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+def _validate_embeddings_v1(
+    payload: Mapping[str, Any],
+    *,
+    expected_embeddings_version: str = EMBEDDINGS_V1_VERSION,
+) -> Mapping[str, Any]:
     metadata = _metadata(payload, name="embeddings-v1")
     if metadata.get("artifact_type") != EMBEDDINGS_ARTIFACT_TYPE:
         raise MLTextTransferReadinessError(
             f"expected embeddings-v1 metadata.artifact_type={EMBEDDINGS_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
         )
-    if metadata.get("embedding_artifact_version") != EMBEDDINGS_V1_VERSION:
+    if metadata.get("embedding_artifact_version") != expected_embeddings_version:
         raise MLTextTransferReadinessError(
             "expected embeddings-v1 metadata.embedding_artifact_version="
-            f"{EMBEDDINGS_V1_VERSION!r}, got {metadata.get('embedding_artifact_version')!r}"
+            f"{expected_embeddings_version!r}, got {metadata.get('embedding_artifact_version')!r}"
         )
     return metadata
 
@@ -556,21 +574,42 @@ def build_heuristic_readiness_flags(
     return flags
 
 
-def build_text_format_evidence(text_corpus_v2_payload: Mapping[str, Any] | None) -> dict[str, Any]:
+def build_text_format_evidence(
+    text_corpus_v2_payload: Mapping[str, Any] | None,
+    *,
+    expected_text_corpus_version: str = TEXT_CORPUS_V2_VERSION,
+) -> dict[str, Any]:
     if text_corpus_v2_payload is None:
         return {
             "provided": False,
-            "conclusion": "No ml-labeled-text-corpus-v2 artifact was provided; text-format sensitivity evidence is unavailable.",
+            "conclusion": f"No {expected_text_corpus_version} artifact was provided; text-format sensitivity evidence is unavailable.",
         }
-    metadata = _validate_text_corpus_v2(text_corpus_v2_payload)
+    metadata = _validate_text_corpus_v2(
+        text_corpus_v2_payload,
+        expected_text_corpus_version=expected_text_corpus_version,
+    )
     changed = metadata.get("n_text_changed_from_v1")
     if changed == 0:
-        conclusion = NO_REEMBED_NEEDED_CONCLUSION
+        if expected_text_corpus_version == TEXT_CORPUS_V2_VERSION:
+            conclusion = NO_REEMBED_NEEDED_CONCLUSION
+        else:
+            conclusion = (
+                f"Text-format normalization did not change text_for_embedding values in {expected_text_corpus_version}; "
+                "regenerating embeddings solely for text formatting is unnecessary for this dataset. The observed "
+                "transfer differences are unlikely to be explained by title/abstract string packaging alone, though "
+                "source selection and label context remain confounds."
+            )
     else:
-        conclusion = (
-            "Text-format normalization changed text_for_embedding values in v2; generate v2 embeddings before comparing "
-            "cross-pool transfer again."
-        )
+        if expected_text_corpus_version == TEXT_CORPUS_V2_VERSION:
+            conclusion = (
+                "Text-format normalization changed text_for_embedding values in v2; generate v2 embeddings before comparing "
+                "cross-pool transfer again."
+            )
+        else:
+            conclusion = (
+                f"Text-format normalization changed text_for_embedding values in {expected_text_corpus_version}; generate "
+                "matching embeddings before comparing cross-pool transfer again."
+            )
     return {
         "provided": True,
         "counts_by_previous_embedding_text_format_version": metadata.get(
@@ -617,6 +656,11 @@ def build_ml_text_transfer_readiness_payload(
     label_dataset_path: Path,
     text_corpus_v2_path: Path | None = None,
     embeddings_v1_path: Path | None = None,
+    expected_cross_pool_version: str = CROSS_POOL_VERSION,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
+    expected_text_corpus_version: str = TEXT_CORPUS_V2_VERSION,
+    expected_embeddings_version: str = EMBEDDINGS_V1_VERSION,
+    readiness_version: str = READINESS_VERSION,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     inputs = [
@@ -625,30 +669,39 @@ def build_ml_text_transfer_readiness_payload(
     ]
     cross_pool_payload = _load_json_object(Path(cross_pool_path))
     label_payload = _load_json_object(Path(label_dataset_path))
-    _validate_cross_pool(cross_pool_payload)
-    _validate_label_dataset(label_payload)
+    _validate_cross_pool(cross_pool_payload, expected_cross_pool_version=expected_cross_pool_version)
+    _validate_label_dataset(label_payload, expected_label_dataset_version=expected_label_dataset_version)
 
     text_corpus_payload = None
     if text_corpus_v2_path is not None:
         inputs.append(_input_record("text_corpus_v2", text_corpus_v2_path))
         text_corpus_payload = _load_json_object(Path(text_corpus_v2_path))
-        _validate_text_corpus_v2(text_corpus_payload)
+        _validate_text_corpus_v2(text_corpus_payload, expected_text_corpus_version=expected_text_corpus_version)
 
     if embeddings_v1_path is not None:
         inputs.append(_input_record("embeddings_v1", embeddings_v1_path))
         embeddings_payload = _load_json_object(Path(embeddings_v1_path))
-        _validate_embeddings_v1(embeddings_payload)
+        _validate_embeddings_v1(embeddings_payload, expected_embeddings_version=expected_embeddings_version)
 
     class_balance, duplicate_summary = build_class_balance(label_payload)
     cross_pool_synthesis = build_cross_pool_synthesis(cross_pool_payload)
-    text_format_evidence = build_text_format_evidence(text_corpus_payload)
+    text_format_evidence = build_text_format_evidence(
+        text_corpus_payload,
+        expected_text_corpus_version=expected_text_corpus_version,
+    )
     flags = build_heuristic_readiness_flags(cross_pool_payload=cross_pool_payload, class_balance=class_balance)
 
     metadata = {
         "artifact_type": ARTIFACT_TYPE,
-        "readiness_version": READINESS_VERSION,
+        "readiness_version": readiness_version,
         "generated_at": generated_at or _now_iso_z(),
         "inputs": inputs,
+        "expected_versions": {
+            "cross_pool": expected_cross_pool_version,
+            "label_dataset": expected_label_dataset_version,
+            "text_corpus": expected_text_corpus_version,
+            "embeddings": expected_embeddings_version,
+        },
         "thresholds": dict(THRESHOLDS),
         "caveats": list(CAVEATS),
     }
@@ -689,7 +742,7 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
     flags = payload.get("heuristic_readiness_flags", {})
 
     lines = [
-        "# Text Transfer Readiness v1",
+        f"# Text Transfer Readiness ({metadata.get('readiness_version')})",
         "",
         "## Executive Summary",
         "",
@@ -799,12 +852,22 @@ def write_ml_text_transfer_readiness(
     embeddings_v1_path: Path | None,
     output_path: Path,
     markdown_output_path: Path | None,
+    expected_cross_pool_version: str = CROSS_POOL_VERSION,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
+    expected_text_corpus_version: str = TEXT_CORPUS_V2_VERSION,
+    expected_embeddings_version: str = EMBEDDINGS_V1_VERSION,
+    readiness_version: str = READINESS_VERSION,
 ) -> dict[str, Any]:
     payload = build_ml_text_transfer_readiness_payload(
         cross_pool_path=cross_pool_path,
         label_dataset_path=label_dataset_path,
         text_corpus_v2_path=text_corpus_v2_path,
         embeddings_v1_path=embeddings_v1_path,
+        expected_cross_pool_version=expected_cross_pool_version,
+        expected_label_dataset_version=expected_label_dataset_version,
+        expected_text_corpus_version=expected_text_corpus_version,
+        expected_embeddings_version=expected_embeddings_version,
+        readiness_version=readiness_version,
     )
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)

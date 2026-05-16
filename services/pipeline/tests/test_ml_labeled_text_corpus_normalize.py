@@ -157,6 +157,21 @@ def test_canonical_title_falls_back_to_label_title_then_work_id(tmp_path: Path) 
     assert payload["rows"][1]["text_for_embedding"] == "Wfallback\n\nAbstract"
 
 
+def test_accepts_caller_supplied_source_and_output_versions(tmp_path: Path) -> None:
+    source = _payload(version="ml-labeled-text-corpus-v3")
+    payload = build_ml_labeled_text_corpus_normalize_payload(
+        source_corpus_path=_write_source(tmp_path, source),
+        source_corpus_version="ml-labeled-text-corpus-v3",
+        corpus_version="ml-labeled-text-corpus-v3-normalized",
+        generated_at="2026-05-14T00:00:00Z",
+    )
+
+    assert payload["metadata"]["source_corpus_version"] == "ml-labeled-text-corpus-v3"
+    assert payload["metadata"]["corpus_version"] == "ml-labeled-text-corpus-v3-normalized"
+    assert "ml-labeled-text-corpus-v3-normalized" in payload["metadata"]["layering_note"]
+    assert "ml-labeled-text-corpus-v3-normalized" in render_markdown(payload)
+
+
 def test_validation_failures(tmp_path: Path) -> None:
     with pytest.raises(MLLabeledTextCorpusNormalizeError, match="metadata object"):
         build_ml_labeled_text_corpus_normalize_payload(source_corpus_path=_write_source(tmp_path, {"rows": []}))
