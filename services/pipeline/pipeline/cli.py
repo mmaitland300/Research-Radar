@@ -2441,6 +2441,55 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_hybrid_scorer_offline_experiment_parser = subparsers.add_parser(
+        "ml-hybrid-scorer-offline-experiment",
+        help="Execute pre-registered hybrid scorer offline experiment from scoring v3 JSON only",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--production-candidate-scoring",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v3 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--production-candidate-metric-gates",
+        required=True,
+        help="Path to ml-offline-production-candidate-metric-gates-v3 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--experiment-spec",
+        required=True,
+        help="Path to ml-hybrid-scorer-offline-experiment-v1-spec JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--holdout-assignment",
+        required=True,
+        help="Path to ml-learned-scorer-holdout-assignment-v1 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--holdout-policy",
+        default=None,
+        help="Optional ml-learned-scorer-holdout-policy-v1 JSON provenance input",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write hybrid scorer offline experiment JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--experiment-version",
+        default="ml-hybrid-scorer-offline-experiment-v1",
+        help="Experiment version string to write (default: ml-hybrid-scorer-offline-experiment-v1)",
+    )
+    ml_hybrid_scorer_offline_experiment_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -3999,6 +4048,34 @@ def main() -> None:
             )
         except MLHybridScorerOfflineExperimentSpecError as e:
             print(f"ml-hybrid-scorer-offline-experiment-spec: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-hybrid-scorer-offline-experiment":
+        from pipeline.ml_hybrid_scorer_offline_experiment import (
+            MLHybridScorerOfflineExperimentError,
+            write_ml_hybrid_scorer_offline_experiment,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_hybrid_scorer_offline_experiment(
+                production_candidate_scoring_path=Path(args.production_candidate_scoring),
+                production_candidate_metric_gates_path=Path(args.production_candidate_metric_gates),
+                experiment_spec_path=Path(args.experiment_spec),
+                holdout_assignment_path=Path(args.holdout_assignment),
+                holdout_policy_path=Path(args.holdout_policy) if args.holdout_policy else None,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                experiment_version=str(args.experiment_version),
+                repo_root=repo_root,
+            )
+        except MLHybridScorerOfflineExperimentError as e:
+            print(f"ml-hybrid-scorer-offline-experiment: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
