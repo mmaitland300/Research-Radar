@@ -2490,6 +2490,55 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_hybrid_scorer_metric_gates_parser = subparsers.add_parser(
+        "ml-hybrid-scorer-metric-gates",
+        help="Evaluate hybrid scorer offline experiment metric gates (JSON-only; no training, DB, shadow, or prod)",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--hybrid-experiment",
+        required=True,
+        help="Path to ml-hybrid-scorer-offline-experiment-v1 JSON",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--experiment-spec",
+        required=True,
+        help="Path to ml-hybrid-scorer-offline-experiment-v1-spec JSON",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--production-candidate-metric-gates",
+        required=True,
+        help="Path to ml-offline-production-candidate-metric-gates-v3 JSON",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--holdout-assignment",
+        default=None,
+        help="Optional ml-learned-scorer-holdout-assignment-v1 JSON provenance/eval-SHA check",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write hybrid scorer metric gates JSON",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--gates-version",
+        default="ml-hybrid-scorer-metric-gates-v1",
+        help="Gates version string to write (default: ml-hybrid-scorer-metric-gates-v1)",
+    )
+    ml_hybrid_scorer_metric_gates_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -4076,6 +4125,34 @@ def main() -> None:
             )
         except MLHybridScorerOfflineExperimentError as e:
             print(f"ml-hybrid-scorer-offline-experiment: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-hybrid-scorer-metric-gates":
+        from pipeline.ml_hybrid_scorer_metric_gates import (
+            MLHybridScorerMetricGatesError,
+            write_ml_hybrid_scorer_metric_gates,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_hybrid_scorer_metric_gates(
+                hybrid_experiment_path=Path(args.hybrid_experiment),
+                experiment_spec_path=Path(args.experiment_spec),
+                production_candidate_metric_gates_path=Path(args.production_candidate_metric_gates),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                holdout_assignment_path=Path(args.holdout_assignment) if args.holdout_assignment else None,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                gates_version=str(args.gates_version),
+                repo_root=repo_root,
+            )
+        except MLHybridScorerMetricGatesError as e:
+            print(f"ml-hybrid-scorer-metric-gates: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
