@@ -2118,7 +2118,20 @@ def main() -> None:
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--gates-version",
         default="ml-offline-production-candidate-metric-gates-v1",
-        help="Gates version string to write (default: ml-offline-production-candidate-metric-gates-v1)",
+        help=(
+            "Gates version string to write "
+            "(default: ml-offline-production-candidate-metric-gates-v1; use v2 for learned scorer gates)"
+        ),
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--audit-embedding-scorer-export",
+        default=None,
+        help="Path to ml-offline-audit-embedding-scorer-v1 JSON; required for gates v2",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--production-candidate-metric-gates-v1",
+        default=None,
+        help="Optional path to prior ml-offline-production-candidate-metric-gates-v1 JSON",
     )
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--repo-root",
@@ -3528,12 +3541,30 @@ def main() -> None:
         repo_root = Path(args.repo_root) if args.repo_root else None
         out_json = Path(args.output)
         out_md = Path(args.markdown_output)
+        audit_scorer_export = (
+            Path(args.audit_embedding_scorer_export) if args.audit_embedding_scorer_export else None
+        )
+        prior_v1_gates = (
+            Path(args.production_candidate_metric_gates_v1)
+            if args.production_candidate_metric_gates_v1
+            else None
+        )
+        if (
+            str(args.gates_version) == "ml-offline-production-candidate-metric-gates-v2"
+            and audit_scorer_export is None
+        ):
+            parser.error(
+                "--audit-embedding-scorer-export is required when --gates-version "
+                "ml-offline-production-candidate-metric-gates-v2"
+            )
         try:
             write_ml_offline_production_candidate_metric_gates(
                 production_candidate_scoring_path=Path(args.production_candidate_scoring),
                 offline_metric_gates_path=Path(args.offline_metric_gates),
                 split_policy_path=Path(args.split_policy),
                 production_readiness_plan_path=Path(args.production_readiness_plan),
+                audit_embedding_scorer_export_path=audit_scorer_export,
+                production_candidate_metric_gates_v1_path=prior_v1_gates,
                 output_path=out_json,
                 markdown_output_path=out_md,
                 gates_version=str(args.gates_version),

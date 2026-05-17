@@ -1,0 +1,680 @@
+{
+  "blocked_reasons": [
+    "G12_independent_validation_status:not_evaluated",
+    "missing_ml_shadow_scorer_v1",
+    "production_default_blocked"
+  ],
+  "comparison_to_heuristic": {
+    "delta_average_precision": 0.04211340593781876,
+    "delta_precision_at_10": 0.0,
+    "delta_roc_auc": 0.19649122807017538,
+    "side_by_side": {
+      "average_precision": {
+        "audit_embedding_probability_work": 1.0,
+        "heuristic_final_score": 0.9578865940621812
+      },
+      "precision_at_10": {
+        "audit_embedding_probability_work": 1.0,
+        "heuristic_final_score": 1.0
+      },
+      "precision_at_20": {
+        "audit_embedding_probability_work": 1.0,
+        "heuristic_final_score": 1.0
+      },
+      "precision_at_5": {
+        "audit_embedding_probability_work": 1.0,
+        "heuristic_final_score": 1.0
+      },
+      "recall_at_10": {
+        "audit_embedding_probability_work": 0.05263157894736842,
+        "heuristic_final_score": 0.05263157894736842
+      },
+      "recall_at_20": {
+        "audit_embedding_probability_work": 0.10526315789473684,
+        "heuristic_final_score": 0.10526315789473684
+      },
+      "recall_at_5": {
+        "audit_embedding_probability_work": 0.02631578947368421,
+        "heuristic_final_score": 0.02631578947368421
+      },
+      "roc_auc_mann_whitney": {
+        "audit_embedding_probability_work": 1.0,
+        "heuristic_final_score": 0.8035087719298246
+      }
+    }
+  },
+  "coverage_summary": {
+    "candidate_unique_canonical_work_count": 217,
+    "candidate_work_labeled_coverage_rate": 1.0,
+    "labeled_eval_subset_negative_work_count": 27,
+    "labeled_eval_subset_positive_work_count": 190,
+    "labeled_eval_subset_work_count": 217,
+    "missing_embedding_rate": 0.0
+  },
+  "gates": [
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "scope",
+      "gate_id": "G01_input_scope",
+      "observed_value": {
+        "candidate_pool_definition_present": true,
+        "candidate_pool_family": "emerging",
+        "candidate_pool_ranking_run_id": "rank-ee2ba6c816",
+        "experiment_version": "ml-offline-production-candidate-scoring-v2",
+        "metadata_family": "emerging",
+        "metadata_present": true,
+        "metadata_ranking_run_id": "rank-ee2ba6c816",
+        "scoring_mode": "heuristic_and_audit_embedding_scorer",
+        "target": "good_or_acceptable"
+      },
+      "rationale": "The v2 diagnostic must identify the learned-scored product-candidate pool, ranking run, and family.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.metadata.experiment_version",
+        "scoring.metadata.scoring_mode",
+        "scoring.metadata.target",
+        "scoring.metadata.ranking_run_id",
+        "scoring.metadata.family",
+        "scoring.candidate_pool_definition"
+      ],
+      "status": "pass",
+      "threshold": {
+        "candidate_pool_definition_present": true,
+        "experiment_version": "ml-offline-production-candidate-scoring-v2",
+        "family_present": true,
+        "ranking_run_id_present": true,
+        "scoring_mode": "heuristic_and_audit_embedding_scorer",
+        "target": "good_or_acceptable"
+      },
+      "title": "Input Scope"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G02_prior_audit_gates_passed",
+      "observed_value": {
+        "audit_ranker_gates_passed": true
+      },
+      "rationale": "The audit-ranker evidence line must have passed before interpreting product-candidate diagnostics.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "offline_metric_gates.audit_ranker_gates_passed"
+      ],
+      "status": "pass",
+      "threshold": {
+        "audit_ranker_gates_passed": true
+      },
+      "title": "Prior Audit Gates Passed"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "coverage",
+      "gate_id": "G03_candidate_pool_size",
+      "observed_value": {
+        "candidate_unique_canonical_work_count": 217
+      },
+      "rationale": "The existing product-candidate pool must contain enough distinct works for a diagnostic gate.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.candidate_pool_summary.candidate_unique_canonical_work_count"
+      ],
+      "status": "pass",
+      "threshold": {
+        "candidate_unique_work_count_min": 100
+      },
+      "title": "Candidate Pool Size"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "coverage",
+      "gate_id": "G04_label_coverage",
+      "observed_value": {
+        "candidate_work_labeled_coverage_rate": 1.0,
+        "labeled_eval_subset_work_count": 217
+      },
+      "rationale": "The learned application diagnostic needs broad labeled overlap and enough labeled works.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.label_join_summary.candidate_work_labeled_coverage_rate",
+        "scoring.label_join_summary.labeled_eval_subset_work_count"
+      ],
+      "status": "pass",
+      "threshold": {
+        "candidate_label_coverage_rate_min": 0.8,
+        "labeled_eval_work_count_min": 100
+      },
+      "title": "Label Coverage"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "coverage",
+      "gate_id": "G05_negative_coverage",
+      "observed_value": {
+        "labeled_eval_subset_negative_work_count": 27
+      },
+      "rationale": "Negative labeled works are required to interpret separation metrics beyond positive-heavy top-k evidence.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.label_join_summary.labeled_eval_subset_negative_work_count"
+      ],
+      "status": "pass",
+      "threshold": {
+        "labeled_eval_negative_work_count_min": 20
+      },
+      "title": "Negative Coverage"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "coverage",
+      "gate_id": "G06_embedding_coverage",
+      "observed_value": {
+        "labeled_candidate_observation_count": 286,
+        "missing_embedding_count": 0,
+        "missing_embedding_rate": 0.0
+      },
+      "rationale": "The learned scorer can only be evaluated if labeled candidate observations mostly have embeddings.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.embedding_join_summary.missing_embedding_count",
+        "scoring.embedding_join_summary.labeled_candidate_observation_count"
+      ],
+      "status": "pass",
+      "threshold": {
+        "missing_embedding_rate_max": 0.05
+      },
+      "title": "Embedding Coverage"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "metric",
+      "gate_id": "G07_heuristic_roc_auc",
+      "observed_value": {
+        "roc_auc_mann_whitney": 0.8035087719298246,
+        "roc_auc_reason": null
+      },
+      "rationale": "The existing heuristic final_score line should still clear its minimum diagnostic separation floor.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.heuristic_metrics.roc_auc_mann_whitney",
+        "scoring.heuristic_metrics.roc_auc_reason"
+      ],
+      "status": "pass",
+      "threshold": {
+        "heuristic_roc_auc_min": 0.7
+      },
+      "title": "Heuristic ROC-AUC"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "metric",
+      "gate_id": "G08_heuristic_average_precision",
+      "observed_value": {
+        "average_precision": 0.9578865940621812,
+        "average_precision_reason": null
+      },
+      "rationale": "The heuristic final_score line remains a separate minimum evidence check.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.heuristic_metrics.average_precision",
+        "scoring.heuristic_metrics.average_precision_reason"
+      ],
+      "status": "pass",
+      "threshold": {
+        "heuristic_average_precision_min": 0.85
+      },
+      "title": "Heuristic Average Precision"
+    },
+    {
+      "blocking_for": [
+        "product_candidate_heuristic_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "metric",
+      "gate_id": "G09_heuristic_top_k_precision",
+      "observed_value": {
+        "precision_at_10": 1.0,
+        "reason": null
+      },
+      "rationale": "Top-10 precision on labeled works must clear the minimum heuristic threshold.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "scoring.heuristic_metrics.precision_recall_at_k[\"10\"].precision",
+        "scoring.heuristic_metrics.precision_recall_at_k[\"10\"].reason"
+      ],
+      "status": "pass",
+      "threshold": {
+        "heuristic_precision_at_10_min": 0.8
+      },
+      "title": "Heuristic Top-K Precision"
+    },
+    {
+      "blocking_for": [
+        "learned_scorer_application_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "learned_scorer",
+      "gate_id": "G10_learned_scorer_application",
+      "observed_value": {
+        "average_precision": 1.0,
+        "checks": {
+          "learned_average_precision_floor": true,
+          "learned_or_embedding_metrics_learned_product_scores_produced": true,
+          "learned_precision_at_10_floor": true,
+          "learned_roc_auc_floor": true,
+          "product_candidate_rows_used_for_training_zero": true,
+          "score_name_expected": true,
+          "scoring_mode_details_learned_product_scores_produced": true
+        },
+        "learned_score_aggregation_policy": "max_probability",
+        "precision_at_10": 1.0,
+        "roc_auc_mann_whitney": 1.0,
+        "score_name": "audit_embedding_probability_work"
+      },
+      "rationale": "The frozen scorer was applied with minimum diagnostic floors on the labeled overlap; this is not independent validation.",
+      "required_for": [
+        "learned_scorer_application_gates"
+      ],
+      "source_field_paths": [
+        "scoring.scoring_mode_details.learned_product_scores_produced",
+        "scoring.scoring_mode_details.product_candidate_rows_used_for_training",
+        "scoring.scoring_mode_details.learned_score_aggregation_policy",
+        "scoring.learned_or_embedding_metrics.learned_product_scores_produced",
+        "scoring.learned_or_embedding_metrics.metrics.score_name",
+        "scoring.learned_or_embedding_metrics.metrics.roc_auc_mann_whitney",
+        "scoring.learned_or_embedding_metrics.metrics.average_precision",
+        "scoring.learned_or_embedding_metrics.metrics.precision_recall_at_k[\"10\"].precision"
+      ],
+      "status": "pass",
+      "threshold": {
+        "learned_product_scores_produced": true,
+        "minimum_learned_average_precision": 0.85,
+        "minimum_learned_precision_at_10": 0.8,
+        "minimum_learned_roc_auc": 0.7,
+        "product_candidate_rows_used_for_training": 0,
+        "score_name": "audit_embedding_probability_work"
+      },
+      "title": "Learned Scorer Application"
+    },
+    {
+      "blocking_for": [
+        "learned_scorer_application_gates",
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "provenance",
+      "gate_id": "G11_scorer_provenance",
+      "observed_value": {
+        "checks": {
+          "fit_mode": true,
+          "product_candidate_pool_used_for_training": true,
+          "production_artifact_written": true,
+          "scorer_artifact_type": true,
+          "scorer_version": true,
+          "shadow_scoring_authorized": true,
+          "supplied_scorer_sha_matches_scoring_details": true,
+          "supplied_scorer_sha_matches_scoring_inputs": true,
+          "target": true
+        },
+        "embedding_dimensions": 1536,
+        "scoring_inputs_scorer_sha256": "d074a7bca4984579ce171cb5cd14bbd072d22aa17eb41f5fa547aefcb091e894",
+        "scoring_mode_details_scorer_sha256": "d074a7bca4984579ce171cb5cd14bbd072d22aa17eb41f5fa547aefcb091e894",
+        "supplied_scorer_sha256": "d074a7bca4984579ce171cb5cd14bbd072d22aa17eb41f5fa547aefcb091e894"
+      },
+      "rationale": "The scoring artifact must point to the exact frozen audit scorer export that is supplied here.",
+      "required_for": [
+        "learned_scorer_application_gates"
+      ],
+      "source_field_paths": [
+        "scoring.scoring_mode_details.audit_embedding_scorer_sha256",
+        "scoring.metadata.inputs.audit_embedding_scorer_export.sha256",
+        "scorer.metadata.artifact_type",
+        "scorer.metadata.scorer_version",
+        "scorer.metadata.fit_mode",
+        "scorer.metadata.target",
+        "scorer.policy_compliance.product_candidate_pool_used_for_training",
+        "scorer.policy_compliance.shadow_scoring_authorized",
+        "scorer.policy_compliance.production_artifact_written"
+      ],
+      "status": "pass",
+      "threshold": {
+        "fit_mode": "full_fit_audit_corpus",
+        "product_candidate_pool_used_for_training": false,
+        "production_artifact_written": false,
+        "scorer_artifact_type": "ml_offline_audit_embedding_scorer",
+        "scorer_version": "ml-offline-audit-embedding-scorer-v1",
+        "sha256_matches_scoring": true,
+        "shadow_scoring_authorized": false,
+        "target": "good_or_acceptable"
+      },
+      "title": "Scorer Provenance"
+    },
+    {
+      "blocking_for": [
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "validation",
+      "gate_id": "G12_independent_validation_status",
+      "observed_value": {
+        "independent_holdout_policy_present": false,
+        "labeled_overlap_subset_of_audit_training_corpus": true,
+        "product_candidate_pool_used_for_training": false,
+        "scorer_fit_mode": "full_fit_audit_corpus"
+      },
+      "rationale": "The v2 overlap uses the same label dataset and embedding rows as the audit-training universe; these metrics are not holdout validation.",
+      "required_for": [],
+      "source_field_paths": [
+        "scorer.metadata.fit_mode",
+        "scorer.policy_compliance.product_candidate_pool_used_for_training",
+        "scoring.metadata.inputs.label_dataset",
+        "scoring.metadata.inputs.embeddings"
+      ],
+      "status": "not_evaluated",
+      "threshold": {
+        "independent_holdout_policy_present": true
+      },
+      "title": "Independent Validation Status"
+    },
+    {
+      "advisory_text": "The scoring artifact still lists unevaluated product-candidate gates; this v2 artifact supersedes that blocker for offline learned application gates only.",
+      "blocking_for": [
+        "shadow_scoring",
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G13_shadow_blockers_documented",
+      "observed_value": {
+        "scoring_blockers_to_shadow": [
+          "product-candidate learned metric gates not yet evaluated",
+          "no ml-shadow-scorer-v1 contract exists",
+          "production default blocked by readiness plan",
+          "no production model artifact exists"
+        ],
+        "shadow_blockers": [
+          "independent_learned_validation_not_evaluated",
+          "missing_ml_shadow_scorer_v1",
+          "production_default_blocked",
+          "no_production_model_artifact"
+        ],
+        "shadow_scoring_allowed": false
+      },
+      "rationale": "The gate artifact must explicitly keep shadow blocked even when learned application gates pass.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "this.shadow_scoring_allowed",
+        "this.shadow_blockers",
+        "scoring.blockers_to_shadow"
+      ],
+      "status": "pass",
+      "threshold": {
+        "shadow_blockers_include": [
+          "independent_learned_validation_not_evaluated",
+          "missing_ml_shadow_scorer_v1",
+          "production_default_blocked",
+          "no_production_model_artifact"
+        ],
+        "shadow_scoring_allowed": false
+      },
+      "title": "Shadow Blockers Documented"
+    },
+    {
+      "blocking_for": [
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G14_production_readiness_alignment",
+      "observed_value": {
+        "good_or_acceptable": {
+          "allowed_next_stage": "offline_ranker_research_only",
+          "production_eligible": false,
+          "status": "primary_candidate"
+        },
+        "overall_status": "research_only",
+        "surprising_or_useful": {
+          "allowed_next_stage": "rubric_and_labeling_only",
+          "production_eligible": false,
+          "status": "deferred"
+        }
+      },
+      "rationale": "Offline product-candidate gates may advance only while the production plan remains blocked.",
+      "required_for": [
+        "product_candidate_heuristic_gates"
+      ],
+      "source_field_paths": [
+        "production_readiness_plan.metadata.overall_status",
+        "production_readiness_plan.targets.good_or_acceptable.production_eligible",
+        "production_readiness_plan.targets.surprising_or_useful.status"
+      ],
+      "status": "pass",
+      "threshold": {
+        "good_or_acceptable_production_eligible": false,
+        "overall_status_blocked_posture": true,
+        "surprising_or_useful_deferred_or_excluded": true
+      },
+      "title": "Production Readiness Alignment"
+    },
+    {
+      "advisory_text": "This advisory does not fail pass/fail gates.",
+      "blocking_for": [],
+      "category": "advisory",
+      "gate_id": "G15_positive_prevalence_advisory",
+      "observed_value": {
+        "labeled_eval_subset_positive_work_count": 190,
+        "labeled_eval_subset_work_count": 217,
+        "positive_work_prevalence": 0.8755760368663594
+      },
+      "rationale": "High P@k may be prevalence-driven on a positive-heavy labeled subset.",
+      "required_for": [],
+      "source_field_paths": [
+        "scoring.label_join_summary.labeled_eval_subset_positive_work_count",
+        "scoring.label_join_summary.labeled_eval_subset_work_count"
+      ],
+      "status": "advisory_warn",
+      "threshold": {
+        "high_positive_work_prevalence_advisory_threshold": 0.85
+      },
+      "title": "Positive Prevalence Advisory"
+    },
+    {
+      "advisory_text": "This advisory does not fail pass/fail gates.",
+      "blocking_for": [],
+      "category": "advisory",
+      "gate_id": "G16_near_perfect_learned_metrics_advisory",
+      "observed_value": {
+        "learned_average_precision": 1.0,
+        "learned_roc_auc": 1.0
+      },
+      "rationale": "Near-perfect learned metrics may reflect audit-corpus training overlap, not generalization.",
+      "required_for": [],
+      "source_field_paths": [
+        "scoring.learned_or_embedding_metrics.metrics.roc_auc_mann_whitney",
+        "scoring.learned_or_embedding_metrics.metrics.average_precision"
+      ],
+      "status": "advisory_warn",
+      "threshold": {
+        "near_perfect_learned_average_precision_advisory_threshold": 0.99,
+        "near_perfect_learned_roc_auc_advisory_threshold": 0.99
+      },
+      "title": "Near-Perfect Learned Metrics Advisory"
+    }
+  ],
+  "heuristic_metric_summary": {
+    "average_precision": 0.9578865940621812,
+    "positive_work_prevalence": 0.8755760368663594,
+    "precision_at_10": 1.0,
+    "roc_auc_mann_whitney": 0.8035087719298246
+  },
+  "independent_learned_validation_passed": false,
+  "learned_metric_summary": {
+    "average_precision": 1.0,
+    "metric_level": "canonical_work_labeled_eval_subset",
+    "positive_work_prevalence": 0.8755760368663594,
+    "precision_at_10": 1.0,
+    "roc_auc_mann_whitney": 1.0,
+    "score_name": "audit_embedding_probability_work"
+  },
+  "learned_scorer_application_gates_passed": true,
+  "metadata": {
+    "artifact_type": "ml_offline_production_candidate_metric_gates",
+    "audit_embedding_scorer_sha256": "d074a7bca4984579ce171cb5cd14bbd072d22aa17eb41f5fa547aefcb091e894",
+    "audit_embedding_scorer_version": "ml-offline-audit-embedding-scorer-v1",
+    "caveats": [
+      "Not validation.",
+      "Product-candidate offline diagnostic only.",
+      "Learned scorer trained on audit corpus; labeled overlap not independent holdout.",
+      "Near-perfect learned metrics may reflect training overlap.",
+      "Heuristic final_score and learned audit scorer are separate evidence lines.",
+      "Shadow and production default blocked.",
+      "No ranking/API/web changes."
+    ],
+    "family": "emerging",
+    "gate_status_enum": [
+      "pass",
+      "fail",
+      "skip",
+      "not_applicable",
+      "not_evaluated",
+      "advisory_warn"
+    ],
+    "gates_version": "ml-offline-production-candidate-metric-gates-v2",
+    "generated_at": "2026-05-17T03:08:58Z",
+    "inputs": [
+      {
+        "name": "production_candidate_scoring",
+        "path": "docs/audit/ml-offline-production-candidate-scoring-v2.json",
+        "sha256": "e7b84921bd3572d2d233029f0614c636ac8ef34259329164596b1f933ff0c1f0"
+      },
+      {
+        "name": "offline_metric_gates",
+        "path": "docs/audit/ml-offline-metric-gates-v1.json",
+        "sha256": "d51248ffe4954def1cb67e58a566cb155f50033616fdeba7cd011d9522ccc267"
+      },
+      {
+        "name": "split_policy",
+        "path": "docs/audit/ml-label-split-policy-v1.json",
+        "sha256": "0141d03a1c7822d6c6065483aae0ec7aff31c6d73e329da0880e3b39de993c08"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      },
+      {
+        "name": "audit_embedding_scorer_export",
+        "path": "docs/audit/ml-offline-audit-embedding-scorer-v1.json",
+        "sha256": "d074a7bca4984579ce171cb5cd14bbd072d22aa17eb41f5fa547aefcb091e894"
+      },
+      {
+        "name": "production_candidate_metric_gates_v1",
+        "path": "docs/audit/ml-offline-production-candidate-metric-gates-v1.json",
+        "sha256": "614bd437fe1b22f5c6abd4eb453d95ff3292693b152f307097fb4217892f81e7"
+      }
+    ],
+    "offline_metric_gates_version": "ml-offline-metric-gates-v1",
+    "production_candidate_scoring_version": "ml-offline-production-candidate-scoring-v2",
+    "production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "ranking_run_id": "rank-ee2ba6c816",
+    "scoring_mode": "heuristic_and_audit_embedding_scorer",
+    "split_policy_version": "ml-label-split-policy-v1",
+    "strategic_framing": {
+      "existing_pool_source": "paper_scores",
+      "learned_audit_scorer_artifact": "ml-offline-audit-embedding-scorer-v1",
+      "learned_audit_scorer_full_fit_on_audit_labeled_v8_corpus": true,
+      "not_live_recommender_quality": true,
+      "passing_v2_gates_authorizes_only": "create_learned_scorer_holdout_policy_v1",
+      "passing_v2_gates_does_not_authorize": [
+        "shadow_scoring",
+        "production_default"
+      ],
+      "product_candidate_labeled_overlap_uses_same_label_dataset_and_embedding_rows_by_row_id": true,
+      "read_only_reuse": true,
+      "strong_learned_metrics_do_not_mean": [
+        "independent_validation",
+        "shadow_readiness"
+      ],
+      "strong_learned_metrics_mean": "successful scorer application and minimum diagnostic separation on the labeled overlap"
+    },
+    "target": "good_or_acceptable",
+    "thresholds": {
+      "high_positive_work_prevalence_advisory_threshold": 0.85,
+      "maximum_missing_embedding_rate_for_labeled_observations": 0.05,
+      "minimum_candidate_label_coverage_rate": 0.8,
+      "minimum_candidate_unique_work_count": 100,
+      "minimum_heuristic_average_precision": 0.85,
+      "minimum_heuristic_precision_at_10": 0.8,
+      "minimum_heuristic_roc_auc": 0.7,
+      "minimum_labeled_eval_negative_work_count": 20,
+      "minimum_labeled_eval_work_count": 100,
+      "minimum_learned_average_precision": 0.85,
+      "minimum_learned_precision_at_10": 0.8,
+      "minimum_learned_roc_auc": 0.7,
+      "near_perfect_learned_average_precision_advisory_threshold": 0.99,
+      "near_perfect_learned_roc_auc_advisory_threshold": 0.99
+    },
+    "thresholds_version": "ml-offline-production-candidate-metric-gates-v2-thresholds"
+  },
+  "product_candidate_heuristic_gates_passed": true,
+  "production_default_allowed": false,
+  "recommended_next_stage": "create_learned_scorer_holdout_policy_v1",
+  "shadow_blockers": [
+    "independent_learned_validation_not_evaluated",
+    "missing_ml_shadow_scorer_v1",
+    "production_default_blocked",
+    "no_production_model_artifact"
+  ],
+  "shadow_scoring_allowed": false
+}

@@ -12,9 +12,12 @@ import pytest
 
 from pipeline.ml_offline_production_candidate_metric_gates import (
     GATES_VERSION,
+    GATES_VERSION_V2,
+    MLOfflineProductionCandidateMetricGatesError,
     build_ml_offline_production_candidate_metric_gates_payload,
     markdown_from_ml_offline_production_candidate_metric_gates,
 )
+from pipeline.ml_label_dataset import sha256_file
 
 
 def _scoring_payload() -> dict:
@@ -94,6 +97,107 @@ def _scoring_payload() -> dict:
     }
 
 
+def _scorer_payload(*, product_candidate_pool_used_for_training: bool = False) -> dict:
+    return {
+        "metadata": {
+            "artifact_type": "ml_offline_audit_embedding_scorer",
+            "scorer_version": "ml-offline-audit-embedding-scorer-v1",
+            "target": "good_or_acceptable",
+            "fit_mode": "full_fit_audit_corpus",
+            "label_dataset_sha256": "label-sha",
+            "embedding_artifact_sha256": "embedding-sha",
+            "embedding_dimensions": 2,
+        },
+        "scorer": {
+            "scaler": {"feature_count": 2, "mean": [0.0, 0.0], "scale": [1.0, 1.0]},
+            "classifier": {
+                "coefficients_standardized_space": [1.0, -1.0],
+                "intercept_standardized_space": 0.0,
+            },
+        },
+        "policy_compliance": {
+            "product_candidate_pool_used_for_training": product_candidate_pool_used_for_training,
+            "shadow_scoring_authorized": False,
+            "production_artifact_written": False,
+        },
+    }
+
+
+def _scoring_payload_v2(scorer_sha: str) -> dict:
+    payload = copy.deepcopy(_scoring_payload())
+    payload["metadata"].update(
+        {
+            "experiment_version": "ml-offline-production-candidate-scoring-v2",
+            "scoring_mode": "heuristic_and_audit_embedding_scorer",
+            "inputs": [
+                {"name": "label_dataset", "path": "label.json", "sha256": "label-sha"},
+                {"name": "embeddings", "path": "embeddings.json", "sha256": "embedding-sha"},
+                {
+                    "name": "audit_embedding_scorer_export",
+                    "path": "scorer.json",
+                    "sha256": scorer_sha,
+                },
+            ],
+        }
+    )
+    payload["scoring_mode_details"] = {
+        "scoring_mode": "heuristic_and_audit_embedding_scorer",
+        "learned_product_scores_produced": True,
+        "audit_embedding_scorer_export_present": True,
+        "audit_embedding_scorer_version": "ml-offline-audit-embedding-scorer-v1",
+        "audit_embedding_scorer_sha256": scorer_sha,
+        "product_candidate_rows_used_for_training": 0,
+        "learned_score_aggregation_policy": "max_probability",
+        "learned_metric_thresholds": {
+            "minimum_learned_roc_auc": 0.70,
+            "minimum_learned_average_precision": 0.85,
+            "minimum_learned_precision_at_10": 0.80,
+        },
+        "learned_metric_thresholds_satisfied": True,
+    }
+    payload["learned_or_embedding_metrics"] = {
+        "metrics": {
+            "metric_level": "canonical_work_labeled_eval_subset",
+            "score_name": "audit_embedding_probability_work",
+            "labeled_eval_subset_work_count": 217,
+            "scored_labeled_work_count": 217,
+            "positive_work_count": 190,
+            "negative_work_count": 27,
+            "roc_auc_mann_whitney": 1.0,
+            "roc_auc_reason": None,
+            "average_precision": 1.0,
+            "average_precision_reason": None,
+            "precision_recall_at_k": {
+                "5": {"precision": 1.0, "recall": 0.02631578947368421, "reason": None},
+                "10": {"precision": 1.0, "recall": 0.05263157894736842, "reason": None},
+                "20": {"precision": 1.0, "recall": 0.10526315789473684, "reason": None},
+            },
+        },
+        "comparison_to_heuristic": {
+            "delta_roc_auc": 0.19649122807017538,
+            "delta_average_precision": 0.04211340593781876,
+            "delta_precision_at_10": 0.0,
+            "side_by_side": {
+                "roc_auc_mann_whitney": {
+                    "heuristic_final_score": 0.8035087719298246,
+                    "audit_embedding_probability_work": 1.0,
+                }
+            },
+        },
+        "learned_product_scores_produced": True,
+        "audit_embedding_scorer_export_present": True,
+        "aggregation_policy": "max_probability",
+        "learned_metric_thresholds_satisfied": True,
+    }
+    payload["blockers_to_shadow"] = [
+        "product-candidate learned metric gates not yet evaluated",
+        "no ml-shadow-scorer-v1 contract exists",
+        "production default blocked by readiness plan",
+        "no production model artifact exists",
+    ]
+    return payload
+
+
 def _offline_metric_gates_payload() -> dict:
     return {
         "audit_ranker_gates_passed": True,
@@ -147,6 +251,47 @@ def _paths(tmp_path: Path, scoring: dict | None = None) -> dict[str, Path]:
 def _build(tmp_path: Path, scoring: dict | None = None) -> dict:
     return build_ml_offline_production_candidate_metric_gates_payload(
         **_paths(tmp_path, scoring),
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+
+def _paths_v2(
+    tmp_path: Path,
+    *,
+    scoring: dict | None = None,
+    scorer: dict | None = None,
+    include_prior_v1: bool = False,
+) -> dict[str, Path]:
+    scorer_path = _write_json(tmp_path, "scorer.json", scorer or _scorer_payload())
+    scorer_sha = sha256_file(scorer_path)
+    paths = _paths(tmp_path, scoring or _scoring_payload_v2(scorer_sha))
+    paths["audit_embedding_scorer_export_path"] = scorer_path
+    if include_prior_v1:
+        paths["production_candidate_metric_gates_v1_path"] = _write_json(
+            tmp_path,
+            "metric-gates-v1.json",
+            {
+                "metadata": {
+                    "artifact_type": "ml_offline_production_candidate_metric_gates",
+                    "gates_version": "ml-offline-production-candidate-metric-gates-v1",
+                },
+                "product_candidate_heuristic_gates_passed": True,
+            },
+        )
+    return paths
+
+
+def _build_v2(
+    tmp_path: Path,
+    *,
+    scoring: dict | None = None,
+    scorer: dict | None = None,
+    include_prior_v1: bool = False,
+) -> dict:
+    return build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths_v2(tmp_path, scoring=scoring, scorer=scorer, include_prior_v1=include_prior_v1),
+        gates_version=GATES_VERSION_V2,
         repo_root=tmp_path,
         generated_at="2026-05-16T00:00:00Z",
     )
@@ -258,6 +403,99 @@ def test_shadow_scoring_and_production_default_are_always_false(tmp_path: Path) 
     assert _gate(payload, "G11_shadow_blockers_documented")["status"] == "pass"
 
 
+def test_v2_happy_path_passes_learned_application_and_blocks_shadow(tmp_path: Path) -> None:
+    payload = _build_v2(tmp_path, include_prior_v1=True)
+
+    assert payload["metadata"]["gates_version"] == GATES_VERSION_V2
+    assert payload["metadata"]["thresholds_version"] == "ml-offline-production-candidate-metric-gates-v2-thresholds"
+    assert payload["product_candidate_heuristic_gates_passed"] is True
+    assert payload["learned_scorer_application_gates_passed"] is True
+    assert payload["independent_learned_validation_passed"] is False
+    assert payload["recommended_next_stage"] == "create_learned_scorer_holdout_policy_v1"
+    assert _gate(payload, "G10_learned_scorer_application")["status"] == "pass"
+    assert _gate(payload, "G11_scorer_provenance")["status"] == "pass"
+    assert _gate(payload, "G12_independent_validation_status")["status"] == "not_evaluated"
+    assert _gate(payload, "G15_positive_prevalence_advisory")["status"] == "advisory_warn"
+    assert _gate(payload, "G16_near_perfect_learned_metrics_advisory")["status"] == "advisory_warn"
+    assert payload["shadow_scoring_allowed"] is False
+    assert payload["production_default_allowed"] is False
+    assert payload["learned_metric_summary"]["roc_auc_mann_whitney"] == 1.0
+    assert payload["comparison_to_heuristic"]["delta_roc_auc"] == pytest.approx(0.19649122807017538)
+    assert any(item["name"] == "production_candidate_metric_gates_v1" for item in payload["metadata"]["inputs"])
+    assert (
+        payload["metadata"]["strategic_framing"]["passing_v2_gates_authorizes_only"]
+        == "create_learned_scorer_holdout_policy_v1"
+    )
+
+
+@pytest.mark.parametrize(
+    ("metric_path", "value"),
+    [
+        ("roc_auc_mann_whitney", 0.69),
+        ("average_precision", 0.84),
+        ("precision_recall_at_k.10.precision", 0.79),
+    ],
+)
+def test_v2_low_learned_metric_fails_g10(tmp_path: Path, metric_path: str, value: float) -> None:
+    scorer_path = _write_json(tmp_path, "scorer.json", _scorer_payload())
+    scoring = _scoring_payload_v2(sha256_file(scorer_path))
+    current = scoring["learned_or_embedding_metrics"]["metrics"]
+    parts = metric_path.split(".")
+    for part in parts[:-1]:
+        current = current[part]
+    current[parts[-1]] = value
+
+    payload = build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths(tmp_path, scoring),
+        audit_embedding_scorer_export_path=scorer_path,
+        gates_version=GATES_VERSION_V2,
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+    assert _gate(payload, "G10_learned_scorer_application")["status"] == "fail"
+    assert payload["learned_scorer_application_gates_passed"] is False
+    assert payload["recommended_next_stage"] == "revisit_scorer_export_or_features"
+
+
+def test_v2_rejects_scorer_sha_mismatch(tmp_path: Path) -> None:
+    scorer_path = _write_json(tmp_path, "scorer.json", _scorer_payload())
+    scoring = _scoring_payload_v2("wrong-sha")
+
+    with pytest.raises(MLOfflineProductionCandidateMetricGatesError, match="scorer sha256"):
+        build_ml_offline_production_candidate_metric_gates_payload(
+            **_paths(tmp_path, scoring),
+            audit_embedding_scorer_export_path=scorer_path,
+            gates_version=GATES_VERSION_V2,
+            repo_root=tmp_path,
+            generated_at="2026-05-16T00:00:00Z",
+        )
+
+
+def test_v2_rejects_scorer_trained_on_product_candidate_pool(tmp_path: Path) -> None:
+    scorer = _scorer_payload(product_candidate_pool_used_for_training=True)
+    scorer_path = _write_json(tmp_path, "scorer.json", scorer)
+    scoring = _scoring_payload_v2(sha256_file(scorer_path))
+
+    with pytest.raises(MLOfflineProductionCandidateMetricGatesError, match="product_candidate_pool_used_for_training"):
+        build_ml_offline_production_candidate_metric_gates_payload(
+            **_paths(tmp_path, scoring),
+            audit_embedding_scorer_export_path=scorer_path,
+            gates_version=GATES_VERSION_V2,
+            repo_root=tmp_path,
+            generated_at="2026-05-16T00:00:00Z",
+        )
+
+
+def test_v2_advisories_do_not_fail_pass_gates(tmp_path: Path) -> None:
+    payload = _build_v2(tmp_path)
+
+    assert _gate(payload, "G15_positive_prevalence_advisory")["status"] == "advisory_warn"
+    assert _gate(payload, "G16_near_perfect_learned_metrics_advisory")["status"] == "advisory_warn"
+    assert payload["product_candidate_heuristic_gates_passed"] is True
+    assert payload["learned_scorer_application_gates_passed"] is True
+
+
 def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     paths = _paths(tmp_path)
     out_json = tmp_path / "product-candidate-gates.json"
@@ -292,6 +530,86 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "Not Shadow / Not Production" in out_md.read_text(encoding="utf-8")
 
 
+def test_cli_v2_requires_scorer_export_but_v1_does_not(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+    out_json = tmp_path / "product-candidate-gates.json"
+    out_md = tmp_path / "product-candidate-gates.md"
+
+    import pipeline.cli as cli_main
+
+    base_argv = [
+        "pipeline.cli",
+        "ml-offline-production-candidate-metric-gates",
+        "--production-candidate-scoring",
+        str(paths["production_candidate_scoring_path"]),
+        "--offline-metric-gates",
+        str(paths["offline_metric_gates_path"]),
+        "--split-policy",
+        str(paths["split_policy_path"]),
+        "--production-readiness-plan",
+        str(paths["production_readiness_plan_path"]),
+        "--output",
+        str(out_json),
+        "--markdown-output",
+        str(out_md),
+        "--repo-root",
+        str(tmp_path),
+    ]
+    with patch.object(sys, "argv", base_argv):
+        cli_main.main()
+
+    with patch.object(
+        sys,
+        "argv",
+        base_argv + ["--gates-version", "ml-offline-production-candidate-metric-gates-v2"],
+    ):
+        with pytest.raises(SystemExit) as excinfo:
+            cli_main.main()
+    assert excinfo.value.code == 2
+
+
+def test_cli_v2_writes_json_and_markdown(tmp_path: Path) -> None:
+    paths = _paths_v2(tmp_path, include_prior_v1=True)
+    out_json = tmp_path / "product-candidate-gates-v2.json"
+    out_md = tmp_path / "product-candidate-gates-v2.md"
+
+    import pipeline.cli as cli_main
+
+    argv = [
+        "pipeline.cli",
+        "ml-offline-production-candidate-metric-gates",
+        "--production-candidate-scoring",
+        str(paths["production_candidate_scoring_path"]),
+        "--offline-metric-gates",
+        str(paths["offline_metric_gates_path"]),
+        "--split-policy",
+        str(paths["split_policy_path"]),
+        "--production-readiness-plan",
+        str(paths["production_readiness_plan_path"]),
+        "--audit-embedding-scorer-export",
+        str(paths["audit_embedding_scorer_export_path"]),
+        "--production-candidate-metric-gates-v1",
+        str(paths["production_candidate_metric_gates_v1_path"]),
+        "--gates-version",
+        "ml-offline-production-candidate-metric-gates-v2",
+        "--output",
+        str(out_json),
+        "--markdown-output",
+        str(out_md),
+        "--repo-root",
+        str(tmp_path),
+    ]
+    with patch.object(sys, "argv", argv):
+        cli_main.main()
+
+    data = json.loads(out_json.read_text(encoding="utf-8"))
+    assert data["learned_scorer_application_gates_passed"] is True
+    assert data["recommended_next_stage"] == "create_learned_scorer_holdout_policy_v1"
+    md = out_md.read_text(encoding="utf-8")
+    assert "Independent Validation Status" in md
+    assert "not shadow scoring" in md.lower()
+
+
 def test_markdown_contains_required_sections(tmp_path: Path) -> None:
     payload = _build(tmp_path)
     md = markdown_from_ml_offline_production_candidate_metric_gates(payload)
@@ -303,6 +621,22 @@ def test_markdown_contains_required_sections(tmp_path: Path) -> None:
     assert "Learned Scorer Status" in md
     assert "Positive Prevalence Advisory" in md
     assert "Recommended Next Stage" in md
+
+
+def test_v2_markdown_contains_required_sections(tmp_path: Path) -> None:
+    payload = _build_v2(tmp_path)
+    md = markdown_from_ml_offline_production_candidate_metric_gates(payload)
+
+    assert "Executive Summary" in md
+    assert "Gate Checklist" in md
+    assert "Coverage" in md
+    assert "Heuristic Summary" in md
+    assert "Learned Application Summary" in md
+    assert "Independent Validation Status" in md
+    assert "Advisories" in md
+    assert "Not Shadow / Not Production" in md
+    assert "Recommended Next Stage" in md
+    assert "not independent validation" in md
 
 
 def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url() -> None:
