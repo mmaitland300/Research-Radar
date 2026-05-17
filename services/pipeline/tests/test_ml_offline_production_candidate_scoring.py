@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from pipeline.ml_offline_baseline_eval import sha256_file
+from pipeline.ml_offline_audit_embedding_scorer_export import score_audit_embedding_probability
 from pipeline.ml_offline_production_candidate_scoring import (
     MLOfflineProductionCandidateScoringError,
     assert_local_database_url,
@@ -230,14 +231,27 @@ def _ranker_payload() -> dict:
 
 
 def _embeddings_payload(*, label_sha: str, row_ids: list[str]) -> dict:
+    vectors = {
+        "r1a": [0.1, 0.2],
+        "r1b": [0.8, 0.9],
+        "r2": [-2.0, -2.0],
+        "r3": [1.5, 1.5],
+        "r4": [-1.0, -1.0],
+        "r5": [2.0, 2.0],
+        "r9": [1.7, 1.7],
+    }
     return {
         "metadata": {
             "artifact_type": "ml_labeled_text_embeddings",
             "embedding_artifact_version": "ml-labeled-text-embeddings-v3",
             "source_label_dataset_sha256": label_sha,
             "source_label_dataset_version": "ml-label-dataset-v8",
+            "embedding_dimensions": 2,
         },
-        "rows": [{"row_id": row_id, "embedding_status": "ok", "embedding": [0.0, 0.1]} for row_id in row_ids],
+        "rows": [
+            {"row_id": row_id, "embedding_status": "ok", "embedding": vectors.get(row_id, [0.0, 0.1])}
+            for row_id in row_ids
+        ],
     }
 
 
@@ -255,28 +269,80 @@ def _gates_payload(*, ranker_path: Path, ranker_sha: str) -> dict:
     }
 
 
-def _fixture_paths(tmp_path: Path) -> dict[str, Path]:
+def _audit_scorer_payload(*, label_sha: str, embeddings_sha: str, dimensions: int = 2, target: str = "good_or_acceptable") -> dict:
+    return {
+        "metadata": {
+            "artifact_type": "ml_offline_audit_embedding_scorer",
+            "scorer_version": "ml-offline-audit-embedding-scorer-v1",
+            "target": target,
+            "fit_mode": "full_fit_audit_corpus",
+            "label_dataset_sha256": label_sha,
+            "embedding_artifact_sha256": embeddings_sha,
+            "embedding_dimensions": dimensions,
+        },
+        "policy_compliance": {
+            "shadow_scoring_authorized": False,
+            "product_candidate_pool_used_for_training": False,
+            "production_artifact_written": False,
+        },
+        "scorer": {
+            "pipeline_steps": ["scaler", "classifier"],
+            "scaler": {
+                "with_mean": True,
+                "feature_count": dimensions,
+                "mean": [0.0] * dimensions,
+                "scale": [1.0] * dimensions,
+            },
+            "classifier": {
+                "solver": "lbfgs",
+                "penalty": "l2",
+                "max_iter": 5000,
+                "classes": [False, True],
+                "coefficients_standardized_space": [1.0] + [0.0] * (dimensions - 1),
+                "intercept_standardized_space": 0.0,
+            },
+        },
+    }
+
+
+def _fixture_paths(tmp_path: Path, *, include_r5_embedding: bool = False, with_audit_scorer: bool = False) -> dict[str, Path]:
     label_path = _write_json(tmp_path, "labels.json", _label_payload())
     label_sha = sha256_file(label_path)
     policy_path = _write_json(tmp_path, "policy.json", _policy_payload())
     ranker_path = _write_json(tmp_path, "ranker.json", _ranker_payload())
     ranker_sha = sha256_file(ranker_path)
     gates_path = _write_json(tmp_path, "gates.json", _gates_payload(ranker_path=ranker_path, ranker_sha=ranker_sha))
+    row_ids = ["r1a", "r1b", "r2", "r3", "r4"]
+    if include_r5_embedding:
+        row_ids.append("r5")
     embeddings_path = _write_json(
         tmp_path,
         "embeddings.json",
-        _embeddings_payload(label_sha=label_sha, row_ids=["r1a", "r1b", "r2", "r3", "r4"]),
+        _embeddings_payload(label_sha=label_sha, row_ids=row_ids),
     )
-    return {
+    paths = {
         "label_dataset_path": label_path,
         "split_policy_path": policy_path,
         "metric_gates_path": gates_path,
         "audit_ranker_experiment_path": ranker_path,
         "embeddings_path": embeddings_path,
     }
+    if with_audit_scorer:
+        paths["audit_embedding_scorer_export_path"] = _write_json(
+            tmp_path,
+            "audit-scorer.json",
+            _audit_scorer_payload(label_sha=label_sha, embeddings_sha=sha256_file(embeddings_path)),
+        )
+    return paths
 
 
-def _build(tmp_path: Path, *, conn: _FakeConn | None = None, paths: dict[str, Path] | None = None) -> tuple[dict, _FakeConn]:
+def _build(
+    tmp_path: Path,
+    *,
+    conn: _FakeConn | None = None,
+    paths: dict[str, Path] | None = None,
+    **kwargs: object,
+) -> tuple[dict, _FakeConn]:
     fc = conn or _FakeConn()
     artifact_paths = paths or _fixture_paths(tmp_path)
     payload = build_ml_offline_production_candidate_scoring_payload(
@@ -288,6 +354,7 @@ def _build(tmp_path: Path, *, conn: _FakeConn | None = None, paths: dict[str, Pa
         database_url="postgresql://research_radar:research_radar@localhost:5432/research_radar",
         repo_root=tmp_path,
         generated_at="2026-05-16T00:00:00Z",
+        **kwargs,
     )
     return payload, fc
 
@@ -402,10 +469,128 @@ def test_scoring_mode_defaults_to_heuristic_and_no_learned_scores(tmp_path: Path
     payload, _fc = _build(tmp_path)
 
     assert payload["metadata"]["scoring_mode"] == "heuristic_and_coverage_only"
+    assert payload["metadata"]["experiment_version"] == "ml-offline-production-candidate-scoring-v1"
     assert payload["scoring_mode_details"]["learned_product_scores_produced"] is False
     assert payload["learned_or_embedding_metrics"]["metrics"] is None
     assert payload["learned_or_embedding_metrics"]["learned_product_scores_produced"] is False
     assert "per-fold coefficients only" in payload["learned_or_embedding_metrics"]["reason"]
+
+
+def test_learned_mode_scores_labeled_eval_subset_and_compares_to_heuristic(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path, include_r5_embedding=True, with_audit_scorer=True)
+    payload, fc = _build(tmp_path, paths=paths, scoring_mode="heuristic_and_audit_embedding_scorer")
+
+    assert payload["metadata"]["experiment_version"] == "ml-offline-production-candidate-scoring-v2"
+    assert payload["metadata"]["scoring_mode"] == "heuristic_and_audit_embedding_scorer"
+    assert any(item["name"] == "audit_embedding_scorer_export" for item in payload["metadata"]["inputs"])
+
+    details = payload["scoring_mode_details"]
+    assert details["learned_product_scores_produced"] is True
+    assert details["audit_embedding_scorer_export_present"] is True
+    assert details["product_candidate_rows_used_for_training"] == 0
+    assert details["learned_score_aggregation_policy"] == "max_probability"
+    assert details["learned_metric_thresholds"]["minimum_learned_roc_auc"] == 0.70
+
+    learned = payload["learned_or_embedding_metrics"]
+    assert learned["learned_product_scores_produced"] is True
+    assert learned["metrics"]["score_name"] == "audit_embedding_probability_work"
+    assert learned["metrics"]["labeled_eval_subset_work_count"] == payload["label_join_summary"]["labeled_eval_subset_work_count"]
+    assert learned["metrics"]["scored_labeled_work_count"] == payload["label_join_summary"]["labeled_eval_subset_work_count"]
+    assert "delta_roc_auc" in learned["comparison_to_heuristic"]
+    assert "delta_average_precision" in learned["comparison_to_heuristic"]
+    assert "delta_precision_at_10" in learned["comparison_to_heuristic"]
+
+    scorer = json.loads(paths["audit_embedding_scorer_export_path"].read_text(encoding="utf-8"))
+    w1 = next(row for row in payload["labeled_eval_subset"] if row["canonical_openalex_work_id"] == "W1")
+    expected_r1a = score_audit_embedding_probability([0.1, 0.2], scorer)
+    expected_r1b = score_audit_embedding_probability([0.8, 0.9], scorer)
+    assert w1["audit_embedding_probability_work"] == pytest.approx(max(expected_r1a, expected_r1b))
+    assert w1["observation_level_score_count"] == 2
+    observations_for_w1 = [
+        row for row in payload["labeled_candidate_observations"] if row["canonical_openalex_work_id"] == "W1"
+    ]
+    assert {row["row_id"]: row["audit_embedding_probability_observation"] for row in observations_for_w1} == pytest.approx(
+        {"r1a": expected_r1a, "r1b": expected_r1b}
+    )
+
+    executed = "\n".join(fc.executed_sql).upper()
+    for bad in ("INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE"):
+        assert bad not in executed
+
+
+def test_learned_mode_requires_audit_embedding_scorer_export(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path, include_r5_embedding=True)
+    with pytest.raises(MLOfflineProductionCandidateScoringError, match="audit-embedding-scorer-export"):
+        _build(tmp_path, paths=paths, scoring_mode="heuristic_and_audit_embedding_scorer")
+
+    import pipeline.cli as cli_main
+
+    argv = [
+        "pipeline.cli",
+        "ml-offline-production-candidate-scoring",
+        "--label-dataset",
+        str(paths["label_dataset_path"]),
+        "--split-policy",
+        str(paths["split_policy_path"]),
+        "--metric-gates",
+        str(paths["metric_gates_path"]),
+        "--audit-ranker-experiment",
+        str(paths["audit_ranker_experiment_path"]),
+        "--embeddings",
+        str(paths["embeddings_path"]),
+        "--ranking-run-id",
+        "rank-a",
+        "--scoring-mode",
+        "heuristic_and_audit_embedding_scorer",
+        "--output",
+        str(tmp_path / "out.json"),
+        "--markdown-output",
+        str(tmp_path / "out.md"),
+        "--database-url",
+        "postgresql://research_radar:research_radar@localhost:5432/research_radar",
+    ]
+    with patch.object(sys, "argv", argv):
+        with pytest.raises(SystemExit):
+            cli_main.main()
+
+
+@pytest.mark.parametrize(
+    ("mutator", "message"),
+    [
+        (lambda scorer: scorer["metadata"].__setitem__("scorer_version", "older"), "scorer_version"),
+        (lambda scorer: scorer["metadata"].__setitem__("target", "surprising_or_useful"), "metadata.target"),
+        (lambda scorer: scorer["metadata"].__setitem__("embedding_dimensions", 3), "embedding dimensions"),
+    ],
+)
+def test_learned_mode_rejects_bad_scorer_version_target_or_dimension(
+    tmp_path: Path,
+    mutator: object,
+    message: str,
+) -> None:
+    paths = _fixture_paths(tmp_path, include_r5_embedding=True, with_audit_scorer=True)
+    scorer = json.loads(paths["audit_embedding_scorer_export_path"].read_text(encoding="utf-8"))
+    mutator(scorer)
+    paths["audit_embedding_scorer_export_path"] = _write_json(tmp_path, f"bad-scorer-{message}.json", scorer)
+    with pytest.raises(MLOfflineProductionCandidateScoringError, match=message):
+        _build(tmp_path, paths=paths, scoring_mode="heuristic_and_audit_embedding_scorer")
+
+
+def test_learned_mode_rejects_scorer_provenance_mismatch(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path, include_r5_embedding=True, with_audit_scorer=True)
+    scorer = json.loads(paths["audit_embedding_scorer_export_path"].read_text(encoding="utf-8"))
+    scorer["metadata"]["label_dataset_sha256"] = "not-the-label-sha"
+    paths["audit_embedding_scorer_export_path"] = _write_json(tmp_path, "bad-scorer-provenance.json", scorer)
+
+    with pytest.raises(MLOfflineProductionCandidateScoringError, match="label_dataset_sha256"):
+        _build(tmp_path, paths=paths, scoring_mode="heuristic_and_audit_embedding_scorer")
+
+    paths = _fixture_paths(tmp_path, include_r5_embedding=True, with_audit_scorer=True)
+    scorer = json.loads(paths["audit_embedding_scorer_export_path"].read_text(encoding="utf-8"))
+    scorer["metadata"]["embedding_artifact_sha256"] = "not-the-embedding-sha"
+    paths["audit_embedding_scorer_export_path"] = _write_json(tmp_path, "bad-scorer-embedding-provenance.json", scorer)
+
+    with pytest.raises(MLOfflineProductionCandidateScoringError, match="embedding_artifact_sha256"):
+        _build(tmp_path, paths=paths, scoring_mode="heuristic_and_audit_embedding_scorer")
 
 
 def test_markdown_includes_not_shadow_not_production_caveats(tmp_path: Path) -> None:
@@ -417,6 +602,19 @@ def test_markdown_includes_not_shadow_not_production_caveats(tmp_path: Path) -> 
     assert "This is not production scoring" in md
     assert "No production model artifact" in md
     assert "Product-candidate metric gates v1" in md
+
+    learned_payload, _fc = _build(
+        tmp_path,
+        paths=_fixture_paths(tmp_path, include_r5_embedding=True, with_audit_scorer=True),
+        scoring_mode="heuristic_and_audit_embedding_scorer",
+    )
+    learned_md = markdown_from_ml_offline_production_candidate_scoring(learned_payload)
+    assert "Learned Audit Scorer Metrics" in learned_md
+    assert "Heuristic vs Learned Comparison" in learned_md
+    assert "This is not shadow scoring" in learned_md
+    assert "This is not production scoring" in learned_md
+    assert "Production defaults remain blocked" in learned_md
+    assert "Product-candidate metric gates v2" in learned_md
 
 
 def test_database_url_must_be_local() -> None:

@@ -2062,8 +2062,19 @@ def main() -> None:
     )
     ml_offline_production_candidate_scoring_parser.add_argument(
         "--experiment-version",
-        default="ml-offline-production-candidate-scoring-v1",
-        help="Experiment version string to write (default: ml-offline-production-candidate-scoring-v1)",
+        default=None,
+        help="Experiment version string to write (default is selected from scoring mode)",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--scoring-mode",
+        default="heuristic_and_coverage_only",
+        choices=["heuristic_and_coverage_only", "heuristic_and_audit_embedding_scorer"],
+        help="Scoring mode (default: heuristic_and_coverage_only)",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--audit-embedding-scorer-export",
+        default=None,
+        help="Path to ml-offline-audit-embedding-scorer-v1 JSON; required for heuristic_and_audit_embedding_scorer",
     )
     ml_offline_production_candidate_scoring_parser.add_argument(
         "--repo-root",
@@ -3476,6 +3487,11 @@ def main() -> None:
             parser.error("--ranking-run-id is required and must be non-empty")
         dsn = args.database_url or _bootstrap_loader.database_url_from_env()
         repo_root = Path(args.repo_root) if args.repo_root else None
+        audit_embedding_scorer_export = (
+            Path(args.audit_embedding_scorer_export) if args.audit_embedding_scorer_export else None
+        )
+        if args.scoring_mode == "heuristic_and_audit_embedding_scorer" and audit_embedding_scorer_export is None:
+            parser.error("--audit-embedding-scorer-export is required when --scoring-mode heuristic_and_audit_embedding_scorer")
         out_json = Path(args.output)
         out_md = Path(args.markdown_output)
         try:
@@ -3491,7 +3507,9 @@ def main() -> None:
                 target=str(args.target),
                 output_path=out_json,
                 markdown_output_path=out_md,
-                experiment_version=str(args.experiment_version),
+                experiment_version=str(args.experiment_version) if args.experiment_version else None,
+                scoring_mode=str(args.scoring_mode),
+                audit_embedding_scorer_export_path=audit_embedding_scorer_export,
                 repo_root=repo_root,
             )
         except MLOfflineProductionCandidateScoringError as e:

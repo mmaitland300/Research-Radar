@@ -26,11 +26,13 @@ from pipeline.ml_offline_baseline_eval import (
     roc_auc_mann_whitney,
     sha256_file,
 )
+from pipeline.ml_offline_audit_embedding_scorer_export import score_audit_embedding_probability
 from pipeline.recommendation_review_worksheet import cluster_version_from_config
 from pipeline.repo_paths import default_repo_root, portable_repo_path
 
 ARTIFACT_TYPE = "ml_offline_production_candidate_scoring"
 EXPERIMENT_VERSION = "ml-offline-production-candidate-scoring-v1"
+EXPERIMENT_VERSION_V2 = "ml-offline-production-candidate-scoring-v2"
 LABEL_DATASET_VERSION = "ml-label-dataset-v8"
 SPLIT_POLICY_ARTIFACT_TYPE = "ml_label_split_policy"
 SPLIT_POLICY_VERSION = "ml-label-split-policy-v1"
@@ -40,15 +42,25 @@ RANKER_ARTIFACT_TYPE = "ml_offline_ranker_experiment"
 RANKER_VERSION = "ml-offline-ranker-experiment-v1"
 EMBEDDINGS_ARTIFACT_TYPE = "ml_labeled_text_embeddings"
 EMBEDDINGS_VERSION = "ml-labeled-text-embeddings-v3"
+AUDIT_SCORER_ARTIFACT_TYPE = "ml_offline_audit_embedding_scorer"
+AUDIT_SCORER_VERSION = "ml-offline-audit-embedding-scorer-v1"
 TARGET_GOOD = "good_or_acceptable"
 FORBIDDEN_TARGET = "surprising_or_useful"
 DEFAULT_FAMILY = "emerging"
 ALLOWED_FAMILIES = frozenset({DEFAULT_FAMILY})
 SCORING_MODE_HEURISTIC = "heuristic_and_coverage_only"
+SCORING_MODE_AUDIT_EMBEDDING = "heuristic_and_audit_embedding_scorer"
+SCORING_MODES = frozenset({SCORING_MODE_HEURISTIC, SCORING_MODE_AUDIT_EMBEDDING})
 LEARNED_UNAVAILABLE_REASON = (
     "ml-offline-ranker-experiment-v1 contains per-fold coefficients only; "
     "no frozen full-fit audit scorer export exists."
 )
+LEARNED_SCORE_AGGREGATION_POLICY = "max_probability"
+LEARNED_METRIC_THRESHOLDS = {
+    "minimum_learned_roc_auc": 0.70,
+    "minimum_learned_average_precision": 0.85,
+    "minimum_learned_precision_at_10": 0.80,
+}
 K_VALUES = (5, 10, 20)
 RANK_BUCKETS: tuple[tuple[int, int | None], ...] = ((1, 5), (6, 10), (11, 20), (21, 50), (51, 100), (101, None))
 
@@ -67,6 +79,23 @@ BLOCKERS_TO_SHADOW = (
     "no ml-shadow-scorer-v1 contract exists",
     "production default blocked by readiness plan",
     "no production model artifact exists",
+)
+
+LEARNED_BLOCKERS_TO_SHADOW = (
+    "product-candidate learned metric gates not yet evaluated",
+    "no ml-shadow-scorer-v1 contract exists",
+    "production default blocked by readiness plan",
+    "no production model artifact exists",
+)
+
+LEARNED_CAVEATS = (
+    "Not validation.",
+    "Frozen audit scorer trained on audit corpus only.",
+    "Product pool application is offline diagnostic only.",
+    "Product candidates were not used for training.",
+    "Learned audit scorer and heuristic final_score are separate evidence lines.",
+    "No shadow scoring or production default change.",
+    "No ranking/API/web changes.",
 )
 
 
@@ -217,7 +246,7 @@ def _validate_embeddings(
     *,
     label_dataset_sha256: str,
     label_dataset_version: str,
-) -> dict[str, dict[str, Any]]:
+) -> tuple[Mapping[str, Any], dict[str, dict[str, Any]]]:
     metadata = _metadata(payload, name="embeddings")
     if metadata.get("artifact_type") != EMBEDDINGS_ARTIFACT_TYPE:
         raise MLOfflineProductionCandidateScoringError(
@@ -245,7 +274,110 @@ def _validate_embeddings(
         if row_id in by_id:
             raise MLOfflineProductionCandidateScoringError(f"embeddings contains duplicate row_id: {row_id}")
         by_id[row_id] = dict(row)
-    return by_id
+    return metadata, by_id
+
+
+def _input_sha_matches(payload: Mapping[str, Any], names: set[str], expected_sha: str) -> bool:
+    metadata = payload.get("metadata")
+    inputs = metadata.get("inputs") if isinstance(metadata, Mapping) else None
+    if not isinstance(inputs, Sequence) or isinstance(inputs, (str, bytes)):
+        return False
+    for item in inputs:
+        if not isinstance(item, Mapping):
+            continue
+        if str(item.get("name") or "") in names and item.get("sha256") == expected_sha:
+            return True
+    return False
+
+
+def _validate_audit_embedding_scorer(
+    payload: Mapping[str, Any],
+    *,
+    label_dataset_sha256: str,
+    embeddings_sha256: str,
+    embedding_dimensions: Any,
+) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="audit-embedding-scorer-export")
+    if metadata.get("artifact_type") != AUDIT_SCORER_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected audit scorer metadata.artifact_type={AUDIT_SCORER_ARTIFACT_TYPE!r}, "
+            f"got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("scorer_version") != AUDIT_SCORER_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected audit scorer metadata.scorer_version={AUDIT_SCORER_VERSION!r}, got {metadata.get('scorer_version')!r}"
+        )
+    if metadata.get("target") != TARGET_GOOD:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected audit scorer metadata.target={TARGET_GOOD!r}, got {metadata.get('target')!r}"
+        )
+    if metadata.get("fit_mode") != "full_fit_audit_corpus":
+        raise MLOfflineProductionCandidateScoringError("audit scorer metadata.fit_mode must be full_fit_audit_corpus")
+    policy = payload.get("policy_compliance")
+    if not isinstance(policy, Mapping):
+        raise MLOfflineProductionCandidateScoringError("audit scorer missing policy_compliance object")
+    if policy.get("shadow_scoring_authorized") is not False:
+        raise MLOfflineProductionCandidateScoringError("audit scorer shadow_scoring_authorized must be false")
+    if policy.get("product_candidate_pool_used_for_training") is not False:
+        raise MLOfflineProductionCandidateScoringError("audit scorer product_candidate_pool_used_for_training must be false")
+    if policy.get("production_artifact_written") is not False:
+        raise MLOfflineProductionCandidateScoringError("audit scorer production_artifact_written must be false")
+
+    scorer_dimensions = metadata.get("embedding_dimensions")
+    if scorer_dimensions is None:
+        scorer_block = payload.get("scorer")
+        scaler_block = scorer_block.get("scaler") if isinstance(scorer_block, Mapping) else None
+        scorer_dimensions = scaler_block.get("feature_count") if isinstance(scaler_block, Mapping) else None
+    if not isinstance(embedding_dimensions, int) or embedding_dimensions <= 0:
+        raise MLOfflineProductionCandidateScoringError("embeddings metadata.embedding_dimensions is required in learned mode")
+    if scorer_dimensions != embedding_dimensions:
+        raise MLOfflineProductionCandidateScoringError(
+            f"audit scorer embedding dimensions {scorer_dimensions!r} do not match embeddings metadata.embedding_dimensions "
+            f"{embedding_dimensions!r}"
+        )
+
+    direct_label_sha = metadata.get("label_dataset_sha256")
+    direct_embeddings_sha = metadata.get("embedding_artifact_sha256")
+    label_ok = (
+        direct_label_sha == label_dataset_sha256
+        if direct_label_sha is not None
+        else _input_sha_matches(payload, {"label_dataset"}, label_dataset_sha256)
+    )
+    embeddings_ok = (
+        direct_embeddings_sha == embeddings_sha256
+        if direct_embeddings_sha is not None
+        else _input_sha_matches(payload, {"embeddings"}, embeddings_sha256)
+    )
+    if not label_ok:
+        raise MLOfflineProductionCandidateScoringError(
+            "audit scorer label_dataset_sha256/provenance does not match supplied label dataset"
+        )
+    if not embeddings_ok:
+        raise MLOfflineProductionCandidateScoringError(
+            "audit scorer embedding_artifact_sha256/provenance does not match supplied embeddings"
+        )
+    return metadata
+
+
+def _validate_scoring_mode(scoring_mode: str, audit_embedding_scorer_export_path: Path | None) -> str:
+    normalized = str(scoring_mode or "").strip()
+    if normalized not in SCORING_MODES:
+        raise MLOfflineProductionCandidateScoringError(
+            f"unsupported scoring_mode {normalized!r}; expected one of {sorted(SCORING_MODES)}"
+        )
+    if normalized == SCORING_MODE_AUDIT_EMBEDDING and audit_embedding_scorer_export_path is None:
+        raise MLOfflineProductionCandidateScoringError(
+            "--audit-embedding-scorer-export is required when --scoring-mode heuristic_and_audit_embedding_scorer"
+        )
+    return normalized
+
+
+def _default_experiment_version(scoring_mode: str, experiment_version: str | None) -> str:
+    if experiment_version:
+        return str(experiment_version)
+    if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
+        return EXPERIMENT_VERSION_V2
+    return EXPERIMENT_VERSION
 
 
 def _validate_target_and_family(*, target: str, family: str) -> tuple[str, str]:
@@ -491,22 +623,35 @@ def _build_labeled_eval_subset(
             conflict_work_ids.append(canonical)
         majority = _majority_label(pos, neg)
         majority_counts["positive" if majority is True else "negative" if majority is False else "tie"] += 1
-        eval_rows.append(
-            {
-                "canonical_openalex_work_id": canonical,
-                "candidate_internal_work_id": candidate.get("internal_work_id"),
-                "candidate_openalex_id": candidate.get("openalex_id"),
-                "heuristic_rank": candidate.get("heuristic_rank"),
-                "final_score": candidate.get("final_score"),
-                "label_any_positive": pos > 0,
-                "positive_observation_count": pos,
-                "negative_observation_count": neg,
-                "observation_count": len(observations),
-                "majority_vote_label": majority,
-                "conflicting_target_observations": pos > 0 and neg > 0,
-                "row_ids": [row.get("row_id") for row in observations],
-            }
-        )
+        eval_row = {
+            "canonical_openalex_work_id": canonical,
+            "candidate_internal_work_id": candidate.get("internal_work_id"),
+            "candidate_openalex_id": candidate.get("openalex_id"),
+            "heuristic_rank": candidate.get("heuristic_rank"),
+            "final_score": candidate.get("final_score"),
+            "label_any_positive": pos > 0,
+            "positive_observation_count": pos,
+            "negative_observation_count": neg,
+            "observation_count": len(observations),
+            "majority_vote_label": majority,
+            "conflicting_target_observations": pos > 0 and neg > 0,
+            "row_ids": [row.get("row_id") for row in observations],
+        }
+        learned_scores = [
+            float(row["audit_embedding_probability_observation"])
+            for row in observations
+            if _float_or_none(row.get("audit_embedding_probability_observation")) is not None
+        ]
+        if learned_scores:
+            eval_row.update(
+                {
+                    "audit_embedding_probability_work": max(learned_scores),
+                    "audit_embedding_probability_observation_values": learned_scores,
+                    "observation_level_score_count": len(learned_scores),
+                    "learned_score_aggregation_policy": LEARNED_SCORE_AGGREGATION_POLICY,
+                }
+            )
+        eval_rows.append(eval_row)
 
     eval_rows.sort(key=lambda row: (-(float(row.get("final_score") or 0.0)), int(row.get("heuristic_rank") or 10**12)))
     diagnostics = {
@@ -522,6 +667,25 @@ def _build_labeled_eval_subset(
         },
     }
     return eval_rows, diagnostics
+
+
+def _attach_audit_embedding_observation_scores(
+    joined_observations: Sequence[Mapping[str, Any]],
+    *,
+    embeddings_by_row_id: Mapping[str, Mapping[str, Any]],
+    audit_scorer_payload: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for row in joined_observations:
+        item = dict(row)
+        row_id = str(row.get("row_id") or "").strip()
+        embedding = embeddings_by_row_id.get(row_id)
+        if row.get("embedding_present") is True and isinstance(embedding, Mapping):
+            vector = embedding.get("embedding")
+            if isinstance(vector, Sequence) and not isinstance(vector, (str, bytes)):
+                item["audit_embedding_probability_observation"] = score_audit_embedding_probability(vector, audit_scorer_payload)
+        out.append(item)
+    return out
 
 
 def average_precision(scores_labels_desc: Sequence[tuple[float, bool]]) -> float | None:
@@ -565,18 +729,23 @@ def _precision_recall_at_k(scores_labels_desc: Sequence[tuple[float, bool]], k: 
     }
 
 
-def _heuristic_metrics(eval_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _score_metrics(
+    eval_rows: Sequence[Mapping[str, Any]],
+    *,
+    score_field: str,
+    score_name: str,
+) -> dict[str, Any]:
     scores_labels = [
-        (float(row["final_score"]), bool(row["label_any_positive"]))
+        (float(row[score_field]), bool(row["label_any_positive"]))
         for row in eval_rows
-        if _float_or_none(row.get("final_score")) is not None
+        if _float_or_none(row.get(score_field)) is not None
     ]
     scores_labels_desc = sorted(scores_labels, key=lambda item: (-item[0], item[1]))
     positives = sum(1 for _score, label in scores_labels if label)
     negatives = len(scores_labels) - positives
     auc = roc_auc_mann_whitney(scores_labels)
     if not scores_labels:
-        auc_reason = "no labeled candidate works with final_score"
+        auc_reason = f"no labeled candidate works with {score_name}"
     elif positives == 0 or negatives == 0:
         auc_reason = "ROC-AUC requires at least one positive and one negative labeled candidate work"
     else:
@@ -585,6 +754,8 @@ def _heuristic_metrics(eval_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]
     ap_reason = None if ap is not None else "average precision requires at least one positive labeled candidate work"
     return {
         "metric_level": "canonical_work_labeled_eval_subset",
+        "score_name": score_name,
+        "labeled_eval_subset_work_count": len(eval_rows),
         "scored_labeled_work_count": len(scores_labels),
         "positive_work_count": positives,
         "negative_work_count": negatives,
@@ -593,10 +764,106 @@ def _heuristic_metrics(eval_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]
         "average_precision": ap,
         "average_precision_reason": ap_reason,
         "precision_recall_at_k": {str(k): _precision_recall_at_k(scores_labels_desc, k) for k in K_VALUES},
+    }
+
+
+def _heuristic_metrics(eval_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    metrics = _score_metrics(eval_rows, score_field="final_score", score_name="final_score")
+    metrics.update(
+        {
         "comparison_note": (
             "This extends ml-offline-baseline-eval-rank-ee2ba6c816-v8 with pool-first framing; "
             "heuristic numbers may match v8 eval on joined rows."
         ),
+        }
+    )
+    return metrics
+
+
+def _metric_delta(learned_value: Any, heuristic_value: Any) -> float | None:
+    learned = _float_or_none(learned_value)
+    heuristic = _float_or_none(heuristic_value)
+    if learned is None or heuristic is None:
+        return None
+    return float(learned - heuristic)
+
+
+def _pr_value(metrics: Mapping[str, Any], k: int, field: str) -> Any:
+    block = metrics.get("precision_recall_at_k")
+    if not isinstance(block, Mapping):
+        return None
+    entry = block.get(str(k))
+    if not isinstance(entry, Mapping):
+        return None
+    return entry.get(field)
+
+
+def _learned_thresholds_satisfied(metrics: Mapping[str, Any]) -> bool:
+    return (
+        _float_or_none(metrics.get("roc_auc_mann_whitney")) is not None
+        and float(metrics["roc_auc_mann_whitney"]) >= LEARNED_METRIC_THRESHOLDS["minimum_learned_roc_auc"]
+        and _float_or_none(metrics.get("average_precision")) is not None
+        and float(metrics["average_precision"]) >= LEARNED_METRIC_THRESHOLDS["minimum_learned_average_precision"]
+        and _float_or_none(_pr_value(metrics, 10, "precision")) is not None
+        and float(_pr_value(metrics, 10, "precision")) >= LEARNED_METRIC_THRESHOLDS["minimum_learned_precision_at_10"]
+    )
+
+
+def _comparison_to_heuristic(
+    *,
+    heuristic_metrics: Mapping[str, Any],
+    learned_metrics: Mapping[str, Any],
+) -> dict[str, Any]:
+    side_by_side: dict[str, Any] = {
+        "roc_auc_mann_whitney": {
+            "heuristic_final_score": heuristic_metrics.get("roc_auc_mann_whitney"),
+            "audit_embedding_probability_work": learned_metrics.get("roc_auc_mann_whitney"),
+        },
+        "average_precision": {
+            "heuristic_final_score": heuristic_metrics.get("average_precision"),
+            "audit_embedding_probability_work": learned_metrics.get("average_precision"),
+        },
+    }
+    for k in K_VALUES:
+        side_by_side[f"precision_at_{k}"] = {
+            "heuristic_final_score": _pr_value(heuristic_metrics, k, "precision"),
+            "audit_embedding_probability_work": _pr_value(learned_metrics, k, "precision"),
+        }
+        side_by_side[f"recall_at_{k}"] = {
+            "heuristic_final_score": _pr_value(heuristic_metrics, k, "recall"),
+            "audit_embedding_probability_work": _pr_value(learned_metrics, k, "recall"),
+        }
+    return {
+        "delta_roc_auc": _metric_delta(learned_metrics.get("roc_auc_mann_whitney"), heuristic_metrics.get("roc_auc_mann_whitney")),
+        "delta_average_precision": _metric_delta(learned_metrics.get("average_precision"), heuristic_metrics.get("average_precision")),
+        "delta_precision_at_10": _metric_delta(
+            _pr_value(learned_metrics, 10, "precision"),
+            _pr_value(heuristic_metrics, 10, "precision"),
+        ),
+        "side_by_side": side_by_side,
+    }
+
+
+def _learned_metrics(
+    *,
+    eval_rows: Sequence[Mapping[str, Any]],
+    heuristic_metrics: Mapping[str, Any],
+) -> dict[str, Any]:
+    metrics = _score_metrics(
+        eval_rows,
+        score_field="audit_embedding_probability_work",
+        score_name="audit_embedding_probability_work",
+    )
+    return {
+        "metrics": metrics,
+        "comparison_to_heuristic": _comparison_to_heuristic(
+            heuristic_metrics=heuristic_metrics,
+            learned_metrics=metrics,
+        ),
+        "learned_product_scores_produced": True,
+        "audit_embedding_scorer_export_present": True,
+        "aggregation_policy": LEARNED_SCORE_AGGREGATION_POLICY,
+        "learned_metric_thresholds_satisfied": _learned_thresholds_satisfied(metrics),
     }
 
 
@@ -712,7 +979,7 @@ def _label_join_summary(
     }
 
 
-def _scoring_mode_details() -> dict[str, Any]:
+def _scoring_mode_details_heuristic() -> dict[str, Any]:
     return {
         "scoring_mode": SCORING_MODE_HEURISTIC,
         "learned_product_scores_produced": False,
@@ -732,6 +999,27 @@ def _learned_metrics_null() -> dict[str, Any]:
     }
 
 
+def _scoring_mode_details_learned(
+    *,
+    audit_embedding_scorer_version: Any,
+    audit_embedding_scorer_sha256: str,
+    learned_metric_thresholds_satisfied: bool,
+) -> dict[str, Any]:
+    return {
+        "scoring_mode": SCORING_MODE_AUDIT_EMBEDDING,
+        "learned_product_scores_produced": True,
+        "audit_embedding_scorer_export_present": True,
+        "audit_embedding_scorer_version": audit_embedding_scorer_version,
+        "audit_embedding_scorer_sha256": audit_embedding_scorer_sha256,
+        "no_fold_coefficient_averaging": True,
+        "no_refit_in_this_command": True,
+        "product_candidate_rows_used_for_training": 0,
+        "learned_score_aggregation_policy": LEARNED_SCORE_AGGREGATION_POLICY,
+        "learned_metric_thresholds": dict(LEARNED_METRIC_THRESHOLDS),
+        "learned_metric_thresholds_satisfied": learned_metric_thresholds_satisfied,
+    }
+
+
 def build_ml_offline_production_candidate_scoring_payload(
     conn: psycopg.Connection,
     *,
@@ -743,30 +1031,37 @@ def build_ml_offline_production_candidate_scoring_payload(
     ranking_run_id: str,
     family: str = DEFAULT_FAMILY,
     target: str = TARGET_GOOD,
-    experiment_version: str = EXPERIMENT_VERSION,
+    experiment_version: str | None = None,
+    scoring_mode: str = SCORING_MODE_HEURISTIC,
+    audit_embedding_scorer_export_path: Path | None = None,
     database_url: str | None = None,
     repo_root: Path | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     target, family = _validate_target_and_family(target=target, family=family)
+    scoring_mode = _validate_scoring_mode(scoring_mode, audit_embedding_scorer_export_path)
+    resolved_experiment_version = _default_experiment_version(scoring_mode, experiment_version)
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     label_path = Path(label_dataset_path).resolve()
     policy_path = Path(split_policy_path).resolve()
     gates_path = Path(metric_gates_path).resolve()
     ranker_path = Path(audit_ranker_experiment_path).resolve()
     emb_path = Path(embeddings_path).resolve()
+    scorer_path = Path(audit_embedding_scorer_export_path).resolve() if audit_embedding_scorer_export_path is not None else None
 
     label_payload = _load_json_object(label_path)
     policy_payload = _load_json_object(policy_path)
     gates_payload = _load_json_object(gates_path)
     ranker_payload = _load_json_object(ranker_path)
     emb_payload = _load_json_object(emb_path)
+    scorer_payload = _load_json_object(scorer_path) if scorer_path is not None else None
 
     label_rows = _validate_label_dataset(label_payload)
     _validate_split_policy(policy_payload)
     _validate_audit_ranker_experiment(ranker_payload)
 
     label_sha = sha256_file(label_path)
+    embeddings_sha = sha256_file(emb_path)
     ranker_sha = sha256_file(ranker_path)
     _validate_metric_gates(
         gates_payload,
@@ -774,11 +1069,25 @@ def build_ml_offline_production_candidate_scoring_payload(
         audit_ranker_experiment_sha256=ranker_sha,
         repo_root=root,
     )
-    embeddings_by_row_id = _validate_embeddings(
+    embedding_metadata, embeddings_by_row_id = _validate_embeddings(
         emb_payload,
         label_dataset_sha256=label_sha,
         label_dataset_version=LABEL_DATASET_VERSION,
     )
+    scorer_metadata: Mapping[str, Any] | None = None
+    scorer_sha: str | None = None
+    if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
+        if scorer_payload is None or scorer_path is None:
+            raise MLOfflineProductionCandidateScoringError(
+                "--audit-embedding-scorer-export is required in heuristic_and_audit_embedding_scorer mode"
+            )
+        scorer_sha = sha256_file(scorer_path)
+        scorer_metadata = _validate_audit_embedding_scorer(
+            scorer_payload,
+            label_dataset_sha256=label_sha,
+            embeddings_sha256=embeddings_sha,
+            embedding_dimensions=embedding_metadata.get("embedding_dimensions"),
+        )
 
     database_summary = assert_local_database_url(database_url) if database_url is not None else {
         "local_database_url_confirmed": None,
@@ -807,8 +1116,34 @@ def build_ml_offline_production_candidate_scoring_payload(
         embeddings_by_row_id=embeddings_by_row_id,
         target=target,
     )
+    if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
+        joined_observations = _attach_audit_embedding_observation_scores(
+            joined_observations,
+            embeddings_by_row_id=embeddings_by_row_id,
+            audit_scorer_payload=scorer_payload or {},
+        )
     eval_rows, conflict_diagnostics = _build_labeled_eval_subset(joined_observations, candidates_by_work=candidates_by_work)
     eval_by_work = {str(row["canonical_openalex_work_id"]): row for row in eval_rows}
+    heuristic_metrics = _heuristic_metrics(eval_rows)
+    if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
+        learned_metrics = _learned_metrics(eval_rows=eval_rows, heuristic_metrics=heuristic_metrics)
+        scoring_mode_details = _scoring_mode_details_learned(
+            audit_embedding_scorer_version=(scorer_metadata or {}).get("scorer_version"),
+            audit_embedding_scorer_sha256=str(scorer_sha),
+            learned_metric_thresholds_satisfied=bool(learned_metrics["learned_metric_thresholds_satisfied"]),
+        )
+        blockers_to_shadow = list(LEARNED_BLOCKERS_TO_SHADOW)
+        caveats = list(LEARNED_CAVEATS)
+        interpretation_next_step = "Run product-candidate learned metric gates v2."
+    else:
+        learned_metrics = _learned_metrics_null()
+        scoring_mode_details = _scoring_mode_details_heuristic()
+        blockers_to_shadow = list(BLOCKERS_TO_SHADOW)
+        caveats = list(CAVEATS)
+        interpretation_next_step = (
+            "Run product-candidate metric gates v1 if the coverage and top-k diagnostics are credible; "
+            "otherwise collect targeted product-pool labels."
+        )
 
     cfg = _parse_config_json(run_row.get("config_json"))
     generated = generated_at or _now_iso_z()
@@ -819,18 +1154,20 @@ def build_ml_offline_production_candidate_scoring_payload(
         _input_record("audit_ranker_experiment", ranker_path, repo_root=root),
         _input_record("embeddings", emb_path, repo_root=root),
     ]
+    if scorer_path is not None:
+        inputs.append(_input_record("audit_embedding_scorer_export", scorer_path, repo_root=root))
 
     return {
         "metadata": {
             "artifact_type": ARTIFACT_TYPE,
-            "experiment_version": experiment_version,
+            "experiment_version": resolved_experiment_version,
             "generated_at": generated,
             "inputs": inputs,
             "ranking_run_id": rid,
             "family": family,
             "target": target,
-            "scoring_mode": SCORING_MODE_HEURISTIC,
-            "caveats": list(CAVEATS),
+            "scoring_mode": scoring_mode,
+            "caveats": caveats,
         },
         "preflight_db_summary": {
             **database_summary,
@@ -868,13 +1205,13 @@ def build_ml_offline_production_candidate_scoring_payload(
             "embedding_rows_available": len(embeddings_by_row_id),
             **embedding_join_summary,
         },
-        "scoring_mode_details": _scoring_mode_details(),
-        "heuristic_metrics": _heuristic_metrics(eval_rows),
-        "learned_or_embedding_metrics": _learned_metrics_null(),
+        "scoring_mode_details": scoring_mode_details,
+        "heuristic_metrics": heuristic_metrics,
+        "learned_or_embedding_metrics": learned_metrics,
         "top_k_tables": _top_k_tables(candidate_rows, eval_by_work=eval_by_work),
         "coverage_by_rank_bucket": _coverage_by_rank_bucket(candidate_rows, eval_by_work=eval_by_work),
         "duplicate_conflict_diagnostics": conflict_diagnostics,
-        "blockers_to_shadow": list(BLOCKERS_TO_SHADOW),
+        "blockers_to_shadow": blockers_to_shadow,
         "interpretation": {
             "summary": (
                 "This artifact measures label overlap and current heuristic final_score behavior on a product-like "
@@ -887,10 +1224,7 @@ def build_ml_offline_production_candidate_scoring_payload(
                 "shadow-scoring readiness",
                 "production ranking improvement",
             ],
-            "next_step": (
-                "Run product-candidate metric gates v1 if the coverage and top-k diagnostics are credible; "
-                "otherwise collect targeted product-pool labels."
-            ),
+            "next_step": interpretation_next_step,
         },
         "candidate_pool_rows": candidate_rows,
         "labeled_candidate_observations": joined_observations,
@@ -914,6 +1248,7 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
     metrics = payload["heuristic_metrics"]
     learned = payload["learned_or_embedding_metrics"]
     top_k = payload["top_k_tables"]
+    learned_metrics = learned.get("metrics") if isinstance(learned.get("metrics"), Mapping) else None
 
     lines = [
         f"# Production-Candidate Offline Scoring ({metadata['experiment_version']})",
@@ -928,6 +1263,18 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
         f"- **scoring_mode:** `{metadata['scoring_mode']}`",
         f"- **candidate rows:** {pool['paper_scores_row_count']}",
         f"- **labeled eval works:** {labels['labeled_eval_subset_work_count']}",
+        f"- **heuristic ROC-AUC/AP:** {_fmt(metrics['roc_auc_mann_whitney'])} / {_fmt(metrics['average_precision'])}",
+    ]
+    if learned_metrics is not None:
+        comparison = learned.get("comparison_to_heuristic") if isinstance(learned.get("comparison_to_heuristic"), Mapping) else {}
+        lines.extend(
+            [
+                f"- **learned audit scorer ROC-AUC/AP:** {_fmt(learned_metrics['roc_auc_mann_whitney'])} / {_fmt(learned_metrics['average_precision'])}",
+                f"- **learned vs heuristic deltas (ROC-AUC/AP/P@10):** {_fmt(comparison.get('delta_roc_auc'))} / {_fmt(comparison.get('delta_average_precision'))} / {_fmt(comparison.get('delta_precision_at_10'))}",
+            ]
+        )
+    lines.extend(
+        [
         "",
         "## Candidate Pool Definition",
         "",
@@ -950,18 +1297,49 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
         "| --- | ---: | --- |",
         f"| ROC-AUC (Mann-Whitney) | {_fmt(metrics['roc_auc_mann_whitney'])} | {metrics.get('roc_auc_reason') or ''} |",
         f"| Average precision | {_fmt(metrics['average_precision'])} | {metrics.get('average_precision_reason') or ''} |",
-    ]
+        ]
+    )
     for k in K_VALUES:
         block = metrics["precision_recall_at_k"][str(k)]
         lines.append(f"| Precision@{k} | {_fmt(block['precision'])} | {block.get('reason') or ''} |")
         lines.append(f"| Recall@{k} | {_fmt(block['recall'])} | {block.get('reason') or ''} |")
 
+    lines.extend(["", "## Learned Audit Scorer Metrics", ""])
+    if learned_metrics is None:
+        lines.append(f"`{metadata['scoring_mode']}`: learned product scores were not produced. {learned['reason']}")
+    else:
+        lines.extend(
+            [
+                f"- **Score aggregation policy:** `{learned.get('aggregation_policy')}`",
+                "",
+                "| Metric | Value | Note |",
+                "| --- | ---: | --- |",
+                f"| ROC-AUC (Mann-Whitney) | {_fmt(learned_metrics['roc_auc_mann_whitney'])} | {learned_metrics.get('roc_auc_reason') or ''} |",
+                f"| Average precision | {_fmt(learned_metrics['average_precision'])} | {learned_metrics.get('average_precision_reason') or ''} |",
+            ]
+        )
+        for k in K_VALUES:
+            block = learned_metrics["precision_recall_at_k"][str(k)]
+            lines.append(f"| Precision@{k} | {_fmt(block['precision'])} | {block.get('reason') or ''} |")
+            lines.append(f"| Recall@{k} | {_fmt(block['recall'])} | {block.get('reason') or ''} |")
+
+        comparison = learned.get("comparison_to_heuristic") if isinstance(learned.get("comparison_to_heuristic"), Mapping) else {}
+        side_by_side = comparison.get("side_by_side") if isinstance(comparison.get("side_by_side"), Mapping) else {}
+        lines.extend(
+            [
+                "",
+                "## Heuristic vs Learned Comparison",
+                "",
+                "| Metric | Heuristic final_score | Learned audit scorer | Delta learned-heuristic |",
+                "| --- | ---: | ---: | ---: |",
+                f"| ROC-AUC | {_fmt(side_by_side.get('roc_auc_mann_whitney', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('roc_auc_mann_whitney', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_roc_auc'))} |",
+                f"| Average precision | {_fmt(side_by_side.get('average_precision', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('average_precision', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_average_precision'))} |",
+                f"| Precision@10 | {_fmt(side_by_side.get('precision_at_10', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('precision_at_10', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_precision_at_10'))} |",
+            ]
+        )
+
     lines.extend(
         [
-            "",
-            "## Learned/Embedding Metric Status",
-            "",
-            f"`{metadata['scoring_mode']}`: learned product scores were not produced. {learned['reason']}",
             "",
             "## Top-K Labeled Coverage",
             "",
@@ -994,7 +1372,7 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
             "",
             "## Next Step",
             "",
-            "Product-candidate metric gates v1 if results are credible; otherwise targeted product-pool labels.",
+            "Product-candidate metric gates v2." if learned_metrics is not None else "Product-candidate metric gates v1 if results are credible; otherwise targeted product-pool labels.",
             "",
         ]
     )
@@ -1014,7 +1392,9 @@ def write_ml_offline_production_candidate_scoring(
     target: str,
     output_path: Path,
     markdown_output_path: Path,
-    experiment_version: str = EXPERIMENT_VERSION,
+    experiment_version: str | None = None,
+    scoring_mode: str = SCORING_MODE_HEURISTIC,
+    audit_embedding_scorer_export_path: Path | None = None,
     database_url: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -1029,6 +1409,8 @@ def write_ml_offline_production_candidate_scoring(
         family=family,
         target=target,
         experiment_version=experiment_version,
+        scoring_mode=scoring_mode,
+        audit_embedding_scorer_export_path=audit_embedding_scorer_export_path,
         database_url=database_url,
         repo_root=repo_root,
     )
@@ -1052,9 +1434,12 @@ def run_ml_offline_production_candidate_scoring_cli(
     target: str,
     output_path: Path,
     markdown_output_path: Path,
-    experiment_version: str = EXPERIMENT_VERSION,
+    experiment_version: str | None = None,
+    scoring_mode: str = SCORING_MODE_HEURISTIC,
+    audit_embedding_scorer_export_path: Path | None = None,
     repo_root: Path | None = None,
 ) -> None:
+    _validate_scoring_mode(scoring_mode, audit_embedding_scorer_export_path)
     assert_local_database_url(database_url)
     with psycopg.connect(database_url) as conn:
         write_ml_offline_production_candidate_scoring(
@@ -1070,6 +1455,8 @@ def run_ml_offline_production_candidate_scoring_cli(
             output_path=output_path,
             markdown_output_path=markdown_output_path,
             experiment_version=experiment_version,
+            scoring_mode=scoring_mode,
+            audit_embedding_scorer_export_path=audit_embedding_scorer_export_path,
             database_url=database_url,
             repo_root=repo_root,
         )
