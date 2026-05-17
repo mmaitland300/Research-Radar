@@ -2377,6 +2377,70 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_hybrid_scorer_offline_experiment_spec_parser = subparsers.add_parser(
+        "ml-hybrid-scorer-offline-experiment-spec",
+        help="Write hybrid scorer offline experiment pre-registration spec (no scoring, training, DB, shadow, or prod)",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--production-candidate-scoring",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v3 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--production-candidate-metric-gates",
+        required=True,
+        help="Path to ml-offline-production-candidate-metric-gates-v3 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--holdout-assignment",
+        required=True,
+        help="Path to ml-learned-scorer-holdout-assignment-v1 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--label-dataset",
+        default=None,
+        help="Optional ml-label-dataset-v8 JSON provenance/inventory input",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--holdout-policy",
+        default=None,
+        help="Optional ml-learned-scorer-holdout-policy-v1 JSON provenance input",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--audit-embedding-scorer-export",
+        default=None,
+        help="Optional ml-offline-audit-embedding-scorer-v2 JSON provenance input",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write hybrid scorer offline experiment spec JSON",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--spec-version",
+        default="ml-hybrid-scorer-offline-experiment-v1-spec",
+        help="Spec version string to write (default: ml-hybrid-scorer-offline-experiment-v1-spec)",
+    )
+    ml_hybrid_scorer_offline_experiment_spec_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -3902,6 +3966,39 @@ def main() -> None:
             )
         except MLLearnedScorerHoldoutAssignmentError as e:
             print(f"ml-learned-scorer-holdout-assignment: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-hybrid-scorer-offline-experiment-spec":
+        from pipeline.ml_hybrid_scorer_offline_experiment_spec import (
+            MLHybridScorerOfflineExperimentSpecError,
+            write_ml_hybrid_scorer_offline_experiment_spec,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_hybrid_scorer_offline_experiment_spec(
+                production_candidate_scoring_path=Path(args.production_candidate_scoring),
+                production_candidate_metric_gates_path=Path(args.production_candidate_metric_gates),
+                holdout_assignment_path=Path(args.holdout_assignment),
+                split_policy_path=Path(args.split_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                label_dataset_path=Path(args.label_dataset) if args.label_dataset else None,
+                holdout_policy_path=Path(args.holdout_policy) if args.holdout_policy else None,
+                audit_embedding_scorer_export_path=(
+                    Path(args.audit_embedding_scorer_export) if args.audit_embedding_scorer_export else None
+                ),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                spec_version=str(args.spec_version),
+                repo_root=repo_root,
+            )
+        except MLHybridScorerOfflineExperimentSpecError as e:
+            print(f"ml-hybrid-scorer-offline-experiment-spec: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)

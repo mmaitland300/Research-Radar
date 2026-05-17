@@ -1,0 +1,276 @@
+{
+  "candidate_and_eval_policy": {
+    "all_arms_use_same_eval_work_set_and_label_denominators": true,
+    "candidate_score_transforms_scope": "full scoring v3 candidate pool",
+    "future_experiment_must_use_eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "metrics_scope": "eval-assignment labeled works only",
+    "positive_heavy_eval_interpretation": "P@k is advisory; ROC-AUC/AP carry more signal",
+    "unlabeled_candidate_works_allowed_in_distribution_summaries": true,
+    "unlabeled_candidate_works_excluded_from_label_metric_denominators": true
+  },
+  "caveats": [
+    "Spec only; no scoring executed.",
+    "v3 eval has already been observed, so future hybrid run is diagnostic/exploratory on this same surface unless a new holdout is defined.",
+    "Single-reviewer audit labels.",
+    "One ranking run/family.",
+    "Positive-heavy P@k.",
+    "Not live recommender validation.",
+    "Not shadow readiness.",
+    "No production authorization."
+  ],
+  "evidence_summary": {
+    "deltas_learned_minus_heuristic": {
+      "delta_average_precision": 0.008711385808262917,
+      "delta_precision_at_10": 0.0,
+      "delta_precision_at_20": 0.0,
+      "delta_precision_at_5": 0.0,
+      "delta_roc_auc": 0.0011695906432748204
+    },
+    "eval_work_count": 217,
+    "eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "heuristic_metrics": {
+      "average_precision": 0.9578865940621812,
+      "precision_at_10": 1.0,
+      "precision_at_20": 1.0,
+      "precision_at_5": 1.0,
+      "roc_auc": 0.8035087719298246
+    },
+    "holdout_learned_metrics": {
+      "average_precision": 0.9665979798704442,
+      "precision_at_10": 1.0,
+      "precision_at_20": 1.0,
+      "precision_at_5": 1.0,
+      "roc_auc": 0.8046783625730994
+    },
+    "independent_validation_passed_but_material_lift_failed": {
+      "independent_learned_validation_passed": true,
+      "material_lift_passed": false
+    },
+    "leakage_zero_confirmation": {
+      "assignment_global_zero_assertion": true,
+      "assignment_train_eval_work_overlap_count": 0,
+      "scoring_train_rows_used_in_metrics": 0,
+      "scoring_train_works_used_in_metrics": 0
+    },
+    "material_lift_gaps": {
+      "average_precision_gap_to_material_lift": 0.011288614191737083,
+      "roc_auc_gap_to_material_lift": 0.02883040935672518
+    },
+    "material_lift_thresholds": {
+      "minimum_delta_average_precision_for_material_lift": 0.02,
+      "minimum_delta_roc_auc_for_material_lift": 0.03
+    },
+    "positive_work_prevalence": 0.8755760368663594
+  },
+  "feature_policy": {
+    "allowed_features": [
+      {
+        "name": "final_score",
+        "source": "frozen scoring v3 candidate pool"
+      },
+      {
+        "name": "audit_embedding_probability_work",
+        "source": "scoring v3 holdout scorer v2 application"
+      }
+    ],
+    "allowed_label_blind_transforms": [
+      {
+        "current_pool_work_count": 217,
+        "definition": {
+          "definition": "percentile rank within full candidate pool",
+          "higher_score_is_better": true,
+          "name": "rank_pct",
+          "tie_policy": "deterministic average-rank or stable documented tie policy in future executable experiment"
+        },
+        "name": "rank_percentile",
+        "same_pool_as_scoring_v3": true,
+        "scope": "full candidate pool"
+      },
+      {
+        "name": "z_score",
+        "scope": "full candidate pool"
+      },
+      {
+        "name": "min_max_scaling",
+        "scope": "full candidate pool"
+      },
+      {
+        "definition": "logit(audit_embedding_probability_work) with clipping",
+        "name": "logit_audit_embedding_probability_work"
+      }
+    ],
+    "forbidden_features_or_methods": [
+      "labels or derived targets as features",
+      "reviewer_notes",
+      "review_pool_variant",
+      "sample_reason",
+      "row_id",
+      "assignment as predictive feature",
+      "post-hoc transforms chosen using eval-label performance",
+      "supervised fitting or weight search on eval labels",
+      "DB/ranking writes"
+    ]
+  },
+  "forbidden_designs": [
+    "supervised hybrid on eval labels",
+    "choosing weights after seeing v3/gates metrics and claiming validation",
+    "picking the best pre-registered arm after seeing eval metrics and treating that as confirmatory validation",
+    "using product-candidate eval labels to train a combiner",
+    "shadow deployment",
+    "production default change",
+    "silent label conflict resolution"
+  ],
+  "future_experiment_contract": {
+    "expected_inputs": [
+      "ml-offline-production-candidate-scoring-v3.json",
+      "ml-offline-production-candidate-metric-gates-v3.json",
+      "ml-hybrid-scorer-offline-experiment-v1-spec.json",
+      "ml-learned-scorer-holdout-assignment-v1.json"
+    ],
+    "expected_outputs": [
+      "docs/audit/ml-hybrid-scorer-offline-experiment-v1.json",
+      "docs/audit/ml-hybrid-scorer-offline-experiment-v1.md"
+    ],
+    "future_command": "ml-hybrid-scorer-offline-experiment",
+    "must": [
+      "compute all pre-registered arms exactly",
+      "use no supervised fitting",
+      "compute rank percentiles on the full candidate pool",
+      "report metrics for heuristic, learned, and hybrid arms on identical eval works",
+      "report score distributions for all candidate works",
+      "preserve not-validation caveats",
+      "keep shadow/prod blocked"
+    ],
+    "not_implemented_here": true
+  },
+  "future_gate_contract": {
+    "best_arm_on_seen_eval_is_exploratory_only": true,
+    "future_command": "ml-hybrid-scorer-metric-gates",
+    "material_lift_threshold": {
+      "hybrid_beats_heuristic_by_roc_auc": 0.03,
+      "or_hybrid_beats_heuristic_by_average_precision": 0.02
+    },
+    "not_implemented_here": true,
+    "p_at_10_non_regression": "advisory if both arms are saturated at 1.0",
+    "recommended_next_stage_if_no_lift": "collect_labels_or_features_or_new_eval_surface",
+    "shadow_remains_blocked_until_later_explicit_shadow_spec_after_stronger_evidence": true
+  },
+  "hybrid_experiment_rationale": {
+    "heuristic_final_score_is_already_strong": true,
+    "not_shadow_readiness": true,
+    "text_only_learned_scorer_roughly_matches_heuristic_without_material_lift": true,
+    "why_hybrid_is_next": "hybrid scoring is the natural next offline research step because final_score and learned probability may carry complementary signal"
+  },
+  "interpretation": {
+    "next_authorized_step": "ml-hybrid-scorer-offline-experiment-v1",
+    "not_claimed": [
+      "hybrid scoring execution",
+      "validation beyond the already observed v3 eval surface",
+      "shadow readiness",
+      "production readiness",
+      "live recommender quality"
+    ],
+    "summary": "Hybrid scorer offline experiment v1 is pre-registered because the holdout learned scorer passed validity and non-regression but did not materially beat the heuristic baseline."
+  },
+  "metadata": {
+    "artifact_type": "ml_hybrid_scorer_offline_experiment_spec",
+    "audit_embedding_scorer_version": "ml-offline-audit-embedding-scorer-v2",
+    "caveats": [
+      "Spec only; no scoring executed.",
+      "v3 eval has already been observed, so future hybrid run is diagnostic/exploratory on this same surface unless a new holdout is defined.",
+      "Single-reviewer audit labels.",
+      "One ranking run/family.",
+      "Positive-heavy P@k.",
+      "Not live recommender validation.",
+      "Not shadow readiness.",
+      "No production authorization."
+    ],
+    "eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "generated_at": "2026-05-17T15:48:15Z",
+    "holdout_assignment_version": "ml-learned-scorer-holdout-assignment-v1",
+    "holdout_policy_version": "ml-learned-scorer-holdout-policy-v1",
+    "inputs": [
+      {
+        "name": "production_candidate_scoring",
+        "path": "docs/audit/ml-offline-production-candidate-scoring-v3.json",
+        "sha256": "3947f8500d25a8984fca7a5570b39ba07c9a0c07e7694f079e56c3672f2aa362"
+      },
+      {
+        "name": "production_candidate_metric_gates",
+        "path": "docs/audit/ml-offline-production-candidate-metric-gates-v3.json",
+        "sha256": "e8459dce403684dc36deed72438924782dfaf3d47ff1275baeaa8d4c57347404"
+      },
+      {
+        "name": "holdout_assignment",
+        "path": "docs/audit/ml-learned-scorer-holdout-assignment-v1.json",
+        "sha256": "5597d54f7c57150bdef0317d3c65512108fce240d6e7b5f34f04430bcdb2052d"
+      },
+      {
+        "name": "split_policy",
+        "path": "docs/audit/ml-label-split-policy-v1.json",
+        "sha256": "0141d03a1c7822d6c6065483aae0ec7aff31c6d73e329da0880e3b39de993c08"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      },
+      {
+        "name": "label_dataset",
+        "path": "docs/audit/ml-label-dataset-v8.json",
+        "sha256": "ea65b114cfef6e22e3299bf4e54d320b6ba13a66185ac0908700528a1846948c"
+      },
+      {
+        "name": "holdout_policy",
+        "path": "docs/audit/ml-learned-scorer-holdout-policy-v1.json",
+        "sha256": "224f8022a1bd3208472f642a645324950d1d076f5de90edb4f288d746285dc4f"
+      },
+      {
+        "name": "audit_embedding_scorer_export",
+        "path": "docs/audit/ml-offline-audit-embedding-scorer-v2.json",
+        "sha256": "f2e7744c089360c9a218361d94b6ed9d55c6c9570775fff769713785d40ee795"
+      }
+    ],
+    "label_dataset_version": "ml-label-dataset-v8",
+    "production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "source_metric_gates_version": "ml-offline-production-candidate-metric-gates-v3",
+    "source_scoring_version": "ml-offline-production-candidate-scoring-v3",
+    "spec_version": "ml-hybrid-scorer-offline-experiment-v1-spec",
+    "split_policy_version": "ml-label-split-policy-v1"
+  },
+  "pre_registered_hybrid_arms": [
+    {
+      "arm_id": "heuristic_final_score_baseline",
+      "baseline": true,
+      "score_formula": "final_score"
+    },
+    {
+      "arm_id": "holdout_embedding_probability_baseline",
+      "baseline": true,
+      "score_formula": "audit_embedding_probability_work"
+    },
+    {
+      "arm_id": "hybrid_rank_mean_50_50",
+      "baseline": false,
+      "score_formula": "0.5 * rank_pct(final_score) + 0.5 * rank_pct(audit_embedding_probability_work)"
+    },
+    {
+      "arm_id": "hybrid_rank_mean_75_25_heuristic",
+      "baseline": false,
+      "score_formula": "0.75 * rank_pct(final_score) + 0.25 * rank_pct(audit_embedding_probability_work)"
+    },
+    {
+      "arm_id": "hybrid_rank_mean_25_75_heuristic",
+      "baseline": false,
+      "score_formula": "0.25 * rank_pct(final_score) + 0.75 * rank_pct(audit_embedding_probability_work)"
+    }
+  ],
+  "shadow_and_production_blockers": {
+    "missing_hybrid_experiment_results": true,
+    "missing_hybrid_metric_gates": true,
+    "missing_ml_shadow_scorer_v1": true,
+    "no_production_model_artifact": true,
+    "production_default_allowed": false,
+    "shadow_scoring_allowed": false
+  }
+}
