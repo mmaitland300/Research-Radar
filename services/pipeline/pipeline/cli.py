@@ -2107,7 +2107,7 @@ def main() -> None:
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--production-candidate-scoring",
         required=True,
-        help="Path to ml-offline-production-candidate-scoring-v1 JSON",
+        help="Path to ml-offline-production-candidate-scoring JSON",
     )
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--offline-metric-gates",
@@ -2137,20 +2137,40 @@ def main() -> None:
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--gates-version",
         default="ml-offline-production-candidate-metric-gates-v1",
+        choices=[
+            "ml-offline-production-candidate-metric-gates-v1",
+            "ml-offline-production-candidate-metric-gates-v2",
+            "ml-offline-production-candidate-metric-gates-v3",
+        ],
         help=(
             "Gates version string to write "
-            "(default: ml-offline-production-candidate-metric-gates-v1; use v2 for learned scorer gates)"
+            "(default: ml-offline-production-candidate-metric-gates-v1)"
         ),
     )
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--audit-embedding-scorer-export",
         default=None,
-        help="Path to ml-offline-audit-embedding-scorer-v1 JSON; required for gates v2",
+        help="Path to audit embedding scorer JSON; required for gates v2/v3",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--holdout-assignment",
+        default=None,
+        help="Path to ml-learned-scorer-holdout-assignment-v1 JSON; required for gates v3",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--holdout-policy",
+        default=None,
+        help="Path to ml-learned-scorer-holdout-policy-v1 JSON; required for gates v3",
     )
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--production-candidate-metric-gates-v1",
         default=None,
         help="Optional path to prior ml-offline-production-candidate-metric-gates-v1 JSON",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--production-candidate-metric-gates-v2",
+        default=None,
+        help="Optional path to prior ml-offline-production-candidate-metric-gates-v2 JSON",
     )
     ml_offline_production_candidate_metric_gates_parser.add_argument(
         "--repo-root",
@@ -3714,9 +3734,16 @@ def main() -> None:
         audit_scorer_export = (
             Path(args.audit_embedding_scorer_export) if args.audit_embedding_scorer_export else None
         )
+        holdout_assignment = Path(args.holdout_assignment) if args.holdout_assignment else None
+        holdout_policy = Path(args.holdout_policy) if args.holdout_policy else None
         prior_v1_gates = (
             Path(args.production_candidate_metric_gates_v1)
             if args.production_candidate_metric_gates_v1
+            else None
+        )
+        prior_v2_gates = (
+            Path(args.production_candidate_metric_gates_v2)
+            if args.production_candidate_metric_gates_v2
             else None
         )
         if (
@@ -3727,6 +3754,22 @@ def main() -> None:
                 "--audit-embedding-scorer-export is required when --gates-version "
                 "ml-offline-production-candidate-metric-gates-v2"
             )
+        if str(args.gates_version) == "ml-offline-production-candidate-metric-gates-v3":
+            if audit_scorer_export is None:
+                parser.error(
+                    "--audit-embedding-scorer-export is required when --gates-version "
+                    "ml-offline-production-candidate-metric-gates-v3"
+                )
+            if holdout_assignment is None:
+                parser.error(
+                    "--holdout-assignment is required when --gates-version "
+                    "ml-offline-production-candidate-metric-gates-v3"
+                )
+            if holdout_policy is None:
+                parser.error(
+                    "--holdout-policy is required when --gates-version "
+                    "ml-offline-production-candidate-metric-gates-v3"
+                )
         try:
             write_ml_offline_production_candidate_metric_gates(
                 production_candidate_scoring_path=Path(args.production_candidate_scoring),
@@ -3735,6 +3778,9 @@ def main() -> None:
                 production_readiness_plan_path=Path(args.production_readiness_plan),
                 audit_embedding_scorer_export_path=audit_scorer_export,
                 production_candidate_metric_gates_v1_path=prior_v1_gates,
+                production_candidate_metric_gates_v2_path=prior_v2_gates,
+                holdout_assignment_path=holdout_assignment,
+                holdout_policy_path=holdout_policy,
                 output_path=out_json,
                 markdown_output_path=out_md,
                 gates_version=str(args.gates_version),

@@ -18,9 +18,11 @@ from pipeline.repo_paths import default_repo_root, portable_repo_path
 ARTIFACT_TYPE = "ml_offline_production_candidate_metric_gates"
 GATES_VERSION = "ml-offline-production-candidate-metric-gates-v1"
 GATES_VERSION_V2 = "ml-offline-production-candidate-metric-gates-v2"
+GATES_VERSION_V3 = "ml-offline-production-candidate-metric-gates-v3"
 SCORING_ARTIFACT_TYPE = "ml_offline_production_candidate_scoring"
 SCORING_VERSION = "ml-offline-production-candidate-scoring-v1"
 SCORING_VERSION_V2 = "ml-offline-production-candidate-scoring-v2"
+SCORING_VERSION_V3 = "ml-offline-production-candidate-scoring-v3"
 OFFLINE_METRIC_GATES_ARTIFACT_TYPE = "ml_offline_metric_gates"
 OFFLINE_METRIC_GATES_VERSION = "ml-offline-metric-gates-v1"
 SPLIT_POLICY_ARTIFACT_TYPE = "ml_label_split_policy"
@@ -29,10 +31,17 @@ PRODUCTION_PLAN_ARTIFACT_TYPE = "ml_production_readiness_plan"
 PRODUCTION_PLAN_VERSION = "ml-production-readiness-plan-v1"
 AUDIT_SCORER_ARTIFACT_TYPE = "ml_offline_audit_embedding_scorer"
 AUDIT_SCORER_VERSION = "ml-offline-audit-embedding-scorer-v1"
+AUDIT_SCORER_VERSION_V2 = "ml-offline-audit-embedding-scorer-v2"
+HOLDOUT_ASSIGNMENT_ARTIFACT_TYPE = "ml_learned_scorer_holdout_assignment"
+HOLDOUT_ASSIGNMENT_VERSION = "ml-learned-scorer-holdout-assignment-v1"
+HOLDOUT_POLICY_ARTIFACT_TYPE = "ml_learned_scorer_holdout_policy"
+HOLDOUT_POLICY_VERSION = "ml-learned-scorer-holdout-policy-v1"
+HOLDOUT_STRATEGY_ID = "product_candidate_snapshot_holdout"
 TARGET = "good_or_acceptable"
 FORBIDDEN_TARGET = "surprising_or_useful"
 SCORING_MODE_HEURISTIC = "heuristic_and_coverage_only"
 SCORING_MODE_AUDIT_EMBEDDING = "heuristic_and_audit_embedding_scorer"
+SCORING_MODE_HOLDOUT_EMBEDDING = "heuristic_and_holdout_embedding_scorer"
 
 THRESHOLDS_VERSION = "ml-offline-production-candidate-metric-gates-v1-thresholds"
 THRESHOLDS: dict[str, float | int] = {
@@ -63,6 +72,27 @@ THRESHOLDS_V2: dict[str, float | int] = {
     "near_perfect_learned_roc_auc_advisory_threshold": 0.99,
     "near_perfect_learned_average_precision_advisory_threshold": 0.99,
 }
+THRESHOLDS_VERSION_V3 = "ml-offline-production-candidate-metric-gates-v3-thresholds"
+THRESHOLDS_V3: dict[str, float | int | bool | str] = {
+    "minimum_candidate_unique_work_count": 100,
+    "minimum_candidate_label_coverage_rate": 0.80,
+    "minimum_labeled_eval_work_count": 100,
+    "minimum_labeled_eval_negative_work_count": 20,
+    "minimum_heuristic_roc_auc": 0.70,
+    "minimum_heuristic_average_precision": 0.85,
+    "minimum_heuristic_precision_at_10": 0.80,
+    "maximum_missing_embedding_rate_for_labeled_observations": 0.05,
+    "high_positive_work_prevalence_advisory_threshold": 0.85,
+    "minimum_holdout_learned_roc_auc": 0.70,
+    "minimum_holdout_learned_average_precision": 0.85,
+    "minimum_holdout_learned_precision_at_10": 0.80,
+    "minimum_delta_roc_auc_for_non_regression": 0.0,
+    "minimum_delta_average_precision_for_non_regression": 0.0,
+    "precision_at_10_non_regression": "advisory_only",
+    "minimum_delta_roc_auc_for_material_lift": 0.03,
+    "minimum_delta_average_precision_for_material_lift": 0.02,
+    "material_lift_precision_at_10_required": False,
+}
 
 GATE_STATUS_ENUM = ("pass", "fail", "skip", "not_applicable", "not_evaluated", "advisory_warn")
 REQUIRED_HEURISTIC_GATE_IDS = (
@@ -91,6 +121,19 @@ REQUIRED_HEURISTIC_GATE_IDS_V2 = (
     "G13_shadow_blockers_documented",
     "G14_production_readiness_alignment",
 )
+REQUIRED_HEURISTIC_GATE_IDS_V3 = (
+    "G01_input_scope",
+    "G02_prior_audit_gates_passed",
+    "G03_candidate_pool_size",
+    "G04_label_coverage",
+    "G05_negative_coverage",
+    "G06_embedding_coverage",
+    "G07_heuristic_roc_auc",
+    "G08_heuristic_average_precision",
+    "G09_heuristic_top_k_precision",
+    "G15_shadow_blockers_documented",
+    "G16_production_readiness_alignment",
+)
 SHADOW_BLOCKERS = (
     "learned_scorer_not_evaluated",
     "missing_ml_shadow_scorer_v1",
@@ -99,6 +142,12 @@ SHADOW_BLOCKERS = (
 )
 SHADOW_BLOCKERS_V2 = (
     "independent_learned_validation_not_evaluated",
+    "missing_ml_shadow_scorer_v1",
+    "production_default_blocked",
+    "no_production_model_artifact",
+)
+SHADOW_BLOCKERS_V3 = (
+    "material_lift_insufficient",
     "missing_ml_shadow_scorer_v1",
     "production_default_blocked",
     "no_production_model_artifact",
@@ -120,6 +169,15 @@ CAVEATS_V2 = (
     "Heuristic final_score and learned audit scorer are separate evidence lines.",
     "Shadow and production default blocked.",
     "No ranking/API/web changes.",
+)
+CAVEATS_V3 = (
+    "Not live recommender validation.",
+    "Single-reviewer audit labels.",
+    "One ranking run/family.",
+    "Holdout is relative to scorer v2 train works.",
+    "Positive-heavy eval inflates P@k.",
+    "Embedding-only model does not materially beat final_score on current snapshot.",
+    "No shadow/production authorization.",
 )
 
 
@@ -367,6 +425,95 @@ def _validate_audit_embedding_scorer(payload: Mapping[str, Any]) -> Mapping[str,
     return metadata
 
 
+def _validate_scoring_v3(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="production-candidate-scoring")
+    if metadata.get("artifact_type") != SCORING_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected scoring metadata.artifact_type={SCORING_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("experiment_version") != SCORING_VERSION_V3:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected scoring metadata.experiment_version={SCORING_VERSION_V3!r}, got {metadata.get('experiment_version')!r}"
+        )
+    if metadata.get("scoring_mode") != SCORING_MODE_HOLDOUT_EMBEDDING:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected scoring metadata.scoring_mode={SCORING_MODE_HOLDOUT_EMBEDDING!r}, got {metadata.get('scoring_mode')!r}"
+        )
+    if metadata.get("target") != TARGET:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected scoring metadata.target={TARGET!r}, got {metadata.get('target')!r}"
+        )
+    if _get(payload, "scoring_mode_details.learned_product_scores_produced") is not True:
+        raise MLOfflineProductionCandidateMetricGatesError("scoring learned_product_scores_produced must be true")
+    if _get(payload, "scoring_mode_details.eval_only") is not True:
+        raise MLOfflineProductionCandidateMetricGatesError("scoring scoring_mode_details.eval_only must be true")
+    if _get(payload, "scoring_mode_details.product_candidate_rows_used_for_training") != 0:
+        raise MLOfflineProductionCandidateMetricGatesError("scoring product_candidate_rows_used_for_training must be 0")
+    if not _nonempty(metadata.get("eval_work_set_sha256")):
+        raise MLOfflineProductionCandidateMetricGatesError("scoring metadata.eval_work_set_sha256 must be present")
+    comparison = _get(payload, "learned_or_embedding_metrics.comparison_to_heuristic")
+    if not isinstance(comparison, Mapping):
+        raise MLOfflineProductionCandidateMetricGatesError("scoring comparison_to_heuristic must be present")
+    for key in ("delta_roc_auc", "delta_average_precision", "delta_precision_at_10"):
+        if key not in comparison:
+            raise MLOfflineProductionCandidateMetricGatesError(f"scoring comparison_to_heuristic.{key} must be present")
+    return metadata
+
+
+def _validate_holdout_assignment(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="holdout-assignment")
+    if metadata.get("artifact_type") != HOLDOUT_ASSIGNMENT_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected holdout assignment metadata.artifact_type={HOLDOUT_ASSIGNMENT_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("assignment_version") != HOLDOUT_ASSIGNMENT_VERSION:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected holdout assignment metadata.assignment_version={HOLDOUT_ASSIGNMENT_VERSION!r}, got {metadata.get('assignment_version')!r}"
+        )
+    if metadata.get("strategy_id") != HOLDOUT_STRATEGY_ID:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"holdout assignment metadata.strategy_id must be {HOLDOUT_STRATEGY_ID!r}"
+        )
+    return metadata
+
+
+def _holdout_policy_eval_sha(payload: Mapping[str, Any]) -> tuple[Any, Any]:
+    inventory_sha = _get(payload, "dataset_inventory.product_candidate_eval_work_set_sha256")
+    strategy_sha = _get(payload, "primary_holdout_strategy.eval_work_set_definition.eval_work_set_sha256")
+    return inventory_sha, strategy_sha
+
+
+def _validate_holdout_policy(payload: Mapping[str, Any], *, expected_eval_sha: str) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="holdout-policy")
+    if metadata.get("artifact_type") != HOLDOUT_POLICY_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected holdout policy metadata.artifact_type={HOLDOUT_POLICY_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("policy_version") != HOLDOUT_POLICY_VERSION:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected holdout policy metadata.policy_version={HOLDOUT_POLICY_VERSION!r}, got {metadata.get('policy_version')!r}"
+        )
+    inventory_sha, strategy_sha = _holdout_policy_eval_sha(payload)
+    if inventory_sha != expected_eval_sha or strategy_sha != expected_eval_sha:
+        raise MLOfflineProductionCandidateMetricGatesError("holdout policy eval_work_set_sha256 must match scoring/scorer/assignment")
+    return metadata
+
+
+def _validate_audit_embedding_scorer_v3(
+    payload: Mapping[str, Any],
+    *,
+    scoring_eval_sha: str,
+    assignment_sha256: str,
+) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="audit-embedding-scorer-export")
+    if metadata.get("artifact_type") != AUDIT_SCORER_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected scorer metadata.artifact_type={AUDIT_SCORER_ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
+        )
+    _ = scoring_eval_sha, assignment_sha256
+    return metadata
+
+
 def _validate_prior_v1_metric_gates(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     metadata = _metadata(payload, name="production-candidate-metric-gates-v1")
     if metadata.get("artifact_type") != ARTIFACT_TYPE:
@@ -380,6 +527,19 @@ def _validate_prior_v1_metric_gates(payload: Mapping[str, Any]) -> Mapping[str, 
     if payload.get("product_candidate_heuristic_gates_passed") is not True:
         raise MLOfflineProductionCandidateMetricGatesError(
             "prior v1 product-candidate metric gates product_candidate_heuristic_gates_passed must be true"
+        )
+    return metadata
+
+
+def _validate_prior_v2_metric_gates(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="production-candidate-metric-gates-v2")
+    if metadata.get("artifact_type") != ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected prior v2 gates metadata.artifact_type={ARTIFACT_TYPE!r}, got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("gates_version") != GATES_VERSION_V2:
+        raise MLOfflineProductionCandidateMetricGatesError(
+            f"expected prior v2 gates metadata.gates_version={GATES_VERSION_V2!r}, got {metadata.get('gates_version')!r}"
         )
     return metadata
 
@@ -1474,6 +1634,562 @@ def _build_gates_v2(
     return gates
 
 
+def _build_gates_v3(
+    *,
+    scoring_payload: Mapping[str, Any],
+    offline_metric_gates_payload: Mapping[str, Any],
+    production_plan_payload: Mapping[str, Any],
+    scorer_payload: Mapping[str, Any],
+    scorer_sha256: str,
+    assignment_payload: Mapping[str, Any],
+    assignment_sha256: str,
+    holdout_policy_payload: Mapping[str, Any],
+    shadow_scoring_allowed: bool,
+    production_default_allowed: bool,
+    shadow_blockers: Sequence[str],
+) -> list[dict[str, Any]]:
+    gates: list[dict[str, Any]] = []
+    scoring_metadata = _metadata(scoring_payload, name="production-candidate-scoring")
+    scorer_metadata = _metadata(scorer_payload, name="audit-embedding-scorer-export")
+    assignment_metadata = _metadata(assignment_payload, name="holdout-assignment")
+
+    candidate_pool_definition = scoring_payload.get("candidate_pool_definition")
+    g01_observed = {
+        "experiment_version": scoring_metadata.get("experiment_version"),
+        "scoring_mode": scoring_metadata.get("scoring_mode"),
+        "target": scoring_metadata.get("target"),
+        "ranking_run_id": scoring_metadata.get("ranking_run_id"),
+        "family": scoring_metadata.get("family"),
+        "candidate_pool_definition_present": isinstance(candidate_pool_definition, Mapping),
+    }
+    g01_pass = (
+        g01_observed["experiment_version"] == SCORING_VERSION_V3
+        and g01_observed["scoring_mode"] == SCORING_MODE_HOLDOUT_EMBEDDING
+        and g01_observed["target"] == TARGET
+        and _nonempty(g01_observed["ranking_run_id"])
+        and _nonempty(g01_observed["family"])
+        and g01_observed["candidate_pool_definition_present"]
+    )
+    gates.append(
+        _gate(
+            "G01_input_scope",
+            title="Input Scope",
+            category="scope",
+            status=_status(bool(g01_pass)),
+            threshold={
+                "experiment_version": SCORING_VERSION_V3,
+                "scoring_mode": SCORING_MODE_HOLDOUT_EMBEDDING,
+                "target": TARGET,
+                "ranking_run_id_present": True,
+                "family_present": True,
+                "candidate_pool_definition_present": True,
+            },
+            observed_value=g01_observed,
+            source_field_paths=[
+                "scoring.metadata.experiment_version",
+                "scoring.metadata.scoring_mode",
+                "scoring.metadata.target",
+                "scoring.metadata.ranking_run_id",
+                "scoring.metadata.family",
+                "scoring.candidate_pool_definition",
+            ],
+            rationale="The v3 diagnostic must identify the holdout-scored product-candidate pool, ranking run, and family.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    audit_ranker_passed = offline_metric_gates_payload.get("audit_ranker_gates_passed")
+    gates.append(
+        _gate(
+            "G02_prior_audit_gates_passed",
+            title="Prior Audit Gates Passed",
+            category="policy",
+            status=_status(audit_ranker_passed is True),
+            threshold={"audit_ranker_gates_passed": True},
+            observed_value={"audit_ranker_gates_passed": audit_ranker_passed},
+            source_field_paths=["offline_metric_gates.audit_ranker_gates_passed"],
+            rationale="The audit-ranker evidence line must have passed before interpreting product-candidate diagnostics.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    candidate_count = _get(scoring_payload, "candidate_pool_summary.candidate_unique_canonical_work_count")
+    g03_pass = _is_number(candidate_count) and candidate_count >= THRESHOLDS_V3["minimum_candidate_unique_work_count"]
+    gates.append(
+        _gate(
+            "G03_candidate_pool_size",
+            title="Candidate Pool Size",
+            category="coverage",
+            status=_status(g03_pass),
+            threshold={"candidate_unique_work_count_min": THRESHOLDS_V3["minimum_candidate_unique_work_count"]},
+            observed_value={"candidate_unique_canonical_work_count": candidate_count},
+            source_field_paths=["scoring.candidate_pool_summary.candidate_unique_canonical_work_count"],
+            rationale="The product-candidate eval arm must contain enough distinct works for deterministic gates.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    label_coverage = _get(scoring_payload, "label_join_summary.candidate_work_labeled_coverage_rate")
+    labeled_work_count = _get(scoring_payload, "label_join_summary.labeled_eval_subset_work_count")
+    g04_pass = (
+        _is_number(label_coverage)
+        and _is_number(labeled_work_count)
+        and label_coverage >= THRESHOLDS_V3["minimum_candidate_label_coverage_rate"]
+        and labeled_work_count >= THRESHOLDS_V3["minimum_labeled_eval_work_count"]
+    )
+    gates.append(
+        _gate(
+            "G04_label_coverage",
+            title="Label Coverage",
+            category="coverage",
+            status=_status(g04_pass),
+            threshold={
+                "candidate_label_coverage_rate_min": THRESHOLDS_V3["minimum_candidate_label_coverage_rate"],
+                "labeled_eval_work_count_min": THRESHOLDS_V3["minimum_labeled_eval_work_count"],
+            },
+            observed_value={
+                "candidate_work_labeled_coverage_rate": label_coverage,
+                "labeled_eval_subset_work_count": labeled_work_count,
+            },
+            source_field_paths=[
+                "scoring.label_join_summary.candidate_work_labeled_coverage_rate",
+                "scoring.label_join_summary.labeled_eval_subset_work_count",
+            ],
+            rationale="The holdout diagnostic needs broad label overlap and enough labeled eval works.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    negative_count = _get(scoring_payload, "label_join_summary.labeled_eval_subset_negative_work_count")
+    g05_pass = _is_number(negative_count) and negative_count >= THRESHOLDS_V3["minimum_labeled_eval_negative_work_count"]
+    gates.append(
+        _gate(
+            "G05_negative_coverage",
+            title="Negative Coverage",
+            category="coverage",
+            status=_status(g05_pass),
+            threshold={"labeled_eval_negative_work_count_min": THRESHOLDS_V3["minimum_labeled_eval_negative_work_count"]},
+            observed_value={"labeled_eval_subset_negative_work_count": negative_count},
+            source_field_paths=["scoring.label_join_summary.labeled_eval_subset_negative_work_count"],
+            rationale="Negative labeled eval works are required to interpret held-out separation metrics.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    missing_rate = _missing_embedding_rate(scoring_payload)
+    g06_pass = (
+        missing_rate is not None
+        and missing_rate <= THRESHOLDS_V3["maximum_missing_embedding_rate_for_labeled_observations"]
+    )
+    gates.append(
+        _gate(
+            "G06_embedding_coverage",
+            title="Embedding Coverage",
+            category="coverage",
+            status=_status(g06_pass),
+            threshold={
+                "missing_embedding_rate_max": THRESHOLDS_V3[
+                    "maximum_missing_embedding_rate_for_labeled_observations"
+                ]
+            },
+            observed_value={
+                "missing_embedding_count": _get(scoring_payload, "embedding_join_summary.missing_embedding_count"),
+                "labeled_candidate_observation_count": _get(
+                    scoring_payload, "embedding_join_summary.labeled_candidate_observation_count"
+                ),
+                "missing_embedding_rate": missing_rate,
+            },
+            source_field_paths=[
+                "scoring.embedding_join_summary.missing_embedding_count",
+                "scoring.embedding_join_summary.labeled_candidate_observation_count",
+            ],
+            rationale="The holdout learned scorer can only be evaluated if labeled eval observations have embeddings.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    heuristic_roc = _get(scoring_payload, "heuristic_metrics.roc_auc_mann_whitney")
+    g07_pass = _is_number(heuristic_roc) and heuristic_roc >= THRESHOLDS_V3["minimum_heuristic_roc_auc"]
+    gates.append(
+        _gate(
+            "G07_heuristic_roc_auc",
+            title="Heuristic ROC-AUC",
+            category="metric",
+            status=_status(g07_pass),
+            threshold={"heuristic_roc_auc_min": THRESHOLDS_V3["minimum_heuristic_roc_auc"]},
+            observed_value={"roc_auc_mann_whitney": heuristic_roc},
+            source_field_paths=["scoring.heuristic_metrics.roc_auc_mann_whitney"],
+            rationale="The heuristic final_score line remains a required baseline evidence check.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    heuristic_ap = _get(scoring_payload, "heuristic_metrics.average_precision")
+    g08_pass = _is_number(heuristic_ap) and heuristic_ap >= THRESHOLDS_V3["minimum_heuristic_average_precision"]
+    gates.append(
+        _gate(
+            "G08_heuristic_average_precision",
+            title="Heuristic Average Precision",
+            category="metric",
+            status=_status(g08_pass),
+            threshold={"heuristic_average_precision_min": THRESHOLDS_V3["minimum_heuristic_average_precision"]},
+            observed_value={"average_precision": heuristic_ap},
+            source_field_paths=["scoring.heuristic_metrics.average_precision"],
+            rationale="The heuristic final_score line should retain strong precision-recall evidence on the same eval works.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    heuristic_p10 = _get(scoring_payload, "heuristic_metrics.precision_recall_at_k.10.precision")
+    g09_pass = _is_number(heuristic_p10) and heuristic_p10 >= THRESHOLDS_V3["minimum_heuristic_precision_at_10"]
+    gates.append(
+        _gate(
+            "G09_heuristic_top_k_precision",
+            title="Heuristic Top-K Precision",
+            category="metric",
+            status=_status(g09_pass),
+            threshold={"heuristic_precision_at_10_min": THRESHOLDS_V3["minimum_heuristic_precision_at_10"]},
+            observed_value={"precision_at_10": heuristic_p10},
+            source_field_paths=['scoring.heuristic_metrics.precision_recall_at_k["10"].precision'],
+            rationale="Top-10 precision on labeled eval works must clear the heuristic floor.",
+            blocking_for=["product_candidate_heuristic_gates", "shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    learned_roc = _get(scoring_payload, "learned_or_embedding_metrics.metrics.roc_auc_mann_whitney")
+    learned_ap = _get(scoring_payload, "learned_or_embedding_metrics.metrics.average_precision")
+    learned_p10 = _get(scoring_payload, "learned_or_embedding_metrics.metrics.precision_recall_at_k.10.precision")
+    g10_checks = {
+        "learned_product_scores_produced": _get(scoring_payload, "scoring_mode_details.learned_product_scores_produced") is True,
+        "eval_only": _get(scoring_payload, "scoring_mode_details.eval_only") is True,
+        "product_candidate_rows_used_for_training_zero": _get(
+            scoring_payload, "scoring_mode_details.product_candidate_rows_used_for_training"
+        )
+        == 0,
+        "learned_roc_auc_floor": _is_number(learned_roc) and learned_roc >= THRESHOLDS_V3["minimum_holdout_learned_roc_auc"],
+        "learned_average_precision_floor": _is_number(learned_ap)
+        and learned_ap >= THRESHOLDS_V3["minimum_holdout_learned_average_precision"],
+        "learned_precision_at_10_floor": _is_number(learned_p10)
+        and learned_p10 >= THRESHOLDS_V3["minimum_holdout_learned_precision_at_10"],
+    }
+    gates.append(
+        _gate(
+            "G10_holdout_learned_validity",
+            title="Holdout Learned Validity",
+            category="learned_scorer",
+            status=_status(all(g10_checks.values())),
+            threshold={
+                "minimum_holdout_learned_roc_auc": THRESHOLDS_V3["minimum_holdout_learned_roc_auc"],
+                "minimum_holdout_learned_average_precision": THRESHOLDS_V3[
+                    "minimum_holdout_learned_average_precision"
+                ],
+                "minimum_holdout_learned_precision_at_10": THRESHOLDS_V3[
+                    "minimum_holdout_learned_precision_at_10"
+                ],
+            },
+            observed_value={
+                "checks": g10_checks,
+                "roc_auc_mann_whitney": learned_roc,
+                "average_precision": learned_ap,
+                "precision_at_10": learned_p10,
+            },
+            source_field_paths=[
+                "scoring.scoring_mode_details.learned_product_scores_produced",
+                "scoring.scoring_mode_details.eval_only",
+                "scoring.scoring_mode_details.product_candidate_rows_used_for_training",
+                "scoring.learned_or_embedding_metrics.metrics.roc_auc_mann_whitney",
+                "scoring.learned_or_embedding_metrics.metrics.average_precision",
+                'scoring.learned_or_embedding_metrics.metrics.precision_recall_at_k["10"].precision',
+            ],
+            rationale="Held-out diagnostic validity passed means minimum eval-only floors cleared; it does not authorize shadow.",
+            blocking_for=["held_out_learned_validity", "shadow_scoring", "production_default"],
+            required_for=["held_out_learned_validity"],
+        )
+    )
+
+    scoring_scorer_sha = _get(scoring_payload, "scoring_mode_details.audit_embedding_scorer_sha256")
+    scoring_scorer_version = _get(scoring_payload, "scoring_mode_details.audit_embedding_scorer_version")
+    scoring_scorer_input_sha = _input_sha(scoring_metadata, "audit_embedding_scorer_export")
+    scoring_eval_sha = scoring_metadata.get("eval_work_set_sha256")
+    g11_checks = {
+        "scoring_details_scorer_version": scoring_scorer_version == AUDIT_SCORER_VERSION_V2,
+        "scorer_version": scorer_metadata.get("scorer_version") == AUDIT_SCORER_VERSION_V2,
+        "fit_mode": scorer_metadata.get("fit_mode") == "holdout_bound_train_only",
+        "target": scorer_metadata.get("target") == TARGET,
+        "supplied_scorer_sha_matches_scoring_details": scorer_sha256 == scoring_scorer_sha,
+        "supplied_scorer_sha_matches_scoring_inputs": scorer_sha256 == scoring_scorer_input_sha,
+        "eval_sha_aligns": scorer_metadata.get("eval_work_set_sha256") == scoring_eval_sha,
+        "eval_works_excluded_from_fit": _get(scorer_payload, "policy_compliance.eval_works_excluded_from_fit") is True,
+        "holdout_assignment_honored": _get(scorer_payload, "policy_compliance.holdout_assignment_honored") is True,
+        "holdout_assignment_sha_matches": scorer_metadata.get("holdout_assignment_sha256") == assignment_sha256,
+    }
+    gates.append(
+        _gate(
+            "G11_holdout_scorer_provenance",
+            title="Holdout Scorer Provenance",
+            category="provenance",
+            status=_status(all(g11_checks.values())),
+            threshold={
+                "scorer_version": AUDIT_SCORER_VERSION_V2,
+                "fit_mode": "holdout_bound_train_only",
+                "target": TARGET,
+                "sha256_matches_scoring": True,
+                "eval_works_excluded_from_fit": True,
+                "holdout_assignment_honored": True,
+            },
+            observed_value={
+                "checks": g11_checks,
+                "supplied_scorer_sha256": scorer_sha256,
+                "scoring_scorer_version": scoring_scorer_version,
+                "scoring_scorer_sha256": scoring_scorer_sha,
+                "scoring_input_scorer_sha256": scoring_scorer_input_sha,
+                "scorer_eval_work_set_sha256": scorer_metadata.get("eval_work_set_sha256"),
+                "scoring_eval_work_set_sha256": scoring_eval_sha,
+            },
+            source_field_paths=[
+                "scoring.scoring_mode_details.audit_embedding_scorer_sha256",
+                "scoring.scoring_mode_details.audit_embedding_scorer_version",
+                "scoring.metadata.inputs.audit_embedding_scorer_export.sha256",
+                "scorer.metadata.scorer_version",
+                "scorer.metadata.fit_mode",
+                "scorer.metadata.target",
+                "scorer.metadata.eval_work_set_sha256",
+                "scorer.policy_compliance.eval_works_excluded_from_fit",
+                "scorer.policy_compliance.holdout_assignment_honored",
+                "scorer.metadata.holdout_assignment_sha256",
+            ],
+            rationale="The supplied scorer must be the exact holdout-bound v2 scorer used by scoring v3.",
+            blocking_for=["held_out_learned_validity", "shadow_scoring", "production_default"],
+            required_for=["held_out_learned_validity"],
+        )
+    )
+
+    pool_sha = _get(scoring_payload, "holdout_assignment_summary.pool_work_set_sha256")
+    assignment_eval_sha = assignment_metadata.get("eval_work_set_sha256")
+    g12_checks = {
+        "assignment_global_zero": _get(assignment_payload, "leakage_report.global_zero_assertion") is True,
+        "assignment_train_eval_overlap_zero": _get(assignment_payload, "leakage_report.train_eval_work_overlap_count") == 0,
+        "scoring_train_rows_zero": _get(scoring_payload, "leakage_report.train_rows_used_in_metrics") == 0,
+        "scoring_train_works_zero": _get(scoring_payload, "leakage_report.train_works_used_in_metrics") == 0,
+        "pool_sha_matches_eval_sha": pool_sha == scoring_eval_sha,
+        "assignment_eval_sha_matches": assignment_eval_sha == scoring_eval_sha,
+        "pool_matches_eval_set": _get(scoring_payload, "holdout_assignment_summary.pool_matches_eval_set") is True,
+    }
+    gates.append(
+        _gate(
+            "G12_holdout_assignment_alignment",
+            title="Holdout Assignment Alignment",
+            category="leakage",
+            status=_status(all(g12_checks.values())),
+            threshold={
+                "train_rows_used_in_metrics": 0,
+                "train_works_used_in_metrics": 0,
+                "pool_sha_equals_eval_sha": True,
+                "assignment_leakage_zero": True,
+            },
+            observed_value={
+                "checks": g12_checks,
+                "independent_holdout_evaluation_performed": True,
+                "scoring_eval_work_set_sha256": scoring_eval_sha,
+                "pool_work_set_sha256": pool_sha,
+                "assignment_eval_work_set_sha256": assignment_eval_sha,
+            },
+            source_field_paths=[
+                "assignment.leakage_report.global_zero_assertion",
+                "assignment.leakage_report.train_eval_work_overlap_count",
+                "scoring.leakage_report.train_rows_used_in_metrics",
+                "scoring.leakage_report.train_works_used_in_metrics",
+                "scoring.holdout_assignment_summary.pool_work_set_sha256",
+                "scoring.holdout_assignment_summary.pool_matches_eval_set",
+                "assignment.metadata.eval_work_set_sha256",
+            ],
+            rationale="The candidate pool and metric rows must align exactly to the reserved eval work set with no train leakage.",
+            blocking_for=["held_out_learned_validity", "shadow_scoring", "production_default"],
+            required_for=["held_out_learned_validity"],
+        )
+    )
+
+    delta_roc = _get(scoring_payload, "learned_or_embedding_metrics.comparison_to_heuristic.delta_roc_auc")
+    delta_ap = _get(scoring_payload, "learned_or_embedding_metrics.comparison_to_heuristic.delta_average_precision")
+    delta_p10 = _get(scoring_payload, "learned_or_embedding_metrics.comparison_to_heuristic.delta_precision_at_10")
+    g13_pass = (
+        _is_number(delta_roc)
+        and _is_number(delta_ap)
+        and delta_roc >= THRESHOLDS_V3["minimum_delta_roc_auc_for_non_regression"]
+        and delta_ap >= THRESHOLDS_V3["minimum_delta_average_precision_for_non_regression"]
+    )
+    gates.append(
+        _gate(
+            "G13_heuristic_non_regression",
+            title="Heuristic Non-Regression",
+            category="comparison",
+            status=_status(g13_pass),
+            threshold={
+                "minimum_delta_roc_auc_for_non_regression": THRESHOLDS_V3[
+                    "minimum_delta_roc_auc_for_non_regression"
+                ],
+                "minimum_delta_average_precision_for_non_regression": THRESHOLDS_V3[
+                    "minimum_delta_average_precision_for_non_regression"
+                ],
+                "precision_at_10_non_regression": THRESHOLDS_V3["precision_at_10_non_regression"],
+            },
+            observed_value={
+                "delta_roc_auc": delta_roc,
+                "delta_average_precision": delta_ap,
+                "delta_precision_at_10": delta_p10,
+            },
+            source_field_paths=[
+                "scoring.learned_or_embedding_metrics.comparison_to_heuristic.delta_roc_auc",
+                "scoring.learned_or_embedding_metrics.comparison_to_heuristic.delta_average_precision",
+                "scoring.learned_or_embedding_metrics.comparison_to_heuristic.delta_precision_at_10",
+            ],
+            rationale="The holdout learned scorer should not underperform heuristic final_score on ROC-AUC or AP.",
+            blocking_for=["heuristic_non_regression", "shadow_scoring"],
+            required_for=["heuristic_non_regression"],
+            advisory_text="Precision@10 is advisory only because the eval subset is positive-heavy.",
+        )
+    )
+
+    material_pass = (
+        _is_number(delta_roc)
+        and _is_number(delta_ap)
+        and delta_roc >= THRESHOLDS_V3["minimum_delta_roc_auc_for_material_lift"]
+        and delta_ap >= THRESHOLDS_V3["minimum_delta_average_precision_for_material_lift"]
+    )
+    gates.append(
+        _gate(
+            "G14_material_lift",
+            title="Material Lift",
+            category="comparison",
+            status="pass" if material_pass else "advisory_warn",
+            threshold={
+                "minimum_delta_roc_auc_for_material_lift": THRESHOLDS_V3[
+                    "minimum_delta_roc_auc_for_material_lift"
+                ],
+                "minimum_delta_average_precision_for_material_lift": THRESHOLDS_V3[
+                    "minimum_delta_average_precision_for_material_lift"
+                ],
+                "material_lift_precision_at_10_required": THRESHOLDS_V3[
+                    "material_lift_precision_at_10_required"
+                ],
+            },
+            observed_value={
+                "delta_roc_auc": delta_roc,
+                "delta_average_precision": delta_ap,
+                "delta_precision_at_10": delta_p10,
+            },
+            source_field_paths=[
+                "scoring.learned_or_embedding_metrics.comparison_to_heuristic.delta_roc_auc",
+                "scoring.learned_or_embedding_metrics.comparison_to_heuristic.delta_average_precision",
+                "scoring.learned_or_embedding_metrics.comparison_to_heuristic.delta_precision_at_10",
+            ],
+            rationale="Material lift is required before considering shadow-spec work; failing it does not fail independent validation.",
+            blocking_for=["shadow_scoring_readiness"],
+            required_for=["material_lift"],
+            advisory_text="Material lift is insufficient on the current snapshot." if not material_pass else None,
+        )
+    )
+
+    required_blockers_present = set(SHADOW_BLOCKERS_V3).issubset(set(shadow_blockers))
+    g15_pass = shadow_scoring_allowed is False and required_blockers_present
+    gates.append(
+        _gate(
+            "G15_shadow_blockers_documented",
+            title="Shadow Blockers Documented",
+            category="policy",
+            status=_status(g15_pass),
+            threshold={"shadow_scoring_allowed": False, "shadow_blockers_include": list(SHADOW_BLOCKERS_V3)},
+            observed_value={"shadow_scoring_allowed": shadow_scoring_allowed, "shadow_blockers": list(shadow_blockers)},
+            source_field_paths=["this.shadow_scoring_allowed", "this.shadow_blockers"],
+            rationale="The v3 gate artifact must keep shadow blocked when material lift is insufficient.",
+            blocking_for=["shadow_scoring", "production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    good = _get(production_plan_payload, "targets.good_or_acceptable")
+    surprising = _get(production_plan_payload, "targets.surprising_or_useful")
+    if not isinstance(good, Mapping):
+        good = {}
+    if not isinstance(surprising, Mapping):
+        surprising = {}
+    overall_status = _get(production_plan_payload, "metadata.overall_status")
+    surprising_status = str(surprising.get("status") or "").strip().lower()
+    surprising_deferred_or_excluded = "deferred" in surprising_status or "excluded" in surprising_status
+    g16_pass = (
+        good.get("production_eligible") is False
+        and surprising_deferred_or_excluded
+        and _blocked_overall_status(overall_status)
+    )
+    gates.append(
+        _gate(
+            "G16_production_readiness_alignment",
+            title="Production Readiness Alignment",
+            category="policy",
+            status=_status(g16_pass),
+            threshold={
+                "good_or_acceptable_production_eligible": False,
+                "surprising_or_useful_deferred_or_excluded": True,
+                "overall_status_blocked_posture": True,
+            },
+            observed_value={
+                "overall_status": overall_status,
+                "good_or_acceptable_production_eligible": good.get("production_eligible"),
+                "surprising_or_useful_status": surprising.get("status"),
+            },
+            source_field_paths=[
+                "production_readiness_plan.metadata.overall_status",
+                "production_readiness_plan.targets.good_or_acceptable.production_eligible",
+                "production_readiness_plan.targets.surprising_or_useful.status",
+            ],
+            rationale="Offline validation gates may advance only while production remains explicitly blocked.",
+            blocking_for=["production_default"],
+            required_for=["product_candidate_heuristic_gates"],
+        )
+    )
+
+    positive_rate = _positive_prevalence(scoring_payload)
+    if positive_rate is None:
+        g17_status = "not_applicable"
+    elif positive_rate > THRESHOLDS_V3["high_positive_work_prevalence_advisory_threshold"]:
+        g17_status = "advisory_warn"
+    else:
+        g17_status = "pass"
+    gates.append(
+        _gate(
+            "G17_positive_prevalence_advisory",
+            title="Positive Prevalence Advisory",
+            category="advisory",
+            status=g17_status,
+            threshold={
+                "high_positive_work_prevalence_advisory_threshold": THRESHOLDS_V3[
+                    "high_positive_work_prevalence_advisory_threshold"
+                ]
+            },
+            observed_value={"positive_work_prevalence": positive_rate},
+            source_field_paths=[
+                "scoring.label_join_summary.labeled_eval_subset_positive_work_count",
+                "scoring.label_join_summary.labeled_eval_subset_work_count",
+            ],
+            rationale="Positive-heavy eval can inflate P@k, so top-k precision should be interpreted cautiously.",
+            blocking_for=[],
+            required_for=[],
+            advisory_text="This advisory never blocks gates." if g17_status == "advisory_warn" else None,
+        )
+    )
+
+    return gates
+
+
 def _gate_status_map(gates: Sequence[Mapping[str, Any]]) -> dict[str, str]:
     return {str(gate["gate_id"]): str(gate["status"]) for gate in gates}
 
@@ -1548,6 +2264,48 @@ def _overall_outcomes_v2(gates: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _overall_outcomes_v3(gates: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    statuses = _gate_status_map(gates)
+    failed_required = [gate_id for gate_id in REQUIRED_HEURISTIC_GATE_IDS_V3 if statuses.get(gate_id) != "pass"]
+    heuristic_passed = not failed_required
+    held_out_passed = (
+        statuses.get("G10_holdout_learned_validity") == "pass"
+        and statuses.get("G11_holdout_scorer_provenance") == "pass"
+        and statuses.get("G12_holdout_assignment_alignment") == "pass"
+    )
+    non_regression_passed = statuses.get("G13_heuristic_non_regression") == "pass"
+    material_lift_passed = statuses.get("G14_material_lift") == "pass"
+    independent_passed = heuristic_passed and held_out_passed and statuses.get("G12_holdout_assignment_alignment") == "pass"
+
+    if failed_required:
+        recommended = "blocked_pending_product_candidate_heuristic_gate_failures"
+    elif not held_out_passed:
+        recommended = "revisit_holdout_scorer_or_features"
+    elif independent_passed and not material_lift_passed:
+        recommended = "create_hybrid_scorer_offline_experiment_v1"
+    else:
+        recommended = "draft_ml_shadow_scorer_v1_spec"
+
+    failed_gate_ids = [str(gate["gate_id"]) for gate in gates if gate.get("status") == "fail"]
+    blocked_reasons = list(dict.fromkeys(failed_gate_ids + failed_required))
+    if not material_lift_passed:
+        blocked_reasons.append("material_lift_insufficient")
+    blocked_reasons.extend(["missing_ml_shadow_scorer_v1", "production_default_blocked"])
+
+    return {
+        "product_candidate_heuristic_gates_passed": heuristic_passed,
+        "held_out_learned_validity_passed": held_out_passed,
+        "heuristic_non_regression_passed": non_regression_passed,
+        "material_lift_passed": material_lift_passed,
+        "independent_learned_validation_passed": independent_passed,
+        "shadow_scoring_allowed": False,
+        "production_default_allowed": False,
+        "recommended_next_stage": recommended,
+        "blocked_reasons": blocked_reasons,
+        "shadow_blockers": list(SHADOW_BLOCKERS_V3),
+    }
+
+
 def build_ml_offline_production_candidate_metric_gates_payload(
     *,
     production_candidate_scoring_path: Path,
@@ -1556,11 +2314,14 @@ def build_ml_offline_production_candidate_metric_gates_payload(
     production_readiness_plan_path: Path,
     audit_embedding_scorer_export_path: Path | None = None,
     production_candidate_metric_gates_v1_path: Path | None = None,
+    production_candidate_metric_gates_v2_path: Path | None = None,
+    holdout_assignment_path: Path | None = None,
+    holdout_policy_path: Path | None = None,
     gates_version: str = GATES_VERSION,
     repo_root: Path | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    if gates_version not in {GATES_VERSION, GATES_VERSION_V2}:
+    if gates_version not in {GATES_VERSION, GATES_VERSION_V2, GATES_VERSION_V3}:
         raise MLOfflineProductionCandidateMetricGatesError(f"unsupported gates_version: {gates_version!r}")
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     scoring_path = Path(production_candidate_scoring_path).resolve()
@@ -1573,6 +2334,13 @@ def build_ml_offline_production_candidate_metric_gates_payload(
         if production_candidate_metric_gates_v1_path
         else None
     )
+    prior_v2_path = (
+        Path(production_candidate_metric_gates_v2_path).resolve()
+        if production_candidate_metric_gates_v2_path
+        else None
+    )
+    assignment_path = Path(holdout_assignment_path).resolve() if holdout_assignment_path else None
+    policy_holdout_path = Path(holdout_policy_path).resolve() if holdout_policy_path else None
 
     scoring_payload = _load_json_object(scoring_path)
     offline_metric_gates_payload = _load_json_object(offline_gates_path)
@@ -1666,6 +2434,155 @@ def build_ml_offline_production_candidate_metric_gates_payload(
             **outcomes,
             "coverage_summary": coverage_summary,
             "heuristic_metric_summary": heuristic_metric_summary,
+        }
+
+    if gates_version == GATES_VERSION_V3:
+        if scorer_path is None:
+            raise MLOfflineProductionCandidateMetricGatesError(
+                "--audit-embedding-scorer-export is required for ml-offline-production-candidate-metric-gates-v3"
+            )
+        if assignment_path is None:
+            raise MLOfflineProductionCandidateMetricGatesError(
+                "--holdout-assignment is required for ml-offline-production-candidate-metric-gates-v3"
+            )
+        if policy_holdout_path is None:
+            raise MLOfflineProductionCandidateMetricGatesError(
+                "--holdout-policy is required for ml-offline-production-candidate-metric-gates-v3"
+            )
+
+        scorer_payload = _load_json_object(scorer_path)
+        assignment_payload = _load_json_object(assignment_path)
+        holdout_policy_payload = _load_json_object(policy_holdout_path)
+        scorer_record = _input_record("audit_embedding_scorer_export", scorer_path, repo_root=root)
+        assignment_record = _input_record("holdout_assignment", assignment_path, repo_root=root)
+        holdout_policy_record = _input_record("holdout_policy", policy_holdout_path, repo_root=root)
+        scorer_sha256 = scorer_record["sha256"]
+        assignment_sha256 = assignment_record["sha256"]
+        inputs.extend([scorer_record, assignment_record, holdout_policy_record])
+
+        scoring_metadata = _validate_scoring_v3(scoring_payload)
+        assignment_metadata = _validate_holdout_assignment(assignment_payload)
+        scoring_eval_sha = str(scoring_metadata.get("eval_work_set_sha256") or "")
+        _validate_audit_embedding_scorer_v3(
+            scorer_payload,
+            scoring_eval_sha=scoring_eval_sha,
+            assignment_sha256=assignment_sha256,
+        )
+        scorer_metadata = _metadata(scorer_payload, name="audit-embedding-scorer-export")
+        _validate_holdout_policy(holdout_policy_payload, expected_eval_sha=scoring_eval_sha)
+        holdout_policy_metadata = _metadata(holdout_policy_payload, name="holdout-policy")
+        if assignment_metadata.get("eval_work_set_sha256") != scoring_eval_sha:
+            # Keep this as a gate failure in G12; the artifact can still explain the mismatch.
+            pass
+
+        if prior_v1_path is not None:
+            prior_v1_payload = _load_json_object(prior_v1_path)
+            _validate_prior_v1_metric_gates(prior_v1_payload)
+            inputs.append(_input_record("production_candidate_metric_gates_v1", prior_v1_path, repo_root=root))
+        if prior_v2_path is not None:
+            prior_v2_payload = _load_json_object(prior_v2_path)
+            _validate_prior_v2_metric_gates(prior_v2_payload)
+            inputs.append(_input_record("production_candidate_metric_gates_v2", prior_v2_path, repo_root=root))
+
+        base_outcomes_v3 = {
+            "shadow_scoring_allowed": False,
+            "production_default_allowed": False,
+            "shadow_blockers": list(SHADOW_BLOCKERS_V3),
+        }
+        gates = _build_gates_v3(
+            scoring_payload=scoring_payload,
+            offline_metric_gates_payload=offline_metric_gates_payload,
+            production_plan_payload=production_plan_payload,
+            scorer_payload=scorer_payload,
+            scorer_sha256=scorer_sha256,
+            assignment_payload=assignment_payload,
+            assignment_sha256=assignment_sha256,
+            holdout_policy_payload=holdout_policy_payload,
+            shadow_scoring_allowed=base_outcomes_v3["shadow_scoring_allowed"],
+            production_default_allowed=base_outcomes_v3["production_default_allowed"],
+            shadow_blockers=base_outcomes_v3["shadow_blockers"],
+        )
+        outcomes = _overall_outcomes_v3(gates)
+
+        learned_metrics = _get(scoring_payload, "learned_or_embedding_metrics.metrics")
+        if not isinstance(learned_metrics, Mapping):
+            learned_metrics = {}
+        comparison_to_heuristic = _get(scoring_payload, "learned_or_embedding_metrics.comparison_to_heuristic")
+        if not isinstance(comparison_to_heuristic, Mapping):
+            comparison_to_heuristic = {}
+        side_by_side = comparison_to_heuristic.get("side_by_side")
+        if not isinstance(side_by_side, Mapping):
+            side_by_side = {}
+
+        learned_metric_summary = {
+            "metric_level": learned_metrics.get("metric_level"),
+            "score_name": learned_metrics.get("score_name"),
+            "roc_auc_mann_whitney": learned_metrics.get("roc_auc_mann_whitney"),
+            "average_precision": learned_metrics.get("average_precision"),
+            "precision_at_10": _get(learned_metrics, "precision_recall_at_k.10.precision"),
+            "positive_work_prevalence": _positive_prevalence(scoring_payload),
+        }
+        comparison_summary = {
+            "heuristic_roc_auc": heuristic_metric_summary["roc_auc_mann_whitney"],
+            "heuristic_average_precision": heuristic_metric_summary["average_precision"],
+            "heuristic_precision_at_10": heuristic_metric_summary["precision_at_10"],
+            "holdout_learned_roc_auc": learned_metric_summary["roc_auc_mann_whitney"],
+            "holdout_learned_average_precision": learned_metric_summary["average_precision"],
+            "holdout_learned_precision_at_10": learned_metric_summary["precision_at_10"],
+            "delta_roc_auc": comparison_to_heuristic.get("delta_roc_auc"),
+            "delta_average_precision": comparison_to_heuristic.get("delta_average_precision"),
+            "delta_precision_at_10": comparison_to_heuristic.get("delta_precision_at_10"),
+            "side_by_side": side_by_side,
+            "interpretation_note": (
+                "v3 holdout learned ROC is about 0.805 vs heuristic about 0.804; "
+                "v2 full-fit learned ROC 1.0 was overlap-inflated."
+            ),
+        }
+
+        metadata = {
+            "artifact_type": ARTIFACT_TYPE,
+            "gates_version": gates_version,
+            "generated_at": generated_at or _now_iso_z(),
+            "inputs": inputs,
+            "target": scoring_metadata.get("target"),
+            "ranking_run_id": scoring_metadata.get("ranking_run_id"),
+            "family": scoring_metadata.get("family"),
+            "scoring_mode": scoring_metadata.get("scoring_mode"),
+            "production_candidate_scoring_version": scoring_metadata.get("experiment_version"),
+            "offline_metric_gates_version": offline_metric_gates_metadata.get("gates_version"),
+            "split_policy_version": split_policy_metadata.get("policy_version"),
+            "production_readiness_plan_version": production_plan_metadata.get("plan_version"),
+            "audit_embedding_scorer_version": scorer_metadata.get("scorer_version"),
+            "audit_embedding_scorer_sha256": scorer_sha256,
+            "holdout_assignment_version": assignment_metadata.get("assignment_version"),
+            "holdout_assignment_sha256": assignment_sha256,
+            "holdout_policy_version": holdout_policy_metadata.get("policy_version"),
+            "holdout_policy_sha256": holdout_policy_record["sha256"],
+            "eval_work_set_sha256": scoring_eval_sha,
+            "thresholds_version": THRESHOLDS_VERSION_V3,
+            "thresholds": dict(THRESHOLDS_V3),
+            "gate_status_enum": list(GATE_STATUS_ENUM),
+            "strategic_framing": {
+                "evaluates_holdout_bound_scorer_on_product_snapshot": True,
+                "independent_validation_is_offline_audit_only": True,
+                "passing_independent_validation_does_not_authorize_shadow": True,
+                "material_lift_required_for_shadow_spec": True,
+                "next_ml_step_hybrid_not_shadow": True,
+                "existing_pool_source": "paper_scores",
+                "read_only_reuse": True,
+                "not_live_recommender_quality": True,
+            },
+            "caveats": list(CAVEATS_V3),
+        }
+
+        return {
+            "metadata": metadata,
+            "gates": gates,
+            **outcomes,
+            "coverage_summary": coverage_summary,
+            "heuristic_metric_summary": heuristic_metric_summary,
+            "learned_metric_summary": learned_metric_summary,
+            "comparison_summary": comparison_summary,
         }
 
     if scorer_path is None:
@@ -1920,8 +2837,120 @@ def _markdown_v2(payload: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _markdown_v3(payload: Mapping[str, Any]) -> str:
+    metadata = payload["metadata"]
+    gates = payload["gates"]
+    coverage = payload["coverage_summary"]
+    heuristic = payload["heuristic_metric_summary"]
+    learned = payload["learned_metric_summary"]
+    comparison = payload.get("comparison_summary", {})
+    if not isinstance(comparison, Mapping):
+        comparison = {}
+    material_gate = next(gate for gate in gates if gate["gate_id"] == "G14_material_lift")
+    prevalence_gate = next(gate for gate in gates if gate["gate_id"] == "G17_positive_prevalence_advisory")
+
+    lines = [
+        f"# Product-Candidate Holdout Metric Gates ({metadata['gates_version']})",
+        "",
+        "## Executive Summary",
+        "",
+        "This evaluates the v3 product-candidate offline diagnostic where the holdout-bound audit embedding scorer was applied to the reserved product-candidate eval arm.",
+        "",
+        f"- **Product-candidate heuristic gates passed:** {payload['product_candidate_heuristic_gates_passed']}",
+        f"- **Held-out learned validity passed:** {payload['held_out_learned_validity_passed']}",
+        f"- **Heuristic non-regression passed:** {payload['heuristic_non_regression_passed']}",
+        f"- **Material lift passed:** {payload['material_lift_passed']}",
+        f"- **Independent learned validation passed:** {payload['independent_learned_validation_passed']}",
+        f"- **Recommended next stage:** `{payload['recommended_next_stage']}`",
+        f"- **Shadow scoring allowed:** {payload['shadow_scoring_allowed']}",
+        f"- **Production default allowed:** {payload['production_default_allowed']}",
+        "",
+        "Passing held-out learned validity does not authorize shadow. Material lift is the extra bar before shadow-spec work; on this snapshot the next step is a hybrid offline experiment, not `ml-shadow-scorer-v1`.",
+        "",
+        "## Three-Decision Table",
+        "",
+        "| Decision | Result | Meaning |",
+        "| --- | --- | --- |",
+        f"| Held-out learned validity | {payload['held_out_learned_validity_passed']} | Minimum eval-only learned floors cleared. |",
+        f"| Heuristic non-regression | {payload['heuristic_non_regression_passed']} | Learned ROC-AUC/AP did not regress versus heuristic final_score. |",
+        f"| Material lift | {payload['material_lift_passed']} | Learned scorer clears the extra lift bar for shadow-spec work. |",
+        "",
+        "## Gate Checklist",
+        "",
+        "| Gate | Title | Status | Required for | Rationale |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for gate in gates:
+        required_for = ", ".join(gate["required_for"]) or "advisory"
+        lines.append(
+            f"| `{gate['gate_id']}` | {gate['title']} | {gate['status']} | {required_for} | {gate['rationale']} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Coverage",
+            "",
+            "| Measure | Value |",
+            "| --- | ---: |",
+            f"| Candidate unique works | {_fmt(coverage['candidate_unique_canonical_work_count'])} |",
+            f"| Candidate label coverage rate | {_fmt(coverage['candidate_work_labeled_coverage_rate'])} |",
+            f"| Labeled eval works | {_fmt(coverage['labeled_eval_subset_work_count'])} |",
+            f"| Labeled positive works | {_fmt(coverage['labeled_eval_subset_positive_work_count'])} |",
+            f"| Labeled negative works | {_fmt(coverage['labeled_eval_subset_negative_work_count'])} |",
+            f"| Missing embedding rate | {_fmt(coverage['missing_embedding_rate'])} |",
+            "",
+            "## Heuristic vs Holdout Learned Comparison",
+            "",
+            "| Metric | Heuristic final_score | Holdout learned scorer | Delta |",
+            "| --- | ---: | ---: | ---: |",
+            f"| ROC-AUC | {_fmt(comparison.get('heuristic_roc_auc'))} | {_fmt(comparison.get('holdout_learned_roc_auc'))} | {_fmt(comparison.get('delta_roc_auc'))} |",
+            f"| Average precision | {_fmt(comparison.get('heuristic_average_precision'))} | {_fmt(comparison.get('holdout_learned_average_precision'))} | {_fmt(comparison.get('delta_average_precision'))} |",
+            f"| Precision@10 | {_fmt(comparison.get('heuristic_precision_at_10'))} | {_fmt(comparison.get('holdout_learned_precision_at_10'))} | {_fmt(comparison.get('delta_precision_at_10'))} |",
+            "",
+            "## v2 Full-Fit Caution",
+            "",
+            str(comparison.get("interpretation_note") or "v2 full-fit learned metrics were not independent validation."),
+            "",
+            "## Leakage and Holdout Alignment",
+            "",
+            f"- **Eval work-set SHA:** `{metadata.get('eval_work_set_sha256')}`",
+            "- Train rows used in metrics: `0` required.",
+            "- Train works used in metrics: `0` required.",
+            "- Candidate pool work set must match the reserved eval work set.",
+            "",
+            "## Advisories",
+            "",
+            f"- `{material_gate['gate_id']}`: {material_gate['status']} - {material_gate.get('advisory_text') or material_gate['rationale']}",
+            f"- `{prevalence_gate['gate_id']}`: {prevalence_gate['status']} - {prevalence_gate['rationale']}",
+            "",
+            "## Not Shadow / Not Production",
+            "",
+            "- This is not shadow scoring.",
+            "- This is not production scoring.",
+            "- Passing independent offline validation does not authorize shadow.",
+            "- Material lift is insufficient for shadow-spec work on this snapshot.",
+            "- No `ml-shadow-scorer-v1` contract exists.",
+            "- No production model artifact exists.",
+            "- No ranking/API/web changes were made.",
+            "",
+            "## Recommended Next Stage",
+            "",
+            f"`{payload['recommended_next_stage']}`",
+            "",
+            "## Caveats",
+            "",
+        ]
+    )
+    lines.extend(f"- {caveat}" for caveat in metadata["caveats"])
+    lines.extend(["", f"Gate status counts: `{_gate_counts(gates)}`", ""])
+    return "\n".join(lines)
+
+
 def markdown_from_ml_offline_production_candidate_metric_gates(payload: Mapping[str, Any]) -> str:
     metadata = payload["metadata"]
+    if metadata["gates_version"] == GATES_VERSION_V3:
+        return _markdown_v3(payload)
     if metadata["gates_version"] == GATES_VERSION_V2:
         return _markdown_v2(payload)
     gates = payload["gates"]
@@ -2030,6 +3059,9 @@ def write_ml_offline_production_candidate_metric_gates(
     production_readiness_plan_path: Path,
     audit_embedding_scorer_export_path: Path | None = None,
     production_candidate_metric_gates_v1_path: Path | None = None,
+    production_candidate_metric_gates_v2_path: Path | None = None,
+    holdout_assignment_path: Path | None = None,
+    holdout_policy_path: Path | None = None,
     output_path: Path,
     markdown_output_path: Path,
     gates_version: str = GATES_VERSION,
@@ -2042,6 +3074,9 @@ def write_ml_offline_production_candidate_metric_gates(
         production_readiness_plan_path=production_readiness_plan_path,
         audit_embedding_scorer_export_path=audit_embedding_scorer_export_path,
         production_candidate_metric_gates_v1_path=production_candidate_metric_gates_v1_path,
+        production_candidate_metric_gates_v2_path=production_candidate_metric_gates_v2_path,
+        holdout_assignment_path=holdout_assignment_path,
+        holdout_policy_path=holdout_policy_path,
         gates_version=gates_version,
         repo_root=repo_root,
     )
@@ -2060,6 +3095,7 @@ __all__ = [
     "ARTIFACT_TYPE",
     "GATES_VERSION",
     "GATES_VERSION_V2",
+    "GATES_VERSION_V3",
     "MLOfflineProductionCandidateMetricGatesError",
     "build_ml_offline_production_candidate_metric_gates_payload",
     "markdown_from_ml_offline_production_candidate_metric_gates",

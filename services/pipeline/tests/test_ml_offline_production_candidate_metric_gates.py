@@ -13,6 +13,7 @@ import pytest
 from pipeline.ml_offline_production_candidate_metric_gates import (
     GATES_VERSION,
     GATES_VERSION_V2,
+    GATES_VERSION_V3,
     MLOfflineProductionCandidateMetricGatesError,
     build_ml_offline_production_candidate_metric_gates_payload,
     markdown_from_ml_offline_production_candidate_metric_gates,
@@ -198,6 +199,166 @@ def _scoring_payload_v2(scorer_sha: str) -> dict:
     return payload
 
 
+def _scoring_payload_v3(scorer_sha: str, assignment_sha: str, eval_sha: str) -> dict:
+    payload = copy.deepcopy(_scoring_payload())
+    payload["metadata"].update(
+        {
+            "experiment_version": "ml-offline-production-candidate-scoring-v3",
+            "scoring_mode": "heuristic_and_holdout_embedding_scorer",
+            "eval_work_set_sha256": eval_sha,
+            "inputs": [
+                {"name": "label_dataset", "path": "label.json", "sha256": "label-sha"},
+                {"name": "embeddings", "path": "embeddings.json", "sha256": "embedding-sha"},
+                {
+                    "name": "audit_embedding_scorer_export",
+                    "path": "scorer-v2.json",
+                    "sha256": scorer_sha,
+                },
+                {
+                    "name": "holdout_assignment",
+                    "path": "assignment.json",
+                    "sha256": assignment_sha,
+                },
+            ],
+        }
+    )
+    payload["candidate_pool_summary"]["candidate_pool_work_set_sha256"] = eval_sha
+    payload["scoring_mode_details"] = {
+        "scoring_mode": "heuristic_and_holdout_embedding_scorer",
+        "learned_product_scores_produced": True,
+        "eval_only": True,
+        "audit_embedding_scorer_version": "ml-offline-audit-embedding-scorer-v2",
+        "audit_embedding_scorer_sha256": scorer_sha,
+        "holdout_assignment_version": "ml-learned-scorer-holdout-assignment-v1",
+        "holdout_assignment_sha256": assignment_sha,
+        "product_candidate_rows_used_for_training": 0,
+        "learned_score_aggregation_policy": "max_probability",
+    }
+    payload["holdout_assignment_summary"] = {
+        "assignment_version": "ml-learned-scorer-holdout-assignment-v1",
+        "assignment_sha256": assignment_sha,
+        "eval_work_set_sha256": eval_sha,
+        "pool_work_set_sha256": eval_sha,
+        "pool_matches_eval_set": True,
+        "eval_assignment_row_count": 286,
+        "train_assignment_rows_in_join_count": 0,
+        "unlabeled_candidate_work_count": 0,
+    }
+    payload["learned_or_embedding_metrics"] = {
+        "learned_product_scores_produced": True,
+        "eval_only": True,
+        "scorer_version": "ml-offline-audit-embedding-scorer-v2",
+        "scorer_fit_mode": "holdout_bound_train_only",
+        "scorer_sha256": scorer_sha,
+        "aggregation_policy": "max_probability",
+        "product_candidate_rows_used_for_training": 0,
+        "metrics": {
+            "metric_level": "canonical_work_labeled_eval_subset",
+            "score_name": "audit_embedding_probability_work",
+            "labeled_eval_subset_work_count": 217,
+            "scored_labeled_work_count": 217,
+            "positive_work_count": 190,
+            "negative_work_count": 27,
+            "roc_auc_mann_whitney": 0.8046783625730994,
+            "roc_auc_reason": None,
+            "average_precision": 0.9665979798704442,
+            "average_precision_reason": None,
+            "precision_recall_at_k": {
+                "5": {"precision": 1.0, "recall": 0.02631578947368421, "reason": None},
+                "10": {"precision": 1.0, "recall": 0.05263157894736842, "reason": None},
+                "20": {"precision": 1.0, "recall": 0.10526315789473684, "reason": None},
+            },
+        },
+        "comparison_to_heuristic": {
+            "delta_roc_auc": 0.0011695906432748204,
+            "delta_average_precision": 0.008711385808262917,
+            "delta_precision_at_5": 0.0,
+            "delta_precision_at_10": 0.0,
+            "delta_precision_at_20": 0.0,
+            "side_by_side": {
+                "roc_auc_mann_whitney": {
+                    "heuristic_final_score": 0.8035087719298246,
+                    "audit_embedding_probability_work": 0.8046783625730994,
+                },
+                "average_precision": {
+                    "heuristic_final_score": 0.9578865940621812,
+                    "audit_embedding_probability_work": 0.9665979798704442,
+                },
+            },
+        },
+        "learned_metric_thresholds_satisfied": True,
+    }
+    payload["leakage_report"] = {
+        "train_rows_used_in_metrics": 0,
+        "train_works_used_in_metrics": 0,
+        "eval_work_set_matches_assignment": True,
+        "candidate_pool_work_set_matches_eval_set": True,
+    }
+    payload["blockers_to_shadow"] = [
+        "product-candidate metric gates v3 not yet evaluated",
+        "no ml-shadow-scorer-v1 contract exists",
+        "production default blocked by readiness plan",
+        "no production model artifact exists",
+    ]
+    return payload
+
+
+def _scorer_payload_v3(
+    *,
+    eval_sha: str,
+    assignment_sha: str,
+    scorer_version: str = "ml-offline-audit-embedding-scorer-v2",
+    fit_mode: str = "holdout_bound_train_only",
+) -> dict:
+    return {
+        "metadata": {
+            "artifact_type": "ml_offline_audit_embedding_scorer",
+            "scorer_version": scorer_version,
+            "target": "good_or_acceptable",
+            "fit_mode": fit_mode,
+            "eval_work_set_sha256": eval_sha,
+            "holdout_assignment_sha256": assignment_sha,
+            "embedding_dimensions": 2,
+        },
+        "policy_compliance": {
+            "eval_works_excluded_from_fit": True,
+            "holdout_assignment_honored": True,
+            "product_candidate_pool_used_for_training": False,
+            "production_artifact_written": False,
+            "shadow_scoring_authorized": False,
+        },
+    }
+
+
+def _assignment_payload_v3(*, eval_sha: str) -> dict:
+    return {
+        "metadata": {
+            "artifact_type": "ml_learned_scorer_holdout_assignment",
+            "assignment_version": "ml-learned-scorer-holdout-assignment-v1",
+            "strategy_id": "product_candidate_snapshot_holdout",
+            "eval_work_set_sha256": eval_sha,
+            "eval_work_count": 217,
+        },
+        "leakage_report": {
+            "global_zero_assertion": True,
+            "train_eval_work_overlap_count": 0,
+        },
+    }
+
+
+def _holdout_policy_payload_v3(*, eval_sha: str) -> dict:
+    return {
+        "metadata": {
+            "artifact_type": "ml_learned_scorer_holdout_policy",
+            "policy_version": "ml-learned-scorer-holdout-policy-v1",
+        },
+        "dataset_inventory": {"product_candidate_eval_work_set_sha256": eval_sha},
+        "primary_holdout_strategy": {
+            "eval_work_set_definition": {"eval_work_set_sha256": eval_sha},
+        },
+    }
+
+
 def _offline_metric_gates_payload() -> dict:
     return {
         "audit_ranker_gates_passed": True,
@@ -292,6 +453,85 @@ def _build_v2(
     return build_ml_offline_production_candidate_metric_gates_payload(
         **_paths_v2(tmp_path, scoring=scoring, scorer=scorer, include_prior_v1=include_prior_v1),
         gates_version=GATES_VERSION_V2,
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+
+def _paths_v3(
+    tmp_path: Path,
+    *,
+    scoring: dict | None = None,
+    scorer: dict | None = None,
+    assignment: dict | None = None,
+    eval_sha: str = "eval-sha",
+    include_prior_v1: bool = False,
+    include_prior_v2: bool = False,
+) -> dict[str, Path]:
+    assignment_path = _write_json(tmp_path, "assignment.json", assignment or _assignment_payload_v3(eval_sha=eval_sha))
+    assignment_sha = sha256_file(assignment_path)
+    scorer_path = _write_json(
+        tmp_path,
+        "scorer-v2.json",
+        scorer or _scorer_payload_v3(eval_sha=eval_sha, assignment_sha=assignment_sha),
+    )
+    scorer_sha = sha256_file(scorer_path)
+    paths = _paths(tmp_path, scoring or _scoring_payload_v3(scorer_sha, assignment_sha, eval_sha))
+    paths["audit_embedding_scorer_export_path"] = scorer_path
+    paths["holdout_assignment_path"] = assignment_path
+    paths["holdout_policy_path"] = _write_json(
+        tmp_path,
+        "holdout-policy.json",
+        _holdout_policy_payload_v3(eval_sha=eval_sha),
+    )
+    if include_prior_v1:
+        paths["production_candidate_metric_gates_v1_path"] = _write_json(
+            tmp_path,
+            "metric-gates-v1.json",
+            {
+                "metadata": {
+                    "artifact_type": "ml_offline_production_candidate_metric_gates",
+                    "gates_version": "ml-offline-production-candidate-metric-gates-v1",
+                },
+                "product_candidate_heuristic_gates_passed": True,
+            },
+        )
+    if include_prior_v2:
+        paths["production_candidate_metric_gates_v2_path"] = _write_json(
+            tmp_path,
+            "metric-gates-v2.json",
+            {
+                "metadata": {
+                    "artifact_type": "ml_offline_production_candidate_metric_gates",
+                    "gates_version": "ml-offline-production-candidate-metric-gates-v2",
+                },
+                "learned_scorer_application_gates_passed": True,
+            },
+        )
+    return paths
+
+
+def _build_v3(
+    tmp_path: Path,
+    *,
+    scoring: dict | None = None,
+    scorer: dict | None = None,
+    assignment: dict | None = None,
+    eval_sha: str = "eval-sha",
+    include_prior_v1: bool = False,
+    include_prior_v2: bool = False,
+) -> dict:
+    return build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths_v3(
+            tmp_path,
+            scoring=scoring,
+            scorer=scorer,
+            assignment=assignment,
+            eval_sha=eval_sha,
+            include_prior_v1=include_prior_v1,
+            include_prior_v2=include_prior_v2,
+        ),
+        gates_version=GATES_VERSION_V3,
         repo_root=tmp_path,
         generated_at="2026-05-16T00:00:00Z",
     )
@@ -496,6 +736,142 @@ def test_v2_advisories_do_not_fail_pass_gates(tmp_path: Path) -> None:
     assert payload["learned_scorer_application_gates_passed"] is True
 
 
+def test_v3_happy_path_passes_validity_non_regresses_and_blocks_shadow(tmp_path: Path) -> None:
+    payload = _build_v3(tmp_path, include_prior_v1=True, include_prior_v2=True)
+
+    assert payload["metadata"]["gates_version"] == GATES_VERSION_V3
+    assert payload["metadata"]["thresholds_version"] == "ml-offline-production-candidate-metric-gates-v3-thresholds"
+    assert payload["product_candidate_heuristic_gates_passed"] is True
+    assert payload["held_out_learned_validity_passed"] is True
+    assert payload["heuristic_non_regression_passed"] is True
+    assert payload["material_lift_passed"] is False
+    assert payload["independent_learned_validation_passed"] is True
+    assert payload["recommended_next_stage"] == "create_hybrid_scorer_offline_experiment_v1"
+    assert payload["shadow_scoring_allowed"] is False
+    assert payload["production_default_allowed"] is False
+    assert _gate(payload, "G10_holdout_learned_validity")["status"] == "pass"
+    assert _gate(payload, "G11_holdout_scorer_provenance")["status"] == "pass"
+    assert _gate(payload, "G12_holdout_assignment_alignment")["status"] == "pass"
+    assert _gate(payload, "G14_material_lift")["status"] == "advisory_warn"
+    assert _gate(payload, "G17_positive_prevalence_advisory")["status"] == "advisory_warn"
+    assert payload["comparison_summary"]["delta_roc_auc"] == pytest.approx(0.0011695906432748204)
+    assert any(item["name"] == "production_candidate_metric_gates_v2" for item in payload["metadata"]["inputs"])
+
+
+@pytest.mark.parametrize(
+    ("metric_path", "value"),
+    [
+        ("roc_auc_mann_whitney", 0.69),
+        ("average_precision", 0.84),
+        ("precision_recall_at_k.10.precision", 0.79),
+    ],
+)
+def test_v3_low_holdout_learned_metric_fails_g10(tmp_path: Path, metric_path: str, value: float) -> None:
+    paths = _paths_v3(tmp_path)
+    scoring = json.loads(paths["production_candidate_scoring_path"].read_text(encoding="utf-8"))
+    current = scoring["learned_or_embedding_metrics"]["metrics"]
+    parts = metric_path.split(".")
+    for part in parts[:-1]:
+        current = current[part]
+    current[parts[-1]] = value
+
+    payload = build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths_v3(tmp_path, scoring=scoring),
+        gates_version=GATES_VERSION_V3,
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+    assert _gate(payload, "G10_holdout_learned_validity")["status"] == "fail"
+    assert payload["held_out_learned_validity_passed"] is False
+    assert payload["recommended_next_stage"] == "revisit_holdout_scorer_or_features"
+
+
+def test_v3_learned_regression_fails_g13(tmp_path: Path) -> None:
+    paths = _paths_v3(tmp_path)
+    scoring = json.loads(paths["production_candidate_scoring_path"].read_text(encoding="utf-8"))
+    scoring["learned_or_embedding_metrics"]["metrics"]["roc_auc_mann_whitney"] = 0.79
+    scoring["learned_or_embedding_metrics"]["metrics"]["average_precision"] = 0.95
+    scoring["learned_or_embedding_metrics"]["comparison_to_heuristic"]["delta_roc_auc"] = -0.0135087719298246
+    scoring["learned_or_embedding_metrics"]["comparison_to_heuristic"]["delta_average_precision"] = -0.0078865940621812
+
+    payload = build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths_v3(tmp_path, scoring=scoring),
+        gates_version=GATES_VERSION_V3,
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+    assert _gate(payload, "G13_heuristic_non_regression")["status"] == "fail"
+    assert payload["heuristic_non_regression_passed"] is False
+    assert payload["independent_learned_validation_passed"] is True
+
+
+def test_v3_train_rows_used_in_metrics_fails_g12(tmp_path: Path) -> None:
+    paths = _paths_v3(tmp_path)
+    scoring = json.loads(paths["production_candidate_scoring_path"].read_text(encoding="utf-8"))
+    scoring["leakage_report"]["train_rows_used_in_metrics"] = 1
+
+    payload = build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths_v3(tmp_path, scoring=scoring),
+        gates_version=GATES_VERSION_V3,
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+    assert _gate(payload, "G12_holdout_assignment_alignment")["status"] == "fail"
+    assert payload["held_out_learned_validity_passed"] is False
+    assert payload["independent_learned_validation_passed"] is False
+
+
+def test_v3_eval_sha_mismatch_fails_g12(tmp_path: Path) -> None:
+    paths = _paths_v3(tmp_path)
+    scoring = json.loads(paths["production_candidate_scoring_path"].read_text(encoding="utf-8"))
+    scoring["holdout_assignment_summary"]["pool_work_set_sha256"] = "different-eval-sha"
+
+    payload = build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths_v3(tmp_path, scoring=scoring),
+        gates_version=GATES_VERSION_V3,
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+    assert _gate(payload, "G12_holdout_assignment_alignment")["status"] == "fail"
+    assert payload["held_out_learned_validity_passed"] is False
+
+
+@pytest.mark.parametrize(
+    ("scorer_version", "fit_mode"),
+    [
+        ("ml-offline-audit-embedding-scorer-v1", "holdout_bound_train_only"),
+        ("ml-offline-audit-embedding-scorer-v2", "full_fit_audit_corpus"),
+    ],
+)
+def test_v3_wrong_scorer_version_or_fit_mode_fails_g11(
+    tmp_path: Path, scorer_version: str, fit_mode: str
+) -> None:
+    assignment_path = _write_json(tmp_path, "assignment.json", _assignment_payload_v3(eval_sha="eval-sha"))
+    assignment_sha = sha256_file(assignment_path)
+    scorer = _scorer_payload_v3(
+        eval_sha="eval-sha",
+        assignment_sha=assignment_sha,
+        scorer_version=scorer_version,
+        fit_mode=fit_mode,
+    )
+    scorer_path = _write_json(tmp_path, "scorer-v2.json", scorer)
+    scoring = _scoring_payload_v3(sha256_file(scorer_path), assignment_sha, "eval-sha")
+
+    payload = build_ml_offline_production_candidate_metric_gates_payload(
+        **_paths_v3(tmp_path, scoring=scoring, scorer=scorer),
+        gates_version=GATES_VERSION_V3,
+        repo_root=tmp_path,
+        generated_at="2026-05-16T00:00:00Z",
+    )
+
+    assert _gate(payload, "G11_holdout_scorer_provenance")["status"] == "fail"
+    assert payload["held_out_learned_validity_passed"] is False
+
+
 def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     paths = _paths(tmp_path)
     out_json = tmp_path / "product-candidate-gates.json"
@@ -568,6 +944,39 @@ def test_cli_v2_requires_scorer_export_but_v1_does_not(tmp_path: Path) -> None:
     assert excinfo.value.code == 2
 
 
+def test_cli_v3_requires_scorer_assignment_and_policy(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+    out_json = tmp_path / "product-candidate-gates-v3.json"
+    out_md = tmp_path / "product-candidate-gates-v3.md"
+
+    import pipeline.cli as cli_main
+
+    argv = [
+        "pipeline.cli",
+        "ml-offline-production-candidate-metric-gates",
+        "--production-candidate-scoring",
+        str(paths["production_candidate_scoring_path"]),
+        "--offline-metric-gates",
+        str(paths["offline_metric_gates_path"]),
+        "--split-policy",
+        str(paths["split_policy_path"]),
+        "--production-readiness-plan",
+        str(paths["production_readiness_plan_path"]),
+        "--gates-version",
+        "ml-offline-production-candidate-metric-gates-v3",
+        "--output",
+        str(out_json),
+        "--markdown-output",
+        str(out_md),
+        "--repo-root",
+        str(tmp_path),
+    ]
+    with patch.object(sys, "argv", argv):
+        with pytest.raises(SystemExit) as excinfo:
+            cli_main.main()
+    assert excinfo.value.code == 2
+
+
 def test_cli_v2_writes_json_and_markdown(tmp_path: Path) -> None:
     paths = _paths_v2(tmp_path, include_prior_v1=True)
     out_json = tmp_path / "product-candidate-gates-v2.json"
@@ -610,6 +1019,53 @@ def test_cli_v2_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "not shadow scoring" in md.lower()
 
 
+def test_cli_v3_writes_json_and_markdown(tmp_path: Path) -> None:
+    paths = _paths_v3(tmp_path, include_prior_v2=True)
+    out_json = tmp_path / "product-candidate-gates-v3.json"
+    out_md = tmp_path / "product-candidate-gates-v3.md"
+
+    import pipeline.cli as cli_main
+
+    argv = [
+        "pipeline.cli",
+        "ml-offline-production-candidate-metric-gates",
+        "--production-candidate-scoring",
+        str(paths["production_candidate_scoring_path"]),
+        "--offline-metric-gates",
+        str(paths["offline_metric_gates_path"]),
+        "--split-policy",
+        str(paths["split_policy_path"]),
+        "--production-readiness-plan",
+        str(paths["production_readiness_plan_path"]),
+        "--audit-embedding-scorer-export",
+        str(paths["audit_embedding_scorer_export_path"]),
+        "--holdout-assignment",
+        str(paths["holdout_assignment_path"]),
+        "--holdout-policy",
+        str(paths["holdout_policy_path"]),
+        "--production-candidate-metric-gates-v2",
+        str(paths["production_candidate_metric_gates_v2_path"]),
+        "--gates-version",
+        "ml-offline-production-candidate-metric-gates-v3",
+        "--output",
+        str(out_json),
+        "--markdown-output",
+        str(out_md),
+        "--repo-root",
+        str(tmp_path),
+    ]
+    with patch.object(sys, "argv", argv):
+        cli_main.main()
+
+    data = json.loads(out_json.read_text(encoding="utf-8"))
+    assert data["held_out_learned_validity_passed"] is True
+    assert data["material_lift_passed"] is False
+    assert data["recommended_next_stage"] == "create_hybrid_scorer_offline_experiment_v1"
+    md = out_md.read_text(encoding="utf-8")
+    assert "Three-Decision Table" in md
+    assert "Not Shadow / Not Production" in md
+
+
 def test_markdown_contains_required_sections(tmp_path: Path) -> None:
     payload = _build(tmp_path)
     md = markdown_from_ml_offline_production_candidate_metric_gates(payload)
@@ -637,6 +1093,22 @@ def test_v2_markdown_contains_required_sections(tmp_path: Path) -> None:
     assert "Not Shadow / Not Production" in md
     assert "Recommended Next Stage" in md
     assert "not independent validation" in md
+
+
+def test_v3_markdown_contains_required_sections(tmp_path: Path) -> None:
+    payload = _build_v3(tmp_path)
+    md = markdown_from_ml_offline_production_candidate_metric_gates(payload)
+
+    assert "Executive Summary" in md
+    assert "Three-Decision Table" in md
+    assert "Gate Checklist" in md
+    assert "Heuristic vs Holdout Learned Comparison" in md
+    assert "v2 Full-Fit Caution" in md
+    assert "Leakage and Holdout Alignment" in md
+    assert "Advisories" in md
+    assert "Not Shadow / Not Production" in md
+    assert "Recommended Next Stage" in md
+    assert "does not authorize shadow" in md
 
 
 def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url() -> None:
