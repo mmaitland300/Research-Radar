@@ -2252,6 +2252,71 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_learned_scorer_holdout_assignment_parser = subparsers.add_parser(
+        "ml-learned-scorer-holdout-assignment",
+        help="Materialize learned scorer holdout train/eval assignments (no training, DB, ranking, shadow, or prod)",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--embeddings",
+        required=True,
+        help="Path to ml-labeled-text-embeddings-v3 JSON",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--production-candidate-scoring",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v2 JSON",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--holdout-policy",
+        required=True,
+        help="Path to ml-learned-scorer-holdout-policy-v1 JSON",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--production-candidate-metric-gates",
+        required=True,
+        help="Path to ml-offline-production-candidate-metric-gates-v2 JSON",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write learned scorer holdout assignment JSON",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--assignment-version",
+        default="ml-learned-scorer-holdout-assignment-v1",
+        help="Assignment version string to write (default: ml-learned-scorer-holdout-assignment-v1)",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--strategy-id",
+        default="product_candidate_snapshot_holdout",
+        help="Holdout strategy id (default: product_candidate_snapshot_holdout)",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Optional provenance seed; default comes from holdout policy, then split policy, then 20260515",
+    )
+    ml_learned_scorer_holdout_assignment_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -3686,6 +3751,37 @@ def main() -> None:
             )
         except MLLearnedScorerHoldoutPolicyError as e:
             print(f"ml-learned-scorer-holdout-policy: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-learned-scorer-holdout-assignment":
+        from pipeline.ml_learned_scorer_holdout_assignment import (
+            MLLearnedScorerHoldoutAssignmentError,
+            write_ml_learned_scorer_holdout_assignment,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_learned_scorer_holdout_assignment(
+                label_dataset_path=Path(args.label_dataset),
+                split_policy_path=Path(args.split_policy),
+                embeddings_path=Path(args.embeddings),
+                production_candidate_scoring_path=Path(args.production_candidate_scoring),
+                holdout_policy_path=Path(args.holdout_policy),
+                production_candidate_metric_gates_path=Path(args.production_candidate_metric_gates),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                assignment_version=str(args.assignment_version),
+                strategy_id=str(args.strategy_id),
+                seed=args.seed,
+                repo_root=repo_root,
+            )
+        except MLLearnedScorerHoldoutAssignmentError as e:
+            print(f"ml-learned-scorer-holdout-assignment: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
