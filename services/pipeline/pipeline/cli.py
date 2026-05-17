@@ -2198,6 +2198,60 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_learned_scorer_holdout_policy_parser = subparsers.add_parser(
+        "ml-learned-scorer-holdout-policy",
+        help="Write learned scorer holdout boundary policy (no assignments, training, DB, ranking, or shadow/prod changes)",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--embeddings",
+        required=True,
+        help="Path to ml-labeled-text-embeddings-v3 JSON",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--production-candidate-scoring",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v2 JSON",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--production-candidate-metric-gates",
+        required=True,
+        help="Path to ml-offline-production-candidate-metric-gates-v2 JSON",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write learned scorer holdout policy JSON",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--policy-version",
+        default="ml-learned-scorer-holdout-policy-v1",
+        help="Policy version string to write (default: ml-learned-scorer-holdout-policy-v1)",
+    )
+    ml_learned_scorer_holdout_policy_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -3603,6 +3657,35 @@ def main() -> None:
             )
         except MLOfflineAuditEmbeddingScorerExportError as e:
             print(f"ml-offline-audit-embedding-scorer-export: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-learned-scorer-holdout-policy":
+        from pipeline.ml_learned_scorer_holdout_policy import (
+            MLLearnedScorerHoldoutPolicyError,
+            write_ml_learned_scorer_holdout_policy,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_learned_scorer_holdout_policy(
+                label_dataset_path=Path(args.label_dataset),
+                split_policy_path=Path(args.split_policy),
+                embeddings_path=Path(args.embeddings),
+                production_candidate_scoring_path=Path(args.production_candidate_scoring),
+                production_candidate_metric_gates_path=Path(args.production_candidate_metric_gates),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                policy_version=str(args.policy_version),
+                repo_root=repo_root,
+            )
+        except MLLearnedScorerHoldoutPolicyError as e:
+            print(f"ml-learned-scorer-holdout-policy: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)

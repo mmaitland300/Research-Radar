@@ -1,0 +1,211 @@
+{
+  "conflict_and_duplicate_policy": {
+    "downstream_commands_must_report": [
+      "duplicate_work_group_count",
+      "duplicate_observation_pressure",
+      "conflicting_target_work_group_count",
+      "conflict handling policy reference"
+    ],
+    "duplicate_work_groups_assigned_as_unit": true,
+    "preserve_observation_level_rows": true,
+    "silent_label_merge_allowed": false
+  },
+  "dataset_inventory": {
+    "audit_eligible_observation_count": 427,
+    "audit_eligible_observations_with_embedding_count": 427,
+    "audit_eligible_unique_work_count": 342,
+    "audit_eligible_unique_works_with_embedding_count": 342,
+    "conflicting_target_work_group_count": 3,
+    "duplicate_conflict_rollups": {
+      "derived_target_conflict_count": 11,
+      "duplicate_paper_id_count": 55,
+      "raw_conflicting_label_count": 83
+    },
+    "duplicate_observation_pressure": 85,
+    "duplicate_work_group_count": 55,
+    "eval_labeled_observation_count_estimate": 286,
+    "eval_negative_observation_count": 31,
+    "eval_observation_count_estimate": 286,
+    "eval_positive_observation_count": 255,
+    "excluded_rows_by_reason": {},
+    "overlap_work_count_between_full_fit_training_universe_and_eval_set": 217,
+    "product_candidate_eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "product_candidate_labeled_eval_work_count": 217,
+    "product_candidate_pool_work_count": 217,
+    "product_candidate_unlabeled_eval_work_count": 0,
+    "train_observation_count_estimate": 141,
+    "train_work_count_estimate": 125
+  },
+  "eligibility_policy": {
+    "do_not_dedupe_or_silently_resolve_conflicts": true,
+    "inherits": "ml-label-split-policy-v1 row eligibility",
+    "preserve_observation_level_rows": true,
+    "require_boolean_good_or_acceptable": true,
+    "require_embedding_row_present_with_status_ok": "ml-labeled-text-embeddings-v3",
+    "require_explicit_manual_labels": true,
+    "require_resolvable_canonical_openalex_work_id": true,
+    "required_split": "audit_only"
+  },
+  "future_commands": [
+    {
+      "command": "ml-learned-scorer-holdout-assignment-v1",
+      "must_include": [
+        "leakage report"
+      ],
+      "purpose": "materialize per-work and per-row train/eval assignments"
+    },
+    {
+      "command": "ml-offline-audit-embedding-scorer-export-v2",
+      "must_not_use": [
+        "eval work in fitting"
+      ],
+      "purpose": "train only on train-arm observations"
+    },
+    {
+      "command": "ml-offline-production-candidate-scoring-v3",
+      "purpose": "apply holdout-bound scorer to product-candidate eval arm"
+    },
+    {
+      "command": "ml-offline-production-candidate-metric-gates-v3",
+      "independent_learned_validation_may_become_true_only_here": true,
+      "purpose": "evaluate held-out learned metrics"
+    }
+  ],
+  "grouping_policy": {
+    "all_observations_for_one_canonical_work_share_one_future_assignment": true,
+    "grouping_key": "canonical_openalex_work_id",
+    "leakage_rule": "no canonical OpenAlex work may appear in both train and eval",
+    "normalization_rules": "inherit from ml-label-split-policy-v1",
+    "source_fields_checked_in_order": [
+      "work_id",
+      "openalex_work_id",
+      "paper_id"
+    ]
+  },
+  "metadata": {
+    "artifact_type": "ml_learned_scorer_holdout_policy",
+    "caveats": [
+      "Not validation.",
+      "Policy only; no assignments yet.",
+      "Single-reviewer audit labels.",
+      "Product snapshot is one ranking run/family, not live recommender quality.",
+      "The eval work set is reserved from training, but label-based metrics require labeled observations.",
+      "Observation-level duplicates/conflicts are preserved.",
+      "No ranking/API/web changes.",
+      "No shadow or production default authorization."
+    ],
+    "embedding_artifact_version": "ml-labeled-text-embeddings-v3",
+    "generated_at": "2026-05-17T03:30:15Z",
+    "inputs": [
+      {
+        "name": "label_dataset",
+        "path": "docs/audit/ml-label-dataset-v8.json",
+        "sha256": "ea65b114cfef6e22e3299bf4e54d320b6ba13a66185ac0908700528a1846948c"
+      },
+      {
+        "name": "split_policy",
+        "path": "docs/audit/ml-label-split-policy-v1.json",
+        "sha256": "0141d03a1c7822d6c6065483aae0ec7aff31c6d73e329da0880e3b39de993c08"
+      },
+      {
+        "name": "embeddings",
+        "path": "docs/audit/ml-labeled-text-embeddings-v3.json",
+        "sha256": "ed5bdab293e3bdfad119a9eeb0b30201d5f9874fbe9466cf16e3aebcdac1e62d"
+      },
+      {
+        "name": "production_candidate_scoring",
+        "path": "docs/audit/ml-offline-production-candidate-scoring-v2.json",
+        "sha256": "e7b84921bd3572d2d233029f0614c636ac8ef34259329164596b1f933ff0c1f0"
+      },
+      {
+        "name": "production_candidate_metric_gates",
+        "path": "docs/audit/ml-offline-production-candidate-metric-gates-v2.json",
+        "sha256": "07ee9e5f391f0afdb1cb9a09abc1f49387c5bc65315cb7be0312cf3402b19c27"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      }
+    ],
+    "label_dataset_version": "ml-label-dataset-v8",
+    "policy_version": "ml-learned-scorer-holdout-policy-v1",
+    "production_candidate_metric_gates_version": "ml-offline-production-candidate-metric-gates-v2",
+    "production_candidate_scoring_version": "ml-offline-production-candidate-scoring-v2",
+    "production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "split_policy_version": "ml-label-split-policy-v1"
+  },
+  "policy_assertions": {
+    "eval_work_set_reserved_from_future_training": true,
+    "no_product_candidate_scoring_rerun": true,
+    "no_shadow_or_production_authorization": true,
+    "no_training_or_scorer_refit": true,
+    "policy_only_no_assignments": true
+  },
+  "primary_holdout_strategy": {
+    "eval_work_set_definition": {
+      "eval_work_set": "all unique canonical works in candidate_pool_rows, not only labeled works",
+      "eval_work_set_count": 217,
+      "eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+      "family": "emerging",
+      "full_assignment_rows_listed_here": false,
+      "ranking_run_id": "rank-ee2ba6c816",
+      "source_artifact": "ml-offline-production-candidate-scoring-v2",
+      "source_field": "candidate_pool_rows[].canonical_openalex_work_id",
+      "source_pool": "product-candidate paper_scores pool already materialized in scoring v2"
+    },
+    "metric_subset_definition": {
+      "future_artifacts_must_report_labeled_vs_unlabeled_eval_work_counts": true,
+      "future_held_out_metrics_require_explicit_boolean_good_or_acceptable_labels": true,
+      "unlabeled_eval_works_excluded_from_label_metric_denominators": true,
+      "unlabeled_product_candidate_eval_works_reserved_from_training": true
+    },
+    "status": "selected_for_v1",
+    "strategy_id": "product_candidate_snapshot_holdout",
+    "train_work_set_definition": {
+      "all_observations_for_train_works_belong_to_train_in_future_assignment": true,
+      "definition": "all audit-eligible canonical works from v8/v3 embeddings whose canonical work ID is not in eval_work_set",
+      "no_eval_work_may_be_used_to_fit_holdout_bound_scorer": true
+    }
+  },
+  "product_candidate_overlap_honesty": {
+    "cites_metric_gates_v2_gate": "G12_independent_validation_status",
+    "independent_validation_incomplete_until": [
+      "holdout assignment artifact exists",
+      "holdout-bound scorer is trained only on train works",
+      "product-candidate scoring v3 applies that scorer to eval works",
+      "metric gates v3 evaluate held-out learned metrics"
+    ],
+    "product_pool_works_are_eval_only_for_holdout_bound_scorer_training": true,
+    "scoring_v2_metrics_interpretation": "application diagnostics because the frozen scorer was full-fit on the audit label universe"
+  },
+  "randomness_policy": {
+    "assigns_folds_or_row_level_split_ids": false,
+    "future_assignment_command_must_declare": [
+      "seed",
+      "strategy_id",
+      "grouping key",
+      "stratification/reporting fields",
+      "leakage report"
+    ],
+    "recommended_default_seed": 20260515
+  },
+  "shadow_and_production_blockers": {
+    "independent_validation_complete": false,
+    "missing_holdout_assignment": true,
+    "missing_holdout_bound_scorer_export": true,
+    "missing_metric_gates_v3": true,
+    "missing_ml_shadow_scorer_v1": true,
+    "missing_product_candidate_scoring_v3": true,
+    "production_default_authorized": false,
+    "shadow_scoring_authorized": false
+  },
+  "target_policy": {
+    "eligible_target": "good_or_acceptable",
+    "forbidden_targets": [
+      "surprising_or_useful"
+    ],
+    "production_eligible": false,
+    "surprising_or_useful_reason": "forbidden by split policy v1 and deferred for rubric/transfer instability"
+  }
+}
