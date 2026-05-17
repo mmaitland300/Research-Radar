@@ -2114,6 +2114,66 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_offline_audit_embedding_scorer_export_parser = subparsers.add_parser(
+        "ml-offline-audit-embedding-scorer-export",
+        help="Export a JSON-only full-fit audit embedding scorer (no CV/DB/ranking/product-candidate scoring)",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--embeddings",
+        required=True,
+        help="Path to ml-labeled-text-embeddings-v3 JSON",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--production-candidate-metric-gates",
+        required=True,
+        help="Path to ml-offline-production-candidate-metric-gates-v1 JSON",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--ranker-experiment",
+        default=None,
+        help="Optional ml-offline-ranker-experiment-v1 JSON for reference CV aggregate metrics only",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write audit embedding scorer JSON",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--target",
+        default="good_or_acceptable",
+        help="Target to fit (default: good_or_acceptable; v1 hard-fails other targets)",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=None,
+        help="Random seed; default uses split policy recommended seed",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--scorer-version",
+        default="ml-offline-audit-embedding-scorer-v1",
+        help="Scorer version string to write (default: ml-offline-audit-embedding-scorer-v1)",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -3463,6 +3523,37 @@ def main() -> None:
             )
         except MLOfflineProductionCandidateMetricGatesError as e:
             print(f"ml-offline-production-candidate-metric-gates: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-audit-embedding-scorer-export":
+        from pipeline.ml_offline_audit_embedding_scorer_export import (
+            MLOfflineAuditEmbeddingScorerExportError,
+            write_ml_offline_audit_embedding_scorer_export,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        ranker_experiment = Path(args.ranker_experiment) if args.ranker_experiment else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_offline_audit_embedding_scorer_export(
+                label_dataset_path=Path(args.label_dataset),
+                split_policy_path=Path(args.split_policy),
+                embeddings_path=Path(args.embeddings),
+                production_candidate_metric_gates_path=Path(args.production_candidate_metric_gates),
+                ranker_experiment_path=ranker_experiment,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                target=str(args.target),
+                random_seed=args.random_seed,
+                scorer_version=str(args.scorer_version),
+                repo_root=repo_root,
+            )
+        except MLOfflineAuditEmbeddingScorerExportError as e:
+            print(f"ml-offline-audit-embedding-scorer-export: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
