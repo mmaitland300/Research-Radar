@@ -2070,6 +2070,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_offline_production_candidate_metric_gates_parser = subparsers.add_parser(
+        "ml-offline-production-candidate-metric-gates",
+        help="Evaluate product-candidate offline metric gates over an existing scoring diagnostic (no DB/training/ranking)",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--production-candidate-scoring",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v1 JSON",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--offline-metric-gates",
+        required=True,
+        help="Path to ml-offline-metric-gates-v1 JSON",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--split-policy",
+        required=True,
+        help="Path to ml-label-split-policy-v1 JSON",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write product-candidate metric gates JSON",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--gates-version",
+        default="ml-offline-production-candidate-metric-gates-v1",
+        help="Gates version string to write (default: ml-offline-production-candidate-metric-gates-v1)",
+    )
+    ml_offline_production_candidate_metric_gates_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -3392,6 +3436,33 @@ def main() -> None:
             )
         except MLOfflineProductionCandidateScoringError as e:
             print(f"ml-offline-production-candidate-scoring: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-production-candidate-metric-gates":
+        from pipeline.ml_offline_production_candidate_metric_gates import (
+            MLOfflineProductionCandidateMetricGatesError,
+            write_ml_offline_production_candidate_metric_gates,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_offline_production_candidate_metric_gates(
+                production_candidate_scoring_path=Path(args.production_candidate_scoring),
+                offline_metric_gates_path=Path(args.offline_metric_gates),
+                split_policy_path=Path(args.split_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                gates_version=str(args.gates_version),
+                repo_root=repo_root,
+            )
+        except MLOfflineProductionCandidateMetricGatesError as e:
+            print(f"ml-offline-production-candidate-metric-gates: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
