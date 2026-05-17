@@ -9,6 +9,7 @@ or write a model artifact.
 from __future__ import annotations
 
 import json
+import hashlib
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +34,7 @@ from pipeline.repo_paths import default_repo_root, portable_repo_path
 ARTIFACT_TYPE = "ml_offline_production_candidate_scoring"
 EXPERIMENT_VERSION = "ml-offline-production-candidate-scoring-v1"
 EXPERIMENT_VERSION_V2 = "ml-offline-production-candidate-scoring-v2"
+EXPERIMENT_VERSION_V3 = "ml-offline-production-candidate-scoring-v3"
 LABEL_DATASET_VERSION = "ml-label-dataset-v8"
 SPLIT_POLICY_ARTIFACT_TYPE = "ml_label_split_policy"
 SPLIT_POLICY_VERSION = "ml-label-split-policy-v1"
@@ -44,13 +46,22 @@ EMBEDDINGS_ARTIFACT_TYPE = "ml_labeled_text_embeddings"
 EMBEDDINGS_VERSION = "ml-labeled-text-embeddings-v3"
 AUDIT_SCORER_ARTIFACT_TYPE = "ml_offline_audit_embedding_scorer"
 AUDIT_SCORER_VERSION = "ml-offline-audit-embedding-scorer-v1"
+AUDIT_SCORER_VERSION_V2 = "ml-offline-audit-embedding-scorer-v2"
+HOLDOUT_ASSIGNMENT_ARTIFACT_TYPE = "ml_learned_scorer_holdout_assignment"
+HOLDOUT_ASSIGNMENT_VERSION = "ml-learned-scorer-holdout-assignment-v1"
+HOLDOUT_POLICY_ARTIFACT_TYPE = "ml_learned_scorer_holdout_policy"
+HOLDOUT_POLICY_VERSION = "ml-learned-scorer-holdout-policy-v1"
+HOLDOUT_STRATEGY_ID = "product_candidate_snapshot_holdout"
+PRODUCT_CANDIDATE_GATES_ARTIFACT_TYPE = "ml_offline_production_candidate_metric_gates"
+PRODUCT_CANDIDATE_GATES_VERSION_V2 = "ml-offline-production-candidate-metric-gates-v2"
 TARGET_GOOD = "good_or_acceptable"
 FORBIDDEN_TARGET = "surprising_or_useful"
 DEFAULT_FAMILY = "emerging"
 ALLOWED_FAMILIES = frozenset({DEFAULT_FAMILY})
 SCORING_MODE_HEURISTIC = "heuristic_and_coverage_only"
 SCORING_MODE_AUDIT_EMBEDDING = "heuristic_and_audit_embedding_scorer"
-SCORING_MODES = frozenset({SCORING_MODE_HEURISTIC, SCORING_MODE_AUDIT_EMBEDDING})
+SCORING_MODE_HOLDOUT_EMBEDDING = "heuristic_and_holdout_embedding_scorer"
+SCORING_MODES = frozenset({SCORING_MODE_HEURISTIC, SCORING_MODE_AUDIT_EMBEDDING, SCORING_MODE_HOLDOUT_EMBEDDING})
 LEARNED_UNAVAILABLE_REASON = (
     "ml-offline-ranker-experiment-v1 contains per-fold coefficients only; "
     "no frozen full-fit audit scorer export exists."
@@ -96,6 +107,21 @@ LEARNED_CAVEATS = (
     "Learned audit scorer and heuristic final_score are separate evidence lines.",
     "No shadow scoring or production default change.",
     "No ranking/API/web changes.",
+)
+
+HOLDOUT_LEARNED_CAVEATS = (
+    "Not live recommender validation.",
+    "Held out relative to scorer v2 train works; still single-reviewer audit labels.",
+    "One frozen ranking run/family.",
+    "Positive-heavy eval may inflate P@k.",
+    "No shadow/production authorization.",
+)
+
+HOLDOUT_LEARNED_BLOCKERS_TO_SHADOW = (
+    "product-candidate metric gates v3 not yet evaluated",
+    "no ml-shadow-scorer-v1 contract exists",
+    "production default blocked by readiness plan",
+    "no production model artifact exists",
 )
 
 
@@ -290,6 +316,11 @@ def _input_sha_matches(payload: Mapping[str, Any], names: set[str], expected_sha
     return False
 
 
+def _work_set_sha256(work_ids: Sequence[str]) -> str:
+    lines = "".join(f"{work_id}\n" for work_id in sorted({str(work_id).strip() for work_id in work_ids if str(work_id).strip()}))
+    return hashlib.sha256(lines.encode("utf-8")).hexdigest()
+
+
 def _validate_audit_embedding_scorer(
     payload: Mapping[str, Any],
     *,
@@ -359,7 +390,138 @@ def _validate_audit_embedding_scorer(
     return metadata
 
 
-def _validate_scoring_mode(scoring_mode: str, audit_embedding_scorer_export_path: Path | None) -> str:
+def _validate_holdout_assignment(
+    payload: Mapping[str, Any],
+    *,
+    ranking_run_id: str,
+    family: str,
+) -> tuple[Mapping[str, Any], dict[str, dict[str, Any]]]:
+    metadata = _metadata(payload, name="holdout-assignment")
+    if metadata.get("artifact_type") != HOLDOUT_ASSIGNMENT_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected holdout assignment metadata.artifact_type={HOLDOUT_ASSIGNMENT_ARTIFACT_TYPE!r}, "
+            f"got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("assignment_version") != HOLDOUT_ASSIGNMENT_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected holdout assignment metadata.assignment_version={HOLDOUT_ASSIGNMENT_VERSION!r}, "
+            f"got {metadata.get('assignment_version')!r}"
+        )
+    if metadata.get("strategy_id") != HOLDOUT_STRATEGY_ID:
+        raise MLOfflineProductionCandidateScoringError(
+            f"holdout assignment metadata.strategy_id must be {HOLDOUT_STRATEGY_ID!r}"
+        )
+    if metadata.get("ranking_run_id") != ranking_run_id:
+        raise MLOfflineProductionCandidateScoringError("holdout assignment metadata.ranking_run_id must match ranking_run_id")
+    if metadata.get("family") != family:
+        raise MLOfflineProductionCandidateScoringError("holdout assignment metadata.family must match family")
+    leakage = payload.get("leakage_report")
+    if not isinstance(leakage, Mapping):
+        raise MLOfflineProductionCandidateScoringError("holdout assignment missing leakage_report")
+    if leakage.get("global_zero_assertion") is not True:
+        raise MLOfflineProductionCandidateScoringError("holdout assignment leakage_report.global_zero_assertion must be true")
+    if int(leakage.get("train_eval_work_overlap_count") or 0) != 0:
+        raise MLOfflineProductionCandidateScoringError("holdout assignment train_eval_work_overlap_count must be 0")
+    assignments = payload.get("assignments")
+    if not isinstance(assignments, list) or not assignments:
+        raise MLOfflineProductionCandidateScoringError("holdout assignment missing assignments array")
+    by_row_id: dict[str, dict[str, Any]] = {}
+    for idx, raw in enumerate(assignments, start=1):
+        if not isinstance(raw, Mapping):
+            raise MLOfflineProductionCandidateScoringError(f"holdout assignment row {idx} is not an object")
+        row_id = str(raw.get("row_id") or "").strip()
+        if not row_id:
+            raise MLOfflineProductionCandidateScoringError(f"holdout assignment row {idx} missing row_id")
+        if row_id in by_row_id:
+            raise MLOfflineProductionCandidateScoringError(f"holdout assignment duplicate row_id: {row_id}")
+        assignment = str(raw.get("assignment") or "").strip()
+        if assignment not in {"train", "eval"}:
+            raise MLOfflineProductionCandidateScoringError(f"holdout assignment row {idx} has invalid assignment")
+        by_row_id[row_id] = dict(raw)
+    return metadata, by_row_id
+
+
+def _validate_holdout_policy(payload: Mapping[str, Any], *, expected_eval_sha: str) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="holdout-policy")
+    if metadata.get("artifact_type") != HOLDOUT_POLICY_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected holdout policy metadata.artifact_type={HOLDOUT_POLICY_ARTIFACT_TYPE!r}, "
+            f"got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("policy_version") != HOLDOUT_POLICY_VERSION:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected holdout policy metadata.policy_version={HOLDOUT_POLICY_VERSION!r}, got {metadata.get('policy_version')!r}"
+        )
+    inventory = payload.get("dataset_inventory")
+    strategy = payload.get("primary_holdout_strategy")
+    definition = strategy.get("eval_work_set_definition") if isinstance(strategy, Mapping) else None
+    inventory_sha = inventory.get("product_candidate_eval_work_set_sha256") if isinstance(inventory, Mapping) else None
+    strategy_sha = definition.get("eval_work_set_sha256") if isinstance(definition, Mapping) else None
+    if inventory_sha != expected_eval_sha or strategy_sha != expected_eval_sha:
+        raise MLOfflineProductionCandidateScoringError("holdout policy eval_work_set_sha256 must match assignment/scorer")
+    return metadata
+
+
+def _validate_product_candidate_metric_gates_v2(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="production-candidate-metric-gates-v2")
+    if metadata.get("artifact_type") != PRODUCT_CANDIDATE_GATES_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected production-candidate gates metadata.artifact_type={PRODUCT_CANDIDATE_GATES_ARTIFACT_TYPE!r}, "
+            f"got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("gates_version") != PRODUCT_CANDIDATE_GATES_VERSION_V2:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected production-candidate gates metadata.gates_version={PRODUCT_CANDIDATE_GATES_VERSION_V2!r}, "
+            f"got {metadata.get('gates_version')!r}"
+        )
+    return metadata
+
+
+def _validate_holdout_embedding_scorer(
+    payload: Mapping[str, Any],
+    *,
+    assignment_metadata: Mapping[str, Any],
+    assignment_sha256: str,
+    embedding_dimensions: Any,
+) -> Mapping[str, Any]:
+    metadata = _metadata(payload, name="audit-embedding-scorer-export")
+    if metadata.get("artifact_type") != AUDIT_SCORER_ARTIFACT_TYPE:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected audit scorer metadata.artifact_type={AUDIT_SCORER_ARTIFACT_TYPE!r}, "
+            f"got {metadata.get('artifact_type')!r}"
+        )
+    if metadata.get("scorer_version") != AUDIT_SCORER_VERSION_V2:
+        raise MLOfflineProductionCandidateScoringError(
+            f"expected audit scorer metadata.scorer_version={AUDIT_SCORER_VERSION_V2!r}, got {metadata.get('scorer_version')!r}"
+        )
+    if metadata.get("fit_mode") != "holdout_bound_train_only":
+        raise MLOfflineProductionCandidateScoringError("audit scorer metadata.fit_mode must be holdout_bound_train_only")
+    if metadata.get("target") != TARGET_GOOD:
+        raise MLOfflineProductionCandidateScoringError("audit scorer metadata.target must be good_or_acceptable")
+    policy = payload.get("policy_compliance")
+    if not isinstance(policy, Mapping):
+        raise MLOfflineProductionCandidateScoringError("audit scorer missing policy_compliance object")
+    if policy.get("eval_works_excluded_from_fit") is not True:
+        raise MLOfflineProductionCandidateScoringError("audit scorer policy_compliance.eval_works_excluded_from_fit must be true")
+    if metadata.get("eval_work_set_sha256") != assignment_metadata.get("eval_work_set_sha256"):
+        raise MLOfflineProductionCandidateScoringError("audit scorer eval_work_set_sha256 must match holdout assignment")
+    if metadata.get("holdout_assignment_sha256") != assignment_sha256:
+        raise MLOfflineProductionCandidateScoringError("audit scorer holdout_assignment_sha256 must match supplied assignment")
+    scorer_dimensions = metadata.get("embedding_dimensions")
+    if scorer_dimensions is None:
+        scorer_block = payload.get("scorer")
+        scaler_block = scorer_block.get("scaler") if isinstance(scorer_block, Mapping) else None
+        scorer_dimensions = scaler_block.get("feature_count") if isinstance(scaler_block, Mapping) else None
+    if scorer_dimensions != embedding_dimensions:
+        raise MLOfflineProductionCandidateScoringError("audit scorer embedding dimensions do not match supplied embeddings")
+    return metadata
+
+
+def _validate_scoring_mode(
+    scoring_mode: str,
+    audit_embedding_scorer_export_path: Path | None,
+    holdout_assignment_path: Path | None = None,
+) -> str:
     normalized = str(scoring_mode or "").strip()
     if normalized not in SCORING_MODES:
         raise MLOfflineProductionCandidateScoringError(
@@ -369,12 +531,23 @@ def _validate_scoring_mode(scoring_mode: str, audit_embedding_scorer_export_path
         raise MLOfflineProductionCandidateScoringError(
             "--audit-embedding-scorer-export is required when --scoring-mode heuristic_and_audit_embedding_scorer"
         )
+    if normalized == SCORING_MODE_HOLDOUT_EMBEDDING:
+        if audit_embedding_scorer_export_path is None:
+            raise MLOfflineProductionCandidateScoringError(
+                "--audit-embedding-scorer-export is required when --scoring-mode heuristic_and_holdout_embedding_scorer"
+            )
+        if holdout_assignment_path is None:
+            raise MLOfflineProductionCandidateScoringError(
+                "--holdout-assignment is required when --scoring-mode heuristic_and_holdout_embedding_scorer"
+            )
     return normalized
 
 
 def _default_experiment_version(scoring_mode: str, experiment_version: str | None) -> str:
     if experiment_version:
         return str(experiment_version)
+    if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING:
+        return EXPERIMENT_VERSION_V3
     if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
         return EXPERIMENT_VERSION_V2
     return EXPERIMENT_VERSION
@@ -590,6 +763,45 @@ def _join_labels_to_candidates(
         "missing_embedding_row_ids": missing_embeddings[:50],
     }
     return joined, summary
+
+
+def _attach_holdout_assignments(
+    joined_observations: Sequence[Mapping[str, Any]],
+    *,
+    assignment_by_row_id: Mapping[str, Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    missing_assignment_row_ids: list[str] = []
+    assignment_counts: Counter[str] = Counter()
+    train_work_ids: set[str] = set()
+    eval_work_ids: set[str] = set()
+    for row in joined_observations:
+        item = dict(row)
+        row_id = str(item.get("row_id") or "").strip()
+        assignment_record = assignment_by_row_id.get(row_id)
+        if assignment_record is None:
+            missing_assignment_row_ids.append(row_id or "(missing row_id)")
+            item["holdout_assignment"] = None
+        else:
+            assignment = str(assignment_record.get("assignment") or "").strip()
+            item["holdout_assignment"] = assignment
+            item["holdout_assignment_canonical_openalex_work_id"] = assignment_record.get("canonical_openalex_work_id")
+            assignment_counts[assignment] += 1
+            canonical = str(item.get("canonical_openalex_work_id") or "").strip()
+            if assignment == "train":
+                train_work_ids.add(canonical)
+            elif assignment == "eval":
+                eval_work_ids.add(canonical)
+        out.append(item)
+    return out, {
+        "joined_observation_assignment_counts": dict(sorted(assignment_counts.items())),
+        "missing_assignment_count": len(missing_assignment_row_ids),
+        "missing_assignment_row_ids_preview": missing_assignment_row_ids[:50],
+        "train_assignment_rows_in_join_count": assignment_counts["train"],
+        "train_assignment_works_in_join_count": len(train_work_ids),
+        "eval_assignment_row_count": assignment_counts["eval"],
+        "eval_assignment_work_count": len(eval_work_ids),
+    }
 
 
 def _majority_label(pos: int, neg: int) -> bool | None:
@@ -836,9 +1048,17 @@ def _comparison_to_heuristic(
     return {
         "delta_roc_auc": _metric_delta(learned_metrics.get("roc_auc_mann_whitney"), heuristic_metrics.get("roc_auc_mann_whitney")),
         "delta_average_precision": _metric_delta(learned_metrics.get("average_precision"), heuristic_metrics.get("average_precision")),
+        "delta_precision_at_5": _metric_delta(
+            _pr_value(learned_metrics, 5, "precision"),
+            _pr_value(heuristic_metrics, 5, "precision"),
+        ),
         "delta_precision_at_10": _metric_delta(
             _pr_value(learned_metrics, 10, "precision"),
             _pr_value(heuristic_metrics, 10, "precision"),
+        ),
+        "delta_precision_at_20": _metric_delta(
+            _pr_value(learned_metrics, 20, "precision"),
+            _pr_value(heuristic_metrics, 20, "precision"),
         ),
         "side_by_side": side_by_side,
     }
@@ -848,6 +1068,10 @@ def _learned_metrics(
     *,
     eval_rows: Sequence[Mapping[str, Any]],
     heuristic_metrics: Mapping[str, Any],
+    scorer_version: Any | None = None,
+    scorer_fit_mode: Any | None = None,
+    scorer_sha256: str | None = None,
+    eval_only: bool = False,
 ) -> dict[str, Any]:
     metrics = _score_metrics(
         eval_rows,
@@ -855,14 +1079,20 @@ def _learned_metrics(
         score_name="audit_embedding_probability_work",
     )
     return {
+        "learned_product_scores_produced": True,
+        "eval_only": eval_only,
+        "scorer_version": scorer_version,
+        "scorer_fit_mode": scorer_fit_mode,
+        "scorer_sha256": scorer_sha256,
+        "aggregation_policy": LEARNED_SCORE_AGGREGATION_POLICY,
+        "product_candidate_rows_used_for_training": 0,
         "metrics": metrics,
         "comparison_to_heuristic": _comparison_to_heuristic(
             heuristic_metrics=heuristic_metrics,
             learned_metrics=metrics,
         ),
-        "learned_product_scores_produced": True,
         "audit_embedding_scorer_export_present": True,
-        "aggregation_policy": LEARNED_SCORE_AGGREGATION_POLICY,
+        "learned_metric_thresholds": dict(LEARNED_METRIC_THRESHOLDS),
         "learned_metric_thresholds_satisfied": _learned_thresholds_satisfied(metrics),
     }
 
@@ -945,6 +1175,7 @@ def _candidate_pool_summary(candidate_rows: Sequence[Mapping[str, Any]]) -> dict
         "paper_scores_row_count": len(candidate_rows),
         "candidate_unique_internal_work_count": len(set(internal_ids)),
         "candidate_unique_canonical_work_count": len(set(canonical)),
+        "candidate_pool_work_set_sha256": _work_set_sha256(canonical),
         "candidate_rows_without_canonical_work_id": len(candidate_rows) - len(canonical),
     }
 
@@ -1020,6 +1251,28 @@ def _scoring_mode_details_learned(
     }
 
 
+def _scoring_mode_details_holdout_learned(
+    *,
+    audit_embedding_scorer_version: Any,
+    audit_embedding_scorer_sha256: str,
+    holdout_assignment_version: Any,
+    holdout_assignment_sha256: str,
+) -> dict[str, Any]:
+    return {
+        "scoring_mode": SCORING_MODE_HOLDOUT_EMBEDDING,
+        "learned_product_scores_produced": True,
+        "eval_only": True,
+        "audit_embedding_scorer_version": audit_embedding_scorer_version,
+        "audit_embedding_scorer_sha256": audit_embedding_scorer_sha256,
+        "holdout_assignment_version": holdout_assignment_version,
+        "holdout_assignment_sha256": holdout_assignment_sha256,
+        "no_fold_coefficient_averaging": True,
+        "no_refit_in_this_command": True,
+        "product_candidate_rows_used_for_training": 0,
+        "learned_score_aggregation_policy": LEARNED_SCORE_AGGREGATION_POLICY,
+    }
+
+
 def build_ml_offline_production_candidate_scoring_payload(
     conn: psycopg.Connection,
     *,
@@ -1034,12 +1287,15 @@ def build_ml_offline_production_candidate_scoring_payload(
     experiment_version: str | None = None,
     scoring_mode: str = SCORING_MODE_HEURISTIC,
     audit_embedding_scorer_export_path: Path | None = None,
+    holdout_assignment_path: Path | None = None,
+    holdout_policy_path: Path | None = None,
+    production_candidate_metric_gates_v2_path: Path | None = None,
     database_url: str | None = None,
     repo_root: Path | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     target, family = _validate_target_and_family(target=target, family=family)
-    scoring_mode = _validate_scoring_mode(scoring_mode, audit_embedding_scorer_export_path)
+    scoring_mode = _validate_scoring_mode(scoring_mode, audit_embedding_scorer_export_path, holdout_assignment_path)
     resolved_experiment_version = _default_experiment_version(scoring_mode, experiment_version)
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     label_path = Path(label_dataset_path).resolve()
@@ -1048,6 +1304,13 @@ def build_ml_offline_production_candidate_scoring_payload(
     ranker_path = Path(audit_ranker_experiment_path).resolve()
     emb_path = Path(embeddings_path).resolve()
     scorer_path = Path(audit_embedding_scorer_export_path).resolve() if audit_embedding_scorer_export_path is not None else None
+    assignment_path = Path(holdout_assignment_path).resolve() if holdout_assignment_path is not None else None
+    holdout_policy_path_resolved = Path(holdout_policy_path).resolve() if holdout_policy_path is not None else None
+    gates_v2_path = (
+        Path(production_candidate_metric_gates_v2_path).resolve()
+        if production_candidate_metric_gates_v2_path is not None
+        else None
+    )
 
     label_payload = _load_json_object(label_path)
     policy_payload = _load_json_object(policy_path)
@@ -1055,6 +1318,9 @@ def build_ml_offline_production_candidate_scoring_payload(
     ranker_payload = _load_json_object(ranker_path)
     emb_payload = _load_json_object(emb_path)
     scorer_payload = _load_json_object(scorer_path) if scorer_path is not None else None
+    assignment_payload = _load_json_object(assignment_path) if assignment_path is not None else None
+    holdout_policy_payload = _load_json_object(holdout_policy_path_resolved) if holdout_policy_path_resolved is not None else None
+    gates_v2_payload = _load_json_object(gates_v2_path) if gates_v2_path is not None else None
 
     label_rows = _validate_label_dataset(label_payload)
     _validate_split_policy(policy_payload)
@@ -1076,6 +1342,11 @@ def build_ml_offline_production_candidate_scoring_payload(
     )
     scorer_metadata: Mapping[str, Any] | None = None
     scorer_sha: str | None = None
+    assignment_metadata: Mapping[str, Any] | None = None
+    assignment_by_row_id: dict[str, dict[str, Any]] = {}
+    assignment_sha: str | None = None
+    holdout_policy_metadata: Mapping[str, Any] | None = None
+    gates_v2_metadata: Mapping[str, Any] | None = None
     if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
         if scorer_payload is None or scorer_path is None:
             raise MLOfflineProductionCandidateScoringError(
@@ -1088,6 +1359,31 @@ def build_ml_offline_production_candidate_scoring_payload(
             embeddings_sha256=embeddings_sha,
             embedding_dimensions=embedding_metadata.get("embedding_dimensions"),
         )
+    elif scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING:
+        if scorer_payload is None or scorer_path is None or assignment_payload is None or assignment_path is None:
+            raise MLOfflineProductionCandidateScoringError(
+                "--audit-embedding-scorer-export and --holdout-assignment are required in heuristic_and_holdout_embedding_scorer mode"
+            )
+        assignment_sha = sha256_file(assignment_path)
+        assignment_metadata, assignment_by_row_id = _validate_holdout_assignment(
+            assignment_payload,
+            ranking_run_id=str(ranking_run_id or "").strip(),
+            family=family,
+        )
+        scorer_sha = sha256_file(scorer_path)
+        scorer_metadata = _validate_holdout_embedding_scorer(
+            scorer_payload,
+            assignment_metadata=assignment_metadata,
+            assignment_sha256=assignment_sha,
+            embedding_dimensions=embedding_metadata.get("embedding_dimensions"),
+        )
+        if holdout_policy_payload is not None:
+            holdout_policy_metadata = _validate_holdout_policy(
+                holdout_policy_payload,
+                expected_eval_sha=str(assignment_metadata.get("eval_work_set_sha256")),
+            )
+        if gates_v2_payload is not None:
+            gates_v2_metadata = _validate_product_candidate_metric_gates_v2(gates_v2_payload)
 
     database_summary = assert_local_database_url(database_url) if database_url is not None else {
         "local_database_url_confirmed": None,
@@ -1108,6 +1404,22 @@ def build_ml_offline_production_candidate_scoring_payload(
             f"ranking_run_id {rid!r} has no paper_scores rows for family {family!r}; local DB lacks the required run/scores"
         )
 
+    candidate_pool_work_ids = sorted(
+        {str(row.get("canonical_openalex_work_id")) for row in candidate_rows if row.get("canonical_openalex_work_id")}
+    )
+    candidate_pool_work_set_sha = _work_set_sha256(candidate_pool_work_ids)
+    if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING:
+        expected_eval_sha = str((assignment_metadata or {}).get("eval_work_set_sha256") or "")
+        if candidate_pool_work_set_sha != expected_eval_sha:
+            raise MLOfflineProductionCandidateScoringError(
+                "candidate pool work-set SHA does not match holdout assignment/scorer eval_work_set_sha256"
+            )
+        expected_eval_count = int((assignment_metadata or {}).get("eval_work_count") or 0)
+        if expected_eval_count and len(candidate_pool_work_ids) != expected_eval_count:
+            raise MLOfflineProductionCandidateScoringError(
+                "candidate pool unique canonical work count does not match holdout assignment eval_work_count"
+            )
+
     candidates_by_work = _best_candidate_by_work(candidate_rows)
     explicit_label_rows, excluded_counts = _explicit_target_label_rows(label_rows, target)
     joined_observations, embedding_join_summary = _join_labels_to_candidates(
@@ -1116,17 +1428,43 @@ def build_ml_offline_production_candidate_scoring_payload(
         embeddings_by_row_id=embeddings_by_row_id,
         target=target,
     )
-    if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
+    assignment_join_summary: dict[str, Any] = {}
+    metric_joined_observations = joined_observations
+    if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING:
+        joined_observations, assignment_join_summary = _attach_holdout_assignments(
+            joined_observations,
+            assignment_by_row_id=assignment_by_row_id,
+        )
+        if assignment_join_summary["missing_assignment_count"]:
+            raise MLOfflineProductionCandidateScoringError(
+                "joined candidate label rows are missing holdout assignments"
+            )
+        metric_joined_observations = [
+            row for row in joined_observations if row.get("holdout_assignment") == "eval"
+        ]
+    if scoring_mode in {SCORING_MODE_AUDIT_EMBEDDING, SCORING_MODE_HOLDOUT_EMBEDDING}:
         joined_observations = _attach_audit_embedding_observation_scores(
             joined_observations,
             embeddings_by_row_id=embeddings_by_row_id,
             audit_scorer_payload=scorer_payload or {},
         )
-    eval_rows, conflict_diagnostics = _build_labeled_eval_subset(joined_observations, candidates_by_work=candidates_by_work)
+        if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING:
+            metric_joined_observations = [
+                row for row in joined_observations if row.get("holdout_assignment") == "eval"
+            ]
+        else:
+            metric_joined_observations = joined_observations
+    eval_rows, conflict_diagnostics = _build_labeled_eval_subset(metric_joined_observations, candidates_by_work=candidates_by_work)
     eval_by_work = {str(row["canonical_openalex_work_id"]): row for row in eval_rows}
     heuristic_metrics = _heuristic_metrics(eval_rows)
     if scoring_mode == SCORING_MODE_AUDIT_EMBEDDING:
-        learned_metrics = _learned_metrics(eval_rows=eval_rows, heuristic_metrics=heuristic_metrics)
+        learned_metrics = _learned_metrics(
+            eval_rows=eval_rows,
+            heuristic_metrics=heuristic_metrics,
+            scorer_version=(scorer_metadata or {}).get("scorer_version"),
+            scorer_fit_mode=(scorer_metadata or {}).get("fit_mode"),
+            scorer_sha256=str(scorer_sha),
+        )
         scoring_mode_details = _scoring_mode_details_learned(
             audit_embedding_scorer_version=(scorer_metadata or {}).get("scorer_version"),
             audit_embedding_scorer_sha256=str(scorer_sha),
@@ -1135,6 +1473,24 @@ def build_ml_offline_production_candidate_scoring_payload(
         blockers_to_shadow = list(LEARNED_BLOCKERS_TO_SHADOW)
         caveats = list(LEARNED_CAVEATS)
         interpretation_next_step = "Run product-candidate learned metric gates v2."
+    elif scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING:
+        learned_metrics = _learned_metrics(
+            eval_rows=eval_rows,
+            heuristic_metrics=heuristic_metrics,
+            scorer_version=(scorer_metadata or {}).get("scorer_version"),
+            scorer_fit_mode=(scorer_metadata or {}).get("fit_mode"),
+            scorer_sha256=str(scorer_sha),
+            eval_only=True,
+        )
+        scoring_mode_details = _scoring_mode_details_holdout_learned(
+            audit_embedding_scorer_version=(scorer_metadata or {}).get("scorer_version"),
+            audit_embedding_scorer_sha256=str(scorer_sha),
+            holdout_assignment_version=(assignment_metadata or {}).get("assignment_version"),
+            holdout_assignment_sha256=str(assignment_sha),
+        )
+        blockers_to_shadow = list(HOLDOUT_LEARNED_BLOCKERS_TO_SHADOW)
+        caveats = list(HOLDOUT_LEARNED_CAVEATS)
+        interpretation_next_step = "product-candidate metric gates v3"
     else:
         learned_metrics = _learned_metrics_null()
         scoring_mode_details = _scoring_mode_details_heuristic()
@@ -1156,6 +1512,50 @@ def build_ml_offline_production_candidate_scoring_payload(
     ]
     if scorer_path is not None:
         inputs.append(_input_record("audit_embedding_scorer_export", scorer_path, repo_root=root))
+    if assignment_path is not None:
+        inputs.append(_input_record("holdout_assignment", assignment_path, repo_root=root))
+    if holdout_policy_path_resolved is not None:
+        inputs.append(_input_record("holdout_policy", holdout_policy_path_resolved, repo_root=root))
+    if gates_v2_path is not None:
+        inputs.append(_input_record("production_candidate_metric_gates_v2", gates_v2_path, repo_root=root))
+
+    holdout_assignment_summary = None
+    leakage_report = None
+    if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING:
+        train_rows_used_in_metrics = sum(1 for row in metric_joined_observations if row.get("holdout_assignment") == "train")
+        train_works_used_in_metrics = len(
+            {
+                str(row.get("canonical_openalex_work_id"))
+                for row in metric_joined_observations
+                if row.get("holdout_assignment") == "train"
+            }
+        )
+        if train_rows_used_in_metrics or train_works_used_in_metrics:
+            raise MLOfflineProductionCandidateScoringError("train assignment rows cannot be used in holdout metrics")
+        unlabeled_candidate_work_count = max(
+            len(candidate_pool_work_ids) - len({str(row["canonical_openalex_work_id"]) for row in joined_observations}),
+            0,
+        )
+        holdout_assignment_summary = {
+            "assignment_version": (assignment_metadata or {}).get("assignment_version"),
+            "assignment_sha256": assignment_sha,
+            "eval_work_set_sha256": (assignment_metadata or {}).get("eval_work_set_sha256"),
+            "pool_work_set_sha256": candidate_pool_work_set_sha,
+            "pool_matches_eval_set": True,
+            "eval_assignment_row_count": int(assignment_join_summary.get("eval_assignment_row_count") or 0),
+            "train_assignment_rows_in_join_count": int(assignment_join_summary.get("train_assignment_rows_in_join_count") or 0),
+            "unlabeled_candidate_work_count": unlabeled_candidate_work_count,
+            "holdout_policy_version": holdout_policy_metadata.get("policy_version") if holdout_policy_metadata else None,
+            "production_candidate_metric_gates_v2_version": (
+                gates_v2_metadata.get("gates_version") if gates_v2_metadata else None
+            ),
+        }
+        leakage_report = {
+            "train_rows_used_in_metrics": train_rows_used_in_metrics,
+            "train_works_used_in_metrics": train_works_used_in_metrics,
+            "eval_work_set_matches_assignment": True,
+            "candidate_pool_work_set_matches_eval_set": True,
+        }
 
     return {
         "metadata": {
@@ -1167,6 +1567,9 @@ def build_ml_offline_production_candidate_scoring_payload(
             "family": family,
             "target": target,
             "scoring_mode": scoring_mode,
+            "eval_work_set_sha256": (assignment_metadata or {}).get("eval_work_set_sha256") if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING else None,
+            "scorer_version": (scorer_metadata or {}).get("scorer_version") if scorer_metadata else None,
+            "scorer_fit_mode": (scorer_metadata or {}).get("fit_mode") if scorer_metadata else None,
             "caveats": caveats,
         },
         "preflight_db_summary": {
@@ -1193,6 +1596,7 @@ def build_ml_offline_production_candidate_scoring_payload(
             "postgres_write_allowed": False,
         },
         "candidate_pool_summary": _candidate_pool_summary(candidate_rows),
+        "holdout_assignment_summary": holdout_assignment_summary,
         "label_join_summary": _label_join_summary(
             label_rows=label_rows,
             explicit_label_rows=explicit_label_rows,
@@ -1208,22 +1612,36 @@ def build_ml_offline_production_candidate_scoring_payload(
         "scoring_mode_details": scoring_mode_details,
         "heuristic_metrics": heuristic_metrics,
         "learned_or_embedding_metrics": learned_metrics,
+        "leakage_report": leakage_report,
         "top_k_tables": _top_k_tables(candidate_rows, eval_by_work=eval_by_work),
         "coverage_by_rank_bucket": _coverage_by_rank_bucket(candidate_rows, eval_by_work=eval_by_work),
         "duplicate_conflict_diagnostics": conflict_diagnostics,
         "blockers_to_shadow": blockers_to_shadow,
         "interpretation": {
             "summary": (
-                "This artifact measures label overlap and current heuristic final_score behavior on a product-like "
-                "candidate pool that already exists in paper_scores."
+                "This artifact applies the holdout-bound audit embedding scorer to the product-candidate eval arm "
+                "and compares held-out learned scores with heuristic final_score on the same labeled eval works."
+                if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING
+                else (
+                    "This artifact measures label overlap and current heuristic final_score behavior on a product-like "
+                    "candidate pool that already exists in paper_scores."
+                )
             ),
             "readiness": "diagnostic_only_not_shadow_ready",
-            "not_claimed": [
-                "validation",
-                "production readiness",
-                "shadow-scoring readiness",
-                "production ranking improvement",
-            ],
+            "not_claimed": (
+                [
+                    "live recommender validation",
+                    "shadow readiness",
+                    "production readiness",
+                ]
+                if scoring_mode == SCORING_MODE_HOLDOUT_EMBEDDING
+                else [
+                    "validation",
+                    "production readiness",
+                    "shadow-scoring readiness",
+                    "production ranking improvement",
+                ]
+            ),
             "next_step": interpretation_next_step,
         },
         "candidate_pool_rows": candidate_rows,
@@ -1249,13 +1667,19 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
     learned = payload["learned_or_embedding_metrics"]
     top_k = payload["top_k_tables"]
     learned_metrics = learned.get("metrics") if isinstance(learned.get("metrics"), Mapping) else None
+    is_holdout = metadata.get("scoring_mode") == SCORING_MODE_HOLDOUT_EMBEDDING
 
     lines = [
         f"# Production-Candidate Offline Scoring ({metadata['experiment_version']})",
         "",
         "## Executive Summary",
         "",
-        "Offline product-candidate diagnostic over an existing ranking run. No ranking was run, no product scores were written, and no model artifact was produced.",
+        (
+            "Offline product-candidate diagnostic over an existing ranking run. No ranking was run, no product scores "
+            "were written, and no model artifact was produced."
+            if not is_holdout
+            else "Offline product-candidate diagnostic applying the holdout-bound audit embedding scorer to the reserved eval arm. No ranking was run, no product scores were written, and no model artifact was produced."
+        ),
         "",
         f"- **ranking_run_id:** `{metadata['ranking_run_id']}`",
         f"- **family:** `{metadata['family']}`",
@@ -1269,7 +1693,7 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
         comparison = learned.get("comparison_to_heuristic") if isinstance(learned.get("comparison_to_heuristic"), Mapping) else {}
         lines.extend(
             [
-                f"- **learned audit scorer ROC-AUC/AP:** {_fmt(learned_metrics['roc_auc_mann_whitney'])} / {_fmt(learned_metrics['average_precision'])}",
+                f"- **learned scorer ROC-AUC/AP:** {_fmt(learned_metrics['roc_auc_mann_whitney'])} / {_fmt(learned_metrics['average_precision'])}",
                 f"- **learned vs heuristic deltas (ROC-AUC/AP/P@10):** {_fmt(comparison.get('delta_roc_auc'))} / {_fmt(comparison.get('delta_average_precision'))} / {_fmt(comparison.get('delta_precision_at_10'))}",
             ]
         )
@@ -1304,7 +1728,7 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
         lines.append(f"| Precision@{k} | {_fmt(block['precision'])} | {block.get('reason') or ''} |")
         lines.append(f"| Recall@{k} | {_fmt(block['recall'])} | {block.get('reason') or ''} |")
 
-    lines.extend(["", "## Learned Audit Scorer Metrics", ""])
+    lines.extend(["", "## Holdout Learned Scorer Metrics" if is_holdout else "## Learned Audit Scorer Metrics", ""])
     if learned_metrics is None:
         lines.append(f"`{metadata['scoring_mode']}`: learned product scores were not produced. {learned['reason']}")
     else:
@@ -1334,7 +1758,26 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
                 "| --- | ---: | ---: | ---: |",
                 f"| ROC-AUC | {_fmt(side_by_side.get('roc_auc_mann_whitney', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('roc_auc_mann_whitney', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_roc_auc'))} |",
                 f"| Average precision | {_fmt(side_by_side.get('average_precision', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('average_precision', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_average_precision'))} |",
+                f"| Precision@5 | {_fmt(side_by_side.get('precision_at_5', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('precision_at_5', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_precision_at_5'))} |",
                 f"| Precision@10 | {_fmt(side_by_side.get('precision_at_10', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('precision_at_10', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_precision_at_10'))} |",
+                f"| Precision@20 | {_fmt(side_by_side.get('precision_at_20', {}).get('heuristic_final_score'))} | {_fmt(side_by_side.get('precision_at_20', {}).get('audit_embedding_probability_work'))} | {_fmt(comparison.get('delta_precision_at_20'))} |",
+            ]
+        )
+
+    if is_holdout:
+        holdout = payload.get("holdout_assignment_summary") if isinstance(payload.get("holdout_assignment_summary"), Mapping) else {}
+        leakage = payload.get("leakage_report") if isinstance(payload.get("leakage_report"), Mapping) else {}
+        lines.extend(
+            [
+                "",
+                "## Leakage Checks",
+                "",
+                f"- **Eval work-set SHA:** `{holdout.get('eval_work_set_sha256')}`",
+                f"- **Pool work-set SHA:** `{holdout.get('pool_work_set_sha256')}`",
+                f"- **Pool matches eval set:** {holdout.get('pool_matches_eval_set')}",
+                f"- **Train rows used in metrics:** {leakage.get('train_rows_used_in_metrics')}",
+                f"- **Train works used in metrics:** {leakage.get('train_works_used_in_metrics')}",
+                f"- **Eval work set matches assignment:** {leakage.get('eval_work_set_matches_assignment')}",
             ]
         )
 
@@ -1372,7 +1815,11 @@ def markdown_from_ml_offline_production_candidate_scoring(payload: Mapping[str, 
             "",
             "## Next Step",
             "",
-            "Product-candidate metric gates v2." if learned_metrics is not None else "Product-candidate metric gates v1 if results are credible; otherwise targeted product-pool labels.",
+            "Product-candidate metric gates v3."
+            if is_holdout
+            else "Product-candidate metric gates v2."
+            if learned_metrics is not None
+            else "Product-candidate metric gates v1 if results are credible; otherwise targeted product-pool labels.",
             "",
         ]
     )
@@ -1395,6 +1842,9 @@ def write_ml_offline_production_candidate_scoring(
     experiment_version: str | None = None,
     scoring_mode: str = SCORING_MODE_HEURISTIC,
     audit_embedding_scorer_export_path: Path | None = None,
+    holdout_assignment_path: Path | None = None,
+    holdout_policy_path: Path | None = None,
+    production_candidate_metric_gates_v2_path: Path | None = None,
     database_url: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -1411,6 +1861,9 @@ def write_ml_offline_production_candidate_scoring(
         experiment_version=experiment_version,
         scoring_mode=scoring_mode,
         audit_embedding_scorer_export_path=audit_embedding_scorer_export_path,
+        holdout_assignment_path=holdout_assignment_path,
+        holdout_policy_path=holdout_policy_path,
+        production_candidate_metric_gates_v2_path=production_candidate_metric_gates_v2_path,
         database_url=database_url,
         repo_root=repo_root,
     )
@@ -1437,9 +1890,12 @@ def run_ml_offline_production_candidate_scoring_cli(
     experiment_version: str | None = None,
     scoring_mode: str = SCORING_MODE_HEURISTIC,
     audit_embedding_scorer_export_path: Path | None = None,
+    holdout_assignment_path: Path | None = None,
+    holdout_policy_path: Path | None = None,
+    production_candidate_metric_gates_v2_path: Path | None = None,
     repo_root: Path | None = None,
 ) -> None:
-    _validate_scoring_mode(scoring_mode, audit_embedding_scorer_export_path)
+    _validate_scoring_mode(scoring_mode, audit_embedding_scorer_export_path, holdout_assignment_path)
     assert_local_database_url(database_url)
     with psycopg.connect(database_url) as conn:
         write_ml_offline_production_candidate_scoring(
@@ -1457,6 +1913,9 @@ def run_ml_offline_production_candidate_scoring_cli(
             experiment_version=experiment_version,
             scoring_mode=scoring_mode,
             audit_embedding_scorer_export_path=audit_embedding_scorer_export_path,
+            holdout_assignment_path=holdout_assignment_path,
+            holdout_policy_path=holdout_policy_path,
+            production_candidate_metric_gates_v2_path=production_candidate_metric_gates_v2_path,
             database_url=database_url,
             repo_root=repo_root,
         )

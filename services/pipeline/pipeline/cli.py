@@ -2068,13 +2068,32 @@ def main() -> None:
     ml_offline_production_candidate_scoring_parser.add_argument(
         "--scoring-mode",
         default="heuristic_and_coverage_only",
-        choices=["heuristic_and_coverage_only", "heuristic_and_audit_embedding_scorer"],
+        choices=[
+            "heuristic_and_coverage_only",
+            "heuristic_and_audit_embedding_scorer",
+            "heuristic_and_holdout_embedding_scorer",
+        ],
         help="Scoring mode (default: heuristic_and_coverage_only)",
     )
     ml_offline_production_candidate_scoring_parser.add_argument(
         "--audit-embedding-scorer-export",
         default=None,
-        help="Path to ml-offline-audit-embedding-scorer-v1 JSON; required for heuristic_and_audit_embedding_scorer",
+        help="Path to audit embedding scorer JSON; required for learned scoring modes",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--holdout-assignment",
+        default=None,
+        help="Path to ml-learned-scorer-holdout-assignment-v1 JSON; required for heuristic_and_holdout_embedding_scorer",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--holdout-policy",
+        default=None,
+        help="Optional ml-learned-scorer-holdout-policy-v1 JSON provenance for holdout scoring",
+    )
+    ml_offline_production_candidate_scoring_parser.add_argument(
+        "--production-candidate-metric-gates-v2",
+        default=None,
+        help="Optional ml-offline-production-candidate-metric-gates-v2 JSON provenance for holdout scoring",
     )
     ml_offline_production_candidate_scoring_parser.add_argument(
         "--repo-root",
@@ -3643,8 +3662,16 @@ def main() -> None:
         audit_embedding_scorer_export = (
             Path(args.audit_embedding_scorer_export) if args.audit_embedding_scorer_export else None
         )
+        holdout_assignment = Path(args.holdout_assignment) if args.holdout_assignment else None
+        holdout_policy = Path(args.holdout_policy) if args.holdout_policy else None
+        gates_v2 = Path(args.production_candidate_metric_gates_v2) if args.production_candidate_metric_gates_v2 else None
         if args.scoring_mode == "heuristic_and_audit_embedding_scorer" and audit_embedding_scorer_export is None:
             parser.error("--audit-embedding-scorer-export is required when --scoring-mode heuristic_and_audit_embedding_scorer")
+        if args.scoring_mode == "heuristic_and_holdout_embedding_scorer":
+            if audit_embedding_scorer_export is None:
+                parser.error("--audit-embedding-scorer-export is required when --scoring-mode heuristic_and_holdout_embedding_scorer")
+            if holdout_assignment is None:
+                parser.error("--holdout-assignment is required when --scoring-mode heuristic_and_holdout_embedding_scorer")
         out_json = Path(args.output)
         out_md = Path(args.markdown_output)
         try:
@@ -3663,6 +3690,9 @@ def main() -> None:
                 experiment_version=str(args.experiment_version) if args.experiment_version else None,
                 scoring_mode=str(args.scoring_mode),
                 audit_embedding_scorer_export_path=audit_embedding_scorer_export,
+                holdout_assignment_path=holdout_assignment,
+                holdout_policy_path=holdout_policy,
+                production_candidate_metric_gates_v2_path=gates_v2,
                 repo_root=repo_root,
             )
         except MLOfflineProductionCandidateScoringError as e:
