@@ -2140,7 +2140,7 @@ def main() -> None:
     )
     ml_offline_audit_embedding_scorer_export_parser = subparsers.add_parser(
         "ml-offline-audit-embedding-scorer-export",
-        help="Export a JSON-only full-fit audit embedding scorer (no CV/DB/ranking/product-candidate scoring)",
+        help="Export a JSON-only audit embedding scorer (no DB/ranking/product-candidate scoring)",
     )
     ml_offline_audit_embedding_scorer_export_parser.add_argument(
         "--label-dataset",
@@ -2159,8 +2159,29 @@ def main() -> None:
     )
     ml_offline_audit_embedding_scorer_export_parser.add_argument(
         "--production-candidate-metric-gates",
-        required=True,
+        default=None,
         help="Path to ml-offline-production-candidate-metric-gates-v1 JSON",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--fit-mode",
+        choices=["full_fit_audit_corpus", "holdout_bound_train_only"],
+        default="full_fit_audit_corpus",
+        help="Fit mode (default: full_fit_audit_corpus)",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--holdout-assignment",
+        default=None,
+        help="Path to ml-learned-scorer-holdout-assignment-v1 JSON; required for holdout_bound_train_only",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--holdout-policy",
+        default=None,
+        help="Path to ml-learned-scorer-holdout-policy-v1 JSON; required for holdout_bound_train_only",
+    )
+    ml_offline_audit_embedding_scorer_export_parser.add_argument(
+        "--audit-embedding-scorer-export-v1",
+        default=None,
+        help="Optional ml-offline-audit-embedding-scorer-v1 JSON for full-fit reference metrics only",
     )
     ml_offline_audit_embedding_scorer_export_parser.add_argument(
         "--ranker-experiment",
@@ -2190,8 +2211,8 @@ def main() -> None:
     )
     ml_offline_audit_embedding_scorer_export_parser.add_argument(
         "--scorer-version",
-        default="ml-offline-audit-embedding-scorer-v1",
-        help="Scorer version string to write (default: ml-offline-audit-embedding-scorer-v1)",
+        default=None,
+        help="Scorer version string to write (default depends on --fit-mode)",
     )
     ml_offline_audit_embedding_scorer_export_parser.add_argument(
         "--repo-root",
@@ -3704,6 +3725,25 @@ def main() -> None:
 
         repo_root = Path(args.repo_root) if args.repo_root else None
         ranker_experiment = Path(args.ranker_experiment) if args.ranker_experiment else None
+        fit_mode = str(args.fit_mode)
+        production_candidate_metric_gates = (
+            Path(args.production_candidate_metric_gates) if args.production_candidate_metric_gates else None
+        )
+        holdout_assignment = Path(args.holdout_assignment) if args.holdout_assignment else None
+        holdout_policy = Path(args.holdout_policy) if args.holdout_policy else None
+        v1_reference = (
+            Path(args.audit_embedding_scorer_export_v1) if args.audit_embedding_scorer_export_v1 else None
+        )
+        if fit_mode == "full_fit_audit_corpus" and production_candidate_metric_gates is None:
+            parser.error(
+                "ml-offline-audit-embedding-scorer-export: --production-candidate-metric-gates is required "
+                "when --fit-mode full_fit_audit_corpus"
+            )
+        if fit_mode == "holdout_bound_train_only" and (holdout_assignment is None or holdout_policy is None):
+            parser.error(
+                "ml-offline-audit-embedding-scorer-export: --holdout-assignment and --holdout-policy are required "
+                "when --fit-mode holdout_bound_train_only"
+            )
         out_json = Path(args.output)
         out_md = Path(args.markdown_output)
         try:
@@ -3711,13 +3751,17 @@ def main() -> None:
                 label_dataset_path=Path(args.label_dataset),
                 split_policy_path=Path(args.split_policy),
                 embeddings_path=Path(args.embeddings),
-                production_candidate_metric_gates_path=Path(args.production_candidate_metric_gates),
+                production_candidate_metric_gates_path=production_candidate_metric_gates,
+                holdout_assignment_path=holdout_assignment,
+                holdout_policy_path=holdout_policy,
+                audit_embedding_scorer_export_v1_path=v1_reference,
                 ranker_experiment_path=ranker_experiment,
                 output_path=out_json,
                 markdown_output_path=out_md,
                 target=str(args.target),
                 random_seed=args.random_seed,
-                scorer_version=str(args.scorer_version),
+                scorer_version=str(args.scorer_version) if args.scorer_version else None,
+                fit_mode=fit_mode,
                 repo_root=repo_root,
             )
         except MLOfflineAuditEmbeddingScorerExportError as e:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import sys
 import warnings
@@ -16,8 +17,10 @@ from sklearn.preprocessing import StandardScaler
 
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.ml_offline_audit_embedding_scorer_export import (
+    FIT_MODE_HOLDOUT,
     MLOfflineAuditEmbeddingScorerExportError,
     SCORER_VERSION,
+    SCORER_VERSION_V2,
     build_ml_offline_audit_embedding_scorer_export_payload,
     score_audit_embedding_probability,
 )
@@ -125,6 +128,102 @@ def _product_candidate_gates_payload(*, passed: bool = True, next_stage: str | N
     }
 
 
+def _work_set_sha(work_ids: list[str]) -> str:
+    return hashlib.sha256("".join(f"{work_id}\n" for work_id in sorted(work_ids)).encode("utf-8")).hexdigest()
+
+
+def _holdout_assignment_payload(*, overlap: bool = False, one_class_train: bool = False) -> dict:
+    train_assignment = "eval" if one_class_train else "train"
+    leakage_overlap = 1 if overlap else 0
+    return {
+        "metadata": {
+            "artifact_type": "ml_learned_scorer_holdout_assignment",
+            "assignment_version": "ml-learned-scorer-holdout-assignment-v1",
+            "strategy_id": "product_candidate_snapshot_holdout",
+            "seed": 20260515,
+            "target": "good_or_acceptable",
+            "production_candidate_metric_gates_version": "ml-offline-production-candidate-metric-gates-v2",
+            "eval_work_set_sha256": _work_set_sha(["W1"]),
+            "eval_work_count": 1,
+            "train_work_count": 3,
+            "train_observation_count": 3,
+        },
+        "leakage_report": {
+            "train_eval_work_overlap_count": leakage_overlap,
+            "global_zero_assertion": not overlap,
+        },
+        "duplicate_and_conflict_report": {
+            "train": {
+                "duplicate_work_group_count": 0,
+                "duplicate_observation_pressure": 0,
+                "conflicting_target_work_group_count": 0,
+            },
+            "eval": {
+                "duplicate_work_group_count": 1,
+                "duplicate_observation_pressure": 1,
+                "conflicting_target_work_group_count": 1,
+            },
+        },
+        "assignments": [
+            {
+                "row_id": "r1",
+                "canonical_openalex_work_id": "W1",
+                "assignment": "eval",
+                "good_or_acceptable": True,
+                "embedding_status": "ok",
+            },
+            {
+                "row_id": "r2",
+                "canonical_openalex_work_id": "W1",
+                "assignment": "eval",
+                "good_or_acceptable": False,
+                "embedding_status": "ok",
+            },
+            {
+                "row_id": "r3",
+                "canonical_openalex_work_id": "W2",
+                "assignment": train_assignment,
+                "good_or_acceptable": False,
+                "embedding_status": "ok",
+            },
+            {
+                "row_id": "r4",
+                "canonical_openalex_work_id": "W3",
+                "assignment": "train",
+                "good_or_acceptable": True,
+                "embedding_status": "ok",
+            },
+            {
+                "row_id": "r5",
+                "canonical_openalex_work_id": "W4",
+                "assignment": train_assignment,
+                "good_or_acceptable": False,
+                "embedding_status": "ok",
+            },
+        ],
+    }
+
+
+def _holdout_policy_payload(*, eval_sha: str | None = None) -> dict:
+    sha = eval_sha or _work_set_sha(["W1"])
+    return {
+        "metadata": {
+            "artifact_type": "ml_learned_scorer_holdout_policy",
+            "policy_version": "ml-learned-scorer-holdout-policy-v1",
+        },
+        "dataset_inventory": {
+            "product_candidate_eval_work_set_sha256": sha,
+            "product_candidate_pool_work_count": 1,
+        },
+        "primary_holdout_strategy": {
+            "strategy_id": "product_candidate_snapshot_holdout",
+            "eval_work_set_definition": {
+                "eval_work_set_sha256": sha,
+            },
+        },
+    }
+
+
 def _ranker_payload() -> dict:
     return {
         "metadata": {
@@ -153,6 +252,24 @@ def _ranker_payload() -> dict:
     }
 
 
+def _v1_scorer_reference_payload() -> dict:
+    return {
+        "metadata": {
+            "artifact_type": "ml_offline_audit_embedding_scorer",
+            "scorer_version": SCORER_VERSION,
+            "fit_mode": "full_fit_audit_corpus",
+            "target": "good_or_acceptable",
+        },
+        "training_summary": {
+            "in_sample_training_metrics": {
+                "label": "IN-SAMPLE FULL-FIT ONLY - NOT VALIDATION",
+                "roc_auc": 0.9,
+                "average_precision": 0.92,
+            }
+        },
+    }
+
+
 def _write_json(tmp_path: Path, name: str, payload: dict) -> Path:
     path = tmp_path / name
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -174,9 +291,42 @@ def _fixture_paths(tmp_path: Path) -> dict[str, Path]:
     }
 
 
+def _holdout_fixture_paths(
+    tmp_path: Path,
+    *,
+    assignment_payload: dict | None = None,
+    policy_payload: dict | None = None,
+) -> dict[str, Path]:
+    label_path = _write_json(tmp_path, "labels.json", _label_payload())
+    policy_path = _write_json(tmp_path, "policy.json", _split_policy_payload())
+    embeddings_path = _write_json(tmp_path, "embeddings.json", _embedding_payload(sha256_file(label_path)))
+    assignment_path = _write_json(tmp_path, "holdout-assignment.json", assignment_payload or _holdout_assignment_payload())
+    holdout_policy_path = _write_json(tmp_path, "holdout-policy.json", policy_payload or _holdout_policy_payload())
+    ranker_path = _write_json(tmp_path, "ranker.json", _ranker_payload())
+    v1_path = _write_json(tmp_path, "scorer-v1.json", _v1_scorer_reference_payload())
+    return {
+        "label_dataset_path": label_path,
+        "split_policy_path": policy_path,
+        "embeddings_path": embeddings_path,
+        "holdout_assignment_path": assignment_path,
+        "holdout_policy_path": holdout_policy_path,
+        "ranker_experiment_path": ranker_path,
+        "audit_embedding_scorer_export_v1_path": v1_path,
+    }
+
+
 def _build(tmp_path: Path, *, paths: dict[str, Path] | None = None) -> dict:
     return build_ml_offline_audit_embedding_scorer_export_payload(
         **(paths or _fixture_paths(tmp_path)),
+        repo_root=tmp_path,
+        generated_at="2026-05-17T00:00:00Z",
+    )
+
+
+def _build_holdout(tmp_path: Path, *, paths: dict[str, Path] | None = None) -> dict:
+    return build_ml_offline_audit_embedding_scorer_export_payload(
+        **(paths or _holdout_fixture_paths(tmp_path)),
+        fit_mode=FIT_MODE_HOLDOUT,
         repo_root=tmp_path,
         generated_at="2026-05-17T00:00:00Z",
     )
@@ -220,6 +370,166 @@ def test_happy_path_cli_writes_json_and_markdown_with_correct_schema(tmp_path: P
     assert data["scorer"]["scaler"]["feature_count"] == 2
     assert len(data["scorer"]["classifier"]["coefficients_standardized_space"]) == 2
     assert "Offline Audit Embedding Scorer Export" in out_md.read_text(encoding="utf-8")
+
+
+def test_holdout_happy_path_writes_json_markdown_coefficients_and_leakage_asserts(tmp_path: Path) -> None:
+    paths = _holdout_fixture_paths(tmp_path)
+    out_json = tmp_path / "scorer-v2.json"
+    out_md = tmp_path / "scorer-v2.md"
+
+    import pipeline.cli as cli_main
+
+    argv = [
+        "pipeline.cli",
+        "ml-offline-audit-embedding-scorer-export",
+        "--fit-mode",
+        "holdout_bound_train_only",
+        "--label-dataset",
+        str(paths["label_dataset_path"]),
+        "--split-policy",
+        str(paths["split_policy_path"]),
+        "--embeddings",
+        str(paths["embeddings_path"]),
+        "--holdout-assignment",
+        str(paths["holdout_assignment_path"]),
+        "--holdout-policy",
+        str(paths["holdout_policy_path"]),
+        "--ranker-experiment",
+        str(paths["ranker_experiment_path"]),
+        "--audit-embedding-scorer-export-v1",
+        str(paths["audit_embedding_scorer_export_v1_path"]),
+        "--output",
+        str(out_json),
+        "--markdown-output",
+        str(out_md),
+        "--repo-root",
+        str(tmp_path),
+    ]
+    with patch.object(sys, "argv", argv):
+        cli_main.main()
+
+    data = json.loads(out_json.read_text(encoding="utf-8"))
+    assert data["metadata"]["scorer_version"] == SCORER_VERSION_V2
+    assert data["metadata"]["fit_mode"] == "holdout_bound_train_only"
+    assert data["metadata"]["train_observation_count"] == 3
+    assert data["metadata"]["train_work_count"] == 3
+    assert data["metadata"]["eval_work_count"] == 1
+    assert data["scorer"]["scaler"]["feature_count"] == 2
+    assert len(data["scorer"]["classifier"]["coefficients_standardized_space"]) == 2
+    assert data["policy_compliance"]["holdout_assignment_honored"] is True
+    assert data["policy_compliance"]["eval_works_excluded_from_fit"] is True
+    assert data["policy_compliance"]["train_eval_work_overlap_count"] == 0
+    assert data["policy_compliance"]["shadow_scoring_authorized"] is False
+    assert data["policy_compliance"]["production_artifact_written"] is False
+    markdown = out_md.read_text(encoding="utf-8")
+    assert "holdout assignment train arm" in markdown
+    assert "not validation" in markdown.lower()
+    assert "not shadow" in markdown.lower()
+
+
+def test_holdout_rejects_overlap_sha_mismatch_and_one_class_train(tmp_path: Path) -> None:
+    overlap_paths = _holdout_fixture_paths(tmp_path, assignment_payload=_holdout_assignment_payload(overlap=True))
+    with pytest.raises(MLOfflineAuditEmbeddingScorerExportError, match="train_eval_work_overlap_count"):
+        _build_holdout(tmp_path, paths=overlap_paths)
+
+    mismatch_paths = _holdout_fixture_paths(
+        tmp_path,
+        policy_payload=_holdout_policy_payload(eval_sha="not-the-same-sha"),
+    )
+    with pytest.raises(MLOfflineAuditEmbeddingScorerExportError, match="eval_work_set_sha256"):
+        _build_holdout(tmp_path, paths=mismatch_paths)
+
+    one_class_paths = _holdout_fixture_paths(
+        tmp_path,
+        assignment_payload=_holdout_assignment_payload(one_class_train=True),
+    )
+    with pytest.raises(MLOfflineAuditEmbeddingScorerExportError, match="both positive and negative"):
+        _build_holdout(tmp_path, paths=one_class_paths)
+
+
+def test_holdout_exported_score_function_reproduces_sklearn_on_train_arm(tmp_path: Path) -> None:
+    payload = build_ml_offline_audit_embedding_scorer_export_payload(
+        **_holdout_fixture_paths(tmp_path),
+        fit_mode=FIT_MODE_HOLDOUT,
+        random_seed=17,
+        repo_root=tmp_path,
+        generated_at="2026-05-17T00:00:00Z",
+    )
+    rows = [
+        ("r3", False, [-2.0, -2.0]),
+        ("r4", True, [1.8, 1.4]),
+        ("r5", False, [-1.6, -1.8]),
+    ]
+    x = [row[2] for row in rows]
+    y = [row[1] for row in rows]
+    model = Pipeline(
+        [
+            ("scaler", StandardScaler(with_mean=True)),
+            (
+                "classifier",
+                LogisticRegression(solver="lbfgs", penalty="l2", max_iter=5000, random_state=17),
+            ),
+        ]
+    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="'penalty' was deprecated", category=FutureWarning)
+        model.fit(x, y)
+    true_index = list(model.named_steps["classifier"].classes_).index(True)
+    expected = [float(row[true_index]) for row in model.predict_proba(x)]
+
+    actual = [score_audit_embedding_probability(vector, payload) for _, _, vector in rows]
+    assert actual == pytest.approx(expected, rel=1e-12, abs=1e-12)
+
+
+def test_v1_path_unchanged_without_fit_mode(tmp_path: Path) -> None:
+    payload = _build(tmp_path)
+
+    assert payload["metadata"]["scorer_version"] == SCORER_VERSION
+    assert payload["metadata"]["fit_mode"] == "full_fit_audit_corpus"
+    assert "reference_cv_baseline" in payload["training_summary"]
+    assert "reference_baselines" not in payload["training_summary"]
+
+
+def test_cli_conditional_required_flags_for_fit_modes(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path)
+    import pipeline.cli as cli_main
+
+    full_missing_gates_argv = [
+        "pipeline.cli",
+        "ml-offline-audit-embedding-scorer-export",
+        "--label-dataset",
+        str(paths["label_dataset_path"]),
+        "--split-policy",
+        str(paths["split_policy_path"]),
+        "--embeddings",
+        str(paths["embeddings_path"]),
+        "--output",
+        str(tmp_path / "out.json"),
+        "--markdown-output",
+        str(tmp_path / "out.md"),
+    ]
+    with patch.object(sys, "argv", full_missing_gates_argv), pytest.raises(SystemExit):
+        cli_main.main()
+
+    holdout_paths = _holdout_fixture_paths(tmp_path)
+    holdout_missing_assignment_argv = [
+        "pipeline.cli",
+        "ml-offline-audit-embedding-scorer-export",
+        "--fit-mode",
+        "holdout_bound_train_only",
+        "--label-dataset",
+        str(holdout_paths["label_dataset_path"]),
+        "--split-policy",
+        str(holdout_paths["split_policy_path"]),
+        "--embeddings",
+        str(holdout_paths["embeddings_path"]),
+        "--output",
+        str(tmp_path / "holdout-out.json"),
+        "--markdown-output",
+        str(tmp_path / "holdout-out.md"),
+    ]
+    with patch.object(sys, "argv", holdout_missing_assignment_argv), pytest.raises(SystemExit):
+        cli_main.main()
 
 
 def test_rejects_wrong_label_dataset_version(tmp_path: Path) -> None:
