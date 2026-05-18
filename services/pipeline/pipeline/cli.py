@@ -2790,6 +2790,72 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_hybrid_corpus_candidate_plan_parser = subparsers.add_parser(
+        "ml-fresh-hybrid-corpus-candidate-plan",
+        help="Write a dry-run OpenAlex corpus candidate plan for fresh hybrid validation",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--fresh-product-candidate-source-build",
+        required=True,
+        help="Path to ml-fresh-product-candidate-source-build-v1 JSON",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--fresh-candidate-source-expansion-plan",
+        required=True,
+        help="Path to ml-fresh-candidate-source-expansion-plan-v1 JSON",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh hybrid corpus candidate plan JSON",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--plan-version",
+        default="ml-fresh-hybrid-corpus-candidate-plan-v1",
+        help="Plan version string to write (default: ml-fresh-hybrid-corpus-candidate-plan-v1)",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--target-min",
+        type=int,
+        default=160,
+        help="Soft minimum selected candidates (default: 160)",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--target-max",
+        type=int,
+        default=500,
+        help="Hard cap on selected candidates (default: 500)",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Optional OpenAlex User-Agent contact; raw mailto is not stored in artifacts",
+    )
+    ml_fresh_hybrid_corpus_candidate_plan_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_source_split_tiny_baseline_parser = subparsers.add_parser(
         "ml-source-split-tiny-baseline",
         help="Offline source-split tiny baseline: train emerging rank-shaped labels, test blind rows",
@@ -4636,6 +4702,39 @@ def main() -> None:
             )
         except MLFreshProductCandidateSourceBuildError as e:
             print(f"ml-fresh-product-candidate-source-build: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-hybrid-corpus-candidate-plan":
+        from pipeline.ml_fresh_hybrid_corpus_candidate_plan import (
+            MLFreshHybridCorpusCandidatePlanError,
+            write_ml_fresh_hybrid_corpus_candidate_plan,
+        )
+
+        if args.target_max < args.target_min:
+            parser.error("--target-max must be >= --target-min")
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_hybrid_corpus_candidate_plan(
+                fresh_product_candidate_source_build_path=Path(args.fresh_product_candidate_source_build),
+                fresh_candidate_source_expansion_plan_path=Path(args.fresh_candidate_source_expansion_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                plan_version=str(args.plan_version),
+                target_min=int(args.target_min),
+                target_max=int(args.target_max),
+                mailto=args.mailto,
+                repo_root=repo_root,
+            )
+        except MLFreshHybridCorpusCandidatePlanError as e:
+            print(f"ml-fresh-hybrid-corpus-candidate-plan: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
