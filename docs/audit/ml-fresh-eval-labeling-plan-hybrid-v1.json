@@ -1,0 +1,197 @@
+{
+  "allowed_next_stages": [
+    "create_fresh_product_candidate_ranking_source_v1",
+    "create_fresh_eval_labeling_worksheet_hybrid_v1"
+  ],
+  "blocked_next_stages": [
+    "execute_hybrid_validation_on_fresh_surface_v1",
+    "hybrid_validation_metric_gates_v1",
+    "ml-shadow-scorer-v1",
+    "production_default_change"
+  ],
+  "blocking_diagnosis": {
+    "candidate_source_under_minimum": true,
+    "coverage_rate_under_minimum_on_current_surface": true,
+    "current_surface_can_be_made_ready_by_labeling_alone": false,
+    "label_coverage_under_minimum": true,
+    "labeled_work_absolute_minimum_under_policy": true,
+    "negative_coverage_under_minimum": true,
+    "reason": "confirmatory_eligible_work_count 44 < policy minimum 100; labeling all 24 current unlabeled eligible works cannot satisfy candidate_count or absolute labeled_work_count 100 thresholds"
+  },
+  "caveats": [
+    "Plan only; no labels collected and no worksheet written.",
+    "Not confirmatory validation.",
+    "Current 44-work confirmatory surface cannot be made ready by labeling alone.",
+    "A larger fresh product-candidate source is required before hybrid validation scoring.",
+    "Negative labels are currently absent from the confirmatory-eligible surface.",
+    "No shadow or production authorization."
+  ],
+  "coverage_only_deficit_at_current_eligible_count": 7,
+  "coverage_only_deficit_formula": "ceil(0.60 * confirmatory_eligible_work_count) - observed_labeled_works = ceil(0.60 * 44) - 20 = 27 - 20",
+  "frozen_hybrid_arms_reference": {
+    "baselines_for_future_comparison": [
+      "heuristic_final_score_baseline",
+      "holdout_embedding_probability_baseline"
+    ],
+    "no_retuning": true,
+    "primary_confirmatory_arm": "hybrid_rank_mean_50_50",
+    "secondary_reporting_arm": "hybrid_rank_mean_25_75_heuristic"
+  },
+  "future_candidate_source_requirements": {
+    "canonical_openalex_work_ids_required": true,
+    "frozen_primary_hybrid_arm": "hybrid_rank_mean_50_50",
+    "frozen_secondary_reporting_arm": "hybrid_rank_mean_25_75_heuristic",
+    "new_candidate_work_set_sha256_must_differ_from_disallowed": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "new_or_expanded_snapshot_or_run_after_this_plan": true,
+    "old_217_overlap_must_be_tagged_and_excluded_from_confirmatory_denominators": true,
+    "retuning_on_fresh_eval_labels_allowed": false
+  },
+  "hard_blocker_for_labeled_work_threshold": "minimum_confirmatory_labeled_work_count_absolute_minimum_100",
+  "labeled_work_absolute_deficit": 80,
+  "labeled_work_absolute_deficit_formula": "policy_minimum_confirmatory_labeled_work_count - observed_labeled_works = 100 - 20",
+  "labeling_scope_for_current_surface": {
+    "already_labeled_works": 20,
+    "current_confirmatory_eligible_works": 44,
+    "note": "Labeling all 24 is useful for partial audit practice but insufficient for readiness (candidate count < 100; absolute labeled minimum 100; 0 negatives).",
+    "unlabeled_confirmatory_eligible_works": 24
+  },
+  "metadata": {
+    "artifact_type": "ml_fresh_eval_labeling_plan_hybrid",
+    "caveats": [
+      "Plan only; no labels collected and no worksheet written.",
+      "Not confirmatory validation.",
+      "Current 44-work confirmatory surface cannot be made ready by labeling alone.",
+      "A larger fresh product-candidate source is required before hybrid validation scoring.",
+      "Negative labels are currently absent from the confirmatory-eligible surface.",
+      "No shadow or production authorization."
+    ],
+    "conflict_policy_sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841",
+    "generated_at": "2026-05-18T05:57:17Z",
+    "inputs": [
+      {
+        "name": "fresh_eval_surface",
+        "path": "docs/audit/ml-fresh-eval-surface-hybrid-v1.json",
+        "sha256": "0f0d956170aecdc4e815e57de2fc56db6480641623e5f699801d3632d267ad79"
+      },
+      {
+        "name": "fresh_surface_policy",
+        "path": "docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json",
+        "sha256": "10e372bb3236382c977b3cc8dbf56bfa1bff7adb93c6bf4f6673361cfa15a011"
+      },
+      {
+        "name": "label_dataset",
+        "path": "docs/audit/ml-label-dataset-v8.json",
+        "sha256": "ea65b114cfef6e22e3299bf4e54d320b6ba13a66185ac0908700528a1846948c"
+      },
+      {
+        "name": "conflict_policy",
+        "path": "docs/audit/ml-label-conflict-policy.md",
+        "sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841"
+      }
+    ],
+    "label_dataset_version": "ml-label-dataset-v8",
+    "plan_version": "ml-fresh-eval-labeling-plan-hybrid-v1",
+    "source_policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
+    "source_surface_status": "materialized_needs_labels",
+    "source_surface_version": "ml-fresh-eval-surface-hybrid-v1",
+    "target": "good_or_acceptable"
+  },
+  "policy_assertions": {
+    "candidate_source_expansion_required": true,
+    "current_surface_can_be_made_ready_by_labeling_alone": false,
+    "labels_on_current_surface_useful_but_insufficient": true,
+    "production_default_allowed_by_this_plan": false,
+    "retuning_on_fresh_eval_labels_allowed": false,
+    "shadow_allowed_by_this_plan": false
+  },
+  "recommended_collection_plan": {
+    "coverage_only_additional_labeled_works_needed_on_current_44_surface": 7,
+    "coverage_only_note": "Informational only; this does not unlock readiness while the absolute 100-work thresholds fail.",
+    "label_target": "good_or_acceptable",
+    "minimum_additional_confirmatory_candidate_works_needed": 56,
+    "minimum_additional_labeled_works_needed_for_policy_absolute_minimum": 80,
+    "minimum_additional_labeled_works_note": "This is after candidate-source expansion to >=100 eligible works; it is not satisfiable on the current 44-only pool.",
+    "minimum_distinct_negative_works_needed": 20,
+    "minimum_negative_works_needed": 20,
+    "primary_next_action": "create_larger_fresh_product_candidate_source",
+    "secondary_next_action": "prepare_manual_labeling_for_current_and_future_fresh_candidates"
+  },
+  "recommended_next_stage": "create_fresh_product_candidate_ranking_source_v1",
+  "shadow_and_production_blockers": {
+    "confirmatory_validation_complete": false,
+    "missing_negative_labels": true,
+    "missing_sufficient_fresh_candidate_surface": true,
+    "missing_sufficient_fresh_labels": true,
+    "production_default_allowed": false,
+    "shadow_scoring_allowed": false
+  },
+  "surface_summary": {
+    "candidate_work_count": 59,
+    "candidate_work_set_sha256": "1a62e9802e8562854e9b4fd2c44ad72a183d81fe8dbb86b50b09d94fb496e926",
+    "confirmatory_eligible_work_count": 44,
+    "confirmatory_labeled_work_count": 20,
+    "confirmatory_negative_work_count": 0,
+    "confirmatory_positive_work_count": 20,
+    "confirmatory_unlabeled_work_count": 24,
+    "corpus_snapshot_version": "source-snapshot-20260425-044015",
+    "disallowed_eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "distinct_negative_work_count": 0,
+    "excluded_previous_eval_overlap_count": 15,
+    "family": "emerging",
+    "label_coverage_rate": 0.45454545454545453,
+    "ranking_run_id": "rank-3904fec89d",
+    "ready_for_hybrid_validation_scoring": false,
+    "source_recommended_next_stage": "create_fresh_eval_labeling_plan_hybrid_v1",
+    "status": "materialized_needs_labels"
+  },
+  "threshold_gap_analysis": [
+    {
+      "deficit": 56,
+      "notes": "Candidate-source blocker",
+      "observed": 44,
+      "required": 100,
+      "status": "fail",
+      "threshold": "minimum_confirmatory_candidate_work_count"
+    },
+    {
+      "deficit": 80,
+      "notes": "Hard labeled-work blocker (policy absolute minimum; requires expansion before achievable)",
+      "observed": 20,
+      "required": 100,
+      "status": "fail",
+      "threshold": "minimum_confirmatory_labeled_work_count"
+    },
+    {
+      "deficit": "7 at current 44",
+      "notes": "ceil(0.60 * 44) = 27; 27 - 20 = 7; coverage-only on current surface; subordinate to 100 labeled-work rule",
+      "observed": 0.45454545454545453,
+      "required": 0.6,
+      "status": "fail",
+      "threshold": "minimum_confirmatory_label_coverage_rate"
+    },
+    {
+      "deficit": 30,
+      "notes": "Positive-work blocker",
+      "observed": 20,
+      "required": 50,
+      "status": "fail",
+      "threshold": "minimum_confirmatory_positive_work_count"
+    },
+    {
+      "deficit": 20,
+      "notes": "Negative-work blocker",
+      "observed": 0,
+      "required": 20,
+      "status": "fail",
+      "threshold": "minimum_confirmatory_negative_work_count"
+    },
+    {
+      "deficit": 20,
+      "notes": "Distinct negative-work blocker",
+      "observed": 0,
+      "required": 20,
+      "status": "fail",
+      "threshold": "minimum_distinct_negative_work_count"
+    }
+  ]
+}

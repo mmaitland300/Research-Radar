@@ -2697,6 +2697,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_eval_labeling_plan_hybrid_parser = subparsers.add_parser(
+        "ml-fresh-eval-labeling-plan-hybrid",
+        help="Write a plan-only fresh eval labeling/remediation artifact for hybrid validation",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--fresh-eval-surface",
+        required=True,
+        help="Path to ml-fresh-eval-surface-hybrid-v1 JSON",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh eval labeling plan JSON",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--plan-version",
+        default="ml-fresh-eval-labeling-plan-hybrid-v1",
+        help="Plan version string to write (default: ml-fresh-eval-labeling-plan-hybrid-v1)",
+    )
+    ml_fresh_eval_labeling_plan_hybrid_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_source_split_tiny_baseline_parser = subparsers.add_parser(
         "ml-source-split-tiny-baseline",
         help="Offline source-split tiny baseline: train emerging rank-shaped labels, test blind rows",
@@ -4325,6 +4369,33 @@ def main() -> None:
             )
         except MLFreshEvalSurfaceHybridMaterializeError as e:
             print(f"ml-fresh-eval-surface-hybrid-materialize: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-eval-labeling-plan-hybrid":
+        from pipeline.ml_fresh_eval_labeling_plan_hybrid import (
+            MLFreshEvalLabelingPlanHybridError,
+            write_ml_fresh_eval_labeling_plan_hybrid,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_eval_labeling_plan_hybrid(
+                fresh_eval_surface_path=Path(args.fresh_eval_surface),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                plan_version=str(args.plan_version),
+                repo_root=repo_root,
+            )
+        except MLFreshEvalLabelingPlanHybridError as e:
+            print(f"ml-fresh-eval-labeling-plan-hybrid: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
