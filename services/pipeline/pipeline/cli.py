@@ -2827,6 +2827,66 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_fresh_product_candidate_ranking_source_parser = subparsers.add_parser(
+        "ml-fresh-product-candidate-ranking-source",
+        help="Freeze a read-only fresh product-candidate ranking source for hybrid validation",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--fresh-eval-labeling-plan",
+        required=True,
+        help="Path to ml-fresh-eval-labeling-plan-hybrid-v1 JSON",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--family",
+        default="emerging",
+        help="Product-candidate family to inspect (default: emerging)",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--min-confirmatory-candidate-works",
+        type=int,
+        default=None,
+        help="Minimum fresh confirmatory candidate works (default: policy threshold)",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh product-candidate ranking source JSON",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--source-version",
+        default="ml-fresh-product-candidate-ranking-source-v1",
+        help="Source version string to write (default: ml-fresh-product-candidate-ranking-source-v1)",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_tiny_baseline_rollup_parser = subparsers.add_parser(
         "ml-tiny-baseline-rollup",
         help="Offline emerging rollup: fold robustness + ablations vs heuristic (read-only DB)",
@@ -4528,6 +4588,36 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
             print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-product-candidate-ranking-source":
+        from pipeline.ml_fresh_product_candidate_ranking_source import (
+            MLFreshProductCandidateRankingSourceError,
+            write_ml_fresh_product_candidate_ranking_source,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_product_candidate_ranking_source(
+                fresh_eval_labeling_plan_path=Path(args.fresh_eval_labeling_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                database_url=args.database_url,
+                family=str(args.family),
+                min_confirmatory_candidate_works=args.min_confirmatory_candidate_works,
+                source_version=str(args.source_version),
+                repo_root=repo_root,
+            )
+        except MLFreshProductCandidateRankingSourceError as e:
+            print(f"ml-fresh-product-candidate-ranking-source: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
         return
 
     if args.command == "ml-tiny-baseline-rollup":
