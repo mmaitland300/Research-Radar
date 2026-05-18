@@ -423,8 +423,9 @@ pre {
 
 .paper-dossier-hero-title {
   max-width: 100%;
-  overflow-wrap: break-word;
-  word-break: break-word;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  word-break: normal;
   line-height: 1.08;
 }
 
@@ -560,6 +561,34 @@ pre {
 
 .page h1 {
   max-width: 13ch;
+}
+
+.page h1.paper-dossier-hero-title {
+  max-width: min(100%, 18ch);
+}
+
+.page h1.paper-dossier-hero-title-long {
+  max-width: min(100%, 42rem);
+  font-size: 4.15rem;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.page h1.paper-dossier-hero-title-extra-long {
+  max-width: min(100%, 46rem);
+  font-size: 3.35rem;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+}
+
+.paper-dossier-hero .panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: start;
+}
+
+.paper-dossier-hero .stamp-row {
+  justify-content: flex-start;
 }
 
 .hero-lead {
@@ -1307,6 +1336,22 @@ ul {
   padding: 0;
 }
 
+@media (min-width: 901px) {
+  .paper-dossier-hero .family-hero-grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(240px, 0.65fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .page h1.paper-dossier-hero-title-long {
+    font-size: 3.6rem;
+  }
+
+  .page h1.paper-dossier-hero-title-extra-long {
+    font-size: 3rem;
+  }
+}
+
 @media (max-width: 900px) {
   .masthead,
   .hero-grid,
@@ -1369,5 +1414,17 @@ ul {
 
   .metric-card {
     border-radius: 14px;
+  }
+
+  .page h1.paper-dossier-hero-title {
+    line-height: 1.06;
+  }
+
+  .page h1.paper-dossier-hero-title-long {
+    font-size: 2.45rem;
+  }
+
+  .page h1.paper-dossier-hero-title-extra-long {
+    font-size: 2.1rem;
   }
 }

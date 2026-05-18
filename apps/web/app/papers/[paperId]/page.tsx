@@ -297,6 +297,13 @@ function formatRankScope(rankScope: string): string {
   return rankScope.replaceAll("_", " ");
 }
 
+function paperTitleSizeClass(title: string): string {
+  const titleLength = title.trim().length;
+  if (titleLength >= 100) return " paper-dossier-hero-title-extra-long";
+  if (titleLength >= 70) return " paper-dossier-hero-title-long";
+  return "";
+}
+
 function PaperWhySurfaced({ explanations }: { explanations: RankedSignalExplanation[] }) {
   return (
     <details className="ranking-why-details">
@@ -354,6 +361,8 @@ export default async function PaperDetailPage({
     ranking?.kind === "ok" ? ranking.data.families.filter((family) => family.present).length : 0;
   const rankingTopNCount =
     ranking?.kind === "ok" ? ranking.data.families.filter((family) => family.in_top_n).length : 0;
+  const paperTitle = paper?.title ?? "Paper detail";
+  const paperTitleClassName = `paper-dossier-hero-title${paperTitleSizeClass(paperTitle)}`;
   const emergingFocusHref =
     ranking?.kind === "ok"
       ? buildRecommendedHref({
@@ -410,13 +419,13 @@ export default async function PaperDetailPage({
 
   return (
     <main className="page">
-      <section className="panel page-hero family-hero family-hero-emerging">
+      <section className="panel page-hero family-hero family-hero-emerging paper-dossier-hero">
         <div className="family-hero-grid">
           <div>
             <div className="panel-header">
               <div>
                 <p className="eyebrow family-emerging">Paper dossier</p>
-                <h1 className="paper-dossier-hero-title">{paper?.title ?? "Paper detail"}</h1>
+                <h1 className={paperTitleClassName}>{paperTitle}</h1>
               </div>
               <div className="stamp-row">
                 <span className="stamp">Detail view</span>
