@@ -1,0 +1,248 @@
+{
+  "allowed_next_stages": [
+    "materialize_fresh_eval_surface_hybrid_v1",
+    "create_fresh_eval_labeling_plan_if_thresholds_not_met",
+    "execute_hybrid_validation_on_fresh_surface_v1",
+    "run_hybrid_validation_metric_gates_v1"
+  ],
+  "blocked_actions": [
+    "shadow_scoring",
+    "production_default_change",
+    "bridge/default ranking changes",
+    "public copy claiming production readiness",
+    "model/scorer deployment",
+    "silent label conflict resolution",
+    "using old 217-work surface for confirmatory hybrid validation"
+  ],
+  "candidate_source_policy": {
+    "label_blind_candidate_filtering_required": true,
+    "primary_candidate_source_requirements": [
+      "product-candidate style pool",
+      "ranking_run_id or surface_id recorded",
+      "family or candidate family recorded",
+      "candidate acquisition timestamp / snapshot id recorded",
+      "candidate work-set SHA recorded",
+      "no silent candidate filtering after labels are inspected"
+    ]
+  },
+  "canonical_grouping_policy": {
+    "all_observations_for_same_canonical_work_share_one_metric_group": true,
+    "duplicate_conflicting_observations_preserved_and_reported": true,
+    "grouping_key": "canonical_openalex_work_id",
+    "normalization_rules": [
+      "normalize W tokens to uppercase W token",
+      "normalize https://openalex.org/W... URLs to uppercase W token"
+    ],
+    "row_id_level_metric_splitting_allowed": false
+  },
+  "caveats": [
+    "Policy only; no fresh surface materialized yet.",
+    "Not live recommender validation.",
+    "Hybrid lift so far is exploratory on an already-seen surface.",
+    "Single-reviewer audit labels remain a limitation.",
+    "Future surface must satisfy label coverage and negative-count thresholds.",
+    "No shadow or production authorization."
+  ],
+  "disallowed_surfaces": [
+    {
+      "allowed_use": "regression_smoke_or_historical_comparison_only",
+      "candidate_work_count": 217,
+      "confirmatory_use": "disallowed",
+      "eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+      "family": "emerging",
+      "freshness_rule": {
+        "future_artifacts_must_report": [
+          "overlap_work_count",
+          "excluded_previous_eval_overlap_count"
+        ],
+        "future_candidate_pool_may_contain_overlaps_for_operational_visibility": true,
+        "old_canonical_works_confirmatory_metric_denominator_allowed": false,
+        "overlap_confirmatory_metric_denominator_allowed": false,
+        "overlap_tag": "previous_eval_overlap"
+      },
+      "ranking_run_id": "rank-ee2ba6c816",
+      "source_artifacts": [
+        "ml-offline-production-candidate-scoring-v3.json",
+        "ml-learned-scorer-holdout-assignment-v1.json",
+        "ml-hybrid-scorer-offline-experiment-v1.json",
+        "ml-hybrid-scorer-metric-gates-v1.json"
+      ],
+      "surface_id": "product_candidate_eval_surface_rank-ee2ba6c816_emerging_v3"
+    }
+  ],
+  "fresh_surface_definition": {
+    "primary_strategy": {
+      "disallowed_eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+      "requirements": [
+        "Future materialization uses a new corpus snapshot and a new product-candidate ranking/scoring run produced after this policy.",
+        "The materialized candidate work-set SHA must differ from the disallowed eval_work_set_sha256.",
+        "Confirmatory metric rows must be canonical works not in the disallowed 217-work set.",
+        "The surface must be frozen into an artifact before any hybrid validation scoring runs."
+      ],
+      "status": "selected_for_v1",
+      "strategy_id": "new_snapshot_new_product_candidate_run"
+    },
+    "secondary_alternatives": [
+      {
+        "status": "future_alternative_only",
+        "strategy_id": "time_sliced_product_candidate_pool"
+      },
+      {
+        "status": "future_alternative_only",
+        "strategy_id": "separately_labeled_product_like_pool"
+      }
+    ]
+  },
+  "frozen_hybrid_arms": {
+    "baselines_for_future_comparison": [
+      "heuristic_final_score_baseline",
+      "holdout_embedding_probability_baseline"
+    ],
+    "primary_confirmatory_arm": "hybrid_rank_mean_50_50",
+    "rules": [
+      "No re-tuning weights on the fresh surface.",
+      "No selecting a new best arm on fresh labels and calling it confirmatory.",
+      "The primary confirmatory decision should be based on hybrid_rank_mean_50_50 unless a later policy version changes this before scoring."
+    ],
+    "secondary_reporting_arm": "hybrid_rank_mean_25_75_heuristic"
+  },
+  "future_artifact_contract": {
+    "expected_outputs": [
+      "docs/audit/ml-fresh-eval-surface-hybrid-v1.json",
+      "docs/audit/ml-fresh-eval-surface-hybrid-v1.md"
+    ],
+    "future_gates_command": "ml-hybrid-validation-metric-gates",
+    "future_scoring_command": "ml-hybrid-validation-on-fresh-surface",
+    "materialization_command": "ml-fresh-eval-surface-hybrid-materialize",
+    "materialized_surface_must_include": [
+      "surface_id",
+      "candidate_source",
+      "snapshot id / ranking run id",
+      "candidate work set SHA",
+      "disallowed overlap report",
+      "confirmatory_metric_eligible_work_count",
+      "label coverage status",
+      "blocked/unblocked status for scoring"
+    ]
+  },
+  "gate_linkage": {
+    "best_arm_on_seen_eval_is_exploratory_only": true,
+    "inherits_from": "ml-hybrid-scorer-metric-gates-v1",
+    "material_lift_thresholds": {
+      "delta_roc_auc_gte": 0.03,
+      "or_delta_average_precision_gte": 0.02
+    },
+    "must_be_rerun_on_fresh_surface": [
+      "candidate coverage",
+      "label coverage",
+      "class balance",
+      "leakage/overlap checks",
+      "heuristic metrics",
+      "learned metrics",
+      "hybrid metrics",
+      "material lift",
+      "confirmatory_validation_passed"
+    ],
+    "must_not_be_inherited_from_old_surface": [
+      "hybrid_material_lift_passed",
+      "best arm metrics",
+      "ROC-AUC/AP values",
+      "top-k values",
+      "confirmatory validation"
+    ],
+    "top_k_precision_policy": "advisory when saturated"
+  },
+  "label_policy": {
+    "conflict_policy_path": "docs/audit/ml-label-conflict-policy.md",
+    "conflict_policy_sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841",
+    "label_inference_from_rank_score_sample_reason_or_source_pool_allowed": false,
+    "labels_remain_observation_level": true,
+    "minimum_confirmatory_label_thresholds": {
+      "minimum_candidate_work_count": 100,
+      "minimum_confirmatory_label_coverage_rate": 0.6,
+      "minimum_confirmatory_labeled_work_count": 100,
+      "minimum_confirmatory_negative_work_count": 20,
+      "minimum_confirmatory_positive_work_count": 50,
+      "minimum_distinct_negative_work_count": 20
+    },
+    "reviewer_notes_as_labels_or_features_allowed": false,
+    "silent_merge_of_conflicting_labels_allowed": false,
+    "threshold_application_rules": [
+      "Thresholds apply after excluding old 217-work overlap from confirmatory metric denominators.",
+      "If thresholds are not met, future gates must route to labeling or new surface collection, not shadow."
+    ]
+  },
+  "metadata": {
+    "artifact_type": "ml_fresh_eval_surface_policy_hybrid",
+    "caveats": [
+      "Policy only; no fresh surface materialized yet.",
+      "Not live recommender validation.",
+      "Hybrid lift so far is exploratory on an already-seen surface.",
+      "Single-reviewer audit labels remain a limitation.",
+      "Future surface must satisfy label coverage and negative-count thresholds.",
+      "No shadow or production authorization."
+    ],
+    "disallowed_eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "generated_at": "2026-05-18T02:51:40Z",
+    "holdout_assignment_version": "ml-learned-scorer-holdout-assignment-v1",
+    "inputs": [
+      {
+        "name": "hybrid_metric_gates",
+        "path": "docs/audit/ml-hybrid-scorer-metric-gates-v1.json",
+        "sha256": "9949daac84948bf32dd282bf2c760a95f9af2023e2e2b5141435ec357a58075a"
+      },
+      {
+        "name": "hybrid_experiment",
+        "path": "docs/audit/ml-hybrid-scorer-offline-experiment-v1.json",
+        "sha256": "6a7c6a72957618a523eeaf58c88cdbed2cb6838e6bc051e977b7284a9d0c35d9"
+      },
+      {
+        "name": "hybrid_experiment_spec",
+        "path": "docs/audit/ml-hybrid-scorer-offline-experiment-v1-spec.json",
+        "sha256": "7098dfcee2b4e3c64adcea843618112a29b09a4ebea238d6bab111edbde9f366"
+      },
+      {
+        "name": "production_candidate_scoring",
+        "path": "docs/audit/ml-offline-production-candidate-scoring-v3.json",
+        "sha256": "3947f8500d25a8984fca7a5570b39ba07c9a0c07e7694f079e56c3672f2aa362"
+      },
+      {
+        "name": "holdout_assignment",
+        "path": "docs/audit/ml-learned-scorer-holdout-assignment-v1.json",
+        "sha256": "5597d54f7c57150bdef0317d3c65512108fce240d6e7b5f34f04430bcdb2052d"
+      },
+      {
+        "name": "conflict_policy",
+        "path": "docs/audit/ml-label-conflict-policy.md",
+        "sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841"
+      }
+    ],
+    "policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
+    "source_hybrid_experiment_spec_version": "ml-hybrid-scorer-offline-experiment-v1-spec",
+    "source_hybrid_experiment_version": "ml-hybrid-scorer-offline-experiment-v1",
+    "source_hybrid_metric_gates_version": "ml-hybrid-scorer-metric-gates-v1",
+    "source_product_candidate_scoring_version": "ml-offline-production-candidate-scoring-v3",
+    "status": "blocked_for_confirmatory_until_surface_materialized"
+  },
+  "policy_assertions": {
+    "confirmatory_validation_complete": false,
+    "frozen_primary_hybrid_arm": "hybrid_rank_mean_50_50",
+    "old_217_surface_confirmatory_reuse_allowed": false,
+    "old_217_surface_regression_smoke_allowed": true,
+    "production_default_allowed_by_this_policy": false,
+    "requires_canonical_work_grouping": true,
+    "requires_overlap_exclusion_from_confirmatory_metrics": true,
+    "retuning_on_fresh_eval_labels_allowed": false,
+    "shadow_allowed_by_this_policy": false
+  },
+  "purpose": {
+    "does_not_run": [
+      "ranking",
+      "scoring",
+      "training",
+      "labeling"
+    ],
+    "separates_exploratory_from_confirmatory": "Exploratory lift on the already-seen 217-work surface is not future confirmatory evidence.",
+    "summary": "This policy defines a confirmatory validation surface for hybrid scorer v1."
+  }
+}

@@ -2539,6 +2539,60 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_eval_surface_policy_hybrid_parser = subparsers.add_parser(
+        "ml-fresh-eval-surface-policy-hybrid",
+        help="Write fresh eval surface policy for hybrid validation (policy only; no DB, scoring, training, or shadow)",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--hybrid-metric-gates",
+        required=True,
+        help="Path to ml-hybrid-scorer-metric-gates-v1 JSON",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--hybrid-experiment",
+        required=True,
+        help="Path to ml-hybrid-scorer-offline-experiment-v1 JSON",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--hybrid-experiment-spec",
+        required=True,
+        help="Path to ml-hybrid-scorer-offline-experiment-v1-spec JSON",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--production-candidate-scoring",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v3 JSON",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--holdout-assignment",
+        required=True,
+        help="Path to ml-learned-scorer-holdout-assignment-v1 JSON",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh eval surface policy JSON",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--policy-version",
+        default="ml-fresh-eval-surface-policy-hybrid-v1",
+        help="Policy version string to write (default: ml-fresh-eval-surface-policy-hybrid-v1)",
+    )
+    ml_fresh_eval_surface_policy_hybrid_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_transfer_gap_review_parser = subparsers.add_parser(
         "ml-transfer-gap-review-worksheet",
         help="Write transfer-gap manual review CSV + sidecar (no training, ranking, ingest, or splits)",
@@ -4153,6 +4207,35 @@ def main() -> None:
             )
         except MLHybridScorerMetricGatesError as e:
             print(f"ml-hybrid-scorer-metric-gates: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-eval-surface-policy-hybrid":
+        from pipeline.ml_fresh_eval_surface_policy_hybrid import (
+            MLFreshEvalSurfacePolicyHybridError,
+            write_ml_fresh_eval_surface_policy_hybrid,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_eval_surface_policy_hybrid(
+                hybrid_metric_gates_path=Path(args.hybrid_metric_gates),
+                hybrid_experiment_path=Path(args.hybrid_experiment),
+                hybrid_experiment_spec_path=Path(args.hybrid_experiment_spec),
+                production_candidate_scoring_path=Path(args.production_candidate_scoring),
+                holdout_assignment_path=Path(args.holdout_assignment),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                policy_version=str(args.policy_version),
+                repo_root=repo_root,
+            )
+        except MLFreshEvalSurfacePolicyHybridError as e:
+            print(f"ml-fresh-eval-surface-policy-hybrid: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
