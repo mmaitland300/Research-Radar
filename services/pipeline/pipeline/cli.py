@@ -2936,6 +2936,77 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_product_candidate_source_build_parser = subparsers.add_parser(
+        "ml-fresh-product-candidate-source-build",
+        help="Build a frozen artifact-only fresh product-candidate source for hybrid validation",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--fresh-candidate-source-expansion-plan",
+        required=True,
+        help="Path to ml-fresh-candidate-source-expansion-plan-v1 JSON",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--family",
+        default="emerging",
+        help="Product-candidate family to build from (default: emerging)",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--min-confirmatory-eligible-works",
+        type=int,
+        default=None,
+        help="Minimum confirmatory-eligible works (default: policy/expansion-plan threshold)",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--mode",
+        choices=["artifact_only_freeze", "eval_db_source_create"],
+        default="artifact_only_freeze",
+        help="Build mode (default: artifact_only_freeze; eval_db_source_create is reserved in v1)",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--write-eval-db-source",
+        action="store_true",
+        help="Reserved write path; unsupported in v1 unless a safe eval-only DB writer is reused",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh product-candidate source build JSON",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--build-version",
+        default="ml-fresh-product-candidate-source-build-v1",
+        help="Build version string to write (default: ml-fresh-product-candidate-source-build-v1)",
+    )
+    ml_fresh_product_candidate_source_build_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_tiny_baseline_rollup_parser = subparsers.add_parser(
         "ml-tiny-baseline-rollup",
         help="Offline emerging rollup: fold robustness + ablations vs heuristic (read-only DB)",
@@ -4533,6 +4604,38 @@ def main() -> None:
             )
         except MLFreshCandidateSourceExpansionPlanError as e:
             print(f"ml-fresh-candidate-source-expansion-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-product-candidate-source-build":
+        from pipeline.ml_fresh_product_candidate_source_build import (
+            MLFreshProductCandidateSourceBuildError,
+            write_ml_fresh_product_candidate_source_build,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_product_candidate_source_build(
+                fresh_candidate_source_expansion_plan_path=Path(args.fresh_candidate_source_expansion_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                database_url=args.database_url,
+                family=str(args.family),
+                min_confirmatory_eligible_works=args.min_confirmatory_eligible_works,
+                mode=str(args.mode),
+                write_eval_db_source=bool(args.write_eval_db_source),
+                build_version=str(args.build_version),
+                repo_root=repo_root,
+            )
+        except MLFreshProductCandidateSourceBuildError as e:
+            print(f"ml-fresh-product-candidate-source-build: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
