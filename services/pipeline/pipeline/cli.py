@@ -2741,6 +2741,55 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_candidate_source_expansion_plan_parser = subparsers.add_parser(
+        "ml-fresh-candidate-source-expansion-plan",
+        help="Write a plan-only artifact for expanding fresh product-candidate sources before hybrid validation",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--fresh-product-candidate-ranking-source",
+        required=True,
+        help="Path to ml-fresh-product-candidate-ranking-source-v1 JSON",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--fresh-eval-labeling-plan",
+        required=True,
+        help="Path to ml-fresh-eval-labeling-plan-hybrid-v1 JSON",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh candidate source expansion plan JSON",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--plan-version",
+        default="ml-fresh-candidate-source-expansion-plan-v1",
+        help="Plan version string to write (default: ml-fresh-candidate-source-expansion-plan-v1)",
+    )
+    ml_fresh_candidate_source_expansion_plan_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_source_split_tiny_baseline_parser = subparsers.add_parser(
         "ml-source-split-tiny-baseline",
         help="Offline source-split tiny baseline: train emerging rank-shaped labels, test blind rows",
@@ -4456,6 +4505,34 @@ def main() -> None:
             )
         except MLFreshEvalLabelingPlanHybridError as e:
             print(f"ml-fresh-eval-labeling-plan-hybrid: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-candidate-source-expansion-plan":
+        from pipeline.ml_fresh_candidate_source_expansion_plan import (
+            MLFreshCandidateSourceExpansionPlanError,
+            write_ml_fresh_candidate_source_expansion_plan,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_candidate_source_expansion_plan(
+                fresh_product_candidate_ranking_source_path=Path(args.fresh_product_candidate_ranking_source),
+                fresh_eval_labeling_plan_path=Path(args.fresh_eval_labeling_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                plan_version=str(args.plan_version),
+                repo_root=repo_root,
+            )
+        except MLFreshCandidateSourceExpansionPlanError as e:
+            print(f"ml-fresh-candidate-source-expansion-plan: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
