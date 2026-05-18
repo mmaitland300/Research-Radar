@@ -2638,6 +2638,65 @@ def main() -> None:
         action="store_true",
         help="Use deterministic mock DB candidates for tests/dry runs",
     )
+    ml_fresh_eval_surface_hybrid_materialize_parser = subparsers.add_parser(
+        "ml-fresh-eval-surface-hybrid-materialize",
+        help="Materialize a read-only fresh product-candidate eval surface inventory for hybrid validation",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--ranking-run-id",
+        default=None,
+        help="Optional existing ranking_run_id to evaluate; omitted means deterministic discovery",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--family",
+        default="emerging",
+        help="Product-candidate family to materialize (default: emerging)",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--corpus-snapshot-version",
+        default=None,
+        help="Optional corpus snapshot version that the selected candidate source must match/report",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh eval surface materialization JSON",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--surface-version",
+        default="ml-fresh-eval-surface-hybrid-v1",
+        help="Surface version string to write (default: ml-fresh-eval-surface-hybrid-v1)",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_source_split_tiny_baseline_parser = subparsers.add_parser(
         "ml-source-split-tiny-baseline",
         help="Offline source-split tiny baseline: train emerging rank-shaped labels, test blind rows",
@@ -4236,6 +4295,36 @@ def main() -> None:
             )
         except MLFreshEvalSurfacePolicyHybridError as e:
             print(f"ml-fresh-eval-surface-policy-hybrid: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-eval-surface-hybrid-materialize":
+        from pipeline.ml_fresh_eval_surface_hybrid_materialize import (
+            MLFreshEvalSurfaceHybridMaterializeError,
+            write_ml_fresh_eval_surface_hybrid_materialize,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_eval_surface_hybrid_materialize(
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                ranking_run_id=args.ranking_run_id,
+                family=str(args.family),
+                corpus_snapshot_version=args.corpus_snapshot_version,
+                database_url=args.database_url,
+                surface_version=str(args.surface_version),
+                repo_root=repo_root,
+            )
+        except MLFreshEvalSurfaceHybridMaterializeError as e:
+            print(f"ml-fresh-eval-surface-hybrid-materialize: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
