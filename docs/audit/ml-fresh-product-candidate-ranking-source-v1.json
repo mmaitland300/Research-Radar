@@ -11,1873 +11,61 @@
   ],
   "candidate_sources_considered": [
     {
-      "candidate_work_count": 59,
-      "candidate_work_set_sha256": "1a62e9802e8562854e9b4fd2c44ad72a183d81fe8dbb86b50b09d94fb496e926",
-      "canonical_openalex_work_count": 59,
-      "confirmatory_eligible_work_count": 44,
-      "corpus_snapshot_version": "source-snapshot-20260425-044015",
-      "family": "emerging",
-      "is_current_underpowered_freeze": true,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 13,
-        "duplicate_work_ids_preview": [
-          "W2890376498",
-          "W3016069856",
-          "W3036517071",
-          "W3092976109",
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.45454545454545453,
-        "labeled_work_count": 20,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 20,
-        "unlabeled_work_count": 24
-      },
-      "overlap_with_old_217_count": 15,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784",
-        "W7133229896"
-      ],
-      "paper_scores_row_count": 59,
-      "ranking_run_id": "rank-3904fec89d",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_reason_mode": "structural_zero_weight",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": 0.0,
-            "cluster_version": "kmeans-l2-v0-cleantext-r3-k6",
-            "corpus_snapshot_version": "source-snapshot-20260425-044015",
-            "embedding_version": "v1-title-abstract-1536-cleantext-r3",
-            "neighbor_mix_v1": {
-              "k": 15,
-              "signal_version": "neighbor_mix_v1"
-            }
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "emerging_semantic_slice_fit_v1": true,
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.5,
-              "diversity_penalty": 0.05,
-              "semantic": 0.2,
-              "topic_growth": 0.3
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260425-044015",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "emerging_slice_centroid_cosine_v1",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260425-044015",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 59,
-            "emerging": 59,
-            "undercited": 49
-          },
-          "rows_null_bridge": 108,
-          "rows_null_semantic": 108,
-          "total_candidate_works": 59,
-          "total_rows_written": 167
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext-r3",
-        "finished_at": "2026-04-25T05:33:21.064002+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-3904fec89d",
-        "ranking_version": "bridge-v2-nm1-zero-r3-k6-20260424",
-        "started_at": "2026-04-25T05:32:59.659352+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 44,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.45454545454545453,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 20,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 20,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 51,
-      "candidate_work_set_sha256": "891b2cdd0b0b9ed14b315994a7dca4020f52ad828f988ebc7763e95fb6ba7320",
-      "canonical_openalex_work_count": 51,
-      "confirmatory_eligible_work_count": 37,
-      "corpus_snapshot_version": "source-snapshot-20260328-170751",
+      "candidate_work_count": 358,
+      "candidate_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+      "canonical_openalex_work_count": 358,
+      "confirmatory_eligible_work_count": 143,
+      "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
       "family": "emerging",
       "is_current_underpowered_freeze": false,
       "label_coverage_summary": {
         "conflicting_target_work_group_count": 0,
         "conflicting_work_ids_preview": [],
         "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 13,
-        "duplicate_work_ids_preview": [
-          "W2890376498",
-          "W3016069856",
-          "W3036517071",
-          "W3092976109",
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5405405405405406,
-        "labeled_work_count": 20,
+        "duplicate_labeled_work_group_count": 0,
+        "duplicate_work_ids_preview": [],
+        "label_coverage_rate": 0.006993006993006993,
+        "labeled_work_count": 1,
         "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 20,
-        "unlabeled_work_count": 17
+        "positive_labeled_work_count": 1,
+        "unlabeled_work_count": 142
       },
-      "overlap_with_old_217_count": 14,
+      "overlap_with_old_217_count": 215,
       "overlap_work_ids_preview": [
+        "W4400517077",
         "W4401237242",
+        "W4405899471",
+        "W4406354622",
+        "W4406354632",
+        "W4406354650",
+        "W4406354730",
+        "W4406354762",
+        "W4406890357",
         "W4407236737",
         "W4408635446",
         "W4408772031",
+        "W4409215215",
+        "W4409215217",
+        "W4409215246",
+        "W4409215250",
+        "W4409215261",
+        "W4409474070",
+        "W4409474087",
+        "W4409474100",
+        "W4409474113",
         "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
+        "W4410025249",
+        "W4410025357",
+        "W4410025358"
       ],
-      "paper_scores_row_count": 51,
-      "ranking_run_id": "rank-38a09c7368",
+      "paper_scores_row_count": 358,
+      "ranking_run_id": "rank-9f4b2a2084",
       "ranking_run_metadata": {
         "config_json": {
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260328-170751",
-            "type": "included_works"
-          },
-          "signal_policies": {
-            "bridge_score": "null_until_clusters_or_neighbor_features",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260328-170751",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 51,
-            "emerging": 51,
-            "undercited": 51
-          },
-          "rows_null_bridge": 153,
-          "rows_null_semantic": 153,
-          "total_candidate_works": 51,
-          "total_rows_written": 153
-        },
-        "embedding_version": "none-v0",
-        "finished_at": "2026-03-29T04:10:55.340238+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-38a09c7368",
-        "ranking_version": "v0-heuristic-no-embeddings-step3",
-        "started_at": "2026-03-29T04:10:55.231647+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 37,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5405405405405406,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 20,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 20,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-83976f1097",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_reason_mode": "structural_zero_weight",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": 0.0,
-            "cluster_version": "kmeans-l2-v0-cleantext-r2-k6",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext-r2"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 73,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext-r2",
-        "finished_at": "2026-04-05T16:54:48.057436+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-83976f1097",
-        "ranking_version": "ml2-5a-qual-r2-k6-20260405",
-        "started_at": "2026-04-05T16:54:47.973995+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-808f9d7f4d",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_reason_mode": "structural_zero_weight",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": 0.0,
-            "cluster_version": "kmeans-l2-v0-cleantext-r2-k5",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext-r2"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 73,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext-r2",
-        "finished_at": "2026-04-05T16:43:21.532569+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-808f9d7f4d",
-        "ranking_version": "ml2-5a-qual-r2-k5-20260405",
-        "started_at": "2026-04-05T16:43:21.434603+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-b39d9e0d4f",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_reason_mode": "structural_zero_weight",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": 0.0,
-            "cluster_version": "kmeans-l2-v0-cleantext-r2-k4",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext-r2"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 73,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext-r2",
-        "finished_at": "2026-04-05T16:27:11.444681+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-b39d9e0d4f",
-        "ranking_version": "ml2-5a-qual-r2-k4-20260405",
-        "started_at": "2026-04-05T16:27:11.341257+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-cf04ae30c6",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_reason_mode": "structural_weighted",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": 0.1,
-            "cluster_version": "kmeans-l2-v0-cleantext-r2-k3",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext-r2"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.1,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 73,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext-r2",
-        "finished_at": "2026-04-05T15:46:47.666183+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-cf04ae30c6",
-        "ranking_version": "ml2-5b-exp-r2-k3-w010-20260405",
-        "started_at": "2026-04-05T15:46:47.593980+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-16c1cfb490",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_reason_mode": "structural_weighted",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": 0.06,
-            "cluster_version": "kmeans-l2-v0-cleantext-r2-k3",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext-r2"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.06,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 73,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext-r2",
-        "finished_at": "2026-04-05T06:01:26.911328+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-16c1cfb490",
-        "ranking_version": "ml2-5b-exp-r2-k3-w006-20260405",
-        "started_at": "2026-04-05T06:01:26.836187+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-17658d0f74",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": false,
-            "cluster_version": "kmeans-l2-v0-cleantext-r2-k3",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext-r2"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0_persisted_bridge_weight_zero",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 73,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext-r2",
-        "finished_at": "2026-04-05T05:35:57.596800+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-17658d0f74",
-        "ranking_version": "ml2-5a-qual-r2-k3-20260405",
-        "started_at": "2026-04-05T05:35:57.499901+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-c34fa85261",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": false,
-            "cluster_version": "kmeans-l2-v0-cleantext-k3",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0_persisted_bridge_weight_zero",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 101,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext",
-        "finished_at": "2026-04-01T16:14:27.395260+00:00",
-        "notes": "Qualitative bridge review k3 cluster",
-        "ranking_run_id": "rank-c34fa85261",
-        "ranking_version": "ml2-5a-qual-k3-20260331",
-        "started_at": "2026-04-01T16:14:27.268330+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-c765e2de5c",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": false,
-            "cluster_version": "kmeans-l2-v0-cleantext-k12",
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "embedding_version": "v1-title-abstract-1536-cleantext"
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0_persisted_bridge_weight_zero",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 101,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "v1-title-abstract-1536-cleantext",
-        "finished_at": "2026-04-01T06:19:17.224471+00:00",
-        "notes": "ML2-5a validation with cluster bridge_score",
-        "ranking_run_id": "rank-c765e2de5c",
-        "ranking_version": "ml2-5a-val-cluster-20260331",
-        "started_at": "2026-04-01T06:19:17.124784+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-63710a0277",
-      "ranking_run_metadata": {
-        "config_json": {
+          "bridge_eligibility_mode": "current",
+          "bridge_score_percentile_threshold": null,
           "clustering_artifact": null,
+          "cross_cluster_neighbor_share_min": null,
           "default_weights": {
             "bridge": 0.2,
             "citation_velocity": 0.2,
@@ -1885,6 +73,7 @@
             "semantic": 0.3,
             "topic_growth": 0.2
           },
+          "emerging_semantic_slice_fit_v1": true,
           "families_written": [
             "emerging",
             "bridge",
@@ -1900,10 +89,10 @@
             },
             "emerging": {
               "bridge": 0.0,
-              "citation_velocity": 0.6,
+              "citation_velocity": 0.5,
               "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
+              "semantic": 0.2,
+              "topic_growth": 0.3
             },
             "undercited": {
               "bridge": 0.0,
@@ -1915,7 +104,7 @@
           },
           "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
           "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
+            "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
             "emerging_and_bridge": "all_included_works_in_snapshot",
             "type": "included_works",
             "undercited": {
@@ -1933,54 +122,52 @@
               "emerging": "0.0_for_step3_v0",
               "undercited": "citation_popularity_penalty"
             },
-            "semantic_score": "null_until_embeddings",
+            "semantic_score": "emerging_slice_centroid_cosine_v1",
             "topic_growth_score": "mean_recent_topic_share_within_snapshot"
           },
           "thresholds": {
             "recent_topic_year_window": 2
           }
         },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
+        "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
         "counts_json": {
           "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
+            "bridge": 358,
+            "emerging": 358,
+            "undercited": 81
           },
-          "rows_null_bridge": 111,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
+          "rows_null_bridge": 797,
+          "rows_null_semantic": 439,
+          "total_candidate_works": 358,
+          "total_rows_written": 797
         },
-        "embedding_version": "v1-title-abstract-1536-cleantext",
-        "finished_at": "2026-04-01T06:19:10.115506+00:00",
-        "notes": "ML2-5a validation baseline, no cluster",
-        "ranking_run_id": "rank-63710a0277",
-        "ranking_version": "ml2-5a-val-baseline-20260331",
-        "started_at": "2026-04-01T06:19:09.983659+00:00",
+        "embedding_version": "fresh-hybrid-text-embedding-v1",
+        "finished_at": "2026-05-19T04:29:37.020399+00:00",
+        "notes": "Eval-only fresh hybrid confirmatory-path product-candidate ranking; no production/default pin, no API/web change, no shadow/prod authorization.",
+        "ranking_run_id": "rank-9f4b2a2084",
+        "ranking_version": "fresh-hybrid-product-candidate-ranking-v1",
+        "started_at": "2026-05-19T04:29:36.541068+00:00",
         "status": "succeeded"
       },
       "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
+        "meets_min_confirmatory_candidate_works": true,
         "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
+        "selection_blockers": []
       },
       "source_is_fresh_relative_to_old_217": true,
       "threshold_check": {
         "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
+          "observed": 143,
+          "passed": true,
           "threshold": 100
         },
         "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
+          "observed": 0.006993006993006993,
           "passed": false,
           "threshold": 0.6
         },
         "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
+          "observed": 1,
           "passed": false,
           "threshold": 100
         },
@@ -1990,1344 +177,7 @@
           "threshold": 20
         },
         "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-19a2c8671f",
-      "ranking_run_metadata": {
-        "config_json": {
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "null_until_clusters_or_neighbor_features",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 111,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "none-v0",
-        "finished_at": "2026-03-31T16:04:06.646603+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-19a2c8671f",
-        "ranking_version": "v0-heuristic-no-embeddings-step3-cleantext",
-        "started_at": "2026-03-31T16:04:06.570267+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 38,
-      "candidate_work_set_sha256": "468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3",
-      "canonical_openalex_work_count": 38,
-      "confirmatory_eligible_work_count": 24,
-      "corpus_snapshot_version": "source-snapshot-20260329-170012",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 9,
-        "duplicate_work_ids_preview": [
-          "W3093121331",
-          "W3129917041",
-          "W3209617794",
-          "W3215381343",
-          "W4312805589",
-          "W4386773472",
-          "W4387375972",
-          "W4387943290",
-          "W4394916053"
-        ],
-        "label_coverage_rate": 0.5416666666666666,
-        "labeled_work_count": 13,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 13,
-        "unlabeled_work_count": 11
-      },
-      "overlap_with_old_217_count": 14,
-      "overlap_work_ids_preview": [
-        "W4401237242",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409967775",
-        "W4410033452",
-        "W4410091503",
-        "W4410824464",
-        "W4411463636",
-        "W4412780451",
-        "W4413990340",
-        "W4415947443",
-        "W7119099299",
-        "W7128803784"
-      ],
-      "paper_scores_row_count": 38,
-      "ranking_run_id": "rank-d18414d7e7",
-      "ranking_run_metadata": {
-        "config_json": {
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.6,
-              "diversity_penalty": 0.05,
-              "semantic": 0.0,
-              "topic_growth": 0.4
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-20260329-170012",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "null_until_clusters_or_neighbor_features",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "null_until_embeddings",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-20260329-170012",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 38,
-            "emerging": 38,
-            "undercited": 35
-          },
-          "rows_null_bridge": 111,
-          "rows_null_semantic": 111,
-          "total_candidate_works": 38,
-          "total_rows_written": 111
-        },
-        "embedding_version": "none-v0",
-        "finished_at": "2026-03-31T16:03:11.437520+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-d18414d7e7",
-        "ranking_version": "v0-heuristic-no-embeddings-step3-cleantext",
-        "started_at": "2026-03-31T16:03:11.360013+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": true,
-        "selection_blockers": [
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": true,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 24,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.5416666666666666,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 13,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 217,
-      "candidate_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
-      "canonical_openalex_work_count": 217,
-      "confirmatory_eligible_work_count": 0,
-      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 0,
-        "duplicate_work_ids_preview": [],
-        "label_coverage_rate": 0.0,
-        "labeled_work_count": 0,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 0,
-        "unlabeled_work_count": 0
-      },
-      "overlap_with_old_217_count": 217,
-      "overlap_work_ids_preview": [
-        "W4400517077",
-        "W4401237242",
-        "W4405710378",
-        "W4405710382",
-        "W4405899471",
-        "W4406354622",
-        "W4406354632",
-        "W4406354650",
-        "W4406354730",
-        "W4406354762",
-        "W4406890357",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409215215",
-        "W4409215217",
-        "W4409215246",
-        "W4409215250",
-        "W4409215261",
-        "W4409474070",
-        "W4409474087",
-        "W4409474100",
-        "W4409474113",
-        "W4409967775",
-        "W4410025249"
-      ],
-      "paper_scores_row_count": 217,
-      "ranking_run_id": "rank-60910a47b4",
-      "ranking_run_metadata": {
-        "config_json": {
-          "bridge_eligibility_exclusion": {
-            "bridge_eligibility_mode": "top50_cross040_exclude_persistent_shared_v1",
-            "excluded_paper_ids": [
-              "https://openalex.org/W4412696666",
-              "https://openalex.org/W4407236737",
-              "https://openalex.org/W4411141659",
-              "https://openalex.org/W4410025413",
-              "https://openalex.org/W4409215217"
-            ],
-            "excluded_work_ids": [
-              10,
-              14,
-              125,
-              131,
-              138
-            ],
-            "inherits_from_mode": "top50_cross_cluster_gte_0_40",
-            "source_diagnostic_artifact": "docs/audit/manual-review/bridge_objective_redesign_simulation_rank-ee2ba6c816_top20.json"
-          },
-          "bridge_eligibility_mode": "top50_cross040_exclude_persistent_shared_v1",
-          "bridge_score_percentile_threshold": "top50",
-          "clustering_artifact": {
-            "bridge_eligibility_mode": "top50_cross040_exclude_persistent_shared_v1",
-            "bridge_reason_mode": "structural_zero_weight",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_score_percentile_threshold": "top50",
-            "bridge_weight_in_final_score": 0.0,
-            "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "cross_cluster_neighbor_share_min": 0.4,
-            "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-            "neighbor_mix_v1": {
-              "k": 15,
-              "signal_version": "neighbor_mix_v1"
-            }
-          },
-          "cross_cluster_neighbor_share_min": 0.4,
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "emerging_semantic_slice_fit_v1": true,
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.5,
-              "diversity_penalty": 0.05,
-              "semantic": 0.2,
-              "topic_growth": 0.3
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "emerging_slice_centroid_cosine_v1",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 217,
-            "emerging": 217,
-            "undercited": 80
-          },
-          "rows_null_bridge": 297,
-          "rows_null_semantic": 297,
-          "total_candidate_works": 217,
-          "total_rows_written": 514
-        },
-        "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-        "finished_at": "2026-04-29T17:22:23.823923+00:00",
-        "notes": null,
-        "ranking_run_id": "rank-60910a47b4",
-        "ranking_version": "bridge-v2-nm1-zero-corpusv2-r5-k12-elig-exclude-persistent-v1-20260429",
-        "started_at": "2026-04-29T17:21:26.836966+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": false,
-        "selection_blockers": [
-          "candidate_work_set_sha_matches_policy_disallowed_old_surface",
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": false,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.0,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 217,
-      "candidate_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
-      "canonical_openalex_work_count": 217,
-      "confirmatory_eligible_work_count": 0,
-      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 0,
-        "duplicate_work_ids_preview": [],
-        "label_coverage_rate": 0.0,
-        "labeled_work_count": 0,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 0,
-        "unlabeled_work_count": 0
-      },
-      "overlap_with_old_217_count": 217,
-      "overlap_work_ids_preview": [
-        "W4400517077",
-        "W4401237242",
-        "W4405710378",
-        "W4405710382",
-        "W4405899471",
-        "W4406354622",
-        "W4406354632",
-        "W4406354650",
-        "W4406354730",
-        "W4406354762",
-        "W4406890357",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409215215",
-        "W4409215217",
-        "W4409215246",
-        "W4409215250",
-        "W4409215261",
-        "W4409474070",
-        "W4409474087",
-        "W4409474100",
-        "W4409474113",
-        "W4409967775",
-        "W4410025249"
-      ],
-      "paper_scores_row_count": 217,
-      "ranking_run_id": "rank-9a02c81d40",
-      "ranking_run_metadata": {
-        "config_json": {
-          "bridge_eligibility_mode": "top50_cross_cluster_gte_0_40",
-          "bridge_score_percentile_threshold": "top50",
-          "clustering_artifact": {
-            "bridge_eligibility_mode": "top50_cross_cluster_gte_0_40",
-            "bridge_reason_mode": "structural_weighted",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_score_percentile_threshold": "top50",
-            "bridge_weight_in_final_score": 0.1,
-            "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "cross_cluster_neighbor_share_min": 0.4,
-            "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-            "neighbor_mix_v1": {
-              "k": 15,
-              "signal_version": "neighbor_mix_v1"
-            }
-          },
-          "cross_cluster_neighbor_share_min": 0.4,
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "emerging_semantic_slice_fit_v1": true,
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.1,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.5,
-              "diversity_penalty": 0.05,
-              "semantic": 0.2,
-              "topic_growth": 0.3
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "emerging_slice_centroid_cosine_v1",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 217,
-            "emerging": 217,
-            "undercited": 80
-          },
-          "rows_null_bridge": 297,
-          "rows_null_semantic": 297,
-          "total_candidate_works": 217,
-          "total_rows_written": 514
-        },
-        "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-        "finished_at": "2026-04-29T04:58:40.125419+00:00",
-        "notes": "Second gated bridge-weight experiment after 0.05 delta review passed",
-        "ranking_run_id": "rank-9a02c81d40",
-        "ranking_version": "bridge-v2-nm1-w010-corpusv2-r4-k12-elig-top50-cross040-20260428",
-        "started_at": "2026-04-29T04:57:44.651400+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": false,
-        "selection_blockers": [
-          "candidate_work_set_sha_matches_policy_disallowed_old_surface",
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": false,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.0,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 217,
-      "candidate_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
-      "canonical_openalex_work_count": 217,
-      "confirmatory_eligible_work_count": 0,
-      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 0,
-        "duplicate_work_ids_preview": [],
-        "label_coverage_rate": 0.0,
-        "labeled_work_count": 0,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 0,
-        "unlabeled_work_count": 0
-      },
-      "overlap_with_old_217_count": 217,
-      "overlap_work_ids_preview": [
-        "W4400517077",
-        "W4401237242",
-        "W4405710378",
-        "W4405710382",
-        "W4405899471",
-        "W4406354622",
-        "W4406354632",
-        "W4406354650",
-        "W4406354730",
-        "W4406354762",
-        "W4406890357",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409215215",
-        "W4409215217",
-        "W4409215246",
-        "W4409215250",
-        "W4409215261",
-        "W4409474070",
-        "W4409474087",
-        "W4409474100",
-        "W4409474113",
-        "W4409967775",
-        "W4410025249"
-      ],
-      "paper_scores_row_count": 217,
-      "ranking_run_id": "rank-bc1123e00c",
-      "ranking_run_metadata": {
-        "config_json": {
-          "bridge_eligibility_mode": "top50_cross_cluster_gte_0_40",
-          "bridge_score_percentile_threshold": "top50",
-          "clustering_artifact": {
-            "bridge_eligibility_mode": "top50_cross_cluster_gte_0_40",
-            "bridge_reason_mode": "structural_weighted",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_score_percentile_threshold": "top50",
-            "bridge_weight_in_final_score": 0.05,
-            "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "cross_cluster_neighbor_share_min": 0.4,
-            "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-            "neighbor_mix_v1": {
-              "k": 15,
-              "signal_version": "neighbor_mix_v1"
-            }
-          },
-          "cross_cluster_neighbor_share_min": 0.4,
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "emerging_semantic_slice_fit_v1": true,
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.05,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.5,
-              "diversity_penalty": 0.05,
-              "semantic": 0.2,
-              "topic_growth": 0.3
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "emerging_slice_centroid_cosine_v1",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 217,
-            "emerging": 217,
-            "undercited": 80
-          },
-          "rows_null_bridge": 297,
-          "rows_null_semantic": 297,
-          "total_candidate_works": 217,
-          "total_rows_written": 514
-        },
-        "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-        "finished_at": "2026-04-28T17:42:33.154400+00:00",
-        "notes": "Small gated bridge-weight experiment after rank-ee2ba6c816 rollup readiness gate",
-        "ranking_run_id": "rank-bc1123e00c",
-        "ranking_version": "bridge-v2-nm1-w005-corpusv2-r3-k12-elig-top50-cross040-20260428",
-        "started_at": "2026-04-28T17:41:37.361847+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": false,
-        "selection_blockers": [
-          "candidate_work_set_sha_matches_policy_disallowed_old_surface",
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": false,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.0,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 217,
-      "candidate_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
-      "canonical_openalex_work_count": 217,
-      "confirmatory_eligible_work_count": 0,
-      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 0,
-        "duplicate_work_ids_preview": [],
-        "label_coverage_rate": 0.0,
-        "labeled_work_count": 0,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 0,
-        "unlabeled_work_count": 0
-      },
-      "overlap_with_old_217_count": 217,
-      "overlap_work_ids_preview": [
-        "W4400517077",
-        "W4401237242",
-        "W4405710378",
-        "W4405710382",
-        "W4405899471",
-        "W4406354622",
-        "W4406354632",
-        "W4406354650",
-        "W4406354730",
-        "W4406354762",
-        "W4406890357",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409215215",
-        "W4409215217",
-        "W4409215246",
-        "W4409215250",
-        "W4409215261",
-        "W4409474070",
-        "W4409474087",
-        "W4409474100",
-        "W4409474113",
-        "W4409967775",
-        "W4410025249"
-      ],
-      "paper_scores_row_count": 217,
-      "ranking_run_id": "rank-ee2ba6c816",
-      "ranking_run_metadata": {
-        "config_json": {
-          "bridge_eligibility_mode": "top50_cross_cluster_gte_0_40",
-          "bridge_score_percentile_threshold": "top50",
-          "clustering_artifact": {
-            "bridge_eligibility_mode": "top50_cross_cluster_gte_0_40",
-            "bridge_reason_mode": "structural_zero_weight",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_score_percentile_threshold": "top50",
-            "bridge_weight_in_final_score": 0.0,
-            "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "cross_cluster_neighbor_share_min": 0.4,
-            "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-            "neighbor_mix_v1": {
-              "k": 15,
-              "signal_version": "neighbor_mix_v1"
-            }
-          },
-          "cross_cluster_neighbor_share_min": 0.4,
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "emerging_semantic_slice_fit_v1": true,
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.5,
-              "diversity_penalty": 0.05,
-              "semantic": 0.2,
-              "topic_growth": 0.3
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "emerging_slice_centroid_cosine_v1",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 217,
-            "emerging": 217,
-            "undercited": 80
-          },
-          "rows_null_bridge": 297,
-          "rows_null_semantic": 297,
-          "total_candidate_works": 217,
-          "total_rows_written": 514
-        },
-        "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-        "finished_at": "2026-04-28T15:12:53.678989+00:00",
-        "notes": "Corpus v2 zero-bridge rerun with stricter bridge eligibility threshold from sensitivity artifact",
-        "ranking_run_id": "rank-ee2ba6c816",
-        "ranking_version": "bridge-v2-nm1-zero-corpusv2-r2-k12-elig-top50-cross040-20260428",
-        "started_at": "2026-04-28T15:11:57.672138+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": false,
-        "selection_blockers": [
-          "ranking_run_id_is_policy_disallowed_old_surface",
-          "candidate_work_set_sha_matches_policy_disallowed_old_surface",
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": false,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.0,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 50
-        },
-        "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        }
-      }
-    },
-    {
-      "candidate_work_count": 217,
-      "candidate_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
-      "canonical_openalex_work_count": 217,
-      "confirmatory_eligible_work_count": 0,
-      "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-      "family": "emerging",
-      "is_current_underpowered_freeze": false,
-      "label_coverage_summary": {
-        "conflicting_target_work_group_count": 0,
-        "conflicting_work_ids_preview": [],
-        "distinct_negative_work_count": 0,
-        "duplicate_labeled_work_group_count": 0,
-        "duplicate_work_ids_preview": [],
-        "label_coverage_rate": 0.0,
-        "labeled_work_count": 0,
-        "negative_labeled_work_count": 0,
-        "positive_labeled_work_count": 0,
-        "unlabeled_work_count": 0
-      },
-      "overlap_with_old_217_count": 217,
-      "overlap_work_ids_preview": [
-        "W4400517077",
-        "W4401237242",
-        "W4405710378",
-        "W4405710382",
-        "W4405899471",
-        "W4406354622",
-        "W4406354632",
-        "W4406354650",
-        "W4406354730",
-        "W4406354762",
-        "W4406890357",
-        "W4407236737",
-        "W4408635446",
-        "W4408772031",
-        "W4409215215",
-        "W4409215217",
-        "W4409215246",
-        "W4409215250",
-        "W4409215261",
-        "W4409474070",
-        "W4409474087",
-        "W4409474100",
-        "W4409474113",
-        "W4409967775",
-        "W4410025249"
-      ],
-      "paper_scores_row_count": 217,
-      "ranking_run_id": "rank-ed3f090ad7",
-      "ranking_run_metadata": {
-        "config_json": {
-          "clustering_artifact": {
-            "bridge_reason_mode": "structural_zero_weight",
-            "bridge_score_mode": "cluster_boundary_ratio_v0",
-            "bridge_weight_in_final_score": 0.0,
-            "cluster_version": "kmeans-l2-v2-cleantext-r1-k12",
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-            "neighbor_mix_v1": {
-              "k": 15,
-              "signal_version": "neighbor_mix_v1"
-            }
-          },
-          "default_weights": {
-            "bridge": 0.2,
-            "citation_velocity": 0.2,
-            "diversity_penalty": 0.1,
-            "semantic": 0.3,
-            "topic_growth": 0.2
-          },
-          "emerging_semantic_slice_fit_v1": true,
-          "families_written": [
-            "emerging",
-            "bridge",
-            "undercited"
-          ],
-          "family_weights": {
-            "bridge": {
-              "bridge": 0.0,
-              "citation_velocity": 0.35,
-              "diversity_penalty": 0.2,
-              "semantic": 0.0,
-              "topic_growth": 0.65
-            },
-            "emerging": {
-              "bridge": 0.0,
-              "citation_velocity": 0.5,
-              "diversity_penalty": 0.05,
-              "semantic": 0.2,
-              "topic_growth": 0.3
-            },
-            "undercited": {
-              "bridge": 0.0,
-              "citation_velocity": 0.3,
-              "diversity_penalty": 0.25,
-              "semantic": 0.0,
-              "topic_growth": 0.7
-            }
-          },
-          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
-          "selection_scope": {
-            "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-            "emerging_and_bridge": "all_included_works_in_snapshot",
-            "type": "included_works",
-            "undercited": {
-              "doc": "docs/candidate-pool-low-cite.md",
-              "low_cite_candidate_pool_revision": "v0",
-              "max_citations": 30,
-              "min_year": 2019
-            }
-          },
-          "signal_policies": {
-            "bridge_score": "cluster_boundary_ratio_v0",
-            "citation_velocity_score": "citations_per_year_normalized_within_run",
-            "diversity_penalty": {
-              "bridge": "lack_of_topic_breadth_penalty",
-              "emerging": "0.0_for_step3_v0",
-              "undercited": "citation_popularity_penalty"
-            },
-            "semantic_score": "emerging_slice_centroid_cosine_v1",
-            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
-          },
-          "thresholds": {
-            "recent_topic_year_window": 2
-          }
-        },
-        "corpus_snapshot_version": "source-snapshot-v2-candidate-plan-20260428",
-        "counts_json": {
-          "rows_by_family": {
-            "bridge": 217,
-            "emerging": 217,
-            "undercited": 80
-          },
-          "rows_null_bridge": 297,
-          "rows_null_semantic": 297,
-          "total_candidate_works": 217,
-          "total_rows_written": 514
-        },
-        "embedding_version": "v2-title-abstract-1536-cleantext-r1",
-        "finished_at": "2026-04-28T14:48:39.664672+00:00",
-        "notes": "Corpus v2 zero-bridge baseline after hydration, embeddings, and k12 clustering",
-        "ranking_run_id": "rank-ed3f090ad7",
-        "ranking_version": "bridge-v2-nm1-zero-corpusv2-r1-k12-20260428",
-        "started_at": "2026-04-28T14:47:40.689348+00:00",
-        "status": "succeeded"
-      },
-      "selection_eligibility": {
-        "meets_min_confirmatory_candidate_works": false,
-        "policy_valid_source": false,
-        "selection_blockers": [
-          "candidate_work_set_sha_matches_policy_disallowed_old_surface",
-          "confirmatory_eligible_work_count_below_minimum"
-        ]
-      },
-      "source_is_fresh_relative_to_old_217": false,
-      "threshold_check": {
-        "minimum_confirmatory_candidate_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.0,
-          "passed": false,
-          "threshold": 0.6
-        },
-        "minimum_confirmatory_labeled_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 100
-        },
-        "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
-          "threshold": 20
-        },
-        "minimum_confirmatory_positive_work_count": {
-          "observed": 0,
+          "observed": 1,
           "passed": false,
           "threshold": 50
         },
@@ -3368,7 +218,7 @@
     },
     "database_target_redacted": "postgresql://research_radar:***@localhost:5432/research_radar",
     "fresh_surface_policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
-    "generated_at": "2026-05-18T06:11:08Z",
+    "generated_at": "2026-05-19T04:46:03Z",
     "inputs": [
       {
         "name": "fresh_eval_labeling_plan",
@@ -3396,8 +246,29 @@
     "source_version": "ml-fresh-product-candidate-ranking-source-v1",
     "target": "good_or_acceptable"
   },
-  "recommended_next_stage": "create_new_or_larger_candidate_snapshot",
-  "selected_source_freeze": null,
+  "recommended_next_stage": "rerun_fresh_eval_surface_materialize_with_selected_source",
+  "selected_source_freeze": {
+    "candidate_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+    "confirmatory_eligible_work_count": 143,
+    "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+    "family": "emerging",
+    "label_coverage_summary": {
+      "conflicting_target_work_group_count": 0,
+      "conflicting_work_ids_preview": [],
+      "distinct_negative_work_count": 0,
+      "duplicate_labeled_work_group_count": 0,
+      "duplicate_work_ids_preview": [],
+      "label_coverage_rate": 0.006993006993006993,
+      "labeled_work_count": 1,
+      "negative_labeled_work_count": 0,
+      "positive_labeled_work_count": 1,
+      "unlabeled_work_count": 142
+    },
+    "overlap_with_old_217_count": 215,
+    "ranking_run_id": "rank-9f4b2a2084",
+    "source_is_fresh_relative_to_old_217": true,
+    "use_with_materializer_command": "py -m pipeline.cli ml-fresh-eval-surface-hybrid-materialize --fresh-surface-policy ../../docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json --label-dataset ../../docs/audit/ml-label-dataset-v8.json --conflict-policy ../../docs/audit/ml-label-conflict-policy.md --family emerging --ranking-run-id rank-9f4b2a2084 --output ../../docs/audit/ml-fresh-eval-surface-hybrid-v1.json --markdown-output ../../docs/audit/ml-fresh-eval-surface-hybrid-v1.md"
+  },
   "shadow_and_production_blockers": {
     "confirmatory_validation_complete": false,
     "production_default_allowed": false,
@@ -3406,9 +277,186 @@
   "source_selection": {
     "minimum_confirmatory_candidate_works": 100,
     "old_surface_exclusion_sha": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
-    "recommended_next_stage": "create_new_or_larger_candidate_snapshot",
-    "selected_source": null,
-    "selection_rule": "largest confirmatory_eligible_work_count among policy-valid sources with count >= 100; tie-break by newest ranking_run metadata when available. The current underpowered freeze SHA 1a62e9802e8562854e9b4fd2c44ad72a183d81fe8dbb86b50b09d94fb496e926 is considered but not selected when a strictly larger valid source exists.",
-    "status": "blocked_no_source_meets_candidate_threshold"
+    "recommended_next_stage": "rerun_fresh_eval_surface_materialize_with_selected_source",
+    "selected_source": {
+      "candidate_work_count": 358,
+      "candidate_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+      "canonical_openalex_work_count": 358,
+      "confirmatory_eligible_work_count": 143,
+      "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+      "family": "emerging",
+      "is_current_underpowered_freeze": false,
+      "label_coverage_summary": {
+        "conflicting_target_work_group_count": 0,
+        "conflicting_work_ids_preview": [],
+        "distinct_negative_work_count": 0,
+        "duplicate_labeled_work_group_count": 0,
+        "duplicate_work_ids_preview": [],
+        "label_coverage_rate": 0.006993006993006993,
+        "labeled_work_count": 1,
+        "negative_labeled_work_count": 0,
+        "positive_labeled_work_count": 1,
+        "unlabeled_work_count": 142
+      },
+      "overlap_with_old_217_count": 215,
+      "overlap_work_ids_preview": [
+        "W4400517077",
+        "W4401237242",
+        "W4405899471",
+        "W4406354622",
+        "W4406354632",
+        "W4406354650",
+        "W4406354730",
+        "W4406354762",
+        "W4406890357",
+        "W4407236737",
+        "W4408635446",
+        "W4408772031",
+        "W4409215215",
+        "W4409215217",
+        "W4409215246",
+        "W4409215250",
+        "W4409215261",
+        "W4409474070",
+        "W4409474087",
+        "W4409474100",
+        "W4409474113",
+        "W4409967775",
+        "W4410025249",
+        "W4410025357",
+        "W4410025358"
+      ],
+      "paper_scores_row_count": 358,
+      "ranking_run_id": "rank-9f4b2a2084",
+      "ranking_run_metadata": {
+        "config_json": {
+          "bridge_eligibility_mode": "current",
+          "bridge_score_percentile_threshold": null,
+          "clustering_artifact": null,
+          "cross_cluster_neighbor_share_min": null,
+          "default_weights": {
+            "bridge": 0.2,
+            "citation_velocity": 0.2,
+            "diversity_penalty": 0.1,
+            "semantic": 0.3,
+            "topic_growth": 0.2
+          },
+          "emerging_semantic_slice_fit_v1": true,
+          "families_written": [
+            "emerging",
+            "bridge",
+            "undercited"
+          ],
+          "family_weights": {
+            "bridge": {
+              "bridge": 0.0,
+              "citation_velocity": 0.35,
+              "diversity_penalty": 0.2,
+              "semantic": 0.0,
+              "topic_growth": 0.65
+            },
+            "emerging": {
+              "bridge": 0.0,
+              "citation_velocity": 0.5,
+              "diversity_penalty": 0.05,
+              "semantic": 0.2,
+              "topic_growth": 0.3
+            },
+            "undercited": {
+              "bridge": 0.0,
+              "citation_velocity": 0.3,
+              "diversity_penalty": 0.25,
+              "semantic": 0.0,
+              "topic_growth": 0.7
+            }
+          },
+          "placeholder_policy": "semantic_and_bridge_null_until_embeddings_and_clusters",
+          "selection_scope": {
+            "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+            "emerging_and_bridge": "all_included_works_in_snapshot",
+            "type": "included_works",
+            "undercited": {
+              "doc": "docs/candidate-pool-low-cite.md",
+              "low_cite_candidate_pool_revision": "v0",
+              "max_citations": 30,
+              "min_year": 2019
+            }
+          },
+          "signal_policies": {
+            "bridge_score": "null_until_clusters_or_neighbor_features",
+            "citation_velocity_score": "citations_per_year_normalized_within_run",
+            "diversity_penalty": {
+              "bridge": "lack_of_topic_breadth_penalty",
+              "emerging": "0.0_for_step3_v0",
+              "undercited": "citation_popularity_penalty"
+            },
+            "semantic_score": "emerging_slice_centroid_cosine_v1",
+            "topic_growth_score": "mean_recent_topic_share_within_snapshot"
+          },
+          "thresholds": {
+            "recent_topic_year_window": 2
+          }
+        },
+        "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+        "counts_json": {
+          "rows_by_family": {
+            "bridge": 358,
+            "emerging": 358,
+            "undercited": 81
+          },
+          "rows_null_bridge": 797,
+          "rows_null_semantic": 439,
+          "total_candidate_works": 358,
+          "total_rows_written": 797
+        },
+        "embedding_version": "fresh-hybrid-text-embedding-v1",
+        "finished_at": "2026-05-19T04:29:37.020399+00:00",
+        "notes": "Eval-only fresh hybrid confirmatory-path product-candidate ranking; no production/default pin, no API/web change, no shadow/prod authorization.",
+        "ranking_run_id": "rank-9f4b2a2084",
+        "ranking_version": "fresh-hybrid-product-candidate-ranking-v1",
+        "started_at": "2026-05-19T04:29:36.541068+00:00",
+        "status": "succeeded"
+      },
+      "selection_eligibility": {
+        "meets_min_confirmatory_candidate_works": true,
+        "policy_valid_source": true,
+        "selection_blockers": []
+      },
+      "source_is_fresh_relative_to_old_217": true,
+      "threshold_check": {
+        "minimum_confirmatory_candidate_work_count": {
+          "observed": 143,
+          "passed": true,
+          "threshold": 100
+        },
+        "minimum_confirmatory_label_coverage_rate": {
+          "observed": 0.006993006993006993,
+          "passed": false,
+          "threshold": 0.6
+        },
+        "minimum_confirmatory_labeled_work_count": {
+          "observed": 1,
+          "passed": false,
+          "threshold": 100
+        },
+        "minimum_confirmatory_negative_work_count": {
+          "observed": 0,
+          "passed": false,
+          "threshold": 20
+        },
+        "minimum_confirmatory_positive_work_count": {
+          "observed": 1,
+          "passed": false,
+          "threshold": 50
+        },
+        "minimum_distinct_negative_work_count": {
+          "observed": 0,
+          "passed": false,
+          "threshold": 20
+        }
+      }
+    },
+    "selection_rule": "explicit ranking_run_id rank-9f4b2a2084 was supplied; freeze that source if it is policy-valid and has confirmatory_eligible_work_count >= 100 after old-217 exclusion.",
+    "status": "source_frozen_needs_materialization"
   }
 }

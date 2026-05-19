@@ -4,9 +4,9 @@
 
 This artifact freezes an existing read-only product-candidate ranking source, if one is large enough after excluding the old 217-work surface. It does not create rankings, score hybrids, train, import labels, or authorize shadow/production.
 
-- **Status:** `blocked_no_source_meets_candidate_threshold`
+- **Status:** `source_frozen_needs_materialization`
 - **Minimum confirmatory candidate works:** 100
-- **Recommended next stage:** `create_new_or_larger_candidate_snapshot`
+- **Recommended next stage:** `rerun_fresh_eval_surface_materialize_with_selected_source`
 - **Shadow scoring allowed:** False
 - **Production default allowed:** False
 
@@ -18,28 +18,26 @@ The current fresh surface has only 44 confirmatory-eligible works, so labeling a
 
 | Ranking run | Snapshot | Works | Old overlap | Confirmatory eligible | Labeled | Negatives | Candidate pass |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `rank-3904fec89d` | `source-snapshot-20260425-044015` | 59 | 15 | 44 | 20 | 0 | False |
-| `rank-38a09c7368` | `source-snapshot-20260328-170751` | 51 | 14 | 37 | 20 | 0 | False |
-| `rank-83976f1097` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-808f9d7f4d` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-b39d9e0d4f` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-cf04ae30c6` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-16c1cfb490` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-17658d0f74` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-c34fa85261` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-c765e2de5c` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-63710a0277` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-19a2c8671f` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-d18414d7e7` | `source-snapshot-20260329-170012` | 38 | 14 | 24 | 13 | 0 | False |
-| `rank-60910a47b4` | `source-snapshot-v2-candidate-plan-20260428` | 217 | 217 | 0 | 0 | 0 | False |
-| `rank-9a02c81d40` | `source-snapshot-v2-candidate-plan-20260428` | 217 | 217 | 0 | 0 | 0 | False |
-| `rank-bc1123e00c` | `source-snapshot-v2-candidate-plan-20260428` | 217 | 217 | 0 | 0 | 0 | False |
-| `rank-ee2ba6c816` | `source-snapshot-v2-candidate-plan-20260428` | 217 | 217 | 0 | 0 | 0 | False |
-| `rank-ed3f090ad7` | `source-snapshot-v2-candidate-plan-20260428` | 217 | 217 | 0 | 0 | 0 | False |
+| `rank-9f4b2a2084` | `source-snapshot-fresh-hybrid-v1-20260518` | 358 | 215 | 143 | 1 | 0 | True |
 
 ## Selected Source Or Blocker
 
-No existing source met the minimum confirmatory candidate-work threshold after old-surface exclusion.
+- Ranking run: `rank-9f4b2a2084`
+- Family: `emerging`
+- Snapshot: `source-snapshot-fresh-hybrid-v1-20260518`
+- Candidate SHA: `927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6`
+- Confirmatory eligible works: 143
+- Old 217 overlap excluded: 215
+- Labeled works: 1
+- Label coverage rate: 0.0070
+- Positive labeled works: 1
+- Negative labeled works: 0
+
+## Materializer Rerun Command
+
+```powershell
+py -m pipeline.cli ml-fresh-eval-surface-hybrid-materialize --fresh-surface-policy ../../docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json --label-dataset ../../docs/audit/ml-label-dataset-v8.json --conflict-policy ../../docs/audit/ml-label-conflict-policy.md --family emerging --ranking-run-id rank-9f4b2a2084 --output ../../docs/audit/ml-fresh-eval-surface-hybrid-v1.json --markdown-output ../../docs/audit/ml-fresh-eval-surface-hybrid-v1.md
+```
 
 ## Not Validation / Not Shadow / Not Production
 
