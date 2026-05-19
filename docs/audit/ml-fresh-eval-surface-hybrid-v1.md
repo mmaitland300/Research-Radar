@@ -12,45 +12,45 @@ This artifact inventories a concrete existing product-candidate pool for fresh h
 
 ## Candidate Source
 
-- **Mode:** `discovered`
-- **Ranking run:** `rank-3904fec89d`
+- **Mode:** `explicit`
+- **Ranking run:** `rank-9f4b2a2084`
 - **Family:** `emerging`
-- **Corpus snapshot:** `source-snapshot-20260425-044015`
-- **Rationale/block reason:** first successful deterministic discovery candidate with fresh work-set SHA
+- **Corpus snapshot:** `source-snapshot-fresh-hybrid-v1-20260518`
+- **Rationale/block reason:** explicit ranking_run_id is fresh relative to policy disallowed surface
 
 ## Candidate Count And SHA
 
-- Candidate works: 59
-- Candidate work-set SHA: `1a62e9802e8562854e9b4fd2c44ad72a183d81fe8dbb86b50b09d94fb496e926`
+- Candidate works: 358
+- Candidate work-set SHA: `927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6`
 - Differs from old eval SHA: True
 
 ## Overlap With Old 217
 
-- Overlap work count: 15
-- Excluded previous eval overlap count: 15
+- Overlap work count: 215
+- Excluded previous eval overlap count: 215
 - Confirmatory denominator excludes overlap: True
 
 ## Confirmatory Eligible Counts
 
-- Confirmatory metric eligible works: 44
+- Confirmatory metric eligible works: 143
 - Missing canonical work exclusions: 0
 
 ## Label Coverage And Thresholds
 
-- Labeled works: 20
-- Unlabeled works: 24
-- Positive works: 20
+- Labeled works: 1
+- Unlabeled works: 142
+- Positive works: 1
 - Negative works: 0
 - Conflicting target work groups: 0
-- Label coverage rate: 0.455
+- Label coverage rate: 0.007
 
 | Threshold | Observed | Required | Passed |
 | --- | ---: | ---: | --- |
-| `minimum_candidate_work_count` | 44 | 100 | False |
-| `minimum_confirmatory_labeled_work_count` | 20 | 100 | False |
-| `minimum_confirmatory_positive_work_count` | 20 | 50 | False |
+| `minimum_candidate_work_count` | 143 | 100 | True |
+| `minimum_confirmatory_labeled_work_count` | 1 | 100 | False |
+| `minimum_confirmatory_positive_work_count` | 1 | 50 | False |
 | `minimum_confirmatory_negative_work_count` | 0 | 20 | False |
-| `minimum_confirmatory_label_coverage_rate` | 0.455 | 0.600 | False |
+| `minimum_confirmatory_label_coverage_rate` | 0.007 | 0.600 | False |
 | `minimum_distinct_negative_work_count` | 0 | 20 | False |
 
 ## Blocked Actions
