@@ -59,6 +59,7 @@ def run_corpus_v2_embed(
     model: str = DEFAULT_OPENAI_EMBEDDING_MODEL,
     batch_size: int = 32,
     replace: bool = False,
+    limit: int | None = None,
     provider: EmbeddingProvider | None = None,
 ) -> dict[str, Any]:
     snapshot_version = (snapshot_version or "").strip()
@@ -72,11 +73,15 @@ def run_corpus_v2_embed(
         raise CorpusV2EmbedError("refusing to reuse a v1 embedding_version for corpus-v2 embedding", code=2)
     if batch_size <= 0:
         raise CorpusV2EmbedError("--batch-size must be positive", code=2)
+    if limit is not None and limit <= 0:
+        raise CorpusV2EmbedError("--limit must be positive when supplied", code=2)
 
     dsn = database_url or database_url_from_env()
     with psycopg.connect(dsn, autocommit=False) as conn:
         _assert_snapshot_exists(conn, snapshot_version)
         works = _load_target_works(conn, snapshot_version=snapshot_version)
+        if limit is not None:
+            works = works[:limit]
         if not works:
             raise CorpusV2EmbedError(f"snapshot has no included works: {snapshot_version}", code=2)
         blockers = _readiness_blockers(works)
@@ -153,6 +158,7 @@ def run_corpus_v2_embed(
         "input_text_sha256": text_sha256,
         "batches_committed": batches_committed,
         "replaced_existing_count": existing_target if replace else 0,
+        "limit": limit,
         "warnings": [
             "This is an ML artifact generation step only; no clustering, ranking, or bridge validation was run.",
             "Old/new corpus metrics are not same-pool comparable.",

@@ -762,6 +762,76 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_fresh_hybrid_snapshot_embed_parser = subparsers.add_parser(
+        "ml-fresh-hybrid-snapshot-embed",
+        help="Generate embeddings for a fresh hybrid eval-only source snapshot with audit provenance",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--fresh-hybrid-snapshot-hydration",
+        required=True,
+        help="Path to ml-fresh-hybrid-snapshot-hydration-v1 JSON",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--fresh-hybrid-candidate-plan-ingest",
+        required=True,
+        help="Path to ml-fresh-hybrid-candidate-plan-ingest-v1 JSON",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--snapshot-version",
+        default=None,
+        help="Source snapshot version to embed (default: value from hydration artifact)",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--embedding-version",
+        default="fresh-hybrid-text-embedding-v1",
+        help="Embedding version label (default: fresh-hybrid-text-embedding-v1)",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--mock-embeddings",
+        action="store_true",
+        help="Use deterministic local embeddings for tests/dry runs; no embedding API calls",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and count only; no embedding API calls and no writes",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Cap works embedded for tests/smoke only; omit for full snapshot coverage",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh hybrid embeddings JSON",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--artifact-version",
+        default="ml-fresh-hybrid-snapshot-embeddings-v1",
+        help="Artifact version string to write (default: ml-fresh-hybrid-snapshot-embeddings-v1)",
+    )
+    ml_fresh_hybrid_snapshot_embed_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     cluster_inspection_parser = subparsers.add_parser(
         "cluster-inspection",
         help="Read-only cluster coherence/provenance inspection for one explicit snapshot + embedding + cluster identity",
@@ -5368,6 +5438,40 @@ def main() -> None:
         print(summary["embedding_version"])
         print(summary["embedded_count"])
         return
+
+    if args.command == "ml-fresh-hybrid-snapshot-embed":
+        from pipeline.ml_fresh_hybrid_snapshot_embeddings import (
+            MLFreshHybridSnapshotEmbeddingsError,
+            write_ml_fresh_hybrid_snapshot_embeddings,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = write_ml_fresh_hybrid_snapshot_embeddings(
+                fresh_hybrid_snapshot_hydration_path=Path(args.fresh_hybrid_snapshot_hydration),
+                fresh_hybrid_candidate_plan_ingest_path=Path(args.fresh_hybrid_candidate_plan_ingest),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                snapshot_version=args.snapshot_version,
+                embedding_version=str(args.embedding_version),
+                database_url=args.database_url,
+                mock_embeddings=bool(args.mock_embeddings),
+                dry_run=bool(args.dry_run),
+                limit=args.limit,
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                artifact_version=str(args.artifact_version),
+                repo_root=repo_root,
+            )
+        except MLFreshHybridSnapshotEmbeddingsError as e:
+            print(f"ml-fresh-hybrid-snapshot-embed: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(payload["metadata"]["snapshot_version"])
+        print(payload["metadata"]["embedding_version"])
+        print(payload["embedding_result"]["recommended_next_stage"])
+        return
+
     if args.command == "cluster-inspection":
         try:
             payload = run_cluster_inspection(

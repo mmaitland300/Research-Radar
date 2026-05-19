@@ -1,0 +1,95 @@
+{
+  "blocked_actions": [
+    "clustering_if_later_required",
+    "ranking_run",
+    "hybrid_validation",
+    "shadow",
+    "production_default"
+  ],
+  "caveats": [
+    "Controlled embedding generation for one eval-only fresh hybrid snapshot only.",
+    "Embeddings use existing corpus-v2 title+abstract text rules and persistence machinery.",
+    "No clustering, ranking run, paper_scores, label import, hybrid scoring, shadow, or production changes.",
+    "Snapshot remains eval-only / fresh hybrid validation candidate source; it is not a production/default corpus switch.",
+    "Embedding coverage is a pipeline readiness artifact, not validation or ranking evidence.",
+    "No shadow or production authorization."
+  ],
+  "coverage": {
+    "embedded_work_count": 358,
+    "missing_embedding_count": 0,
+    "snapshot_work_count": 358
+  },
+  "embedding_result": {
+    "cluster_required_before_ranking": false,
+    "embedding_dimensions": 1536,
+    "embedding_model": "text-embedding-3-small",
+    "embedding_provider": "openai",
+    "embedding_ready_count_from_hydration": 358,
+    "embeddings_failed_count": 0,
+    "embeddings_skipped_existing_count": 0,
+    "embeddings_written_count": 358,
+    "full_snapshot_embedding_coverage": true,
+    "input_text_sha256": "15a9302da58ba9537322e5d57cf3bb036b31aa5c16a0d78f092c2c46dd1ff470",
+    "recommended_next_stage": "run_fresh_hybrid_product_candidate_ranking_v1",
+    "status": "succeeded",
+    "text_source": "title_abstract",
+    "warnings": [
+      "This is an ML artifact generation step only; no clustering, ranking, or bridge validation was run.",
+      "Old/new corpus metrics are not same-pool comparable."
+    ],
+    "works_considered_count": 358
+  },
+  "metadata": {
+    "artifact_type": "ml_fresh_hybrid_snapshot_embeddings",
+    "artifact_version": "ml-fresh-hybrid-snapshot-embeddings-v1",
+    "caveats": [
+      "Controlled embedding generation for one eval-only fresh hybrid snapshot only.",
+      "Embeddings use existing corpus-v2 title+abstract text rules and persistence machinery.",
+      "No clustering, ranking run, paper_scores, label import, hybrid scoring, shadow, or production changes.",
+      "Snapshot remains eval-only / fresh hybrid validation candidate source; it is not a production/default corpus switch.",
+      "Embedding coverage is a pipeline readiness artifact, not validation or ranking evidence.",
+      "No shadow or production authorization."
+    ],
+    "database_target_redacted": "postgresql://research_radar:***@localhost:5432/research_radar",
+    "dry_run": false,
+    "embedding_version": "fresh-hybrid-text-embedding-v1",
+    "generated_at": "2026-05-19T04:09:13Z",
+    "inputs": [
+      {
+        "name": "fresh_hybrid_snapshot_hydration",
+        "path": "docs/audit/ml-fresh-hybrid-snapshot-hydration-v1.json",
+        "sha256": "7676e60eed1a5d6133b6a9f53fe29313e31b813bd1394450b7b65c377e05d6fa"
+      },
+      {
+        "name": "fresh_hybrid_candidate_plan_ingest",
+        "path": "docs/audit/ml-fresh-hybrid-candidate-plan-ingest-v1.json",
+        "sha256": "953a894aef22501135e8c0990726036cf796701582eb9c98fc540234be9a2133"
+      },
+      {
+        "name": "fresh_surface_policy",
+        "path": "docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json",
+        "sha256": "10e372bb3236382c977b3cc8dbf56bfa1bff7adb93c6bf4f6673361cfa15a011"
+      }
+    ],
+    "limit": null,
+    "mock_embeddings": false,
+    "snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518"
+  },
+  "shadow_and_production_blockers": {
+    "confirmatory_validation_complete": false,
+    "production_default_allowed": false,
+    "shadow_scoring_allowed": false
+  },
+  "sql_write_report": {
+    "affected_row_counts": {
+      "embeddings": 358
+    },
+    "allowed_tables": [
+      "embeddings"
+    ],
+    "paper_scores_written": false,
+    "production_tables_modified": false,
+    "ranking_runs_written": false,
+    "writes_enabled": true
+  }
+}
