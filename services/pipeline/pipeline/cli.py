@@ -3073,6 +3073,55 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_hybrid_candidate_plan_ingest_parser = subparsers.add_parser(
+        "ml-fresh-hybrid-candidate-plan-ingest",
+        help="Ingest committed fresh hybrid candidate plan into a local eval-only source snapshot",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--fresh-hybrid-corpus-candidate-plan",
+        required=True,
+        help="Path to ml-fresh-hybrid-corpus-candidate-plan-v1 JSON",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh hybrid candidate plan ingest JSON",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--snapshot-version",
+        default=None,
+        help="Source snapshot version to create (default: source-snapshot-fresh-hybrid-v1-YYYYMMDD)",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--ingest-version",
+        default="ml-fresh-hybrid-candidate-plan-ingest-v1",
+        help="Ingest version string to write (default: ml-fresh-hybrid-candidate-plan-ingest-v1)",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and report only; do not connect or write DB rows",
+    )
+    ml_fresh_hybrid_candidate_plan_ingest_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_tiny_baseline_rollup_parser = subparsers.add_parser(
         "ml-tiny-baseline-rollup",
         help="Offline emerging rollup: fold robustness + ablations vs heuristic (read-only DB)",
@@ -4735,6 +4784,34 @@ def main() -> None:
             )
         except MLFreshHybridCorpusCandidatePlanError as e:
             print(f"ml-fresh-hybrid-corpus-candidate-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-hybrid-candidate-plan-ingest":
+        from pipeline.ml_fresh_hybrid_candidate_plan_ingest import (
+            MLFreshHybridCandidatePlanIngestError,
+            write_ml_fresh_hybrid_candidate_plan_ingest,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            write_ml_fresh_hybrid_candidate_plan_ingest(
+                fresh_hybrid_corpus_candidate_plan_path=Path(args.fresh_hybrid_corpus_candidate_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                snapshot_version=args.snapshot_version,
+                database_url=args.database_url,
+                ingest_version=str(args.ingest_version),
+                dry_run=bool(args.dry_run),
+                repo_root=repo_root,
+            )
+        except MLFreshHybridCandidatePlanIngestError as e:
+            print(f"ml-fresh-hybrid-candidate-plan-ingest: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
