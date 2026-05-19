@@ -1,0 +1,107 @@
+{
+  "blocked_actions": [
+    "hybrid_validation",
+    "shadow",
+    "production_default",
+    "api_web_change"
+  ],
+  "candidate_source_handoff": {
+    "commands": {
+      "fresh_eval_surface_hybrid_materialize": "py -m pipeline.cli ml-fresh-eval-surface-hybrid-materialize --fresh-surface-policy ../../docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json --label-dataset ../../docs/audit/ml-label-dataset-v8.json --conflict-policy ../../docs/audit/ml-label-conflict-policy.md --ranking-run-id rank-9f4b2a2084 --family emerging --output ../../docs/audit/ml-fresh-eval-surface-hybrid-v1.json --markdown-output ../../docs/audit/ml-fresh-eval-surface-hybrid-v1.md",
+      "fresh_product_candidate_ranking_source": "py -m pipeline.cli ml-fresh-product-candidate-ranking-source --fresh-eval-labeling-plan ../../docs/audit/ml-fresh-eval-labeling-plan-hybrid-v1.json --fresh-surface-policy ../../docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json --label-dataset ../../docs/audit/ml-label-dataset-v8.json --conflict-policy ../../docs/audit/ml-label-conflict-policy.md --ranking-run-id rank-9f4b2a2084 --family emerging --output ../../docs/audit/ml-fresh-product-candidate-ranking-source-v1.json --markdown-output ../../docs/audit/ml-fresh-product-candidate-ranking-source-v1.md",
+      "note": "Use the pinned ranking_run_id so later discovery/materialization stays on this eval-only source."
+    },
+    "family": "emerging",
+    "ranking_run_id": "rank-9f4b2a2084",
+    "snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518"
+  },
+  "caveats": [
+    "Eval-only product-candidate ranking materialization for the fresh hybrid confirmation path.",
+    "Ranking is delegated to existing execute_ranking_run machinery; no production/default ranking pin is changed.",
+    "No new embeddings, hydration, clustering, hybrid validation, label import, API/web change, shadow, or production change.",
+    "cluster_version is omitted because the upstream embedding artifact recorded cluster_required_before_ranking=false.",
+    "paper_scores are source-discovery material for later fresh-surface materialization, not confirmatory validation.",
+    "No shadow or production authorization."
+  ],
+  "metadata": {
+    "artifact_type": "ml_fresh_hybrid_product_candidate_ranking",
+    "artifact_version": "ml-fresh-hybrid-product-candidate-ranking-v1",
+    "caveats": [
+      "Eval-only product-candidate ranking materialization for the fresh hybrid confirmation path.",
+      "Ranking is delegated to existing execute_ranking_run machinery; no production/default ranking pin is changed.",
+      "No new embeddings, hydration, clustering, hybrid validation, label import, API/web change, shadow, or production change.",
+      "cluster_version is omitted because the upstream embedding artifact recorded cluster_required_before_ranking=false.",
+      "paper_scores are source-discovery material for later fresh-surface materialization, not confirmatory validation.",
+      "No shadow or production authorization."
+    ],
+    "database_target_redacted": "postgresql://research_radar:***@localhost:5432/research_radar",
+    "dry_run": false,
+    "embedding_version": "fresh-hybrid-text-embedding-v1",
+    "eval_only": true,
+    "family": "emerging",
+    "generated_at": "2026-05-19T04:29:37Z",
+    "inputs": [
+      {
+        "name": "fresh_hybrid_snapshot_embeddings",
+        "path": "docs/audit/ml-fresh-hybrid-snapshot-embeddings-v1.json",
+        "sha256": "13af8f859e9a4c8eabbd62dbe1b410610a849ef89c46600898ecfb3aafdff631"
+      },
+      {
+        "name": "fresh_hybrid_snapshot_hydration",
+        "path": "docs/audit/ml-fresh-hybrid-snapshot-hydration-v1.json",
+        "sha256": "7676e60eed1a5d6133b6a9f53fe29313e31b813bd1394450b7b65c377e05d6fa"
+      },
+      {
+        "name": "fresh_hybrid_candidate_plan_ingest",
+        "path": "docs/audit/ml-fresh-hybrid-candidate-plan-ingest-v1.json",
+        "sha256": "953a894aef22501135e8c0990726036cf796701582eb9c98fc540234be9a2133"
+      },
+      {
+        "name": "fresh_surface_policy",
+        "path": "docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json",
+        "sha256": "10e372bb3236382c977b3cc8dbf56bfa1bff7adb93c6bf4f6673361cfa15a011"
+      }
+    ],
+    "ranking_version": "fresh-hybrid-product-candidate-ranking-v1",
+    "snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518"
+  },
+  "ranking_result": {
+    "bridge_weight_for_family_bridge": 0.0,
+    "cluster_version": null,
+    "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+    "embedding_version": "fresh-hybrid-text-embedding-v1",
+    "emerging_family_work_count": 358,
+    "paper_scores_by_family": {
+      "bridge": 358,
+      "emerging": 358,
+      "undercited": 81
+    },
+    "paper_scores_written_count": 797,
+    "ranking_run_id": "rank-9f4b2a2084",
+    "ranking_version": "fresh-hybrid-product-candidate-ranking-v1",
+    "recommended_next_stage": "rerun_fresh_product_candidate_ranking_source_after_ranking_v1",
+    "status": "succeeded",
+    "total_candidate_works": 358
+  },
+  "shadow_and_production_blockers": {
+    "confirmatory_validation_complete": false,
+    "production_default_allowed": false,
+    "shadow_scoring_allowed": false
+  },
+  "sql_write_report": {
+    "affected_row_counts": {
+      "paper_scores": 797,
+      "ranking_runs": 2
+    },
+    "allowed_tables": [
+      "ranking_runs",
+      "paper_scores"
+    ],
+    "embeddings_modified": false,
+    "paper_scores_written": true,
+    "production_tables_modified": false,
+    "ranking_runs_written": true,
+    "works_modified": false,
+    "writes_enabled": true
+  }
+}

@@ -262,6 +262,15 @@ def test_rank_3904_underpowered_source_is_considered_but_not_selected(tmp_path: 
     assert payload["selected_source_freeze"]["ranking_run_id"] == "rank-big"
 
 
+def test_explicit_ranking_run_id_freezes_only_that_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = _build(tmp_path, monkeypatch, ranking_run_id="rank-big")
+
+    assert [source["ranking_run_id"] for source in payload["candidate_sources_considered"]] == ["rank-big"]
+    assert payload["source_selection"]["status"] == "source_frozen_needs_materialization"
+    assert payload["selected_source_freeze"]["ranking_run_id"] == "rank-big"
+    assert "explicit ranking_run_id rank-big" in payload["source_selection"]["selection_rule"]
+
+
 def test_old_overlap_excluded_from_confirmatory_count(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     payload = _build(tmp_path, monkeypatch)
     selected = payload["selected_source_freeze"]

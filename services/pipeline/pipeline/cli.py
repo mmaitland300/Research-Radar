@@ -832,6 +832,80 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_hybrid_product_candidate_ranking_parser = subparsers.add_parser(
+        "ml-fresh-hybrid-product-candidate-ranking",
+        help="Run eval-only product-candidate ranking for the fresh hybrid snapshot with audit provenance",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--fresh-hybrid-snapshot-embeddings",
+        required=True,
+        help="Path to ml-fresh-hybrid-snapshot-embeddings-v1 JSON",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--fresh-hybrid-snapshot-hydration",
+        required=True,
+        help="Path to ml-fresh-hybrid-snapshot-hydration-v1 JSON",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--fresh-hybrid-candidate-plan-ingest",
+        required=True,
+        help="Path to ml-fresh-hybrid-candidate-plan-ingest-v1 JSON",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--snapshot-version",
+        default="source-snapshot-fresh-hybrid-v1-20260518",
+        help="Source snapshot version to rank (default: source-snapshot-fresh-hybrid-v1-20260518)",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--embedding-version",
+        default="fresh-hybrid-text-embedding-v1",
+        help="Embedding version label (default: fresh-hybrid-text-embedding-v1)",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--ranking-version",
+        default="fresh-hybrid-product-candidate-ranking-v1",
+        help="Ranking version label (default: fresh-hybrid-product-candidate-ranking-v1)",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--family",
+        default="emerging",
+        help="Recommendation family used for handoff commands (default: emerging)",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate inputs and planned parameters only; no ranking_runs or paper_scores writes",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh hybrid product-candidate ranking JSON",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--artifact-version",
+        default="ml-fresh-hybrid-product-candidate-ranking-v1",
+        help="Artifact version string to write (default: ml-fresh-hybrid-product-candidate-ranking-v1)",
+    )
+    ml_fresh_hybrid_product_candidate_ranking_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     cluster_inspection_parser = subparsers.add_parser(
         "cluster-inspection",
         help="Read-only cluster coherence/provenance inspection for one explicit snapshot + embedding + cluster identity",
@@ -3111,6 +3185,11 @@ def main() -> None:
         help="Product-candidate family to inspect (default: emerging)",
     )
     ml_fresh_product_candidate_ranking_source_parser.add_argument(
+        "--ranking-run-id",
+        default=None,
+        help="Optional explicit ranking_run_id to freeze instead of discovering the largest source",
+    )
+    ml_fresh_product_candidate_ranking_source_parser.add_argument(
         "--min-confirmatory-candidate-works",
         type=int,
         default=None,
@@ -5099,6 +5178,7 @@ def main() -> None:
                 markdown_output_path=out_md,
                 database_url=args.database_url,
                 family=str(args.family),
+                ranking_run_id=args.ranking_run_id,
                 min_confirmatory_candidate_works=args.min_confirmatory_candidate_works,
                 source_version=str(args.source_version),
                 repo_root=repo_root,
@@ -5470,6 +5550,40 @@ def main() -> None:
         print(payload["metadata"]["snapshot_version"])
         print(payload["metadata"]["embedding_version"])
         print(payload["embedding_result"]["recommended_next_stage"])
+        return
+
+    if args.command == "ml-fresh-hybrid-product-candidate-ranking":
+        from pipeline.ml_fresh_hybrid_product_candidate_ranking import (
+            MLFreshHybridProductCandidateRankingError,
+            write_ml_fresh_hybrid_product_candidate_ranking,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = write_ml_fresh_hybrid_product_candidate_ranking(
+                fresh_hybrid_snapshot_embeddings_path=Path(args.fresh_hybrid_snapshot_embeddings),
+                fresh_hybrid_snapshot_hydration_path=Path(args.fresh_hybrid_snapshot_hydration),
+                fresh_hybrid_candidate_plan_ingest_path=Path(args.fresh_hybrid_candidate_plan_ingest),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                snapshot_version=args.snapshot_version,
+                embedding_version=str(args.embedding_version),
+                ranking_version=str(args.ranking_version),
+                family=str(args.family),
+                database_url=args.database_url,
+                dry_run=bool(args.dry_run),
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                artifact_version=str(args.artifact_version),
+                repo_root=repo_root,
+            )
+        except MLFreshHybridProductCandidateRankingError as e:
+            print(f"ml-fresh-hybrid-product-candidate-ranking: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(payload["ranking_result"]["ranking_run_id"])
+        print(payload["ranking_result"]["paper_scores_written_count"])
+        print(payload["ranking_result"]["recommended_next_stage"])
         return
 
     if args.command == "cluster-inspection":

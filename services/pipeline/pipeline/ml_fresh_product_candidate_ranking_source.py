@@ -603,6 +603,7 @@ def build_ml_fresh_product_candidate_ranking_source_payload(
     conflict_policy_path: Path,
     database_url: str | None = None,
     family: str = DEFAULT_FAMILY,
+    ranking_run_id: str | None = None,
     min_confirmatory_candidate_works: int | None = None,
     source_version: str = SOURCE_VERSION,
     repo_root: Path | None = None,
@@ -639,14 +640,18 @@ def build_ml_fresh_product_candidate_ranking_source_payload(
 
     old_eval_ids = _old_eval_work_ids(policy_metadata, repo_root=root)
     label_groups = _label_groups(label_rows)
-    source_rows = _query_candidate_source_rows(conn, family)
     considered: list[dict[str, Any]] = []
-    for source in source_rows:
-        rid = str(source.get("ranking_run_id") or "").strip()
-        if not rid:
-            continue
-        metadata = _query_ranking_run_metadata(conn, rid) or source
-        candidate_rows = _query_candidate_pool(conn, ranking_run_id=rid, family=family)
+    explicit_ranking_run_id = (ranking_run_id or "").strip()
+    if explicit_ranking_run_id:
+        metadata = _query_ranking_run_metadata(conn, explicit_ranking_run_id)
+        if metadata is None:
+            raise MLFreshProductCandidateRankingSourceError(
+                f"ranking_run_id not found in local Postgres: {explicit_ranking_run_id}"
+            )
+        candidate_rows = _query_candidate_pool(conn, ranking_run_id=explicit_ranking_run_id, family=family)
+        source = dict(metadata)
+        source["ranking_run_id"] = explicit_ranking_run_id
+        source["paper_scores_row_count"] = len(candidate_rows)
         considered.append(
             _build_source_summary(
                 source=source,
@@ -659,6 +664,26 @@ def build_ml_fresh_product_candidate_ranking_source_payload(
                 policy_thresholds=policy_thresholds,
             )
         )
+    else:
+        source_rows = _query_candidate_source_rows(conn, family)
+        for source in source_rows:
+            rid = str(source.get("ranking_run_id") or "").strip()
+            if not rid:
+                continue
+            metadata = _query_ranking_run_metadata(conn, rid) or source
+            candidate_rows = _query_candidate_pool(conn, ranking_run_id=rid, family=family)
+            considered.append(
+                _build_source_summary(
+                    source=source,
+                    candidate_rows=candidate_rows,
+                    metadata=metadata,
+                    family=family,
+                    old_eval_ids=old_eval_ids,
+                    label_groups=label_groups,
+                    min_confirmatory_candidate_works=min_candidates,
+                    policy_thresholds=policy_thresholds,
+                )
+            )
     considered.sort(
         key=lambda source: (
             int(source.get("confirmatory_eligible_work_count") or 0),
@@ -677,11 +702,17 @@ def build_ml_fresh_product_candidate_ranking_source_payload(
         "database_target_redacted": None,
         "read_only_contract": "SELECT-only queries; no database mutations",
     }
-    selection_rule = (
-        "largest confirmatory_eligible_work_count among policy-valid sources with count >= "
-        f"{min_candidates}; tie-break by newest ranking_run metadata when available. "
-        f"The current underpowered freeze SHA {CURRENT_UNDERPOWERED_WORK_SET_SHA256} is considered but not selected when a strictly larger valid source exists."
-    )
+    if explicit_ranking_run_id:
+        selection_rule = (
+            f"explicit ranking_run_id {explicit_ranking_run_id} was supplied; freeze that source if it is policy-valid "
+            f"and has confirmatory_eligible_work_count >= {min_candidates} after old-217 exclusion."
+        )
+    else:
+        selection_rule = (
+            "largest confirmatory_eligible_work_count among policy-valid sources with count >= "
+            f"{min_candidates}; tie-break by newest ranking_run metadata when available. "
+            f"The current underpowered freeze SHA {CURRENT_UNDERPOWERED_WORK_SET_SHA256} is considered but not selected when a strictly larger valid source exists."
+        )
     selected_freeze: dict[str, Any] | None = None
     if selected is not None:
         selected_freeze = {
@@ -845,6 +876,7 @@ def write_ml_fresh_product_candidate_ranking_source(
     markdown_output_path: Path,
     database_url: str | None = None,
     family: str = DEFAULT_FAMILY,
+    ranking_run_id: str | None = None,
     min_confirmatory_candidate_works: int | None = None,
     source_version: str = SOURCE_VERSION,
     repo_root: Path | None = None,
@@ -860,6 +892,7 @@ def write_ml_fresh_product_candidate_ranking_source(
             conflict_policy_path=conflict_policy_path,
             database_url=dsn,
             family=family,
+            ranking_run_id=ranking_run_id,
             min_confirmatory_candidate_works=min_confirmatory_candidate_works,
             source_version=source_version,
             repo_root=repo_root,
