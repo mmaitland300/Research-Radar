@@ -653,6 +653,70 @@ def main() -> None:
         action="store_true",
         help="Offline mode for tests/CI: skip live OpenAlex calls and keep works unchanged unless mocked in tests",
     )
+    ml_fresh_hybrid_snapshot_hydrate_parser = subparsers.add_parser(
+        "ml-fresh-hybrid-snapshot-hydrate",
+        help="Hydrate fresh hybrid source snapshot metadata/text with audit provenance",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--fresh-hybrid-candidate-plan-ingest",
+        required=True,
+        help="Path to ml-fresh-hybrid-candidate-plan-ingest-v1 JSON",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--fresh-hybrid-corpus-candidate-plan",
+        required=True,
+        help="Path to ml-fresh-hybrid-corpus-candidate-plan-v1 JSON",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--snapshot-version",
+        default=None,
+        help="Source snapshot version to hydrate (default: value from ingest artifact)",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Optional OpenAlex User-Agent contact; raw mailto is not stored in artifacts",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Deterministic offline OpenAlex hydration for tests/dry runs",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and read before-counts only; no OpenAlex calls and no writes",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh hybrid hydration JSON",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--hydration-version",
+        default="ml-fresh-hybrid-snapshot-hydration-v1",
+        help="Hydration version string to write (default: ml-fresh-hybrid-snapshot-hydration-v1)",
+    )
+    ml_fresh_hybrid_snapshot_hydrate_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     corpus_v2_embed_parser = subparsers.add_parser(
         "corpus-v2-embed",
         help="Generate versioned title+abstract embeddings for one hydrated corpus-v2 snapshot",
@@ -5248,6 +5312,37 @@ def main() -> None:
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
         print(summary["snapshot_version"])
         print(summary["hydration_run_id"])
+        return
+
+    if args.command == "ml-fresh-hybrid-snapshot-hydrate":
+        from pipeline.ml_fresh_hybrid_snapshot_hydration import (
+            MLFreshHybridSnapshotHydrationError,
+            write_ml_fresh_hybrid_snapshot_hydration,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = write_ml_fresh_hybrid_snapshot_hydration(
+                fresh_hybrid_candidate_plan_ingest_path=Path(args.fresh_hybrid_candidate_plan_ingest),
+                fresh_hybrid_corpus_candidate_plan_path=Path(args.fresh_hybrid_corpus_candidate_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                snapshot_version=args.snapshot_version,
+                database_url=args.database_url,
+                mailto=args.mailto,
+                mock_openalex=bool(args.mock_openalex),
+                dry_run=bool(args.dry_run),
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                hydration_version=str(args.hydration_version),
+                repo_root=repo_root,
+            )
+        except MLFreshHybridSnapshotHydrationError as e:
+            print(f"ml-fresh-hybrid-snapshot-hydrate: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(payload["metadata"]["snapshot_version"])
+        print(payload["hydration_result"]["recommended_next_stage"])
         return
 
     if args.command == "corpus-v2-embed":
