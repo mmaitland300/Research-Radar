@@ -2949,6 +2949,77 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser = subparsers.add_parser(
+        "ml-fresh-eval-labeling-worksheet-hybrid",
+        help="Write reviewer-blank CSV plus row_id-keyed context for fresh hybrid eval labeling",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--fresh-eval-surface",
+        required=True,
+        help="Path to ml-fresh-eval-surface-hybrid-v1 JSON",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v8 JSON",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write reviewer CSV",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--context-output",
+        required=True,
+        help="Path to write row_id-keyed JSON sidecar",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--rows",
+        type=int,
+        default=120,
+        help="Requested worksheet row count, capped at available unlabeled eligible works (default: 120)",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--seed",
+        type=int,
+        default=20260519,
+        help="Deterministic sampling seed (default: 20260519)",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--worksheet-version",
+        default="ml-fresh-eval-labeling-worksheet-hybrid-v1",
+        help="Worksheet version string to write (default: ml-fresh-eval-labeling-worksheet-hybrid-v1)",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--review-pool-variant",
+        default="ml_fresh_hybrid_eval_v1",
+        help="Review pool variant to write into CSV/context rows (default: ml_fresh_hybrid_eval_v1)",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Optional local Postgres URL for read-only row metadata enrichment; hosted production URLs are refused",
+    )
+    ml_fresh_eval_labeling_worksheet_hybrid_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_candidate_source_expansion_plan_parser = subparsers.add_parser(
         "ml-fresh-candidate-source-expansion-plan",
         help="Write a plan-only artifact for expanding fresh product-candidate sources before hybrid validation",
@@ -4907,6 +4978,41 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-fresh-eval-labeling-worksheet-hybrid":
+        from pipeline.ml_fresh_eval_labeling_worksheet_hybrid import (
+            MLFreshEvalLabelingWorksheetHybridError,
+            write_ml_fresh_eval_labeling_worksheet_hybrid,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_csv = Path(args.output)
+        out_context = Path(args.context_output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_fresh_eval_labeling_worksheet_hybrid(
+                fresh_eval_surface_path=Path(args.fresh_eval_surface),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                output_path=out_csv,
+                context_output_path=out_context,
+                markdown_output_path=out_md,
+                rows=int(args.rows),
+                seed=int(args.seed),
+                worksheet_version=str(args.worksheet_version),
+                review_pool_variant=str(args.review_pool_variant),
+                database_url=args.database_url,
+                repo_root=repo_root,
+            )
+        except MLFreshEvalLabelingWorksheetHybridError as e:
+            print(f"ml-fresh-eval-labeling-worksheet-hybrid: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_csv.resolve(), file=sys.stderr)
+        print(out_context.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(f"achieved_rows={payload['metadata']['achieved_rows']}", file=sys.stderr)
         return
 
     if args.command == "ml-fresh-candidate-source-expansion-plan":

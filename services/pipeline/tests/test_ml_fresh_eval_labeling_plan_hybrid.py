@@ -250,6 +250,6 @@ def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:
 
     cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
     start = cli_source.index('"ml-fresh-eval-labeling-plan-hybrid"')
-    end = cli_source.index("ml_source_split_tiny_baseline_parser", start)
+    end = cli_source.index("ml_fresh_eval_labeling_worksheet_hybrid_parser", start)
     parser_block = cli_source[start:end]
     assert "--database-url" not in parser_block
