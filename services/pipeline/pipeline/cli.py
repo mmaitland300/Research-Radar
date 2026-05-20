@@ -1581,6 +1581,63 @@ def main() -> None:
         default="ml-label-dataset-v8",
         help="Version string for the new artifact and appended transfer-gap rows (default: ml-label-dataset-v8)",
     )
+    ml_label_dataset_v9_parser = subparsers.add_parser(
+        "ml-label-dataset-v9-fresh-hybrid-ingest",
+        help=(
+            "Build ml-label-dataset v9 from v8 plus the validated fresh-hybrid labeled worksheet "
+            "and row_id-keyed context sidecar"
+        ),
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--base-dataset",
+        required=True,
+        help="Path to base ml-label-dataset JSON (for v9, docs/audit/ml-label-dataset-v8.json)",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--blank-worksheet",
+        required=True,
+        help="Path to blank fresh hybrid eval CSV template",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--labeled-worksheet",
+        required=True,
+        help="Path to completed fresh hybrid eval labeled CSV",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--context-sidecar",
+        required=True,
+        help="Path to fresh hybrid eval row_id-keyed context sidecar JSON",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to label conflict policy Markdown (provenance only; no conflict resolution)",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--fresh-eval-surface",
+        default=None,
+        help="Optional path to ml-fresh-eval-surface-hybrid-v1 JSON for candidate surface SHA validation",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-label-dataset v9 JSON",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown data card",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Repository root (default: parent of services/pipeline)",
+    )
+    ml_label_dataset_v9_parser.add_argument(
+        "--dataset-version",
+        default="ml-label-dataset-v9",
+        help="Version string for the new artifact and appended fresh-hybrid rows (default: ml-label-dataset-v9)",
+    )
     ml_offline_baseline_parser = subparsers.add_parser(
         "ml-offline-baseline-eval",
         help="Read-only offline label baseline metrics (join ml-label-dataset to paper_scores for one ranking_run_id)",
@@ -5472,6 +5529,34 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
             print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-label-dataset-v9-fresh-hybrid-ingest":
+        from pipeline.ml_label_dataset import MLLabelDatasetError, write_ml_label_dataset_v9_fresh_hybrid_ingest
+
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parents[3]
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        dver = (args.dataset_version or "").strip() or "ml-label-dataset-v9"
+        fresh_surface = Path(args.fresh_eval_surface) if args.fresh_eval_surface else None
+        try:
+            write_ml_label_dataset_v9_fresh_hybrid_ingest(
+                repo_root=repo_root,
+                base_dataset_path=Path(args.base_dataset),
+                blank_worksheet_path=Path(args.blank_worksheet),
+                labeled_worksheet_path=Path(args.labeled_worksheet),
+                context_sidecar_path=Path(args.context_sidecar),
+                conflict_policy_path=Path(args.conflict_policy),
+                fresh_eval_surface_path=fresh_surface,
+                json_path=out_json,
+                markdown_path=out_md,
+                dataset_version=dver,
+            )
+        except MLLabelDatasetError as e:
+            print(f"ml-label-dataset-v9-fresh-hybrid-ingest: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
         return
 
     if args.command == "ml-label-dataset":
