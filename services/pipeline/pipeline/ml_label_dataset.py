@@ -53,6 +53,9 @@ FRESH_HYBRID_WORKSHEET_VERSION = "ml-fresh-eval-labeling-worksheet-hybrid-v1"
 FRESH_HYBRID_REVIEW_POOL_VARIANT = "ml_fresh_hybrid_eval_v1"
 FRESH_HYBRID_CONTEXT_ARTIFACT_TYPE = "ml_fresh_eval_labeling_worksheet_hybrid"
 FRESH_HYBRID_SURFACE_VERSION = "ml-fresh-eval-surface-hybrid-v1"
+TOPUP_WORKSHEET_VERSION = "ml-fresh-eval-positive-topup-worksheet-hybrid-v1"
+TOPUP_REVIEW_POOL_VARIANT = "ml_fresh_hybrid_positive_topup_v1"
+TOPUP_CONTEXT_ARTIFACT_TYPE = "ml_fresh_eval_positive_topup_worksheet_hybrid"
 ALLOWED_RELEVANCE_LABELS = {"good", "acceptable", "miss", "irrelevant"}
 ALLOWED_NOVELTY_LABELS = {"surprising", "useful", "obvious", "not_useful", "neither"}
 ALLOWED_BRIDGE_LIKE_LABELS = {"yes", "partial", "no", "not_applicable"}
@@ -528,6 +531,35 @@ def _read_fresh_hybrid_sidecar_rows(context_sidecar_path: Path) -> tuple[dict[st
         row_id = _norm_ws(row.get("row_id"))
         if not row_id:
             raise MLLabelDatasetError(f"{context_sidecar_path} fresh-hybrid sidecar row {idx} has blank row_id")
+        if row_id in by_id:
+            raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
+        by_id[row_id] = row
+    return payload, by_id
+
+
+def _read_fresh_hybrid_positive_topup_sidecar_rows(
+    context_sidecar_path: Path,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    payload = _load_json_object(context_sidecar_path)
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        raise MLLabelDatasetError(f"{context_sidecar_path} missing metadata object")
+    artifact_type = _norm_ws(metadata.get("artifact_type"))
+    if artifact_type != TOPUP_CONTEXT_ARTIFACT_TYPE:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} metadata.artifact_type={artifact_type!r} does not match "
+            f"{TOPUP_CONTEXT_ARTIFACT_TYPE!r}"
+        )
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise MLLabelDatasetError(f"{context_sidecar_path} missing rows array")
+    by_id: dict[str, dict[str, Any]] = {}
+    for idx, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise MLLabelDatasetError(f"{context_sidecar_path} positive-topup sidecar row {idx} is not an object")
+        row_id = _norm_ws(row.get("row_id"))
+        if not row_id:
+            raise MLLabelDatasetError(f"{context_sidecar_path} positive-topup sidecar row {idx} has blank row_id")
         if row_id in by_id:
             raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
         by_id[row_id] = row
@@ -2259,6 +2291,348 @@ def build_ml_label_dataset_v9_fresh_hybrid_ingest(
     )
 
 
+def build_ml_label_dataset_v10_fresh_positive_topup_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    fresh_eval_surface_path: Path | None = None,
+    dataset_version: str = "ml-label-dataset-v10",
+) -> dict[str, Any]:
+    """Build v10 as v9 rows unchanged plus the validated positive top-up worksheet."""
+    from pipeline.ml_fresh_eval_positive_topup_worksheet_hybrid import stable_row_id as stable_topup_row_id
+
+    root = repo_root.resolve()
+    base_path = base_dataset_path.resolve()
+    blank_path = blank_worksheet_path.resolve()
+    labeled_path = labeled_worksheet_path.resolve()
+    sidecar_path = context_sidecar_path.resolve()
+    conflict_path = conflict_policy_path.resolve()
+    input_paths = [base_path, blank_path, labeled_path, sidecar_path, conflict_path]
+    surface_path = fresh_eval_surface_path.resolve() if fresh_eval_surface_path is not None else None
+    if surface_path is not None:
+        input_paths.append(surface_path)
+    for path in input_paths:
+        if not path.is_file():
+            raise MLLabelDatasetError(f"required input not found: {path}")
+
+    base_payload = _load_json_object(base_path)
+    base_metadata = base_payload.get("metadata") if isinstance(base_payload.get("metadata"), dict) else {}
+    base_version = _norm_ws(base_payload.get("dataset_version") or base_metadata.get("dataset_version"))
+    if base_version != "ml-label-dataset-v9":
+        raise MLLabelDatasetError(f"{base_path} dataset_version={base_version!r}; expected 'ml-label-dataset-v9'")
+    base_rows_raw = base_payload.get("rows")
+    if not isinstance(base_rows_raw, list):
+        raise MLLabelDatasetError(f"{base_path} missing rows array")
+    base_rows: list[dict[str, Any]] = copy.deepcopy(base_rows_raw)
+
+    blank_fieldnames, blank_rows = _read_csv_rows(blank_path)
+    labeled_fieldnames, labeled_rows = _read_csv_rows(labeled_path)
+    if len(labeled_rows) != 22:
+        raise MLLabelDatasetError(f"{labeled_path} must contain exactly 22 positive-topup labeled data rows")
+
+    _validate_labeled_matches_blank_template(
+        blank_path=blank_path,
+        blank_fieldnames=blank_fieldnames,
+        blank_rows=blank_rows,
+        labeled_path=labeled_path,
+        labeled_fieldnames=labeled_fieldnames,
+        labeled_rows=labeled_rows,
+    )
+
+    sidecar_payload, sidecar_by_id = _read_fresh_hybrid_positive_topup_sidecar_rows(sidecar_path)
+    sidecar_metadata = sidecar_payload["metadata"]
+    labeled_ids = {_norm_ws(r.get("row_id")) for r in labeled_rows}
+    if set(sidecar_by_id) != labeled_ids:
+        missing = sorted(labeled_ids - set(sidecar_by_id))
+        extra = sorted(set(sidecar_by_id) - labeled_ids)
+        raise MLLabelDatasetError(
+            f"positive-topup sidecar row_id set differs from labeled CSV; missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    sidecar_ws_version = _norm_ws(sidecar_metadata.get("worksheet_version"))
+    if sidecar_ws_version != TOPUP_WORKSHEET_VERSION:
+        raise MLLabelDatasetError(
+            f"positive-topup sidecar worksheet_version={sidecar_ws_version!r} does not match "
+            f"{TOPUP_WORKSHEET_VERSION!r}"
+        )
+    sidecar_pool = _norm_ws(sidecar_metadata.get("review_pool_variant"))
+    if sidecar_pool != TOPUP_REVIEW_POOL_VARIANT:
+        raise MLLabelDatasetError(
+            f"positive-topup sidecar review_pool_variant={sidecar_pool!r} does not match "
+            f"{TOPUP_REVIEW_POOL_VARIANT!r}"
+        )
+    seed = sidecar_metadata.get("seed")
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        raise MLLabelDatasetError("positive-topup sidecar metadata.seed must be an integer")
+    surface_summary = sidecar_metadata.get("source_surface_summary")
+    if not isinstance(surface_summary, dict):
+        raise MLLabelDatasetError("positive-topup sidecar missing metadata.source_surface_summary")
+    positive_threshold = sidecar_metadata.get("positive_threshold_before_labeling")
+    if not isinstance(positive_threshold, dict):
+        raise MLLabelDatasetError("positive-topup sidecar missing metadata.positive_threshold_before_labeling")
+
+    if surface_path is not None:
+        surface_payload = _load_json_object(surface_path)
+        surface_metadata = surface_payload.get("metadata")
+        if not isinstance(surface_metadata, dict):
+            raise MLLabelDatasetError(f"{surface_path} missing metadata object")
+        if surface_metadata.get("surface_version") != FRESH_HYBRID_SURFACE_VERSION:
+            raise MLLabelDatasetError(
+                f"{surface_path} metadata.surface_version must be {FRESH_HYBRID_SURFACE_VERSION!r}"
+            )
+        if surface_metadata.get("label_dataset_version") != "ml-label-dataset-v9":
+            raise MLLabelDatasetError(
+                f"{surface_path} metadata.label_dataset_version must be 'ml-label-dataset-v9' for top-up ingest"
+            )
+        expected_version = surface_metadata.get("expected_label_dataset_version")
+        if expected_version is not None and expected_version != "ml-label-dataset-v9":
+            raise MLLabelDatasetError(
+                f"{surface_path} metadata.expected_label_dataset_version must be 'ml-label-dataset-v9'"
+            )
+        candidate_pool = surface_payload.get("candidate_pool")
+        surface_sha = _norm_ws(candidate_pool.get("candidate_work_set_sha256") if isinstance(candidate_pool, dict) else None)
+        sidecar_surface_sha = _norm_ws(surface_summary.get("candidate_work_set_sha256"))
+        if surface_sha != sidecar_surface_sha:
+            raise MLLabelDatasetError(
+                "fresh eval surface candidate_work_set_sha256 does not match positive-topup sidecar source surface summary"
+            )
+
+    source_rel = _repo_relative(labeled_path, repo_root=root)
+    source_sha = sha256_file(labeled_path)
+    topup_rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for source_row_number, row in enumerate(labeled_rows, start=2):
+        row_id = _norm_ws(row.get("row_id"))
+        if row_id in seen:
+            raise MLLabelDatasetError(f"duplicate positive-topup labeled row_id {row_id}")
+        seen.add(row_id)
+        _validate_nonempty_allowed_labels(row, source_row_number=source_row_number)
+
+        worksheet_version = _norm_ws(row.get("worksheet_version"))
+        if worksheet_version != TOPUP_WORKSHEET_VERSION:
+            raise MLLabelDatasetError(
+                f"positive-topup labeled row {source_row_number} has worksheet_version={worksheet_version!r}"
+            )
+        review_pool_variant = _norm_ws(row.get("review_pool_variant"))
+        if review_pool_variant != TOPUP_REVIEW_POOL_VARIANT:
+            raise MLLabelDatasetError(
+                f"positive-topup labeled row {source_row_number} has review_pool_variant={review_pool_variant!r}"
+            )
+
+        paper_id = _norm_ws(row.get("paper_id"))
+        openalex_work_id = _norm_ws(row.get("openalex_work_id"))
+        work_id = _norm_ws(row.get("work_id"))
+        expected_work_id = paper_id_to_work_id(paper_id)
+        if not expected_work_id:
+            raise MLLabelDatasetError(
+                f"positive-topup labeled row {source_row_number} has non-OpenAlex paper_id={paper_id!r}"
+            )
+        if work_id != expected_work_id or openalex_work_id != expected_work_id:
+            raise MLLabelDatasetError(
+                f"positive-topup labeled row {source_row_number} must keep OpenAlex W token in work_id/openalex_work_id"
+            )
+        if work_id.isdigit():
+            raise MLLabelDatasetError(f"positive-topup labeled row {source_row_number} has numeric work_id={work_id!r}")
+
+        context_row = copy.deepcopy(sidecar_by_id[row_id])
+        context_canonical = _norm_ws(context_row.get("canonical_openalex_work_id"))
+        if context_canonical != expected_work_id:
+            raise MLLabelDatasetError(f"positive-topup sidecar canonical_openalex_work_id mismatch for row_id={row_id}")
+        expected_row_id = stable_topup_row_id(
+            worksheet_version=sidecar_ws_version,
+            seed=seed,
+            canonical_openalex_work_id=context_canonical,
+        )
+        if row_id != expected_row_id:
+            raise MLLabelDatasetError(
+                f"positive-topup labeled row {source_row_number} row_id does not match worksheet_version|seed|canonical_openalex_work_id"
+            )
+        context_paper_id = _norm_ws(context_row.get("paper_id"))
+        if context_paper_id and paper_id_to_work_id(context_paper_id) != expected_work_id:
+            raise MLLabelDatasetError(f"positive-topup sidecar paper_id mismatch for row_id={row_id}")
+        context_openalex_work_id = _norm_ws(context_row.get("openalex_work_id"))
+        if context_openalex_work_id and context_openalex_work_id != expected_work_id:
+            raise MLLabelDatasetError(f"positive-topup sidecar openalex_work_id mismatch for row_id={row_id}")
+        context_work_id = _norm_ws(context_row.get("work_id"))
+        if context_work_id and context_work_id != expected_work_id:
+            raise MLLabelDatasetError(f"positive-topup sidecar work_id mismatch for row_id={row_id}")
+
+        rel_l = _raw_csv_or_none(row, "relevance_label")
+        nov_l = _raw_csv_or_none(row, "novelty_label")
+        br_l = _raw_csv_or_none(row, "bridge_like_label")
+        notes = _raw_csv_or_none(row, "reviewer_notes")
+        rank_in_family = row.get("rank_in_family", "")
+        out: dict[str, Any] = {
+            "dataset_version": dataset_version,
+            "row_id": row_id,
+            "paper_id": paper_id,
+            "work_id": work_id,
+            "title": row.get("title", ""),
+            "year": row.get("year", ""),
+            "citation_count": row.get("citation_count", ""),
+            "source_slug": row.get("source_slug", ""),
+            "topics": row.get("topics", ""),
+            "abstract_preview": row.get("abstract_preview", ""),
+            "ranking_run_id": row.get("ranking_run_id", ""),
+            "ranking_version": None,
+            "corpus_snapshot_version": surface_summary.get("snapshot_version"),
+            "embedding_version": None,
+            "cluster_version": None,
+            "family": row.get("family", ""),
+            "review_pool_variant": review_pool_variant,
+            "rank": rank_in_family,
+            "rank_in_family": rank_in_family,
+            "experiment_rank": None,
+            "final_score": row.get("final_score", ""),
+            "sample_reason": row.get("sample_reason", ""),
+            "source_worksheet_path": source_rel,
+            "source_worksheet_sha256": source_sha,
+            "source_row_number": source_row_number,
+            "relevance_label": rel_l,
+            "novelty_label": nov_l,
+            "bridge_like_label": br_l,
+            "reviewer_notes": notes,
+            "label_provenance": "manual_review_worksheet_csv",
+            "split": "audit_only",
+            "good_or_acceptable": good_or_acceptable(rel_l),
+            "surprising_or_useful": surprising_or_useful(nov_l),
+            "bridge_like_yes_or_partial": bridge_like_yes_or_partial(br_l),
+            "worksheet_version": worksheet_version,
+            "sample_seed": seed,
+            "openalex_work_id": openalex_work_id,
+            "fresh_hybrid_positive_topup_context": context_row,
+        }
+        topup_rows.append(out)
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    source_worksheets = list(base_payload.get("source_worksheets") or [])
+    source_worksheets.append(source_rel)
+    source_sha256 = dict(base_payload.get("source_worksheet_sha256") or {})
+    source_sha256[source_rel] = source_sha
+    row_counts_by_source = dict(base_metadata.get("row_counts_by_source") or {})
+    row_counts_by_source[source_rel] = len(labeled_rows)
+    included_by_source = dict(base_metadata.get("included_labeled_row_counts_by_source") or {})
+    included_by_source[source_rel] = len(topup_rows)
+    blank_rows_by_source = dict(base_metadata.get("skipped_blank_row_counts_by_source") or {})
+    blank_rows_by_source[source_rel] = 0
+    skipped_blank_worksheets = list(base_metadata.get("skipped_blank_worksheets") or [])
+    skipped_malformed_rows = copy.deepcopy(base_metadata.get("skipped_malformed_rows") or [])
+    manual_review_dir_rel = str(base_metadata.get("manual_review_dir") or "docs/audit/manual-review")
+
+    previous_ingests = {
+        key: copy.deepcopy(value)
+        for key, value in base_metadata.items()
+        if key.endswith("_ingest") or key.startswith("previous_")
+    }
+    base_sha = sha256_file(base_path)
+    blank_sha = sha256_file(blank_path)
+    sidecar_sha = sha256_file(sidecar_path)
+    conflict_sha = sha256_file(conflict_path)
+    inputs = [
+        _input_record("base_dataset", base_path, repo_root=root),
+        _input_record("blank_worksheet", blank_path, repo_root=root),
+        _input_record("labeled_worksheet", labeled_path, repo_root=root),
+        _input_record("context_sidecar", sidecar_path, repo_root=root),
+        _input_record("conflict_policy", conflict_path, repo_root=root),
+    ]
+    fresh_eval_surface_input: dict[str, str] | None = None
+    if surface_path is not None:
+        fresh_eval_surface_input = _input_record("fresh_eval_surface", surface_path, repo_root=root)
+        inputs.append(fresh_eval_surface_input)
+
+    label_distribution = _appended_label_distribution(topup_rows)
+    good_positive = sum(1 for row in topup_rows if row.get("good_or_acceptable") is True)
+    good_negative = sum(1 for row in topup_rows if row.get("good_or_acceptable") is False)
+    positive_observed = positive_threshold.get("observed")
+    projected_positive = positive_observed + good_positive if isinstance(positive_observed, (int, float)) else None
+    extra_metadata = {
+        **previous_ingests,
+        "dataset_version": dataset_version,
+        "previous_dataset_version": base_version,
+        "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+        "previous_dataset_sha256": base_sha,
+        "inputs": inputs,
+        "fresh_hybrid_positive_topup_v1_ingest": {
+            "row_count_appended": len(topup_rows),
+            "base_row_count": len(base_rows),
+            "worksheet_version": TOPUP_WORKSHEET_VERSION,
+            "review_pool_variant": TOPUP_REVIEW_POOL_VARIANT,
+            "positive_threshold_before_labeling": copy.deepcopy(positive_threshold),
+            "label_distribution": label_distribution,
+            "good_or_acceptable_positive_count": good_positive,
+            "good_or_acceptable_negative_count": good_negative,
+            "projected_positive_work_count_if_unique": projected_positive,
+            "projection_formula": f"{positive_observed} + count(appended good_or_acceptable)",
+            "projection_caveat": (
+                "materializer work-level aggregation is authoritative; projection should hold because these 22 works "
+                "were unlabeled on the surface, but pass/fail is confirmed only after rematerializing with v10"
+            ),
+            "row_id_policy": {
+                "source": "CSV canonical; sidecar parity required",
+                "formula": "sha256(f\"{worksheet_version}|{seed}|{canonical_openalex_work_id}\")",
+                "stable_row_id_formula_validated": True,
+                "csv_row_id_set_equals_sidecar_row_id_set": True,
+            },
+            "source_row_number_convention": "physical CSV line including header; first data row = 2",
+            "context_preserved_field_name": "fresh_hybrid_positive_topup_context",
+            "fresh_hybrid_positive_topup_context_fields_preserved": (
+                "entire sidecar row object preserved verbatim under fresh_hybrid_positive_topup_context"
+            ),
+            "blank_worksheet_path": _repo_relative(blank_path, repo_root=root),
+            "blank_worksheet_sha256": blank_sha,
+            "labeled_worksheet_path": source_rel,
+            "labeled_worksheet_sha256": source_sha,
+            "context_sidecar_path": _repo_relative(sidecar_path, repo_root=root),
+            "context_sidecar_sha256": sidecar_sha,
+            "conflict_policy_path": _repo_relative(conflict_path, repo_root=root),
+            "conflict_policy_sha256": conflict_sha,
+            "fresh_eval_surface_path": fresh_eval_surface_input["path"] if fresh_eval_surface_input else None,
+            "fresh_eval_surface_sha256": fresh_eval_surface_input["sha256"] if fresh_eval_surface_input else None,
+            "previous_dataset_version": base_version,
+            "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+            "previous_dataset_sha256": base_sha,
+            "source_surface_summary": copy.deepcopy(surface_summary),
+            "validation_summary": {
+                "labeled_rows_found": len(labeled_rows),
+                "blank_and_labeled_row_id_sets_matched": True,
+                "non_review_columns_unchanged": True,
+                "review_columns_required_non_empty": True,
+                "closed_label_sets_validated": True,
+                "sidecar_row_ids_matched": True,
+                "stable_row_id_formula_validated": True,
+                "fresh_eval_surface_sha_matched": surface_path is not None,
+                "fresh_eval_surface_was_v9": surface_path is not None,
+                "conflict_policy_recorded_as_provenance_only": True,
+            },
+        },
+    }
+    extra_caveats = [
+        "Fresh hybrid positive top-up labels are single-reviewer audit labels.",
+        "Fresh hybrid positive top-up rows remain audit_only and do not define a train/eval split.",
+        "This dataset versioning step is not validation and does not run materialization, ranking, scoring, training, or embeddings.",
+        "No production or API behavior changes are authorized by this artifact.",
+    ]
+    return _assemble_dataset_payload_from_rows(
+        dataset_version=dataset_version,
+        generated_at=generated_at,
+        source_worksheets=source_worksheets,
+        source_sha256=source_sha256,
+        all_rows=base_rows + topup_rows,
+        manual_review_dir_rel=manual_review_dir_rel,
+        row_counts_by_source=row_counts_by_source,
+        included_by_source=included_by_source,
+        blank_rows_by_source=blank_rows_by_source,
+        skipped_blank_worksheets=skipped_blank_worksheets,
+        skipped_malformed_rows=skipped_malformed_rows,
+        extra_metadata=extra_metadata,
+        extra_caveats=extra_caveats,
+    )
+
+
 def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     meta = payload["metadata"]
     dup = meta["duplicate_paper_id_report"]
@@ -2270,7 +2644,18 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     v7_ingest = meta.get("external_near_miss_v1_ingest")
     v8_ingest = meta.get("transfer_gap_v1_ingest")
     v9_ingest = meta.get("fresh_hybrid_v1_ingest")
-    if isinstance(v9_ingest, dict):
+    v10_ingest = meta.get("fresh_hybrid_positive_topup_v1_ingest")
+    if isinstance(v10_ingest, dict):
+        regenerate_command = (
+            "Machine-readable export: regenerate via `python -m pipeline.cli "
+            "ml-label-dataset-v10-fresh-positive-topup-ingest "
+            f"--base-dataset {v10_ingest['previous_dataset_path']} "
+            f"--blank-worksheet {v10_ingest['blank_worksheet_path']} "
+            f"--labeled-worksheet {v10_ingest['labeled_worksheet_path']} "
+            f"--context-sidecar {v10_ingest['context_sidecar_path']} "
+            f"--conflict-policy {v10_ingest['conflict_policy_path']} --output <path>.json`."
+        )
+    elif isinstance(v9_ingest, dict):
         regenerate_command = (
             "Machine-readable export: regenerate via `python -m pipeline.cli "
             "ml-label-dataset-v9-fresh-hybrid-ingest "
@@ -2428,17 +2813,44 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "and keep the full row-id keyed sidecar object under nested `fresh_hybrid_context`. The sidecar provides "
         "candidate-surface provenance only; it is not label evidence and does not authorize validation, shadow, or production.",
         "",
+        "## Fresh hybrid positive top-up context fields",
+        "",
+        "Rows from worksheets with `review_pool_variant=ml_fresh_hybrid_positive_topup_v1` are manual positive-threshold "
+        "top-up labels for the same fresh hybrid surface after v9 materialization showed only the positive work-count "
+        "floor was short. They have `split=audit_only`, preserve ranking-run context from the worksheet, and keep the "
+        "full row-id keyed sidecar object under nested `fresh_hybrid_positive_topup_context`. The sidecar is provenance "
+        "only; the authoritative threshold pass/fail comes from rerunning the fresh-surface materializer.",
+        "",
+        *(
+            [
+                "### Fresh hybrid positive top-up v1 ingest",
+                "",
+                f"- **Rows appended:** {v10_ingest['row_count_appended']}",
+                "- **Legacy rows:** copied from v9 unchanged field-for-field, including their existing per-row `dataset_version` values.",
+                f"- **Source row numbering:** {v10_ingest['source_row_number_convention']}.",
+                f"- **Raw relevance distribution:** `{v10_ingest['label_distribution']['relevance_label']}`",
+                f"- **Raw novelty distribution:** `{v10_ingest['label_distribution']['novelty_label']}`",
+                f"- **Raw bridge-like distribution:** `{v10_ingest['label_distribution']['bridge_like_label']}`",
+                f"- **good_or_acceptable positives / negatives:** {v10_ingest['good_or_acceptable_positive_count']} / {v10_ingest['good_or_acceptable_negative_count']}",
+                f"- **Projected positive count:** {v10_ingest['projected_positive_work_count_if_unique']} = {v10_ingest['positive_threshold_before_labeling']['observed']} + {v10_ingest['good_or_acceptable_positive_count']}",
+                "- **Materializer source of truth:** rematerialize with `ml-label-dataset-v10` to confirm final work-level threshold pass/fail.",
+                "- **Next step:** rerun `ml-fresh-eval-surface-hybrid-materialize` with `--label-dataset ../../docs/audit/ml-label-dataset-v10.json --expected-label-dataset-version ml-label-dataset-v10`.",
+                "",
+            ]
+            if isinstance(v10_ingest, dict)
+            else []
+        ),
         *(
             [
                 "### Fresh hybrid v1 ingest",
                 "",
                 f"- **Rows appended:** {v9_ingest['row_count_appended']}",
                 "- **Legacy rows:** copied from v8 unchanged field-for-field, including their existing per-row `dataset_version` values.",
-                f"- **Source row numbering:** {v9_ingest['source_row_number_convention']}.",
-                f"- **Raw relevance distribution:** `{v9_ingest['label_distribution']['relevance_label']}`",
-                f"- **Raw novelty distribution:** `{v9_ingest['label_distribution']['novelty_label']}`",
-                f"- **Raw bridge-like distribution:** `{v9_ingest['label_distribution']['bridge_like_label']}`",
-                f"- **good_or_acceptable positives / negatives:** {v9_ingest['good_or_acceptable_positive_count']} / {v9_ingest['good_or_acceptable_negative_count']}",
+                f"- **Source row numbering:** {v9_ingest.get('source_row_number_convention', 'physical CSV line including header; first data row = 2')}.",
+                f"- **Raw relevance distribution:** `{v9_ingest.get('label_distribution', {}).get('relevance_label', {})}`",
+                f"- **Raw novelty distribution:** `{v9_ingest.get('label_distribution', {}).get('novelty_label', {})}`",
+                f"- **Raw bridge-like distribution:** `{v9_ingest.get('label_distribution', {}).get('bridge_like_label', {})}`",
+                f"- **good_or_acceptable positives / negatives:** {v9_ingest.get('good_or_acceptable_positive_count', 'unknown')} / {v9_ingest.get('good_or_acceptable_negative_count', 'unknown')}",
                 "- **Next step:** after a follow-up accepts `ml-label-dataset-v9`, rerun `ml-fresh-eval-surface-hybrid-materialize` with `--label-dataset ../../docs/audit/ml-label-dataset-v9.json` to measure remaining policy thresholds.",
                 "",
             ]
@@ -2654,6 +3066,37 @@ def write_ml_label_dataset_v9_fresh_hybrid_ingest(
     dataset_version: str = "ml-label-dataset-v9",
 ) -> dict[str, Any]:
     payload = build_ml_label_dataset_v9_fresh_hybrid_ingest(
+        repo_root=repo_root,
+        base_dataset_path=base_dataset_path,
+        blank_worksheet_path=blank_worksheet_path,
+        labeled_worksheet_path=labeled_worksheet_path,
+        context_sidecar_path=context_sidecar_path,
+        conflict_policy_path=conflict_policy_path,
+        fresh_eval_surface_path=fresh_eval_surface_path,
+        dataset_version=dataset_version,
+    )
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    if markdown_path is not None:
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(markdown_from_ml_label_dataset(payload), encoding="utf-8")
+    return payload
+
+
+def write_ml_label_dataset_v10_fresh_positive_topup_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    json_path: Path,
+    markdown_path: Path | None,
+    fresh_eval_surface_path: Path | None = None,
+    dataset_version: str = "ml-label-dataset-v10",
+) -> dict[str, Any]:
+    payload = build_ml_label_dataset_v10_fresh_positive_topup_ingest(
         repo_root=repo_root,
         base_dataset_path=base_dataset_path,
         blank_worksheet_path=blank_worksheet_path,
