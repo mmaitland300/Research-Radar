@@ -8791,39 +8791,39 @@
     "overlap_work_set_sha256": "07f47f2e5712b63537a914c4d30a1c20c25f1c1a13cc7d674d90af570c0b31f7"
   },
   "label_coverage": {
-    "label_coverage_rate": 0.8461538461538461,
+    "label_coverage_rate": 1.0,
     "observation_level": {
-      "confirmatory_labeled_observation_count": 121,
-      "confirmatory_negative_observation_count": 82,
-      "confirmatory_positive_observation_count": 39,
-      "explicit_boolean_target_observation_rows": 547,
-      "explicit_manual_label_rows": 547,
+      "confirmatory_labeled_observation_count": 143,
+      "confirmatory_negative_observation_count": 89,
+      "confirmatory_positive_observation_count": 54,
+      "explicit_boolean_target_observation_rows": 569,
+      "explicit_manual_label_rows": 569,
       "label_rows_missing_canonical_work_id": 0,
       "overlap_labeled_observation_count_smoke_only": 286,
-      "total_label_dataset_rows": 547
+      "total_label_dataset_rows": 569
     },
     "observation_level_labels_preserved": true,
     "positive_negative_conflict_counts": {
       "conflicting_target_work_group_count": 0,
-      "negative_work_count_all_negative": 82,
-      "positive_work_count_any_positive": 39
+      "negative_work_count_all_negative": 89,
+      "positive_work_count_any_positive": 54
     },
     "silent_conflict_merge_used": false,
     "unlabeled_counts": {
-      "confirmatory_unlabeled_work_count": 22
+      "confirmatory_unlabeled_work_count": 0
     },
     "work_level": {
       "confirmatory_candidate_work_count": 143,
-      "confirmatory_labeled_work_count": 121,
-      "confirmatory_negative_work_count": 82,
-      "confirmatory_positive_work_count": 39,
-      "confirmatory_unlabeled_work_count": 22,
+      "confirmatory_labeled_work_count": 143,
+      "confirmatory_negative_work_count": 89,
+      "confirmatory_positive_work_count": 54,
+      "confirmatory_unlabeled_work_count": 0,
       "conflicting_target_work_group_count": 0,
       "conflicting_work_ids_preview": [],
-      "distinct_negative_work_count": 82,
+      "distinct_negative_work_count": 89,
       "duplicate_labeled_work_group_count": 0,
       "duplicate_work_ids_preview": [],
-      "label_coverage_rate": 0.8461538461538461
+      "label_coverage_rate": 1.0
     }
   },
   "metadata": {
@@ -8844,8 +8844,8 @@
       "local_database_url_confirmed": true,
       "read_only_contract": "SELECT-only queries; no database mutations"
     },
-    "expected_label_dataset_version": "ml-label-dataset-v9",
-    "generated_at": "2026-05-20T03:11:41Z",
+    "expected_label_dataset_version": "ml-label-dataset-v10",
+    "generated_at": "2026-05-20T05:03:59Z",
     "inputs": [
       {
         "name": "fresh_surface_policy",
@@ -8854,8 +8854,8 @@
       },
       {
         "name": "label_dataset",
-        "path": "docs/audit/ml-label-dataset-v9.json",
-        "sha256": "f5f9055d54e26889cac625ac237c0b33514e2073476f594d588da5ab9aea8fb5"
+        "path": "docs/audit/ml-label-dataset-v10.json",
+        "sha256": "6cbdc5542ac1c74d5a8e1d83b4cbb2deec452b099cbf7a5de2baea9164ddef58"
       },
       {
         "name": "conflict_policy",
@@ -8863,9 +8863,9 @@
         "sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841"
       }
     ],
-    "label_dataset_version": "ml-label-dataset-v9",
+    "label_dataset_version": "ml-label-dataset-v10",
     "policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
-    "status": "materialized_needs_labels",
+    "status": "materialized_ready",
     "surface_version": "ml-fresh-eval-surface-hybrid-v1"
   },
   "policy_assertions": {
@@ -8878,8 +8878,8 @@
     "shadow_allowed": false
   },
   "production_default_allowed": false,
-  "ready_for_hybrid_validation_scoring": false,
-  "recommended_next_stage": "create_fresh_eval_labeling_plan_hybrid_v1",
+  "ready_for_hybrid_validation_scoring": true,
+  "recommended_next_stage": "execute_hybrid_validation_on_fresh_surface_v1",
   "shadow_scoring_allowed": false,
   "threshold_check": {
     "minimum_candidate_work_count": {
@@ -8888,27 +8888,27 @@
       "threshold": 100
     },
     "minimum_confirmatory_label_coverage_rate": {
-      "observed": 0.8461538461538461,
+      "observed": 1.0,
       "passed": true,
       "threshold": 0.6
     },
     "minimum_confirmatory_labeled_work_count": {
-      "observed": 121,
+      "observed": 143,
       "passed": true,
       "threshold": 100
     },
     "minimum_confirmatory_negative_work_count": {
-      "observed": 82,
+      "observed": 89,
       "passed": true,
       "threshold": 20
     },
     "minimum_confirmatory_positive_work_count": {
-      "observed": 39,
-      "passed": false,
+      "observed": 54,
+      "passed": true,
       "threshold": 50
     },
     "minimum_distinct_negative_work_count": {
-      "observed": 82,
+      "observed": 89,
       "passed": true,
       "threshold": 20
     }

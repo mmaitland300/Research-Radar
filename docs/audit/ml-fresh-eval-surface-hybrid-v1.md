@@ -4,9 +4,9 @@
 
 This artifact inventories a concrete existing product-candidate pool for fresh hybrid validation. It does not run hybrid scoring, train, label, create rankings, or authorize shadow/production.
 
-- **Status:** `materialized_needs_labels`
-- **Ready for hybrid validation scoring:** False
-- **Recommended next stage:** `create_fresh_eval_labeling_plan_hybrid_v1`
+- **Status:** `materialized_ready`
+- **Ready for hybrid validation scoring:** True
+- **Recommended next stage:** `execute_hybrid_validation_on_fresh_surface_v1`
 - **Shadow scoring allowed:** False
 - **Production default allowed:** False
 
@@ -37,21 +37,21 @@ This artifact inventories a concrete existing product-candidate pool for fresh h
 
 ## Label Coverage And Thresholds
 
-- Labeled works: 121
-- Unlabeled works: 22
-- Positive works: 39
-- Negative works: 82
+- Labeled works: 143
+- Unlabeled works: 0
+- Positive works: 54
+- Negative works: 89
 - Conflicting target work groups: 0
-- Label coverage rate: 0.846
+- Label coverage rate: 1.000
 
 | Threshold | Observed | Required | Passed |
 | --- | ---: | ---: | --- |
 | `minimum_candidate_work_count` | 143 | 100 | True |
-| `minimum_confirmatory_labeled_work_count` | 121 | 100 | True |
-| `minimum_confirmatory_positive_work_count` | 39 | 50 | False |
-| `minimum_confirmatory_negative_work_count` | 82 | 20 | True |
-| `minimum_confirmatory_label_coverage_rate` | 0.846 | 0.600 | True |
-| `minimum_distinct_negative_work_count` | 82 | 20 | True |
+| `minimum_confirmatory_labeled_work_count` | 143 | 100 | True |
+| `minimum_confirmatory_positive_work_count` | 54 | 50 | True |
+| `minimum_confirmatory_negative_work_count` | 89 | 20 | True |
+| `minimum_confirmatory_label_coverage_rate` | 1.000 | 0.600 | True |
+| `minimum_distinct_negative_work_count` | 89 | 20 | True |
 
 ## Blocked Actions
 
