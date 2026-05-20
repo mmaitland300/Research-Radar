@@ -3024,6 +3024,70 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_hybrid_validation_on_fresh_surface_parser = subparsers.add_parser(
+        "ml-hybrid-validation-on-fresh-surface",
+        help="Execute frozen hybrid validation metrics on the ready fresh eval surface (SELECT-only DB)",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--fresh-eval-surface",
+        required=True,
+        help="Path to ml-fresh-eval-surface-hybrid-v1 JSON",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v10 JSON",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--audit-embedding-scorer-export",
+        required=True,
+        help="Path to ml-offline-audit-embedding-scorer-v2 JSON",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--fresh-hybrid-snapshot-embeddings",
+        required=True,
+        help="Path to ml-fresh-hybrid-snapshot-embeddings-v1 JSON",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--hybrid-experiment-spec",
+        default=None,
+        help="Optional ml-hybrid-scorer-offline-experiment-v1-spec JSON for provenance validation",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--hybrid-metric-gates",
+        default=None,
+        help="Optional ml-hybrid-scorer-metric-gates-v1 JSON for provenance hashing only",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL for SELECT-only embedding reads (default: DATABASE_URL or PG* env)",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write fresh-surface hybrid validation JSON",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--validation-version",
+        default="ml-hybrid-validation-on-fresh-surface-v1",
+        help="Validation version string to write (default: ml-hybrid-validation-on-fresh-surface-v1)",
+    )
+    ml_hybrid_validation_on_fresh_surface_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_eval_labeling_plan_hybrid_parser = subparsers.add_parser(
         "ml-fresh-eval-labeling-plan-hybrid",
         help="Write a plan-only fresh eval labeling/remediation artifact for hybrid validation",
@@ -5132,6 +5196,40 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-hybrid-validation-on-fresh-surface":
+        from pipeline.ml_hybrid_validation_on_fresh_surface import (
+            MLHybridValidationOnFreshSurfaceError,
+            write_ml_hybrid_validation_on_fresh_surface,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_hybrid_validation_on_fresh_surface(
+                fresh_eval_surface_path=Path(args.fresh_eval_surface),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                audit_embedding_scorer_export_path=Path(args.audit_embedding_scorer_export),
+                fresh_hybrid_snapshot_embeddings_path=Path(args.fresh_hybrid_snapshot_embeddings),
+                hybrid_experiment_spec_path=Path(args.hybrid_experiment_spec) if args.hybrid_experiment_spec else None,
+                hybrid_metric_gates_path=Path(args.hybrid_metric_gates) if args.hybrid_metric_gates else None,
+                database_url=args.database_url,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                validation_version=str(args.validation_version),
+                repo_root=repo_root,
+            )
+        except MLHybridValidationOnFreshSurfaceError as e:
+            print(f"ml-hybrid-validation-on-fresh-surface: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["validation_scope"]["candidate_pool_work_count"])
+        print(payload["validation_scope"]["confirmatory_metric_work_count"])
+        print(payload["recommended_next_stage"])
         return
 
     if args.command == "ml-fresh-eval-labeling-plan-hybrid":
