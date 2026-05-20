@@ -3088,6 +3088,67 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_hybrid_validation_metric_gates_parser = subparsers.add_parser(
+        "ml-hybrid-validation-metric-gates",
+        help="Evaluate fresh-surface hybrid validation metric gates without rerunning scoring",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--hybrid-validation-on-fresh-surface",
+        dest="hybrid_validation_on_fresh_surface",
+        default=None,
+        help="Path to ml-hybrid-validation-on-fresh-surface-v1 JSON",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--hybrid-validation",
+        dest="hybrid_validation_on_fresh_surface",
+        default=None,
+        help="Alias for --hybrid-validation-on-fresh-surface",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--fresh-eval-surface",
+        required=True,
+        help="Path to ml-fresh-eval-surface-hybrid-v1 JSON",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write hybrid validation metric gates JSON",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--gates-version",
+        default="ml-hybrid-validation-metric-gates-v1",
+        help="Gates version string to write (default: ml-hybrid-validation-metric-gates-v1)",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--hybrid-experiment-spec",
+        default=None,
+        help="Optional ml-hybrid-scorer-offline-experiment-v1-spec JSON for arm cross-check",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--hybrid-scorer-metric-gates",
+        default=None,
+        help="Optional ml-hybrid-scorer-metric-gates-v1 JSON for provenance hashing",
+    )
+    ml_hybrid_validation_metric_gates_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_eval_labeling_plan_hybrid_parser = subparsers.add_parser(
         "ml-fresh-eval-labeling-plan-hybrid",
         help="Write a plan-only fresh eval labeling/remediation artifact for hybrid validation",
@@ -5229,6 +5290,42 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["validation_scope"]["candidate_pool_work_count"])
         print(payload["validation_scope"]["confirmatory_metric_work_count"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-hybrid-validation-metric-gates":
+        from pipeline.ml_hybrid_validation_metric_gates import (
+            MLHybridValidationMetricGatesError,
+            write_ml_hybrid_validation_metric_gates,
+        )
+
+        if not args.hybrid_validation_on_fresh_surface:
+            parser.error("--hybrid-validation-on-fresh-surface is required")
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_hybrid_validation_metric_gates(
+                hybrid_validation_on_fresh_surface_path=Path(args.hybrid_validation_on_fresh_surface),
+                fresh_eval_surface_path=Path(args.fresh_eval_surface),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                gates_version=str(args.gates_version),
+                hybrid_experiment_spec_path=Path(args.hybrid_experiment_spec) if args.hybrid_experiment_spec else None,
+                hybrid_scorer_metric_gates_path=Path(args.hybrid_scorer_metric_gates)
+                if args.hybrid_scorer_metric_gates
+                else None,
+                repo_root=repo_root,
+            )
+        except MLHybridValidationMetricGatesError as e:
+            print(f"ml-hybrid-validation-metric-gates: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["primary_confirmatory_arm"])
+        print(payload["confirmatory_validation_passed"])
         print(payload["recommended_next_stage"])
         return
 

@@ -1,0 +1,1361 @@
+{
+  "best_arm_selection_is_exploratory_only": true,
+  "blocked_reasons": [
+    "missing_ml_shadow_scorer_v1_spec",
+    "production_default_blocked"
+  ],
+  "caveats": [
+    "Not live recommender validation.",
+    "Fresh confirmatory surface; old 217 overlaps are excluded from confirmatory metrics.",
+    "Frozen holdout scorer v2 applied without refit.",
+    "Single-reviewer audit labels.",
+    "Primary confirmatory arm is fixed at hybrid_rank_mean_50_50; best-arm selection remains exploratory.",
+    "Passing these gates authorizes only drafting a shadow scorer spec.",
+    "No shadow execution, production default, API/web change, or model deployment is authorized."
+  ],
+  "comparison_summary": {
+    "best_arm_by_average_precision": {
+      "arm_id": "hybrid_rank_mean_50_50",
+      "average_precision": 0.8616964696673468
+    },
+    "best_arm_by_roc_auc": {
+      "arm_id": "hybrid_rank_mean_50_50",
+      "roc_auc_mann_whitney": 0.9103204327923429
+    },
+    "candidate_eval_coverage": {
+      "candidate_pool_work_count": 358,
+      "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+      "confirmatory_metric_work_count": 143,
+      "confirmatory_negative_work_count": 89,
+      "confirmatory_positive_work_count": 54,
+      "positive_work_prevalence": 0.3776223776223776
+    },
+    "heuristic_baseline_metrics": {
+      "arm_id": "heuristic_final_score_baseline",
+      "average_precision": 0.649431822568543,
+      "average_precision_reason": null,
+      "labeled_eval_subset_work_count": 143,
+      "metric_level": "canonical_work_labeled_eval_subset",
+      "negative_work_count": 89,
+      "positive_work_count": 54,
+      "precision_recall_at_k": {
+        "10": {
+          "labeled_work_count": 143,
+          "negative_count": 89,
+          "positive_count": 54,
+          "precision": 0.5,
+          "reason": null,
+          "recall": 0.09259259259259259,
+          "top_k_labeled_negative_count": 5,
+          "top_k_labeled_positive_count": 5
+        },
+        "20": {
+          "labeled_work_count": 143,
+          "negative_count": 89,
+          "positive_count": 54,
+          "precision": 0.5,
+          "reason": null,
+          "recall": 0.18518518518518517,
+          "top_k_labeled_negative_count": 10,
+          "top_k_labeled_positive_count": 10
+        },
+        "5": {
+          "labeled_work_count": 143,
+          "negative_count": 89,
+          "positive_count": 54,
+          "precision": 0.6,
+          "reason": null,
+          "recall": 0.05555555555555555,
+          "top_k_labeled_negative_count": 2,
+          "top_k_labeled_positive_count": 3
+        }
+      },
+      "roc_auc_mann_whitney": 0.8252184769038702,
+      "roc_auc_reason": null,
+      "score_distribution": {
+        "count": 358,
+        "max": 0.791324,
+        "mean": 0.2405410446927374,
+        "median": 0.16874250000000002,
+        "min": 0.136019,
+        "p25": 0.1628615,
+        "p75": 0.2234905
+      },
+      "scored_labeled_work_count": 143,
+      "top_k_previews": {
+        "10": [
+          {
+            "canonical_openalex_work_id": "W4404639702",
+            "label_any_positive": true,
+            "score": 0.672154,
+            "title": "Digital Technology in Cultural Heritage: Construction and Evaluation Methods of AI-Based Ethnic Music Dataset"
+          },
+          {
+            "canonical_openalex_work_id": "W4402645135",
+            "label_any_positive": true,
+            "score": 0.551604,
+            "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+          },
+          {
+            "canonical_openalex_work_id": "W4414872983",
+            "label_any_positive": true,
+            "score": 0.261087,
+            "title": "Explainable Instrument Classification: From MFCC Mean-Vector Models to CNNs on MFCC and Mel-Spectrograms with t-SNE and Grad-CAM Insights"
+          },
+          {
+            "canonical_openalex_work_id": "W4416186486",
+            "label_any_positive": false,
+            "score": 0.250339,
+            "title": "Adolescent emotional responses to different music arrangements"
+          },
+          {
+            "canonical_openalex_work_id": "W7130374567",
+            "label_any_positive": false,
+            "score": 0.231809,
+            "title": "A unified multimodal learning framework for sentiment analysis and mental health indicators from YouTube videos"
+          },
+          {
+            "canonical_openalex_work_id": "W4414866178",
+            "label_any_positive": true,
+            "score": 0.231443,
+            "title": "AI-Driven Multimodal Emotion Recognition and Personalized Recommendations Using Power BI"
+          },
+          {
+            "canonical_openalex_work_id": "W7135192550",
+            "label_any_positive": true,
+            "score": 0.226572,
+            "title": "Optimized feature gains explain and predict successes and failures of human selective listening"
+          },
+          {
+            "canonical_openalex_work_id": "W4417024167",
+            "label_any_positive": false,
+            "score": 0.225287,
+            "title": "Enhancing dementia and cognitive decline detection with large language models and speech representation learning"
+          },
+          {
+            "canonical_openalex_work_id": "W4416060564",
+            "label_any_positive": false,
+            "score": 0.220765,
+            "title": "MLlm-DR: Towards Explainable Depression Recognition with MultiModal Large Language Models"
+          },
+          {
+            "canonical_openalex_work_id": "W7116947425",
+            "label_any_positive": false,
+            "score": 0.217576,
+            "title": "Integration Modes Between MCDM Methods and Machine Learning Algorithms: A Structured Approach for Framework Development"
+          }
+        ],
+        "20": [
+          {
+            "canonical_openalex_work_id": "W4404639702",
+            "label_any_positive": true,
+            "score": 0.672154,
+            "title": "Digital Technology in Cultural Heritage: Construction and Evaluation Methods of AI-Based Ethnic Music Dataset"
+          },
+          {
+            "canonical_openalex_work_id": "W4402645135",
+            "label_any_positive": true,
+            "score": 0.551604,
+            "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+          },
+          {
+            "canonical_openalex_work_id": "W4414872983",
+            "label_any_positive": true,
+            "score": 0.261087,
+            "title": "Explainable Instrument Classification: From MFCC Mean-Vector Models to CNNs on MFCC and Mel-Spectrograms with t-SNE and Grad-CAM Insights"
+          },
+          {
+            "canonical_openalex_work_id": "W4416186486",
+            "label_any_positive": false,
+            "score": 0.250339,
+            "title": "Adolescent emotional responses to different music arrangements"
+          },
+          {
+            "canonical_openalex_work_id": "W7130374567",
+            "label_any_positive": false,
+            "score": 0.231809,
+            "title": "A unified multimodal learning framework for sentiment analysis and mental health indicators from YouTube videos"
+          },
+          {
+            "canonical_openalex_work_id": "W4414866178",
+            "label_any_positive": true,
+            "score": 0.231443,
+            "title": "AI-Driven Multimodal Emotion Recognition and Personalized Recommendations Using Power BI"
+          },
+          {
+            "canonical_openalex_work_id": "W7135192550",
+            "label_any_positive": true,
+            "score": 0.226572,
+            "title": "Optimized feature gains explain and predict successes and failures of human selective listening"
+          },
+          {
+            "canonical_openalex_work_id": "W4417024167",
+            "label_any_positive": false,
+            "score": 0.225287,
+            "title": "Enhancing dementia and cognitive decline detection with large language models and speech representation learning"
+          },
+          {
+            "canonical_openalex_work_id": "W4416060564",
+            "label_any_positive": false,
+            "score": 0.220765,
+            "title": "MLlm-DR: Towards Explainable Depression Recognition with MultiModal Large Language Models"
+          },
+          {
+            "canonical_openalex_work_id": "W7116947425",
+            "label_any_positive": false,
+            "score": 0.217576,
+            "title": "Integration Modes Between MCDM Methods and Machine Learning Algorithms: A Structured Approach for Framework Development"
+          },
+          {
+            "canonical_openalex_work_id": "W4416904914",
+            "label_any_positive": false,
+            "score": 0.217087,
+            "title": "A Multi-Criteria Decision-Making Approach for the Selection of Explainable AI Methods"
+          },
+          {
+            "canonical_openalex_work_id": "W7131215952",
+            "label_any_positive": false,
+            "score": 0.209332,
+            "title": "The Evolution of an Indigenous Mindfulness Program: Qualitative Findings from the IndigenousMIND Study"
+          },
+          {
+            "canonical_openalex_work_id": "W4417357200",
+            "label_any_positive": true,
+            "score": 0.202225,
+            "title": "Joint Learning of Emotion and Singing Style for Enhanced Music Style Understanding"
+          },
+          {
+            "canonical_openalex_work_id": "W4417524614",
+            "label_any_positive": true,
+            "score": 0.201377,
+            "title": "Emotionally consistent music melody generation algorithm integrating prompt perception and hyper-network optimization"
+          },
+          {
+            "canonical_openalex_work_id": "W4417185100",
+            "label_any_positive": false,
+            "score": 0.198141,
+            "title": "AI-driven music intervention based on five-tone theory for anxiety: a preliminary pre-post feasibility study"
+          },
+          {
+            "canonical_openalex_work_id": "W4416286813",
+            "label_any_positive": false,
+            "score": 0.197598,
+            "title": "Mood Mate: Advancing Real-Time Mental Health Monitoring with Multimodal AI"
+          },
+          {
+            "canonical_openalex_work_id": "W4414362180",
+            "label_any_positive": false,
+            "score": 0.195766,
+            "title": "A groove brain-music interface for enhancing individual experience of urge to move"
+          },
+          {
+            "canonical_openalex_work_id": "W4415189580",
+            "label_any_positive": true,
+            "score": 0.19477,
+            "title": "Modular Microservices Architecture for Generative Music Integration in Digital Audio Workstations via VST Plugin"
+          },
+          {
+            "canonical_openalex_work_id": "W4414713366",
+            "label_any_positive": true,
+            "score": 0.188481,
+            "title": "Exploring differences between groove and catchiness"
+          },
+          {
+            "canonical_openalex_work_id": "W4388189390",
+            "label_any_positive": true,
+            "score": 0.183299,
+            "title": "An Algorithmic Approach to Automated Symbolic Transcription of Hindustani Vocals"
+          }
+        ],
+        "5": [
+          {
+            "canonical_openalex_work_id": "W4404639702",
+            "label_any_positive": true,
+            "score": 0.672154,
+            "title": "Digital Technology in Cultural Heritage: Construction and Evaluation Methods of AI-Based Ethnic Music Dataset"
+          },
+          {
+            "canonical_openalex_work_id": "W4402645135",
+            "label_any_positive": true,
+            "score": 0.551604,
+            "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+          },
+          {
+            "canonical_openalex_work_id": "W4414872983",
+            "label_any_positive": true,
+            "score": 0.261087,
+            "title": "Explainable Instrument Classification: From MFCC Mean-Vector Models to CNNs on MFCC and Mel-Spectrograms with t-SNE and Grad-CAM Insights"
+          },
+          {
+            "canonical_openalex_work_id": "W4416186486",
+            "label_any_positive": false,
+            "score": 0.250339,
+            "title": "Adolescent emotional responses to different music arrangements"
+          },
+          {
+            "canonical_openalex_work_id": "W7130374567",
+            "label_any_positive": false,
+            "score": 0.231809,
+            "title": "A unified multimodal learning framework for sentiment analysis and mental health indicators from YouTube videos"
+          }
+        ]
+      }
+    },
+    "holdout_embedding_baseline_metrics": {
+      "arm_id": "holdout_embedding_probability_baseline",
+      "average_precision": 0.7513413290429989,
+      "average_precision_reason": null,
+      "labeled_eval_subset_work_count": 143,
+      "metric_level": "canonical_work_labeled_eval_subset",
+      "negative_work_count": 89,
+      "positive_work_count": 54,
+      "precision_recall_at_k": {
+        "10": {
+          "labeled_work_count": 143,
+          "negative_count": 89,
+          "positive_count": 54,
+          "precision": 0.7,
+          "reason": null,
+          "recall": 0.12962962962962962,
+          "top_k_labeled_negative_count": 3,
+          "top_k_labeled_positive_count": 7
+        },
+        "20": {
+          "labeled_work_count": 143,
+          "negative_count": 89,
+          "positive_count": 54,
+          "precision": 0.85,
+          "reason": null,
+          "recall": 0.3148148148148148,
+          "top_k_labeled_negative_count": 3,
+          "top_k_labeled_positive_count": 17
+        },
+        "5": {
+          "labeled_work_count": 143,
+          "negative_count": 89,
+          "positive_count": 54,
+          "precision": 0.6,
+          "reason": null,
+          "recall": 0.05555555555555555,
+          "top_k_labeled_negative_count": 2,
+          "top_k_labeled_positive_count": 3
+        }
+      },
+      "roc_auc_mann_whitney": 0.850187265917603,
+      "roc_auc_reason": null,
+      "score_distribution": {
+        "count": 358,
+        "max": 0.9999245310558568,
+        "mean": 0.5835405623012688,
+        "median": 0.7130796312137996,
+        "min": 1.3694895944786864e-05,
+        "p25": 0.1382094788458299,
+        "p75": 0.9789513390761534
+      },
+      "scored_labeled_work_count": 143,
+      "top_k_previews": {
+        "10": [
+          {
+            "canonical_openalex_work_id": "W4416369344",
+            "label_any_positive": true,
+            "score": 0.9998732153842248,
+            "title": "Detecting Notational Errors in Digital Music Scores"
+          },
+          {
+            "canonical_openalex_work_id": "W4415011197",
+            "label_any_positive": true,
+            "score": 0.9998591391561724,
+            "title": "An implicit layout-aware transformer for full-page end-to-end optical music recognition"
+          },
+          {
+            "canonical_openalex_work_id": "W7160512765",
+            "label_any_positive": false,
+            "score": 0.9998201130431491,
+            "title": "Hardware Accelerator Design for MUSIC-DOA Estimation with Bilateral Jacobi Optimization"
+          },
+          {
+            "canonical_openalex_work_id": "W4402645135",
+            "label_any_positive": true,
+            "score": 0.9995825323410192,
+            "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+          },
+          {
+            "canonical_openalex_work_id": "W7131093365",
+            "label_any_positive": false,
+            "score": 0.9995073894944658,
+            "title": "Towards common ground in notation for augmented instruments"
+          },
+          {
+            "canonical_openalex_work_id": "W7160852273",
+            "label_any_positive": true,
+            "score": 0.9994652567131451,
+            "title": "Multimodal Automatic Music Transcription Using Piano Audio and Hand-Skeleton Information"
+          },
+          {
+            "canonical_openalex_work_id": "W7156140413",
+            "label_any_positive": true,
+            "score": 0.9994597842876368,
+            "title": "PianoCoRe: Combined and Refined Piano MIDI Dataset"
+          },
+          {
+            "canonical_openalex_work_id": "W7117685190",
+            "label_any_positive": false,
+            "score": 0.9993702028935906,
+            "title": "Reading Music or Reading Notes? Rethinking Musical Stimuli in Eye-Movement Research"
+          },
+          {
+            "canonical_openalex_work_id": "W4415312072",
+            "label_any_positive": true,
+            "score": 0.9993341374040359,
+            "title": "An Open Research Dataset of the 1932 Cairo Congress of Arab Music"
+          },
+          {
+            "canonical_openalex_work_id": "W4411543958",
+            "label_any_positive": true,
+            "score": 0.9992903690135605,
+            "title": "MusiQAl: A dataset for Music Question-Answering through Audio-Video Fusion"
+          }
+        ],
+        "20": [
+          {
+            "canonical_openalex_work_id": "W4416369344",
+            "label_any_positive": true,
+            "score": 0.9998732153842248,
+            "title": "Detecting Notational Errors in Digital Music Scores"
+          },
+          {
+            "canonical_openalex_work_id": "W4415011197",
+            "label_any_positive": true,
+            "score": 0.9998591391561724,
+            "title": "An implicit layout-aware transformer for full-page end-to-end optical music recognition"
+          },
+          {
+            "canonical_openalex_work_id": "W7160512765",
+            "label_any_positive": false,
+            "score": 0.9998201130431491,
+            "title": "Hardware Accelerator Design for MUSIC-DOA Estimation with Bilateral Jacobi Optimization"
+          },
+          {
+            "canonical_openalex_work_id": "W4402645135",
+            "label_any_positive": true,
+            "score": 0.9995825323410192,
+            "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+          },
+          {
+            "canonical_openalex_work_id": "W7131093365",
+            "label_any_positive": false,
+            "score": 0.9995073894944658,
+            "title": "Towards common ground in notation for augmented instruments"
+          },
+          {
+            "canonical_openalex_work_id": "W7160852273",
+            "label_any_positive": true,
+            "score": 0.9994652567131451,
+            "title": "Multimodal Automatic Music Transcription Using Piano Audio and Hand-Skeleton Information"
+          },
+          {
+            "canonical_openalex_work_id": "W7156140413",
+            "label_any_positive": true,
+            "score": 0.9994597842876368,
+            "title": "PianoCoRe: Combined and Refined Piano MIDI Dataset"
+          },
+          {
+            "canonical_openalex_work_id": "W7117685190",
+            "label_any_positive": false,
+            "score": 0.9993702028935906,
+            "title": "Reading Music or Reading Notes? Rethinking Musical Stimuli in Eye-Movement Research"
+          },
+          {
+            "canonical_openalex_work_id": "W4415312072",
+            "label_any_positive": true,
+            "score": 0.9993341374040359,
+            "title": "An Open Research Dataset of the 1932 Cairo Congress of Arab Music"
+          },
+          {
+            "canonical_openalex_work_id": "W4411543958",
+            "label_any_positive": true,
+            "score": 0.9992903690135605,
+            "title": "MusiQAl: A dataset for Music Question-Answering through Audio-Video Fusion"
+          },
+          {
+            "canonical_openalex_work_id": "W4414978836",
+            "label_any_positive": true,
+            "score": 0.9992644688728041,
+            "title": "Transcribing Rhythmic Patterns of the Guitar Track in Polyphonic Music"
+          },
+          {
+            "canonical_openalex_work_id": "W7160556956",
+            "label_any_positive": true,
+            "score": 0.9989098412653618,
+            "title": "A Multi-Source Pipeline for Extracting Traditional-Style Chinese Melody Data from Symbolic Files and Score Images"
+          },
+          {
+            "canonical_openalex_work_id": "W7128649443",
+            "label_any_positive": true,
+            "score": 0.9984332587219169,
+            "title": "Deep Learning approaches to singing voice transcription in pop music"
+          },
+          {
+            "canonical_openalex_work_id": "W4414972133",
+            "label_any_positive": true,
+            "score": 0.9983809929225332,
+            "title": "A Study on the Data Distribution Gap in Music Emotion Recognition"
+          },
+          {
+            "canonical_openalex_work_id": "W4389296725",
+            "label_any_positive": true,
+            "score": 0.9979698637705321,
+            "title": "Application of Computational Methods for Comparative Music Analysis"
+          },
+          {
+            "canonical_openalex_work_id": "W4388189390",
+            "label_any_positive": true,
+            "score": 0.9971944986083743,
+            "title": "An Algorithmic Approach to Automated Symbolic Transcription of Hindustani Vocals"
+          },
+          {
+            "canonical_openalex_work_id": "W4415097458",
+            "label_any_positive": true,
+            "score": 0.9955890323227096,
+            "title": "Moises-Light: Resource-efficient Band-split U-Net For Music Source Separation"
+          },
+          {
+            "canonical_openalex_work_id": "W7138980561",
+            "label_any_positive": true,
+            "score": 0.9946880826245071,
+            "title": "SyncDIT: audio-visual aligned video generation with audio synchronization feature"
+          },
+          {
+            "canonical_openalex_work_id": "W7160699258",
+            "label_any_positive": true,
+            "score": 0.9939124018951125,
+            "title": "Adaptive music generation by integrating improved VAE and improved GMVAE"
+          },
+          {
+            "canonical_openalex_work_id": "W7160947525",
+            "label_any_positive": true,
+            "score": 0.9913477978995852,
+            "title": "Investigation of model training approaches for music inpainting on limited data"
+          }
+        ],
+        "5": [
+          {
+            "canonical_openalex_work_id": "W4416369344",
+            "label_any_positive": true,
+            "score": 0.9998732153842248,
+            "title": "Detecting Notational Errors in Digital Music Scores"
+          },
+          {
+            "canonical_openalex_work_id": "W4415011197",
+            "label_any_positive": true,
+            "score": 0.9998591391561724,
+            "title": "An implicit layout-aware transformer for full-page end-to-end optical music recognition"
+          },
+          {
+            "canonical_openalex_work_id": "W7160512765",
+            "label_any_positive": false,
+            "score": 0.9998201130431491,
+            "title": "Hardware Accelerator Design for MUSIC-DOA Estimation with Bilateral Jacobi Optimization"
+          },
+          {
+            "canonical_openalex_work_id": "W4402645135",
+            "label_any_positive": true,
+            "score": 0.9995825323410192,
+            "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+          },
+          {
+            "canonical_openalex_work_id": "W7131093365",
+            "label_any_positive": false,
+            "score": 0.9995073894944658,
+            "title": "Towards common ground in notation for augmented instruments"
+          }
+        ]
+      }
+    },
+    "label_join_summary": {
+      "confirmatory_labeled_observation_count": 143,
+      "confirmatory_negative_observation_count": 89,
+      "confirmatory_positive_observation_count": 54,
+      "confirmatory_work_count": 143,
+      "conflicting_target_work_group_count": 0,
+      "label_rows_missing_canonical_work_id": 0,
+      "labeled_confirmatory_work_count": 143,
+      "negative_work_count": 89,
+      "positive_work_count": 54,
+      "positive_work_prevalence": 0.3776223776223776,
+      "target": "good_or_acceptable",
+      "unlabeled_confirmatory_work_count": 0,
+      "work_level_rollup_policy": "positive if any explicit target true; negative if observations exist and none are true; conflicts fail"
+    },
+    "leakage_report": {
+      "confirmatory_rows_with_previous_eval_overlap_count": 0,
+      "eval_label_weight_tuning_used": false,
+      "frozen_scorer_fit_corpus_note": "scorer v2 fit on holdout train excluding old eval works; applied to fresh snapshot embeddings without refit",
+      "old_217_overlap_excluded_from_confirmatory_metrics": true,
+      "old_217_overlap_work_count_in_full_pool": 215,
+      "overlap_work_count_in_full_pool_may_be_nonzero": true,
+      "scorer_refit_used": false,
+      "supervised_fit_used": false,
+      "train_rows_used": 0
+    },
+    "primary_hybrid_arm": {
+      "arm_id": "hybrid_rank_mean_50_50",
+      "deltas_vs_heuristic": {
+        "delta_average_precision": 0.21226464709880377,
+        "delta_precision_at_10": 0.5,
+        "delta_precision_at_20": 0.44999999999999996,
+        "delta_precision_at_5": 0.4,
+        "delta_roc_auc": 0.08510195588847269
+      },
+      "material_lift_passed": true,
+      "metrics": {
+        "arm_id": "hybrid_rank_mean_50_50",
+        "average_precision": 0.8616964696673468,
+        "average_precision_reason": null,
+        "labeled_eval_subset_work_count": 143,
+        "metric_level": "canonical_work_labeled_eval_subset",
+        "negative_work_count": 89,
+        "positive_work_count": 54,
+        "precision_recall_at_k": {
+          "10": {
+            "labeled_work_count": 143,
+            "negative_count": 89,
+            "positive_count": 54,
+            "precision": 1.0,
+            "reason": null,
+            "recall": 0.18518518518518517,
+            "top_k_labeled_negative_count": 0,
+            "top_k_labeled_positive_count": 10
+          },
+          "20": {
+            "labeled_work_count": 143,
+            "negative_count": 89,
+            "positive_count": 54,
+            "precision": 0.95,
+            "reason": null,
+            "recall": 0.35185185185185186,
+            "top_k_labeled_negative_count": 1,
+            "top_k_labeled_positive_count": 19
+          },
+          "5": {
+            "labeled_work_count": 143,
+            "negative_count": 89,
+            "positive_count": 54,
+            "precision": 1.0,
+            "reason": null,
+            "recall": 0.09259259259259259,
+            "top_k_labeled_negative_count": 0,
+            "top_k_labeled_positive_count": 5
+          }
+        },
+        "roc_auc_mann_whitney": 0.9103204327923429,
+        "roc_auc_reason": null,
+        "score_distribution": {
+          "count": 358,
+          "max": 0.9943977591036415,
+          "mean": 0.5,
+          "median": 0.5168067226890757,
+          "min": 0.009803921568627472,
+          "p25": 0.3060224089635854,
+          "p75": 0.7107843137254901
+        },
+        "scored_labeled_work_count": 143,
+        "top_k_previews": {
+          "10": [
+            {
+              "canonical_openalex_work_id": "W4402645135",
+              "label_any_positive": true,
+              "score": 0.9733893557422969,
+              "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+            },
+            {
+              "canonical_openalex_work_id": "W4404639702",
+              "label_any_positive": true,
+              "score": 0.8137254901960784,
+              "title": "Digital Technology in Cultural Heritage: Construction and Evaluation Methods of AI-Based Ethnic Music Dataset"
+            },
+            {
+              "canonical_openalex_work_id": "W4388189390",
+              "label_any_positive": true,
+              "score": 0.7941176470588235,
+              "title": "An Algorithmic Approach to Automated Symbolic Transcription of Hindustani Vocals"
+            },
+            {
+              "canonical_openalex_work_id": "W4414972133",
+              "label_any_positive": true,
+              "score": 0.7801120448179272,
+              "title": "A Study on the Data Distribution Gap in Music Emotion Recognition"
+            },
+            {
+              "canonical_openalex_work_id": "W4389296725",
+              "label_any_positive": true,
+              "score": 0.7703081232492996,
+              "title": "Application of Computational Methods for Comparative Music Analysis"
+            },
+            {
+              "canonical_openalex_work_id": "W4416369344",
+              "label_any_positive": true,
+              "score": 0.7591036414565826,
+              "title": "Detecting Notational Errors in Digital Music Scores"
+            },
+            {
+              "canonical_openalex_work_id": "W4415189580",
+              "label_any_positive": true,
+              "score": 0.7478991596638656,
+              "title": "Modular Microservices Architecture for Generative Music Integration in Digital Audio Workstations via VST Plugin"
+            },
+            {
+              "canonical_openalex_work_id": "W4411543958",
+              "label_any_positive": true,
+              "score": 0.7450980392156863,
+              "title": "MusiQAl: A dataset for Music Question-Answering through Audio-Video Fusion"
+            },
+            {
+              "canonical_openalex_work_id": "W4415011197",
+              "label_any_positive": true,
+              "score": 0.7450980392156863,
+              "title": "An implicit layout-aware transformer for full-page end-to-end optical music recognition"
+            },
+            {
+              "canonical_openalex_work_id": "W7160699258",
+              "label_any_positive": true,
+              "score": 0.7408963585434174,
+              "title": "Adaptive music generation by integrating improved VAE and improved GMVAE"
+            }
+          ],
+          "20": [
+            {
+              "canonical_openalex_work_id": "W4402645135",
+              "label_any_positive": true,
+              "score": 0.9733893557422969,
+              "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+            },
+            {
+              "canonical_openalex_work_id": "W4404639702",
+              "label_any_positive": true,
+              "score": 0.8137254901960784,
+              "title": "Digital Technology in Cultural Heritage: Construction and Evaluation Methods of AI-Based Ethnic Music Dataset"
+            },
+            {
+              "canonical_openalex_work_id": "W4388189390",
+              "label_any_positive": true,
+              "score": 0.7941176470588235,
+              "title": "An Algorithmic Approach to Automated Symbolic Transcription of Hindustani Vocals"
+            },
+            {
+              "canonical_openalex_work_id": "W4414972133",
+              "label_any_positive": true,
+              "score": 0.7801120448179272,
+              "title": "A Study on the Data Distribution Gap in Music Emotion Recognition"
+            },
+            {
+              "canonical_openalex_work_id": "W4389296725",
+              "label_any_positive": true,
+              "score": 0.7703081232492996,
+              "title": "Application of Computational Methods for Comparative Music Analysis"
+            },
+            {
+              "canonical_openalex_work_id": "W4416369344",
+              "label_any_positive": true,
+              "score": 0.7591036414565826,
+              "title": "Detecting Notational Errors in Digital Music Scores"
+            },
+            {
+              "canonical_openalex_work_id": "W4415189580",
+              "label_any_positive": true,
+              "score": 0.7478991596638656,
+              "title": "Modular Microservices Architecture for Generative Music Integration in Digital Audio Workstations via VST Plugin"
+            },
+            {
+              "canonical_openalex_work_id": "W4411543958",
+              "label_any_positive": true,
+              "score": 0.7450980392156863,
+              "title": "MusiQAl: A dataset for Music Question-Answering through Audio-Video Fusion"
+            },
+            {
+              "canonical_openalex_work_id": "W4415011197",
+              "label_any_positive": true,
+              "score": 0.7450980392156863,
+              "title": "An implicit layout-aware transformer for full-page end-to-end optical music recognition"
+            },
+            {
+              "canonical_openalex_work_id": "W7160699258",
+              "label_any_positive": true,
+              "score": 0.7408963585434174,
+              "title": "Adaptive music generation by integrating improved VAE and improved GMVAE"
+            },
+            {
+              "canonical_openalex_work_id": "W7160852273",
+              "label_any_positive": true,
+              "score": 0.7366946778711485,
+              "title": "Multimodal Automatic Music Transcription Using Piano Audio and Hand-Skeleton Information"
+            },
+            {
+              "canonical_openalex_work_id": "W4417357200",
+              "label_any_positive": true,
+              "score": 0.7338935574229692,
+              "title": "Joint Learning of Emotion and Singing Style for Enhanced Music Style Understanding"
+            },
+            {
+              "canonical_openalex_work_id": "W4405876086",
+              "label_any_positive": true,
+              "score": 0.7212885154061625,
+              "title": "Explainable detection of machine generated music and early systematic evaluation"
+            },
+            {
+              "canonical_openalex_work_id": "W7117685190",
+              "label_any_positive": false,
+              "score": 0.7156862745098039,
+              "title": "Reading Music or Reading Notes? Rethinking Musical Stimuli in Eye-Movement Research"
+            },
+            {
+              "canonical_openalex_work_id": "W7160556956",
+              "label_any_positive": true,
+              "score": 0.711484593837535,
+              "title": "A Multi-Source Pipeline for Extracting Traditional-Style Chinese Melody Data from Symbolic Files and Score Images"
+            },
+            {
+              "canonical_openalex_work_id": "W7125983108",
+              "label_any_positive": true,
+              "score": 0.7016806722689075,
+              "title": "Analysis model for microtonal variations in ethnic music integrating the self-supervised PESTO algorithm"
+            },
+            {
+              "canonical_openalex_work_id": "W4417524614",
+              "label_any_positive": true,
+              "score": 0.6778711484593838,
+              "title": "Emotionally consistent music melody generation algorithm integrating prompt perception and hyper-network optimization"
+            },
+            {
+              "canonical_openalex_work_id": "W7160947525",
+              "label_any_positive": true,
+              "score": 0.6596638655462185,
+              "title": "Investigation of model training approaches for music inpainting on limited data"
+            },
+            {
+              "canonical_openalex_work_id": "W7117589451",
+              "label_any_positive": true,
+              "score": 0.65406162464986,
+              "title": "Distributed Cross\u2010Domain Music Style Transfer in the SAGIN Environment"
+            },
+            {
+              "canonical_openalex_work_id": "W7127968637",
+              "label_any_positive": true,
+              "score": 0.6498599439775911,
+              "title": "Music Performance Improvement Support System Using a Semi-Automated Instrument-Playing Robot with Real-Time Acoustic Analysis and Habit Visualization"
+            }
+          ],
+          "5": [
+            {
+              "canonical_openalex_work_id": "W4402645135",
+              "label_any_positive": true,
+              "score": 0.9733893557422969,
+              "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+            },
+            {
+              "canonical_openalex_work_id": "W4404639702",
+              "label_any_positive": true,
+              "score": 0.8137254901960784,
+              "title": "Digital Technology in Cultural Heritage: Construction and Evaluation Methods of AI-Based Ethnic Music Dataset"
+            },
+            {
+              "canonical_openalex_work_id": "W4388189390",
+              "label_any_positive": true,
+              "score": 0.7941176470588235,
+              "title": "An Algorithmic Approach to Automated Symbolic Transcription of Hindustani Vocals"
+            },
+            {
+              "canonical_openalex_work_id": "W4414972133",
+              "label_any_positive": true,
+              "score": 0.7801120448179272,
+              "title": "A Study on the Data Distribution Gap in Music Emotion Recognition"
+            },
+            {
+              "canonical_openalex_work_id": "W4389296725",
+              "label_any_positive": true,
+              "score": 0.7703081232492996,
+              "title": "Application of Computational Methods for Comparative Music Analysis"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "confirmatory_validation_passed": true,
+  "fresh_surface_hybrid_validation_passed": true,
+  "gates": [
+    {
+      "blocking_for": [
+        "confirmatory_validation"
+      ],
+      "category": "scope",
+      "gate_id": "G01_input_scope",
+      "observed_value": {
+        "policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
+        "surface_version": "ml-fresh-eval-surface-hybrid-v1",
+        "validation_version": "ml-hybrid-validation-on-fresh-surface-v1"
+      },
+      "rationale": "The gates must evaluate the fresh-surface validation v1 artifact against policy v1.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.metadata.validation_version",
+        "fresh_surface.metadata.surface_version",
+        "policy.metadata.policy_version"
+      ],
+      "status": "pass",
+      "threshold": {
+        "policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
+        "surface_version": "ml-fresh-eval-surface-hybrid-v1",
+        "validation_version": "ml-hybrid-validation-on-fresh-surface-v1"
+      },
+      "title": "Input Scope"
+    },
+    {
+      "blocking_for": [
+        "confirmatory_validation"
+      ],
+      "category": "surface",
+      "gate_id": "G02_fresh_surface_readiness",
+      "observed_value": {
+        "ready_for_hybrid_validation_scoring": true,
+        "status": "materialized_ready",
+        "threshold_check": {
+          "minimum_candidate_work_count": {
+            "observed": 143,
+            "passed": true,
+            "threshold": 100
+          },
+          "minimum_confirmatory_label_coverage_rate": {
+            "observed": 1.0,
+            "passed": true,
+            "threshold": 0.6
+          },
+          "minimum_confirmatory_labeled_work_count": {
+            "observed": 143,
+            "passed": true,
+            "threshold": 100
+          },
+          "minimum_confirmatory_negative_work_count": {
+            "observed": 89,
+            "passed": true,
+            "threshold": 20
+          },
+          "minimum_confirmatory_positive_work_count": {
+            "observed": 54,
+            "passed": true,
+            "threshold": 50
+          },
+          "minimum_distinct_negative_work_count": {
+            "observed": 89,
+            "passed": true,
+            "threshold": 20
+          }
+        }
+      },
+      "rationale": "Fresh validation can only be confirmed on a materialized-ready surface with candidate and label thresholds met.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "fresh_surface.metadata.status",
+        "fresh_surface.ready_for_hybrid_validation_scoring",
+        "fresh_surface.threshold_check"
+      ],
+      "status": "pass",
+      "threshold": {
+        "all_thresholds_passed": true,
+        "ready_for_hybrid_validation_scoring": true,
+        "status": "materialized_ready"
+      },
+      "title": "Fresh Surface Readiness"
+    },
+    {
+      "blocking_for": [
+        "confirmatory_validation",
+        "shadow_spec_readiness"
+      ],
+      "category": "leakage",
+      "gate_id": "G03_leakage_and_freshness",
+      "observed_value": {
+        "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+        "confirmatory_rows_with_previous_eval_overlap_count": 0,
+        "disallowed_eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+        "eval_label_weight_tuning_used": false,
+        "old_217_overlap_excluded_from_confirmatory_metrics": true,
+        "scorer_refit_used": false,
+        "supervised_fit_used": false
+      },
+      "rationale": "Confirmatory metrics must exclude the old eval surface and avoid fitting, retuning, or scorer refit.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.leakage_report",
+        "validation.metadata.candidate_pool_work_set_sha256",
+        "policy.metadata.disallowed_eval_work_set_sha256"
+      ],
+      "status": "pass",
+      "threshold": {
+        "candidate_pool_work_set_sha256_differs_from_old_217": true,
+        "confirmatory_overlap_count": 0,
+        "eval_label_weight_tuning_used": false,
+        "old_217_overlap_excluded_from_confirmatory_metrics": true,
+        "scorer_refit_used": false,
+        "supervised_fit_used": false
+      },
+      "title": "Leakage And Freshness"
+    },
+    {
+      "blocking_for": [
+        "confirmatory_validation"
+      ],
+      "category": "policy",
+      "gate_id": "G04_frozen_primary_arm",
+      "observed_value": {
+        "policy_primary_arm": "hybrid_rank_mean_50_50",
+        "validation_primary_arm": "hybrid_rank_mean_50_50"
+      },
+      "rationale": "The primary confirmatory decision must use the frozen 50/50 arm, not a post-hoc best arm.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.confirmatory_decision_inputs.primary_confirmatory_arm",
+        "policy.frozen_hybrid_arms.primary_confirmatory_arm"
+      ],
+      "status": "pass",
+      "threshold": {
+        "primary_confirmatory_arm": "hybrid_rank_mean_50_50"
+      },
+      "title": "Frozen Primary Arm"
+    },
+    {
+      "blocking_for": [
+        "confirmatory_validation"
+      ],
+      "category": "metrics",
+      "gate_id": "G05_metric_completeness",
+      "observed_value": {
+        "heuristic_final_score_baseline": {
+          "average_precision": true,
+          "negative_work_count": true,
+          "positive_work_count": true,
+          "precision_at_10": true,
+          "precision_at_20": true,
+          "precision_at_5": true,
+          "roc_auc_mann_whitney": true,
+          "scored_labeled_work_count": true
+        },
+        "holdout_embedding_probability_baseline": {
+          "average_precision": true,
+          "negative_work_count": true,
+          "positive_work_count": true,
+          "precision_at_10": true,
+          "precision_at_20": true,
+          "precision_at_5": true,
+          "roc_auc_mann_whitney": true,
+          "scored_labeled_work_count": true
+        },
+        "hybrid_rank_mean_50_50": {
+          "average_precision": true,
+          "negative_work_count": true,
+          "positive_work_count": true,
+          "precision_at_10": true,
+          "precision_at_20": true,
+          "precision_at_5": true,
+          "roc_auc_mann_whitney": true,
+          "scored_labeled_work_count": true
+        }
+      },
+      "rationale": "Heuristic, holdout learned, and primary hybrid metrics must all be present before gate evaluation.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.arm_metrics.heuristic_final_score_baseline",
+        "validation.arm_metrics.holdout_embedding_probability_baseline",
+        "validation.arm_metrics.hybrid_rank_mean_50_50"
+      ],
+      "status": "pass",
+      "threshold": {
+        "required_metrics": [
+          "ROC-AUC",
+          "AP",
+          "P@5",
+          "P@10",
+          "P@20",
+          "positive/negative/scored counts"
+        ]
+      },
+      "title": "Metric Completeness"
+    },
+    {
+      "blocking_for": [
+        "confirmatory_validation",
+        "shadow_spec_readiness"
+      ],
+      "category": "metrics",
+      "gate_id": "G06_primary_material_lift_vs_heuristic",
+      "observed_value": {
+        "deltas": {
+          "delta_average_precision": 0.21226464709880377,
+          "delta_precision_at_10": 0.5,
+          "delta_precision_at_20": 0.44999999999999996,
+          "delta_precision_at_5": 0.4,
+          "delta_roc_auc": 0.08510195588847269
+        },
+        "primary_arm": "hybrid_rank_mean_50_50"
+      },
+      "rationale": "The frozen primary hybrid arm must beat heuristic by the policy ROC-AUC or AP material-lift threshold.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.comparisons_vs_heuristic.hybrid_rank_mean_50_50",
+        "validation.arm_metrics"
+      ],
+      "status": "pass",
+      "threshold": {
+        "minimum_primary_delta_average_precision_for_material_lift": 0.02,
+        "minimum_primary_delta_roc_auc_for_material_lift": 0.03
+      },
+      "title": "Primary Material Lift Vs Heuristic"
+    },
+    {
+      "blocking_for": [
+        "confirmatory_validation"
+      ],
+      "category": "metrics",
+      "gate_id": "G07_primary_top_k_non_regression",
+      "observed_value": {
+        "precision_at_10": {
+          "heuristic": 0.5,
+          "passed": true,
+          "primary_hybrid": 1.0
+        },
+        "precision_at_20": {
+          "heuristic": 0.5,
+          "passed": true,
+          "primary_hybrid": 0.95
+        },
+        "precision_at_5": {
+          "heuristic": 0.6,
+          "passed": true,
+          "primary_hybrid": 1.0
+        }
+      },
+      "rationale": "Top-k precision should not regress for the primary hybrid arm on the fresh surface.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.arm_metrics.hybrid_rank_mean_50_50.precision_recall_at_k",
+        "validation.arm_metrics.heuristic_final_score_baseline.precision_recall_at_k"
+      ],
+      "status": "pass",
+      "threshold": {
+        "primary_precision_at_k_gte_heuristic_for": [
+          5,
+          10,
+          20
+        ]
+      },
+      "title": "Primary Top-K Non-Regression"
+    },
+    {
+      "blocking_for": [
+        "shadow_spec_readiness",
+        "production_default"
+      ],
+      "category": "interpretation",
+      "gate_id": "G08_best_arm_exploratory_only",
+      "observed_value": {
+        "best_arm_selection_is_exploratory_only": true
+      },
+      "rationale": "Best-arm reporting remains exploratory and cannot override the frozen primary arm.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.confirmatory_decision_inputs.best_arm_selection_is_exploratory_only"
+      ],
+      "status": "pass",
+      "threshold": {
+        "best_arm_selection_is_exploratory_only": true
+      },
+      "title": "Best Arm Exploratory Only"
+    },
+    {
+      "blocking_for": [
+        "shadow_spec_readiness"
+      ],
+      "category": "decision",
+      "gate_id": "G09_confirmatory_validation_decision",
+      "observed_value": {
+        "G01_through_G08": {
+          "G01": true,
+          "G02": true,
+          "G03": true,
+          "G04": true,
+          "G05": true,
+          "G06": true,
+          "G07": true,
+          "G08": true
+        }
+      },
+      "rationale": "Confirmatory validation passes only if all scope, readiness, leakage, frozen-arm, metric, lift, and interpretation gates pass.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "this.gates.G01_input_scope",
+        "this.gates.G08_best_arm_exploratory_only"
+      ],
+      "status": "pass",
+      "threshold": {
+        "G01_through_G08_all_pass": true
+      },
+      "title": "Confirmatory Validation Decision"
+    },
+    {
+      "blocking_for": [
+        "shadow_execution",
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G10_shadow_and_production_blockers",
+      "observed_value": {
+        "production_default_allowed": false,
+        "shadow_blockers": [
+          "missing_ml_shadow_scorer_v1_spec",
+          "missing_ml_shadow_scorer_v1_implementation",
+          "production_default_blocked",
+          "no_production_model_artifact"
+        ],
+        "shadow_scoring_allowed": false
+      },
+      "rationale": "Passing gates may authorize only drafting a shadow spec; execution and production remain blocked.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "validation.shadow_scoring_allowed",
+        "validation.production_default_allowed",
+        "this.shadow_blockers"
+      ],
+      "status": "pass",
+      "threshold": {
+        "production_default_allowed": false,
+        "shadow_scoring_allowed": false
+      },
+      "title": "Shadow And Production Blockers"
+    },
+    {
+      "blocking_for": [
+        "production_default"
+      ],
+      "category": "policy",
+      "gate_id": "G11_production_readiness_alignment",
+      "observed_value": {
+        "good_or_acceptable.production_eligible": false,
+        "production_default_authorized": false
+      },
+      "rationale": "The production readiness plan must still block production default changes.",
+      "required_for": [
+        "hybrid_validation_metric_gates"
+      ],
+      "source_field_paths": [
+        "production_readiness_plan.targets.good_or_acceptable.production_eligible",
+        "production_readiness_plan.production_default_authorized"
+      ],
+      "status": "pass",
+      "threshold": {
+        "good_or_acceptable.production_eligible": false,
+        "production_default_authorized": false
+      },
+      "title": "Production Readiness Alignment"
+    }
+  ],
+  "metadata": {
+    "artifact_type": "ml_hybrid_validation_metric_gates",
+    "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+    "caveats": [
+      "Not live recommender validation.",
+      "Fresh confirmatory surface; old 217 overlaps are excluded from confirmatory metrics.",
+      "Frozen holdout scorer v2 applied without refit.",
+      "Single-reviewer audit labels.",
+      "Primary confirmatory arm is fixed at hybrid_rank_mean_50_50; best-arm selection remains exploratory.",
+      "Passing these gates authorizes only drafting a shadow scorer spec.",
+      "No shadow execution, production default, API/web change, or model deployment is authorized."
+    ],
+    "disallowed_eval_work_set_sha256": "213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a",
+    "gate_status_enum": [
+      "pass",
+      "fail"
+    ],
+    "gates_version": "ml-hybrid-validation-metric-gates-v1",
+    "generated_at": "2026-05-20T14:35:18Z",
+    "inputs": [
+      {
+        "name": "hybrid_validation_on_fresh_surface",
+        "path": "docs/audit/ml-hybrid-validation-on-fresh-surface-v1.json",
+        "sha256": "5a9a778e2e0bf5d775b061d9a228a564cf6e99c3cd4a60c6cc2050a3e1caf240"
+      },
+      {
+        "name": "fresh_eval_surface",
+        "path": "docs/audit/ml-fresh-eval-surface-hybrid-v1.json",
+        "sha256": "f1baed1afdf189225e808079bc8262ad0352f530948b9dbccd0acc67ff12b65d"
+      },
+      {
+        "name": "fresh_surface_policy",
+        "path": "docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json",
+        "sha256": "10e372bb3236382c977b3cc8dbf56bfa1bff7adb93c6bf4f6673361cfa15a011"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      },
+      {
+        "name": "hybrid_experiment_spec",
+        "path": "docs/audit/ml-hybrid-scorer-offline-experiment-v1-spec.json",
+        "sha256": "7098dfcee2b4e3c64adcea843618112a29b09a4ebea238d6bab111edbde9f366"
+      },
+      {
+        "name": "hybrid_scorer_metric_gates",
+        "path": "docs/audit/ml-hybrid-scorer-metric-gates-v1.json",
+        "sha256": "9949daac84948bf32dd282bf2c760a95f9af2023e2e2b5141435ec357a58075a"
+      }
+    ],
+    "production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "source_fresh_surface_version": "ml-fresh-eval-surface-hybrid-v1",
+    "source_hybrid_validation_version": "ml-hybrid-validation-on-fresh-surface-v1",
+    "source_policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
+    "thresholds": {
+      "minimum_primary_delta_average_precision_for_material_lift": 0.02,
+      "minimum_primary_delta_roc_auc_for_material_lift": 0.03
+    }
+  },
+  "primary_confirmatory_arm": "hybrid_rank_mean_50_50",
+  "primary_hybrid_material_lift_passed": true,
+  "production_default_allowed": false,
+  "recommended_next_stage": "draft_ml_shadow_scorer_v1_spec",
+  "shadow_and_production_blockers": {
+    "confirmatory_validation_not_complete": false,
+    "missing_ml_shadow_scorer_v1_implementation": true,
+    "missing_ml_shadow_scorer_v1_spec": true,
+    "no_production_model_artifact": true,
+    "production_default_allowed": false,
+    "production_default_blocked": true,
+    "shadow_scoring_allowed": false
+  },
+  "shadow_blockers": [
+    "missing_ml_shadow_scorer_v1_spec",
+    "missing_ml_shadow_scorer_v1_implementation",
+    "production_default_blocked",
+    "no_production_model_artifact"
+  ],
+  "shadow_scoring_allowed": false
+}
