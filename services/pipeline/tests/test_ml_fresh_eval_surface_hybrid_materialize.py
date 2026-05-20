@@ -185,7 +185,7 @@ def _label_row(row_id: str, work_id: str, target: bool) -> dict:
     }
 
 
-def _label_dataset_payload(*, sparse: bool = False) -> dict:
+def _label_dataset_payload(*, sparse: bool = False, dataset_version: str = "ml-label-dataset-v8") -> dict:
     rows = [
         _label_row("r1", "W1", True),
         _label_row("r2", "W2", False),
@@ -199,7 +199,7 @@ def _label_dataset_payload(*, sparse: bool = False) -> dict:
                 _label_row("r-old", "W900", True),
             ]
         )
-    return {"dataset_version": "ml-label-dataset-v8", "rows": rows}
+    return {"dataset_version": dataset_version, "rows": rows}
 
 
 def _write_json(tmp_path: Path, name: str, payload: dict) -> Path:
@@ -208,7 +208,12 @@ def _write_json(tmp_path: Path, name: str, payload: dict) -> Path:
     return path
 
 
-def _fixture_paths(tmp_path: Path, *, sparse_labels: bool = False) -> dict[str, Path]:
+def _fixture_paths(
+    tmp_path: Path,
+    *,
+    sparse_labels: bool = False,
+    label_dataset_version: str = "ml-label-dataset-v8",
+) -> dict[str, Path]:
     old_ids = ["W900", "W901"]
     old_sha = _work_set_sha256(old_ids)
     scoring_path = _write_json(
@@ -276,7 +281,11 @@ def _fixture_paths(tmp_path: Path, *, sparse_labels: bool = False) -> dict[str, 
             },
         },
     )
-    label_path = _write_json(tmp_path, "labels.json", _label_dataset_payload(sparse=sparse_labels))
+    label_path = _write_json(
+        tmp_path,
+        "labels.json",
+        _label_dataset_payload(sparse=sparse_labels, dataset_version=label_dataset_version),
+    )
     conflict_path = tmp_path / "conflict-policy.md"
     conflict_path.write_text("# Conflict Policy\n\nNo silent conflict merge.\n", encoding="utf-8")
     return {
@@ -303,6 +312,8 @@ def test_happy_path_materializes_fresh_pool_and_thresholds_pass(tmp_path: Path) 
 
     assert payload["metadata"]["status"] == "materialized_ready"
     assert payload["metadata"]["surface_version"] == SURFACE_VERSION
+    assert payload["metadata"]["expected_label_dataset_version"] == "ml-label-dataset-v8"
+    assert payload["metadata"]["label_dataset_version"] == "ml-label-dataset-v8"
     assert payload["ready_for_hybrid_validation_scoring"] is True
     assert payload["recommended_next_stage"] == "execute_hybrid_validation_on_fresh_surface_v1"
     assert payload["candidate_source"]["ranking_run_id"] == "rank-fresh"
@@ -374,6 +385,35 @@ def test_label_threshold_failures_route_to_labeling_plan(tmp_path: Path) -> None
     assert payload["threshold_check"]["minimum_confirmatory_labeled_work_count"]["passed"] is False
 
 
+def test_v9_label_dataset_succeeds_when_expected_version_is_v9(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path, label_dataset_version="ml-label-dataset-v9")
+    payload = build_ml_fresh_eval_surface_hybrid_materialize_payload(
+        _FakeConn(),
+        **paths,
+        repo_root=tmp_path,
+        database_url="postgresql://research_radar:research_radar@localhost:5432/research_radar",
+        expected_label_dataset_version="ml-label-dataset-v9",
+        generated_at="2026-05-17T00:00:00Z",
+    )
+
+    assert payload["metadata"]["expected_label_dataset_version"] == "ml-label-dataset-v9"
+    assert payload["metadata"]["label_dataset_version"] == "ml-label-dataset-v9"
+    assert payload["metadata"]["status"] == "materialized_ready"
+
+
+def test_v9_label_dataset_fails_when_default_expected_version_remains_v8(tmp_path: Path) -> None:
+    paths = _fixture_paths(tmp_path, label_dataset_version="ml-label-dataset-v9")
+
+    with pytest.raises(MLFreshEvalSurfaceHybridMaterializeError, match="expected label dataset_version='ml-label-dataset-v8'"):
+        build_ml_fresh_eval_surface_hybrid_materialize_payload(
+            _FakeConn(),
+            **paths,
+            repo_root=tmp_path,
+            database_url="postgresql://research_radar:research_radar@localhost:5432/research_radar",
+            generated_at="2026-05-17T00:00:00Z",
+        )
+
+
 def test_conflict_and_duplicate_work_labels_are_counted_without_silent_merge(tmp_path: Path) -> None:
     payload = _build(tmp_path)
     work = payload["label_coverage"]["work_level"]
@@ -385,7 +425,7 @@ def test_conflict_and_duplicate_work_labels_are_counted_without_silent_merge(tmp
 
 
 def test_cli_writes_json_and_markdown_with_mocked_db(tmp_path: Path) -> None:
-    paths = _fixture_paths(tmp_path)
+    paths = _fixture_paths(tmp_path, label_dataset_version="ml-label-dataset-v9")
     out_json = tmp_path / "surface.json"
     out_md = tmp_path / "surface.md"
 
@@ -398,6 +438,8 @@ def test_cli_writes_json_and_markdown_with_mocked_db(tmp_path: Path) -> None:
         str(paths["fresh_surface_policy_path"]),
         "--label-dataset",
         str(paths["label_dataset_path"]),
+        "--expected-label-dataset-version",
+        "ml-label-dataset-v9",
         "--conflict-policy",
         str(paths["conflict_policy_path"]),
         "--family",
@@ -417,7 +459,10 @@ def test_cli_writes_json_and_markdown_with_mocked_db(tmp_path: Path) -> None:
     ):
         cli_main.main()
 
-    assert json.loads(out_json.read_text(encoding="utf-8"))["metadata"]["status"] == "materialized_ready"
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["metadata"]["status"] == "materialized_ready"
+    assert payload["metadata"]["expected_label_dataset_version"] == "ml-label-dataset-v9"
+    assert payload["metadata"]["label_dataset_version"] == "ml-label-dataset-v9"
     assert "Ready for hybrid validation scoring" in out_md.read_text(encoding="utf-8")
 
 
@@ -438,5 +483,6 @@ def test_module_imports_no_openai_openalex_or_sklearn_and_cli_flags_are_scoped()
     end = cli_source.index("ml_source_split_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]
     assert "--database-url" in parser_block
+    assert "--expected-label-dataset-version" in parser_block
     assert "--openai" not in parser_block.lower()
     assert "--openalex" not in parser_block.lower()

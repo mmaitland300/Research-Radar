@@ -2915,7 +2915,12 @@ def main() -> None:
     ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
         "--label-dataset",
         required=True,
-        help="Path to ml-label-dataset-v8 JSON",
+        help="Path to label dataset JSON (default expected version is ml-label-dataset-v8; use --expected-label-dataset-version for v9 fresh-hybrid reruns)",
+    )
+    ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
+        "--expected-label-dataset-version",
+        default="ml-label-dataset-v8",
+        help="Expected label dataset_version (default: ml-label-dataset-v8; set ml-label-dataset-v9 for fresh-hybrid label reruns)",
     )
     ml_fresh_eval_surface_hybrid_materialize_parser.add_argument(
         "--conflict-policy",
@@ -5001,6 +5006,7 @@ def main() -> None:
                 corpus_snapshot_version=args.corpus_snapshot_version,
                 database_url=args.database_url,
                 surface_version=str(args.surface_version),
+                expected_label_dataset_version=str(args.expected_label_dataset_version),
                 repo_root=repo_root,
             )
         except MLFreshEvalSurfaceHybridMaterializeError as e:

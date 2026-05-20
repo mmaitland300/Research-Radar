@@ -8791,39 +8791,39 @@
     "overlap_work_set_sha256": "07f47f2e5712b63537a914c4d30a1c20c25f1c1a13cc7d674d90af570c0b31f7"
   },
   "label_coverage": {
-    "label_coverage_rate": 0.006993006993006993,
+    "label_coverage_rate": 0.8461538461538461,
     "observation_level": {
-      "confirmatory_labeled_observation_count": 1,
-      "confirmatory_negative_observation_count": 0,
-      "confirmatory_positive_observation_count": 1,
-      "explicit_boolean_target_observation_rows": 427,
-      "explicit_manual_label_rows": 427,
+      "confirmatory_labeled_observation_count": 121,
+      "confirmatory_negative_observation_count": 82,
+      "confirmatory_positive_observation_count": 39,
+      "explicit_boolean_target_observation_rows": 547,
+      "explicit_manual_label_rows": 547,
       "label_rows_missing_canonical_work_id": 0,
       "overlap_labeled_observation_count_smoke_only": 286,
-      "total_label_dataset_rows": 427
+      "total_label_dataset_rows": 547
     },
     "observation_level_labels_preserved": true,
     "positive_negative_conflict_counts": {
       "conflicting_target_work_group_count": 0,
-      "negative_work_count_all_negative": 0,
-      "positive_work_count_any_positive": 1
+      "negative_work_count_all_negative": 82,
+      "positive_work_count_any_positive": 39
     },
     "silent_conflict_merge_used": false,
     "unlabeled_counts": {
-      "confirmatory_unlabeled_work_count": 142
+      "confirmatory_unlabeled_work_count": 22
     },
     "work_level": {
       "confirmatory_candidate_work_count": 143,
-      "confirmatory_labeled_work_count": 1,
-      "confirmatory_negative_work_count": 0,
-      "confirmatory_positive_work_count": 1,
-      "confirmatory_unlabeled_work_count": 142,
+      "confirmatory_labeled_work_count": 121,
+      "confirmatory_negative_work_count": 82,
+      "confirmatory_positive_work_count": 39,
+      "confirmatory_unlabeled_work_count": 22,
       "conflicting_target_work_group_count": 0,
       "conflicting_work_ids_preview": [],
-      "distinct_negative_work_count": 0,
+      "distinct_negative_work_count": 82,
       "duplicate_labeled_work_group_count": 0,
       "duplicate_work_ids_preview": [],
-      "label_coverage_rate": 0.006993006993006993
+      "label_coverage_rate": 0.8461538461538461
     }
   },
   "metadata": {
@@ -8844,7 +8844,8 @@
       "local_database_url_confirmed": true,
       "read_only_contract": "SELECT-only queries; no database mutations"
     },
-    "generated_at": "2026-05-19T15:27:52Z",
+    "expected_label_dataset_version": "ml-label-dataset-v9",
+    "generated_at": "2026-05-20T03:11:41Z",
     "inputs": [
       {
         "name": "fresh_surface_policy",
@@ -8853,8 +8854,8 @@
       },
       {
         "name": "label_dataset",
-        "path": "docs/audit/ml-label-dataset-v8.json",
-        "sha256": "ea65b114cfef6e22e3299bf4e54d320b6ba13a66185ac0908700528a1846948c"
+        "path": "docs/audit/ml-label-dataset-v9.json",
+        "sha256": "f5f9055d54e26889cac625ac237c0b33514e2073476f594d588da5ab9aea8fb5"
       },
       {
         "name": "conflict_policy",
@@ -8862,7 +8863,7 @@
         "sha256": "d0591de1a2bd9ab75c64f2318e9a5ea0b7acd94902e083931049893416d47841"
       }
     ],
-    "label_dataset_version": "ml-label-dataset-v8",
+    "label_dataset_version": "ml-label-dataset-v9",
     "policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
     "status": "materialized_needs_labels",
     "surface_version": "ml-fresh-eval-surface-hybrid-v1"
@@ -8887,28 +8888,28 @@
       "threshold": 100
     },
     "minimum_confirmatory_label_coverage_rate": {
-      "observed": 0.006993006993006993,
-      "passed": false,
+      "observed": 0.8461538461538461,
+      "passed": true,
       "threshold": 0.6
     },
     "minimum_confirmatory_labeled_work_count": {
-      "observed": 1,
-      "passed": false,
+      "observed": 121,
+      "passed": true,
       "threshold": 100
     },
     "minimum_confirmatory_negative_work_count": {
-      "observed": 0,
-      "passed": false,
+      "observed": 82,
+      "passed": true,
       "threshold": 20
     },
     "minimum_confirmatory_positive_work_count": {
-      "observed": 1,
+      "observed": 39,
       "passed": false,
       "threshold": 50
     },
     "minimum_distinct_negative_work_count": {
-      "observed": 0,
-      "passed": false,
+      "observed": 82,
+      "passed": true,
       "threshold": 20
     }
   }

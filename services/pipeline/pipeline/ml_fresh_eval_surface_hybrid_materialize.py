@@ -2,7 +2,7 @@
 
 This command is read-only. It selects an existing product-candidate style
 `paper_scores` pool, excludes the already-observed hybrid eval surface from
-confirmatory denominators, joins existing v8 labels from disk, and writes a
+confirmatory denominators, joins existing label datasets from disk, and writes a
 machine-checkable inventory. It does not score hybrid arms, train, generate
 embeddings, create ranking runs, import labels, or authorize shadow/prod.
 """
@@ -248,10 +248,14 @@ def _validate_policy(payload: Mapping[str, Any]) -> tuple[Mapping[str, Any], dic
     return metadata, normalized_thresholds, old_ids
 
 
-def _validate_label_dataset(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
-    if payload.get("dataset_version") != LABEL_DATASET_VERSION:
+def _validate_label_dataset(
+    payload: Mapping[str, Any],
+    *,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
+) -> list[dict[str, Any]]:
+    if payload.get("dataset_version") != expected_label_dataset_version:
         raise MLFreshEvalSurfaceHybridMaterializeError(
-            f"expected label dataset_version={LABEL_DATASET_VERSION!r}, got {payload.get('dataset_version')!r}"
+            f"expected label dataset_version={expected_label_dataset_version!r}, got {payload.get('dataset_version')!r}"
         )
     rows = payload.get("rows")
     if not isinstance(rows, list):
@@ -759,6 +763,7 @@ def build_ml_fresh_eval_surface_hybrid_materialize_payload(
     corpus_snapshot_version: str | None = None,
     database_url: str | None = None,
     surface_version: str = SURFACE_VERSION,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
     repo_root: Path | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
@@ -769,7 +774,10 @@ def build_ml_fresh_eval_surface_hybrid_materialize_payload(
     policy_payload = _load_json_object(policy_path)
     label_payload = _load_json_object(label_path)
     policy_metadata, thresholds, _policy_old_ids = _validate_policy(policy_payload)
-    label_rows = _validate_label_dataset(label_payload)
+    label_rows = _validate_label_dataset(
+        label_payload,
+        expected_label_dataset_version=expected_label_dataset_version,
+    )
 
     inputs = [
         _input_record("fresh_surface_policy", policy_path, repo_root=root),
@@ -842,6 +850,7 @@ def build_ml_fresh_eval_surface_hybrid_materialize_payload(
         "status": status,
         "inputs": inputs,
         "policy_version": policy_metadata.get("policy_version"),
+        "expected_label_dataset_version": expected_label_dataset_version,
         "label_dataset_version": label_payload.get("dataset_version"),
         "conflict_policy_sha256": conflict_sha,
         "database": database_summary,
@@ -993,6 +1002,7 @@ def write_ml_fresh_eval_surface_hybrid_materialize(
     corpus_snapshot_version: str | None = None,
     database_url: str | None = None,
     surface_version: str = SURFACE_VERSION,
+    expected_label_dataset_version: str = LABEL_DATASET_VERSION,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     dsn = database_url or _database_url_from_env()
@@ -1030,6 +1040,7 @@ def write_ml_fresh_eval_surface_hybrid_materialize(
             corpus_snapshot_version=corpus_snapshot_version,
             database_url=dsn,
             surface_version=surface_version,
+            expected_label_dataset_version=expected_label_dataset_version,
             repo_root=repo_root,
         )
         payload["candidate_source"]["selected_source_rationale"] = (
@@ -1048,6 +1059,7 @@ def write_ml_fresh_eval_surface_hybrid_materialize(
                 corpus_snapshot_version=corpus_snapshot_version,
                 database_url=dsn,
                 surface_version=surface_version,
+                expected_label_dataset_version=expected_label_dataset_version,
                 repo_root=repo_root,
             )
     output_path.parent.mkdir(parents=True, exist_ok=True)

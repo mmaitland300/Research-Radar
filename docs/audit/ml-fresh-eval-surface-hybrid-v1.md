@@ -37,21 +37,21 @@ This artifact inventories a concrete existing product-candidate pool for fresh h
 
 ## Label Coverage And Thresholds
 
-- Labeled works: 1
-- Unlabeled works: 142
-- Positive works: 1
-- Negative works: 0
+- Labeled works: 121
+- Unlabeled works: 22
+- Positive works: 39
+- Negative works: 82
 - Conflicting target work groups: 0
-- Label coverage rate: 0.007
+- Label coverage rate: 0.846
 
 | Threshold | Observed | Required | Passed |
 | --- | ---: | ---: | --- |
 | `minimum_candidate_work_count` | 143 | 100 | True |
-| `minimum_confirmatory_labeled_work_count` | 1 | 100 | False |
-| `minimum_confirmatory_positive_work_count` | 1 | 50 | False |
-| `minimum_confirmatory_negative_work_count` | 0 | 20 | False |
-| `minimum_confirmatory_label_coverage_rate` | 0.007 | 0.600 | False |
-| `minimum_distinct_negative_work_count` | 0 | 20 | False |
+| `minimum_confirmatory_labeled_work_count` | 121 | 100 | True |
+| `minimum_confirmatory_positive_work_count` | 39 | 50 | False |
+| `minimum_confirmatory_negative_work_count` | 82 | 20 | True |
+| `minimum_confirmatory_label_coverage_rate` | 0.846 | 0.600 | True |
+| `minimum_distinct_negative_work_count` | 82 | 20 | True |
 
 ## Blocked Actions
 
