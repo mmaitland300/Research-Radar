@@ -3208,6 +3208,45 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_v1_audit_parser = subparsers.add_parser(
+        "ml-shadow-scorer-v1-audit",
+        help="Replay the disabled-by-default ml-shadow-scorer-v1 formula against fresh validation rows",
+    )
+    ml_shadow_scorer_v1_audit_parser.add_argument(
+        "--shadow-scorer-spec",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-spec JSON",
+    )
+    ml_shadow_scorer_v1_audit_parser.add_argument(
+        "--hybrid-validation-on-fresh-surface",
+        required=True,
+        help="Path to ml-hybrid-validation-on-fresh-surface-v1 JSON",
+    )
+    ml_shadow_scorer_v1_audit_parser.add_argument(
+        "--fresh-eval-surface",
+        required=True,
+        help="Path to ml-fresh-eval-surface-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_v1_audit_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-shadow-scorer-v1 implementation audit JSON",
+    )
+    ml_shadow_scorer_v1_audit_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_v1_audit_parser.add_argument(
+        "--implementation-version",
+        default="ml-shadow-scorer-v1-implementation",
+        help="Implementation version string to write (default: ml-shadow-scorer-v1-implementation)",
+    )
+    ml_shadow_scorer_v1_audit_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_eval_labeling_plan_hybrid_parser = subparsers.add_parser(
         "ml-fresh-eval-labeling-plan-hybrid",
         help="Write a plan-only fresh eval labeling/remediation artifact for hybrid validation",
@@ -5420,6 +5459,35 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["scorer_contract"]["frozen_formula_id"])
         print(payload["spec_ready_for_implementation"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-v1-audit":
+        from pipeline.ml_shadow_scorer_v1 import (
+            MLShadowScorerV1Error,
+            write_ml_shadow_scorer_v1_audit,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_v1_audit(
+                shadow_scorer_spec_path=Path(args.shadow_scorer_spec),
+                hybrid_validation_on_fresh_surface_path=Path(args.hybrid_validation_on_fresh_surface),
+                fresh_eval_surface_path=Path(args.fresh_eval_surface),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                implementation_version=str(args.implementation_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerV1Error as e:
+            print(f"ml-shadow-scorer-v1-audit: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["implementation_status"]["implementation_matches_spec"])
+        print(payload["implementation_status"]["implementation_matches_validation_replay"])
         print(payload["recommended_next_stage"])
         return
 

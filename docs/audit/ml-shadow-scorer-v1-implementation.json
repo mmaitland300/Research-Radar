@@ -1,0 +1,299 @@
+{
+  "audit_replay_summary": {
+    "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+    "candidate_work_scores_count": 358,
+    "implementation_matches_validation_replay": true,
+    "max_abs_rank_pct_delta": 0.0,
+    "max_abs_score_delta": 0.0,
+    "mismatched_work_count": 0,
+    "mismatched_work_preview": [],
+    "missing_learned_probability_count": 0,
+    "replay_tolerance": 1e-12,
+    "validation_primary_arm_id": "hybrid_rank_mean_50_50"
+  },
+  "blocked_actions": [
+    "shadow_execution_enablement",
+    "production_default_change",
+    "api_web_change",
+    "ranking_run",
+    "training",
+    "embedding_generation",
+    "label_ingest"
+  ],
+  "caveats": [
+    "Implementation audit only; shadow execution remains disabled.",
+    "No database access, scoring rerun, embedding generation, ranking run, label ingest, API/web change, or production change.",
+    "Replay uses validation['candidate_work_scores'] exactly.",
+    "Labels in validation rows are ignored by scoring."
+  ],
+  "cross_artifact_provenance_checks": {
+    "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+    "candidate_pool_work_set_sha256_matches": true,
+    "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+    "corpus_snapshot_version_matches": true,
+    "embedding_version": "fresh-hybrid-text-embedding-v1",
+    "embedding_version_matches": true,
+    "family": "emerging",
+    "family_matches": true,
+    "ranking_run_id": "rank-9f4b2a2084",
+    "ranking_run_id_matches": true
+  },
+  "implementation_status": {
+    "candidate_pool_size": 358,
+    "disabled_by_default": true,
+    "formula_id": "hybrid_rank_mean_50_50",
+    "implementation_matches_spec": true,
+    "implementation_matches_validation_replay": true,
+    "implemented": true,
+    "learned_probability_coverage_count": 358,
+    "missing_learned_probability_count": 0,
+    "missing_ml_shadow_scorer_v1_implementation": false
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_v1_implementation",
+    "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+    "caveats": [
+      "Implementation audit only; shadow execution remains disabled.",
+      "No database access, scoring rerun, embedding generation, ranking run, label ingest, API/web change, or production change.",
+      "Replay uses validation['candidate_work_scores'] exactly.",
+      "Labels in validation rows are ignored by scoring."
+    ],
+    "generated_at": "2026-05-21T17:56:41Z",
+    "implementation_mode": "audit_replay_only",
+    "implementation_version": "ml-shadow-scorer-v1-implementation",
+    "inputs": [
+      {
+        "name": "shadow_scorer_spec",
+        "path": "docs/audit/ml-shadow-scorer-v1-spec.json",
+        "sha256": "65d5650f216c582beb556799dd9b2db70c4dd354da7440a8acc48da44586a792"
+      },
+      {
+        "name": "hybrid_validation_on_fresh_surface",
+        "path": "docs/audit/ml-hybrid-validation-on-fresh-surface-v1.json",
+        "sha256": "5a9a778e2e0bf5d775b061d9a228a564cf6e99c3cd4a60c6cc2050a3e1caf240"
+      },
+      {
+        "name": "fresh_eval_surface",
+        "path": "docs/audit/ml-fresh-eval-surface-hybrid-v1.json",
+        "sha256": "f1baed1afdf189225e808079bc8262ad0352f530948b9dbccd0acc67ff12b65d"
+      }
+    ],
+    "shadow_execution_enabled": false,
+    "source_spec_version": "ml-shadow-scorer-v1-spec",
+    "source_surface_version": "ml-fresh-eval-surface-hybrid-v1",
+    "source_validation_version": "ml-hybrid-validation-on-fresh-surface-v1"
+  },
+  "recommended_next_stage": "draft_ml_shadow_scorer_v1_execution_readiness_gates",
+  "score_distribution": {
+    "count": 358,
+    "max": 0.9943977591036415,
+    "mean": 0.5,
+    "median": 0.5168067226890757,
+    "min": 0.009803921568627472,
+    "p25": 0.3060224089635854,
+    "p75": 0.7107843137254901
+  },
+  "shadow_and_production_blockers": {
+    "api_web_changed": false,
+    "missing_ml_shadow_scorer_v1_implementation": false,
+    "missing_shadow_execution_readiness_gates": true,
+    "missing_shadow_output_isolation_check": true,
+    "production_default_allowed": false,
+    "production_default_changed": false,
+    "shadow_scoring_allowed": false
+  },
+  "spec_contract_summary": {
+    "formula": "score = 0.5 * rank_pct(final_score) + 0.5 * rank_pct(audit_embedding_probability_work)",
+    "formula_id": "hybrid_rank_mean_50_50",
+    "rank_percentile_policy": {
+      "higher_raw_score_is_better": true,
+      "n_equals_1_behavior": "rank_pct = 1.0",
+      "otherwise": "rank_pct = 1.0 - ((average_rank - 1.0) / (n - 1.0))",
+      "scope": "full candidate pool for that scoring run",
+      "ties": "average rank"
+    },
+    "scorer_id": "ml-shadow-scorer-v1"
+  },
+  "top_k_preview": [
+    {
+      "audit_embedding_probability_rank_pct": 0.9971988795518207,
+      "canonical_openalex_work_id": "W4408772031",
+      "final_score_rank_pct": 0.9915966386554622,
+      "heuristic_rank": 4,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9943977591036415,
+      "title": "CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.969187675070028,
+      "canonical_openalex_work_id": "W4402645135",
+      "final_score_rank_pct": 0.9775910364145658,
+      "heuristic_rank": 9,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9733893557422969,
+      "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.9663865546218487,
+      "canonical_openalex_work_id": "W4410091503",
+      "final_score_rank_pct": 0.9663865546218487,
+      "heuristic_rank": 13,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9663865546218487,
+      "title": "Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.927170868347339,
+      "canonical_openalex_work_id": "W4407236737",
+      "final_score_rank_pct": 0.957983193277311,
+      "heuristic_rank": 16,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9425770308123249,
+      "title": "The GigaMIDI Dataset with Features for Expressive Music Performance Detection"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.9831932773109243,
+      "canonical_openalex_work_id": "W7119099299",
+      "final_score_rank_pct": 0.9019607843137255,
+      "heuristic_rank": 36,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.9425770308123249,
+      "title": "Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8935574229691877,
+      "canonical_openalex_work_id": "W4414799845",
+      "final_score_rank_pct": 0.9803921568627451,
+      "heuristic_rank": 8,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9369747899159664,
+      "title": "On the Lack of a Perceptually Motivated Evaluation Metric for Packet Loss Concealment in Networked Music Performances"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.9187675070028011,
+      "canonical_openalex_work_id": "W4412780451",
+      "final_score_rank_pct": 0.9495798319327731,
+      "heuristic_rank": 19,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9341736694677871,
+      "title": "MusiQAl: A Dataset for Music Question-Answering through Audio-Video Fusion"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8543417366946778,
+      "canonical_openalex_work_id": "W4409215215",
+      "final_score_rank_pct": 1.0,
+      "heuristic_rank": 1,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.927170868347339,
+      "title": "Issues and Challenges of Audio Technologies for the Musical Metaverse"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.9775910364145658,
+      "canonical_openalex_work_id": "W4416267785",
+      "final_score_rank_pct": 0.8599439775910365,
+      "heuristic_rank": 51,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.9187675070028012,
+      "title": "ImproVision Equilibrium: Toward Multimodal Musical Human-Machine Interaction"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8711484593837535,
+      "canonical_openalex_work_id": "W7116976483",
+      "final_score_rank_pct": 0.9635854341736695,
+      "heuristic_rank": 14,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9173669467787116,
+      "title": "Multimodal Datasets for Studying Expert Performances of Musical Scores"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8263305322128851,
+      "canonical_openalex_work_id": "W4409215261",
+      "final_score_rank_pct": 0.9943977591036415,
+      "heuristic_rank": 3,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.9103641456582633,
+      "title": "Toward an Improved Auditory Model for Predicting Binaural Coloration"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8403361344537815,
+      "canonical_openalex_work_id": "W4409967775",
+      "final_score_rank_pct": 0.9747899159663865,
+      "heuristic_rank": 10,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.907563025210084,
+      "title": "ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.9299719887955182,
+      "canonical_openalex_work_id": "W7134122976",
+      "final_score_rank_pct": 0.8823529411764706,
+      "heuristic_rank": 43,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.9061624649859944,
+      "title": "3D Microphone Array Comparison Part 2: Elicitation of Salient Perceptual Attributes"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.9243697478991597,
+      "canonical_openalex_work_id": "W4411141958",
+      "final_score_rank_pct": 0.876750700280112,
+      "heuristic_rank": 45,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.9005602240896359,
+      "title": "Reverse Engineering of Music Mixing Graphs With Differentiable Processors and Iterative Pruning"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8011204481792717,
+      "canonical_openalex_work_id": "W4412900768",
+      "final_score_rank_pct": 0.9719887955182073,
+      "heuristic_rank": 11,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.8865546218487395,
+      "title": "STAR Drums: A Dataset for Automatic Drum Transcription"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.773109243697479,
+      "canonical_openalex_work_id": "W4414199528",
+      "final_score_rank_pct": 0.988795518207283,
+      "heuristic_rank": 5,
+      "in_top_k_by_final_score": true,
+      "ml_shadow_scorer_v1_score": 0.8809523809523809,
+      "title": "PESTO: Real\u2011Time Pitch Estimation with Self\u2011Supervised Transposition\u2011Equivariant Objective"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8095238095238095,
+      "canonical_openalex_work_id": "W4415947443",
+      "final_score_rank_pct": 0.9355742296918768,
+      "heuristic_rank": 24,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.8725490196078431,
+      "title": "Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8375350140056023,
+      "canonical_openalex_work_id": "W4412518308",
+      "final_score_rank_pct": 0.8879551820728291,
+      "heuristic_rank": 41,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.8627450980392157,
+      "title": "Multimodal Raga Classification from Vocal Performances with Disentanglement and Contrastive Loss"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.7983193277310925,
+      "canonical_openalex_work_id": "W4411489043",
+      "final_score_rank_pct": 0.9187675070028011,
+      "heuristic_rank": 30,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.8585434173669468,
+      "title": "The Potential of Unsupervised Induction of Harmonic Syntax for Jazz"
+    },
+    {
+      "audit_embedding_probability_rank_pct": 0.8823529411764706,
+      "canonical_openalex_work_id": "W7128595024",
+      "final_score_rank_pct": 0.8319327731092436,
+      "heuristic_rank": 61,
+      "in_top_k_by_final_score": false,
+      "ml_shadow_scorer_v1_score": 0.8571428571428571,
+      "title": "High-Resolution Directivity Measurements of an Artificial Head and Mouth Shaped to Three Vowels"
+    }
+  ]
+}
