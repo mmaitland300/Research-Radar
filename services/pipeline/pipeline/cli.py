@@ -3987,6 +3987,87 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-hybrid-candidate-plan",
+        help="Write a dry-run OpenAlex candidate acquisition plan for the second fresh shadow-generalization surface",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--second-candidate-source-expansion-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-candidate-source-expansion-plan-v1 JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v10 JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--offline-production-candidate-scoring-v3",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v3 JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--first-validated-surface",
+        required=True,
+        help="Path to ml-fresh-eval-surface-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--generalization-second-surface",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-second-surface-v1 JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--target-min",
+        type=int,
+        default=180,
+        help="Minimum planned candidate count target (default: 180)",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--target-max",
+        type=int,
+        default=600,
+        help="Maximum planned candidate count target (default: 600)",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--mailto",
+        default=None,
+        help="Optional OpenAlex User-Agent contact; raw mailto is not stored in artifacts",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write second hybrid candidate plan JSON",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--plan-version",
+        default="ml-shadow-scorer-v1-second-hybrid-candidate-plan-v1",
+        help="Plan version string to write (default: ml-shadow-scorer-v1-second-hybrid-candidate-plan-v1)",
+    )
+    ml_shadow_scorer_second_hybrid_candidate_plan_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_product_candidate_ranking_source_parser = subparsers.add_parser(
         "ml-fresh-product-candidate-ranking-source",
         help="Freeze a read-only fresh product-candidate ranking source for hybrid validation",
@@ -6078,6 +6159,43 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(payload["current_blocker_summary"]["candidate_gap"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-hybrid-candidate-plan":
+        from pipeline.ml_shadow_scorer_second_hybrid_candidate_plan import (
+            MLShadowScorerSecondHybridCandidatePlanError,
+            write_ml_shadow_scorer_second_hybrid_candidate_plan,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_second_hybrid_candidate_plan(
+                second_candidate_source_expansion_plan_path=Path(args.second_candidate_source_expansion_plan),
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                offline_production_candidate_scoring_v3_path=Path(args.offline_production_candidate_scoring_v3),
+                first_validated_surface_path=Path(args.first_validated_surface),
+                generalization_second_surface_path=Path(args.generalization_second_surface),
+                target_min=int(args.target_min),
+                target_max=int(args.target_max),
+                mailto=args.mailto,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                plan_version=str(args.plan_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondHybridCandidatePlanError as e:
+            print(f"ml-shadow-scorer-second-hybrid-candidate-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["candidate_selection"]["selected_total"])
+        print(payload["readiness_estimate"]["estimated_confirmatory_eligible_after_exclusions"])
         print(payload["recommended_next_stage"])
         return
 
