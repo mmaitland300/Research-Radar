@@ -3943,6 +3943,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-candidate-source-expansion-plan",
+        help="Write a plan-only artifact to expand/create a second fresh candidate source for shadow generalization",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--generalization-second-surface",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-second-surface-v1 JSON",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write second candidate-source expansion plan JSON",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--plan-version",
+        default="ml-shadow-scorer-v1-second-candidate-source-expansion-plan-v1",
+        help="Plan version string to write (default: ml-shadow-scorer-v1-second-candidate-source-expansion-plan-v1)",
+    )
+    ml_shadow_scorer_second_candidate_source_expansion_plan_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_product_candidate_ranking_source_parser = subparsers.add_parser(
         "ml-fresh-product-candidate-ranking-source",
         help="Freeze a read-only fresh product-candidate ranking source for hybrid validation",
@@ -6005,6 +6049,35 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["discovery_summary"]["status"])
         print(payload["readiness_for_generalization_audit"]["ready_for_generalization_audit_execution"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-candidate-source-expansion-plan":
+        from pipeline.ml_shadow_scorer_second_candidate_source_expansion_plan import (
+            MLShadowScorerSecondCandidateSourceExpansionPlanError,
+            write_ml_shadow_scorer_second_candidate_source_expansion_plan,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_second_candidate_source_expansion_plan(
+                generalization_second_surface_path=Path(args.generalization_second_surface),
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                plan_version=str(args.plan_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondCandidateSourceExpansionPlanError as e:
+            print(f"ml-shadow-scorer-second-candidate-source-expansion-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["current_blocker_summary"]["candidate_gap"])
         print(payload["recommended_next_stage"])
         return
 
