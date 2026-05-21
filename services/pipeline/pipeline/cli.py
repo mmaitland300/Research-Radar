@@ -3869,6 +3869,80 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_shadow_scorer_generalization_second_surface_parser = subparsers.add_parser(
+        "ml-shadow-scorer-generalization-second-surface",
+        help="Discover/select a distinct second fresh surface for ml-shadow-scorer-v1 generalization",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v10 JSON",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--offline-production-candidate-scoring-v3",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v3 JSON",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--first-validated-surface",
+        default=None,
+        help="Optional ml-fresh-eval-surface-hybrid-v1 JSON for first validated surface overlap IDs",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Optional local Postgres URL for SELECT-only discovery",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--ranking-run-id",
+        default=None,
+        help="Optional explicit ranking_run_id probe; still validated for distinctness",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--family",
+        default="emerging",
+        help="Recommendation family to inspect (default: emerging)",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write second-surface discovery JSON",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--surface-version",
+        default="ml-shadow-scorer-v1-generalization-second-surface-v1",
+        help="Surface version string to write (default: ml-shadow-scorer-v1-generalization-second-surface-v1)",
+    )
+    ml_shadow_scorer_generalization_second_surface_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_product_candidate_ranking_source_parser = subparsers.add_parser(
         "ml-fresh-product-candidate-ranking-source",
         help="Freeze a read-only fresh product-candidate ranking source for hybrid validation",
@@ -5894,6 +5968,43 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["generalization_audit_plan_defined"])
         print(payload["generalization_audit_executed"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-generalization-second-surface":
+        from pipeline.ml_shadow_scorer_generalization_second_surface import (
+            MLShadowScorerGeneralizationSecondSurfaceError,
+            write_ml_shadow_scorer_generalization_second_surface,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        first_surface = Path(args.first_validated_surface) if args.first_validated_surface else None
+        try:
+            payload = write_ml_shadow_scorer_generalization_second_surface(
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                offline_production_candidate_scoring_v3_path=Path(args.offline_production_candidate_scoring_v3),
+                first_validated_surface_path=first_surface,
+                database_url=str(args.database_url) if args.database_url else None,
+                ranking_run_id=str(args.ranking_run_id) if args.ranking_run_id else None,
+                family=str(args.family),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                surface_version=str(args.surface_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerGeneralizationSecondSurfaceError as e:
+            print(f"ml-shadow-scorer-generalization-second-surface: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["discovery_summary"]["status"])
+        print(payload["readiness_for_generalization_audit"]["ready_for_generalization_audit_execution"])
         print(payload["recommended_next_stage"])
         return
 
