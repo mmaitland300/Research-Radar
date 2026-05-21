@@ -14,6 +14,9 @@ from pipeline.ml_shadow_scorer_execution_readiness_gates import (
 )
 
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+
+
 FRESH_SHA = "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6"
 
 
@@ -321,8 +324,10 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
 
 
 def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url() -> None:
-    module_source = Path("pipeline/ml_shadow_scorer_execution_readiness_gates.py").read_text(encoding="utf-8").lower()
-    test_source = Path("tests/test_ml_shadow_scorer_execution_readiness_gates.py").read_text(encoding="utf-8").lower()
+    module_source = (PACKAGE_ROOT / "pipeline" / "ml_shadow_scorer_execution_readiness_gates.py").read_text(
+        encoding="utf-8"
+    ).lower()
+    test_source = Path(__file__).read_text(encoding="utf-8").lower()
     import_lines = "\n".join(
         line.strip()
         for line in (module_source + "\n" + test_source).splitlines()
@@ -331,7 +336,7 @@ def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url(
     for forbidden in ("psycopg", "postgres", "openai", "openalex", "sklearn"):
         assert forbidden not in import_lines
 
-    cli_source = Path("pipeline/cli.py").read_text(encoding="utf-8").lower()
+    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8").lower()
     command_index = cli_source.index("ml-shadow-scorer-execution-readiness-gates")
     next_command_index = cli_source.index("ml-fresh-eval-labeling-plan-hybrid", command_index)
     command_block = cli_source[command_index:next_command_index]

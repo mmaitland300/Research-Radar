@@ -17,6 +17,9 @@ from pipeline.ml_hybrid_validation_metric_gates import (
 )
 
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+
+
 EXPECTED_FORMULAS = [
     ("heuristic_final_score_baseline", "final_score"),
     ("holdout_embedding_probability_baseline", "audit_embedding_probability_work"),
@@ -449,8 +452,10 @@ def test_cli_writes_json_and_markdown_with_primary_flag(tmp_path: Path) -> None:
 
 
 def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url() -> None:
-    module_source = Path("pipeline/ml_hybrid_validation_metric_gates.py").read_text(encoding="utf-8").lower()
-    test_source = Path("tests/test_ml_hybrid_validation_metric_gates.py").read_text(encoding="utf-8").lower()
+    module_source = (PACKAGE_ROOT / "pipeline" / "ml_hybrid_validation_metric_gates.py").read_text(
+        encoding="utf-8"
+    ).lower()
+    test_source = Path(__file__).read_text(encoding="utf-8").lower()
     import_lines = "\n".join(
         line.strip()
         for line in (module_source + "\n" + test_source).splitlines()
@@ -462,7 +467,7 @@ def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url(
     assert "openai" not in import_lines
     assert "openalex" not in import_lines
 
-    cli_source = Path("pipeline/cli.py").read_text(encoding="utf-8")
+    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
     start = cli_source.index('"ml-hybrid-validation-metric-gates"')
     end = cli_source.index("ml_fresh_eval_labeling_plan_hybrid_parser", start)
     parser_block = cli_source[start:end]

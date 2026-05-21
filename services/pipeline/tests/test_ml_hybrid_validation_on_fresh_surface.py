@@ -17,6 +17,9 @@ from pipeline.ml_hybrid_validation_on_fresh_surface import (
 )
 
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+
+
 class _FakeCur:
     def __init__(self, parent: "_FakeConn") -> None:
         self._parent = parent
@@ -397,13 +400,15 @@ def test_rejects_hosted_database_url(tmp_path: Path) -> None:
 
 
 def test_cli_parser_registers_command() -> None:
-    cli_source = Path("pipeline/cli.py").read_text(encoding="utf-8")
+    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
     assert "ml-hybrid-validation-on-fresh-surface" in cli_source
 
 
 def test_new_module_has_no_openai_openalex_client_or_sklearn_imports() -> None:
-    module_source = Path("pipeline/ml_hybrid_validation_on_fresh_surface.py").read_text(encoding="utf-8").lower()
-    test_source = Path("tests/test_ml_hybrid_validation_on_fresh_surface.py").read_text(encoding="utf-8").lower()
+    module_source = (PACKAGE_ROOT / "pipeline" / "ml_hybrid_validation_on_fresh_surface.py").read_text(
+        encoding="utf-8"
+    ).lower()
+    test_source = Path(__file__).read_text(encoding="utf-8").lower()
     import_lines = "\n".join(
         line.strip()
         for line in (module_source + "\n" + test_source).splitlines()

@@ -17,6 +17,9 @@ from pipeline.ml_shadow_scorer_spec import (
 )
 
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+
+
 FRESH_SHA = "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6"
 
 
@@ -372,8 +375,8 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
 
 
 def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url() -> None:
-    module_source = Path("pipeline/ml_shadow_scorer_spec.py").read_text(encoding="utf-8").lower()
-    test_source = Path("tests/test_ml_shadow_scorer_spec.py").read_text(encoding="utf-8").lower()
+    module_source = (PACKAGE_ROOT / "pipeline" / "ml_shadow_scorer_spec.py").read_text(encoding="utf-8").lower()
+    test_source = Path(__file__).read_text(encoding="utf-8").lower()
     import_lines = "\n".join(
         line.strip()
         for line in (module_source + "\n" + test_source).splitlines()
@@ -385,7 +388,7 @@ def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url(
     assert "openai" not in import_lines
     assert "openalex" not in import_lines
 
-    cli_source = Path("pipeline/cli.py").read_text(encoding="utf-8")
+    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
     start = cli_source.index('"ml-shadow-scorer-spec"')
     end = cli_source.index("ml_fresh_eval_labeling_plan_hybrid_parser", start)
     parser_block = cli_source[start:end]
