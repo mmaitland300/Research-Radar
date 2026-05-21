@@ -3443,6 +3443,55 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_generalization_audit_plan_parser = subparsers.add_parser(
+        "ml-shadow-scorer-generalization-audit-plan",
+        help="Draft the ml-shadow-scorer-v1 second-surface generalization audit plan",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--shadow-scorer-audit-output-gates",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-audit-output-gates JSON",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--shadow-scorer-spec",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-spec JSON",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-shadow-scorer-v1 generalization audit plan JSON",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--plan-version",
+        default="ml-shadow-scorer-v1-generalization-audit-v1",
+        help="Plan version string to write (default: ml-shadow-scorer-v1-generalization-audit-v1)",
+    )
+    ml_shadow_scorer_generalization_audit_plan_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_eval_labeling_plan_hybrid_parser = subparsers.add_parser(
         "ml-fresh-eval-labeling-plan-hybrid",
         help="Write a plan-only fresh eval labeling/remediation artifact for hybrid validation",
@@ -5814,6 +5863,37 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["online_shadow_execution_policy_defined"])
         print(payload["online_shadow_execution_enabled"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-generalization-audit-plan":
+        from pipeline.ml_shadow_scorer_generalization_audit_plan import (
+            MLShadowScorerGeneralizationAuditPlanError,
+            write_ml_shadow_scorer_generalization_audit_plan,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_generalization_audit_plan(
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                shadow_scorer_audit_output_gates_path=Path(args.shadow_scorer_audit_output_gates),
+                shadow_scorer_spec_path=Path(args.shadow_scorer_spec),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                plan_version=str(args.plan_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerGeneralizationAuditPlanError as e:
+            print(f"ml-shadow-scorer-generalization-audit-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["generalization_audit_plan_defined"])
+        print(payload["generalization_audit_executed"])
         print(payload["recommended_next_stage"])
         return
 
