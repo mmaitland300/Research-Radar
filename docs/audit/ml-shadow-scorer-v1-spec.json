@@ -1,0 +1,225 @@
+{
+  "allowed_inputs": [
+    "canonical_openalex_work_id",
+    "final_score",
+    "audit_embedding_probability_work",
+    "ranking_run_id",
+    "family",
+    "corpus_snapshot_version",
+    "embedding_version",
+    "title",
+    "year",
+    "source metadata for audit display only"
+  ],
+  "caveats": [
+    "Spec only; no shadow scoring executed.",
+    "Spec does not authorize shadow execution.",
+    "Spec does not authorize production default, API, web, or model deployment changes.",
+    "Frozen formula uses the primary hybrid arm confirmed on the fresh 143-work denominator.",
+    "Learned component must use frozen scorer output without refit.",
+    "No eval-label weight tuning or label-derived features are allowed."
+  ],
+  "cross_artifact_provenance_checks": {
+    "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+    "candidate_pool_work_set_sha256_matches": true,
+    "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+    "corpus_snapshot_version_matches": true,
+    "embedding_version": "fresh-hybrid-text-embedding-v1",
+    "embedding_version_matches": true,
+    "family": "emerging",
+    "family_matches": true,
+    "primary_confirmatory_arm_matches": true,
+    "ranking_run_id": "rank-9f4b2a2084",
+    "ranking_run_id_matches": true
+  },
+  "evidence_chain": {
+    "fresh_surface_reference": {
+      "candidate_pool_work_count": 358,
+      "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+      "confirmatory_metric_work_count": 143,
+      "confirmatory_negative_work_count": 89,
+      "confirmatory_positive_work_count": 54,
+      "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+      "embedding_version": "fresh-hybrid-text-embedding-v1",
+      "family": "emerging",
+      "ranking_run_id": "rank-9f4b2a2084"
+    },
+    "hybrid_validation_metric_gates": {
+      "confirmatory_validation_passed": true,
+      "fresh_surface_hybrid_validation_passed": true,
+      "primary_deltas_vs_heuristic": {
+        "delta_average_precision": 0.21226464709880377,
+        "delta_precision_at_10": 0.5,
+        "delta_precision_at_20": 0.44999999999999996,
+        "delta_precision_at_5": 0.4,
+        "delta_roc_auc": 0.08510195588847269
+      },
+      "primary_hybrid_material_lift_passed": true,
+      "recommended_next_stage": "draft_ml_shadow_scorer_v1_spec"
+    }
+  },
+  "execution_policy": {
+    "api_web_changes_allowed": false,
+    "bridge_default_changes_allowed": false,
+    "future_implementation_write_scope": "isolated shadow/audit outputs only",
+    "production_default_promotion_authorized": false,
+    "production_ranking_changes_allowed": false,
+    "shadow_scorer_disabled_by_default": true,
+    "spec_removes_missing_implementation_blocker": false
+  },
+  "forbidden_inputs": [
+    "relevance_label",
+    "novelty_label",
+    "bridge_like_label",
+    "good_or_acceptable",
+    "label_any_positive",
+    "any derived label targets",
+    "reviewer_notes",
+    "row_id",
+    "sample_reason",
+    "review_pool_variant",
+    "holdout assignment",
+    "fresh validation labels",
+    "any feature selected or tuned using labels"
+  ],
+  "frozen_formula_id": "hybrid_rank_mean_50_50",
+  "future_readiness_gates": [
+    "implementation matches this exact formula",
+    "learned component uses frozen ml-offline-audit-embedding-scorer-v2 output or successor explicitly validated by a new gate",
+    "no production/default config changed",
+    "shadow writes isolated from production ranking",
+    "full component coverage",
+    "no label leakage",
+    "monitoring fields emitted",
+    "rollback/disable path documented",
+    "production default remains blocked"
+  ],
+  "implementation_blockers": {
+    "missing_ml_shadow_scorer_v1_implementation": true,
+    "no_production_model_artifact": true,
+    "production_default_blocked": true,
+    "shadow_execution_gate_not_written": true
+  },
+  "learned_component_source": "audit_embedding_probability_work from frozen ml-offline-audit-embedding-scorer-v2 application, as used in fresh validation",
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_spec",
+    "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+    "generated_at": "2026-05-21T16:58:41Z",
+    "inputs": [
+      {
+        "name": "hybrid_validation_metric_gates",
+        "path": "docs/audit/ml-hybrid-validation-metric-gates-v1.json",
+        "sha256": "799bb6b0e5f88ca150111eb3b5e2da9d030d436c58ae9ae34a1a9c011885f46e"
+      },
+      {
+        "name": "hybrid_validation_on_fresh_surface",
+        "path": "docs/audit/ml-hybrid-validation-on-fresh-surface-v1.json",
+        "sha256": "5a9a778e2e0bf5d775b061d9a228a564cf6e99c3cd4a60c6cc2050a3e1caf240"
+      },
+      {
+        "name": "fresh_eval_surface",
+        "path": "docs/audit/ml-fresh-eval-surface-hybrid-v1.json",
+        "sha256": "f1baed1afdf189225e808079bc8262ad0352f530948b9dbccd0acc67ff12b65d"
+      },
+      {
+        "name": "fresh_surface_policy",
+        "path": "docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json",
+        "sha256": "10e372bb3236382c977b3cc8dbf56bfa1bff7adb93c6bf4f6673361cfa15a011"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      },
+      {
+        "name": "audit_embedding_scorer_export",
+        "path": "docs/audit/ml-offline-audit-embedding-scorer-v2.json",
+        "sha256": "f2e7744c089360c9a218361d94b6ed9d55c6c9570775fff769713785d40ee795"
+      },
+      {
+        "name": "hybrid_experiment_spec",
+        "path": "docs/audit/ml-hybrid-scorer-offline-experiment-v1-spec.json",
+        "sha256": "7098dfcee2b4e3c64adcea843618112a29b09a4ebea238d6bab111edbde9f366"
+      }
+    ],
+    "production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "source_fresh_surface_policy_version": "ml-fresh-eval-surface-policy-hybrid-v1",
+    "source_fresh_surface_version": "ml-fresh-eval-surface-hybrid-v1",
+    "source_hybrid_validation_metric_gates_version": "ml-hybrid-validation-metric-gates-v1",
+    "source_hybrid_validation_version": "ml-hybrid-validation-on-fresh-surface-v1",
+    "spec_version": "ml-shadow-scorer-v1-spec",
+    "strategic_framing": [
+      "confirmatory_validation_passed_enables_shadow_spec_drafting_only",
+      "shadow_execution_remains_blocked",
+      "production_default_remains_blocked",
+      "implementation_must_be_disabled_by_default"
+    ]
+  },
+  "observability_requirements": [
+    "component coverage counts",
+    "missing learned probability count",
+    "score distribution for final_score",
+    "score distribution for audit_embedding_probability_work",
+    "score distribution for hybrid shadow score",
+    "top-k overlap with heuristic final_score",
+    "rank displacement summary",
+    "family-level counts",
+    "shadow output completeness",
+    "error counters if implemented online",
+    "latency counters if implemented online"
+  ],
+  "production_default_allowed": false,
+  "rank_percentile_policy": {
+    "fresh_validation_reference_pool_size": 358,
+    "future_shadow_scope_note": "future shadow runs compute rank percentiles within their own full candidate pool",
+    "higher_raw_score_is_better": true,
+    "n_equals_1_behavior": "rank_pct = 1.0",
+    "otherwise": "rank_pct = 1.0 - ((average_rank - 1.0) / (n - 1.0))",
+    "same_tie_policy_as": [
+      "ml_hybrid_validation_on_fresh_surface.py",
+      "offline hybrid experiment v1"
+    ],
+    "scope": "full candidate pool for that scoring run",
+    "ties": "average rank"
+  },
+  "recommended_next_stage": "implement_ml_shadow_scorer_v1_disabled_by_default",
+  "scorer_contract": {
+    "frozen_formula_id": "hybrid_rank_mean_50_50",
+    "learned_component_fit_mode": "holdout_bound_train_only",
+    "learned_component_scorer_version": "ml-offline-audit-embedding-scorer-v2",
+    "learned_component_source": "audit_embedding_probability_work from frozen ml-offline-audit-embedding-scorer-v2 application, as used in fresh validation",
+    "no_eval_label_weight_tuning": true,
+    "no_label_derived_features": true,
+    "no_refit_of_learned_scorer": true,
+    "production_default_changes_allowed": false,
+    "scorer_id": "ml-shadow-scorer-v1"
+  },
+  "scorer_id": "ml-shadow-scorer-v1",
+  "scoring_formula": {
+    "components": [
+      {
+        "name": "final_score_rank_pct",
+        "source": "rank_pct(final_score)",
+        "weight": 0.5
+      },
+      {
+        "name": "audit_embedding_probability_rank_pct",
+        "source": "rank_pct(audit_embedding_probability_work)",
+        "weight": 0.5
+      }
+    ],
+    "expression": "0.5 * rank_pct(final_score) + 0.5 * rank_pct(audit_embedding_probability_work)",
+    "formula_id": "hybrid_rank_mean_50_50",
+    "scoring_formula_literal": "score = 0.5 * rank_pct(final_score) + 0.5 * rank_pct(audit_embedding_probability_work)"
+  },
+  "shadow_and_production_blockers": {
+    "missing_ml_shadow_scorer_v1_implementation": true,
+    "no_production_model_artifact": true,
+    "production_default_allowed": false,
+    "production_default_blocked": true,
+    "shadow_execution_gate_not_written": true,
+    "shadow_scoring_allowed": false
+  },
+  "shadow_scoring_allowed": false,
+  "spec_ready_for_implementation": true
+}
