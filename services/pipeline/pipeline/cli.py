@@ -3247,6 +3247,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_execution_readiness_parser = subparsers.add_parser(
+        "ml-shadow-scorer-execution-readiness-gates",
+        help="Evaluate disabled ml-shadow-scorer-v1 implementation readiness for an isolated audit output artifact",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--shadow-scorer-implementation",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-implementation JSON",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--shadow-scorer-spec",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-spec JSON",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--hybrid-validation-metric-gates",
+        required=True,
+        help="Path to ml-hybrid-validation-metric-gates-v1 JSON",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-shadow-scorer-v1 execution readiness gates JSON",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--gates-version",
+        default="ml-shadow-scorer-v1-execution-readiness-gates",
+        help="Gates version string to write (default: ml-shadow-scorer-v1-execution-readiness-gates)",
+    )
+    ml_shadow_scorer_execution_readiness_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_eval_labeling_plan_hybrid_parser = subparsers.add_parser(
         "ml-fresh-eval-labeling-plan-hybrid",
         help="Write a plan-only fresh eval labeling/remediation artifact for hybrid validation",
@@ -5488,6 +5532,36 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["implementation_status"]["implementation_matches_spec"])
         print(payload["implementation_status"]["implementation_matches_validation_replay"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-execution-readiness-gates":
+        from pipeline.ml_shadow_scorer_execution_readiness_gates import (
+            MLShadowScorerExecutionReadinessGatesError,
+            write_ml_shadow_scorer_execution_readiness_gates,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_execution_readiness_gates(
+                shadow_scorer_implementation_path=Path(args.shadow_scorer_implementation),
+                shadow_scorer_spec_path=Path(args.shadow_scorer_spec),
+                hybrid_validation_metric_gates_path=Path(args.hybrid_validation_metric_gates),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                gates_version=str(args.gates_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerExecutionReadinessGatesError as e:
+            print(f"ml-shadow-scorer-execution-readiness-gates: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["implementation_exact_replay_passed"])
+        print(payload["shadow_scorer_execution_readiness_passed"])
         print(payload["recommended_next_stage"])
         return
 
