@@ -4133,6 +4133,60 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-candidate-plan-ingest",
+        help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--second-hybrid-candidate-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-hybrid-candidate-plan-v1 JSON",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--snapshot-version",
+        default=None,
+        help="Source snapshot version to create (default: source-snapshot-shadow-generalization-v1-YYYYMMDD)",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and report only; do not connect or write DB rows",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write second candidate plan ingest JSON",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--ingest-version",
+        default="ml-shadow-scorer-v1-second-candidate-plan-ingest-v1",
+        help="Ingest version string to write (default: ml-shadow-scorer-v1-second-candidate-plan-ingest-v1)",
+    )
+    ml_shadow_scorer_second_candidate_plan_ingest_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_product_candidate_source_build_parser = subparsers.add_parser(
         "ml-fresh-product-candidate-source-build",
         help="Build a frozen artifact-only fresh product-candidate source for hybrid validation",
@@ -6196,6 +6250,38 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["candidate_selection"]["selected_total"])
         print(payload["readiness_estimate"]["estimated_confirmatory_eligible_after_exclusions"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-candidate-plan-ingest":
+        from pipeline.ml_shadow_scorer_second_candidate_plan_ingest import (
+            MLShadowScorerSecondCandidatePlanIngestError,
+            write_ml_shadow_scorer_second_candidate_plan_ingest,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_second_candidate_plan_ingest(
+                second_hybrid_candidate_plan_path=Path(args.second_hybrid_candidate_plan),
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                snapshot_version=args.snapshot_version,
+                database_url=args.database_url,
+                ingest_version=str(args.ingest_version),
+                dry_run=bool(args.dry_run),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondCandidatePlanIngestError as e:
+            print(f"ml-shadow-scorer-second-candidate-plan-ingest: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["ingest_result"]["status"])
+        print(payload["ingest_result"]["snapshot_work_count"])
         print(payload["recommended_next_stage"])
         return
 
