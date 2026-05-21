@@ -3291,6 +3291,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_v1_audit_output_parser = subparsers.add_parser(
+        "ml-shadow-scorer-v1-audit-output",
+        help="Write isolated offline ml-shadow-scorer-v1 audit output rows from fresh validation candidates",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--shadow-scorer-execution-readiness-gates",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-execution-readiness-gates JSON",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--shadow-scorer-implementation",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-implementation JSON",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--shadow-scorer-spec",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-spec JSON",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--hybrid-validation-on-fresh-surface",
+        required=True,
+        help="Path to ml-hybrid-validation-on-fresh-surface-v1 JSON",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-shadow-scorer-v1 audit output JSON",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--artifact-version",
+        default="ml-shadow-scorer-v1-audit-output",
+        help="Artifact version string to write (default: ml-shadow-scorer-v1-audit-output)",
+    )
+    ml_shadow_scorer_v1_audit_output_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_eval_labeling_plan_hybrid_parser = subparsers.add_parser(
         "ml-fresh-eval-labeling-plan-hybrid",
         help="Write a plan-only fresh eval labeling/remediation artifact for hybrid validation",
@@ -5562,6 +5606,38 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["implementation_exact_replay_passed"])
         print(payload["shadow_scorer_execution_readiness_passed"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-v1-audit-output":
+        from pipeline.ml_shadow_scorer_v1 import (
+            MLShadowScorerV1Error,
+            write_ml_shadow_scorer_v1_audit_output,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_v1_audit_output(
+                shadow_scorer_execution_readiness_gates_path=Path(
+                    args.shadow_scorer_execution_readiness_gates
+                ),
+                shadow_scorer_implementation_path=Path(args.shadow_scorer_implementation),
+                shadow_scorer_spec_path=Path(args.shadow_scorer_spec),
+                hybrid_validation_on_fresh_surface_path=Path(args.hybrid_validation_on_fresh_surface),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                artifact_version=str(args.artifact_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerV1Error as e:
+            print(f"ml-shadow-scorer-v1-audit-output: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["execution_summary"]["status"])
+        print(payload["execution_verification"]["output_matches_validation_replay"])
         print(payload["recommended_next_stage"])
         return
 
