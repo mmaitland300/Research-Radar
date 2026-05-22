@@ -981,6 +981,85 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_product_candidate_ranking_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-product-candidate-ranking",
+        help="Run eval-only product-candidate ranking for the second shadow-generalization snapshot",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--second-snapshot-embeddings",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-embeddings-v1 JSON",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--second-snapshot-hydration",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-hydration-v1 JSON",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--second-candidate-plan-ingest",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-candidate-plan-ingest-v1 JSON",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--snapshot-version",
+        default="source-snapshot-shadow-generalization-v1-20260521",
+        help="Source snapshot version to rank (default: source-snapshot-shadow-generalization-v1-20260521)",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--embedding-version",
+        default="shadow-generalization-text-embedding-v1",
+        help="Embedding version label (default: shadow-generalization-text-embedding-v1)",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--ranking-version",
+        default="shadow-generalization-product-candidate-ranking-v1",
+        help="Ranking version label (default: shadow-generalization-product-candidate-ranking-v1)",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--family",
+        default="emerging",
+        help="Recommendation family used for handoff and reporting (default: emerging)",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate inputs and DB preflight only; no ranking_runs or paper_scores writes",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write second product-candidate ranking JSON",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--artifact-version",
+        default="ml-shadow-scorer-v1-second-product-candidate-ranking-v1",
+        help="Artifact version string to write (default: ml-shadow-scorer-v1-second-product-candidate-ranking-v1)",
+    )
+    ml_shadow_scorer_second_product_candidate_ranking_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_hybrid_product_candidate_ranking_parser = subparsers.add_parser(
         "ml-fresh-hybrid-product-candidate-ranking",
         help="Run eval-only product-candidate ranking for the fresh hybrid snapshot with audit provenance",
@@ -7294,6 +7373,41 @@ def main() -> None:
         print(payload["metadata"]["snapshot_version"])
         print(payload["metadata"]["embedding_version"])
         print(payload["embedding_result"]["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-product-candidate-ranking":
+        from pipeline.ml_shadow_scorer_second_product_candidate_ranking import (
+            MLShadowScorerSecondProductCandidateRankingError,
+            write_ml_shadow_scorer_second_product_candidate_ranking,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = write_ml_shadow_scorer_second_product_candidate_ranking(
+                second_snapshot_embeddings_path=Path(args.second_snapshot_embeddings),
+                second_snapshot_hydration_path=Path(args.second_snapshot_hydration),
+                second_candidate_plan_ingest_path=Path(args.second_candidate_plan_ingest),
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                snapshot_version=args.snapshot_version,
+                embedding_version=str(args.embedding_version),
+                ranking_version=str(args.ranking_version),
+                family=str(args.family),
+                database_url=args.database_url,
+                dry_run=bool(args.dry_run),
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                artifact_version=str(args.artifact_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondProductCandidateRankingError as e:
+            print(f"ml-shadow-scorer-second-product-candidate-ranking: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(payload["ranking_result"]["ranking_run_id"])
+        print(payload["ranking_result"]["paper_scores_written_count"])
+        print(payload["ranking_result"]["recommended_next_stage"])
         return
 
     if args.command == "ml-fresh-hybrid-product-candidate-ranking":
