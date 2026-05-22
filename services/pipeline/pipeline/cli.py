@@ -901,6 +901,86 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_snapshot_embeddings_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-snapshot-embeddings",
+        help="Generate embeddings for the second shadow-generalization source snapshot with audit provenance",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--second-snapshot-hydration",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-hydration-v1 JSON",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--second-candidate-plan-ingest",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-candidate-plan-ingest-v1 JSON",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--second-hybrid-candidate-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-hybrid-candidate-plan-v1 JSON",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--snapshot-version",
+        default=None,
+        help="Source snapshot version to embed (default: source-snapshot-shadow-generalization-v1-20260521)",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--embedding-version",
+        default="shadow-generalization-text-embedding-v1",
+        help="Embedding version label (default: shadow-generalization-text-embedding-v1)",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Local Postgres URL (default: DATABASE_URL or PG* env); hosted production URLs are refused",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--mock-embeddings",
+        action="store_true",
+        help="Use deterministic local embeddings for tests/dry runs; no embedding API calls",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and count only; no embedding API calls and no writes",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Cap works embedded for tests/smoke only; omit for full snapshot coverage",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write second snapshot embeddings JSON",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--artifact-version",
+        default="ml-shadow-scorer-v1-second-snapshot-embeddings-v1",
+        help="Artifact version string to write (default: ml-shadow-scorer-v1-second-snapshot-embeddings-v1)",
+    )
+    ml_shadow_scorer_second_snapshot_embeddings_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_fresh_hybrid_product_candidate_ranking_parser = subparsers.add_parser(
         "ml-fresh-hybrid-product-candidate-ranking",
         help="Run eval-only product-candidate ranking for the fresh hybrid snapshot with audit provenance",
@@ -7173,6 +7253,41 @@ def main() -> None:
             )
         except MLFreshHybridSnapshotEmbeddingsError as e:
             print(f"ml-fresh-hybrid-snapshot-embed: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(payload["metadata"]["snapshot_version"])
+        print(payload["metadata"]["embedding_version"])
+        print(payload["embedding_result"]["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-snapshot-embeddings":
+        from pipeline.ml_shadow_scorer_second_snapshot_embeddings import (
+            MLShadowScorerSecondSnapshotEmbeddingsError,
+            write_ml_shadow_scorer_second_snapshot_embeddings,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = write_ml_shadow_scorer_second_snapshot_embeddings(
+                second_snapshot_hydration_path=Path(args.second_snapshot_hydration),
+                second_candidate_plan_ingest_path=Path(args.second_candidate_plan_ingest),
+                second_hybrid_candidate_plan_path=Path(args.second_hybrid_candidate_plan),
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                snapshot_version=args.snapshot_version,
+                embedding_version=str(args.embedding_version),
+                database_url=args.database_url,
+                mock_embeddings=bool(args.mock_embeddings),
+                dry_run=bool(args.dry_run),
+                limit=args.limit,
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                artifact_version=str(args.artifact_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondSnapshotEmbeddingsError as e:
+            print(f"ml-shadow-scorer-second-snapshot-embeddings: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)

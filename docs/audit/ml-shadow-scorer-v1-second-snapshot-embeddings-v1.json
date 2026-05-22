@@ -1,0 +1,122 @@
+{
+  "blocked_actions": [
+    "openalex_hydration",
+    "snapshot_or_work_row_write",
+    "ranking_run_creation",
+    "paper_scores_write",
+    "clustering",
+    "learned_probability_generation",
+    "scorer_execution",
+    "label_ingest",
+    "online_shadow_execution",
+    "api_web_change",
+    "production_default_change"
+  ],
+  "caveats": [
+    "Controlled embedding generation for one eval-only shadow-generalization snapshot only.",
+    "The embedding_version is intentionally distinct from fresh-hybrid-text-embedding-v1.",
+    "Embedding coverage is pipeline readiness only, not generalization proof.",
+    "No OpenAlex hydration, ranking run, paper_scores, learned probability generation, scorer execution, label ingest, shadow runtime, or production changes.",
+    "No online shadow, API/web, production default, or runtime implementation is authorized."
+  ],
+  "coverage": {
+    "embedded_work_count": 528,
+    "missing_embedding_count": 0,
+    "snapshot_work_count": 528
+  },
+  "embedding_result": {
+    "cluster_required_before_ranking": false,
+    "embedding_dimensions": 1536,
+    "embedding_model": "text-embedding-3-small",
+    "embedding_provider": "openai",
+    "embedding_ready_count_from_hydration": 528,
+    "embeddings_failed_count": 0,
+    "embeddings_skipped_existing_count": 0,
+    "embeddings_written_count": 528,
+    "full_snapshot_embedding_coverage": true,
+    "input_text_sha256": "c0cc6f38484906f2faae519349533f5660188bc18ae7ad7ed5c08e47c2c6cd21",
+    "recommended_next_stage": "run_second_shadow_generalization_product_candidate_ranking_v1",
+    "status": "succeeded",
+    "text_source": "title_abstract",
+    "warnings": [
+      "This is an ML artifact generation step only; no clustering, ranking, or bridge validation was run.",
+      "Old/new corpus metrics are not same-pool comparable."
+    ],
+    "works_considered_count": 528
+  },
+  "hydration_provenance": {
+    "hydration_run_id": "hydrate-20260522041931",
+    "hydration_version": "ml-shadow-scorer-v1-second-snapshot-hydration-v1",
+    "snapshot_embedding_ready": true,
+    "works_considered_count": 528
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_second_snapshot_embeddings",
+    "artifact_version": "ml-shadow-scorer-v1-second-snapshot-embeddings-v1",
+    "database_target_redacted": "postgresql://research_radar:***@localhost:5432/research_radar",
+    "dry_run": false,
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "generated_at": "2026-05-22T04:49:24Z",
+    "inputs": [
+      {
+        "name": "second_snapshot_hydration",
+        "path": "docs/audit/ml-shadow-scorer-v1-second-snapshot-hydration-v1.json",
+        "sha256": "4a8c5c873ea3eefd3a5b0e547437d7583bf48e7406e56cbd3db92e1db0f2d796"
+      },
+      {
+        "name": "second_candidate_plan_ingest",
+        "path": "docs/audit/ml-shadow-scorer-v1-second-candidate-plan-ingest-v1.json",
+        "sha256": "12690a29d162b0b6073d34d133dfe9ee9826997f8d033c805b9978483e222cee"
+      },
+      {
+        "name": "second_hybrid_candidate_plan",
+        "path": "docs/audit/ml-shadow-scorer-v1-second-hybrid-candidate-plan-v1.json",
+        "sha256": "069a899cc20d4a9de21460e6e5b71dd3bc8b92fbbb9a68907778bb95122fa1a1"
+      },
+      {
+        "name": "generalization_audit_plan",
+        "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-v1.json",
+        "sha256": "d976588cf2bb087d751c58379f50039bb86295f3ebb35889a33eb2bfe69ceabf"
+      },
+      {
+        "name": "fresh_surface_policy",
+        "path": "docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json",
+        "sha256": "10e372bb3236382c977b3cc8dbf56bfa1bff7adb93c6bf4f6673361cfa15a011"
+      }
+    ],
+    "limit": null,
+    "mock_embeddings": false,
+    "online_shadow_execution_enabled": false,
+    "runtime_implementation_authorized": false,
+    "snapshot_version": "source-snapshot-shadow-generalization-v1-20260521"
+  },
+  "recommended_next_stage": "run_second_shadow_generalization_product_candidate_ranking_v1",
+  "shadow_and_production_blockers": {
+    "missing_generalization_audit_gates": true,
+    "missing_generalization_audit_on_second_surface": true,
+    "missing_second_fresh_candidate_source": false,
+    "missing_second_surface_embedding_coverage": false,
+    "missing_second_surface_learned_probability_coverage": true,
+    "missing_second_surface_ranking_run": true,
+    "online_shadow_execution_enabled": false,
+    "production_default_allowed": false,
+    "runtime_implementation_authorized": false,
+    "shadow_scoring_allowed": false
+  },
+  "sql_write_report": {
+    "affected_row_counts": {
+      "embeddings": 528
+    },
+    "allowed_tables": [
+      "embeddings"
+    ],
+    "embeddings_written": true,
+    "ingest_runs_written": false,
+    "paper_scores_written": false,
+    "production_tables_modified": false,
+    "ranking_runs_written": false,
+    "source_snapshot_versions_written": false,
+    "works_written": false,
+    "writes_enabled": true
+  }
+}
