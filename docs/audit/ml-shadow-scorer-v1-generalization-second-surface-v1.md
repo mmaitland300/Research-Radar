@@ -4,57 +4,59 @@
 
 This artifact performs read-only source discovery for a distinct second fresh surface. It does not execute the generalization audit or shadow scorer and does not authorize runtime or production behavior.
 
-- Status: `blocked_no_candidate_source_meets_minimum`
-- Sources considered: 19
+- Status: `selected_needs_labels`
+- Sources considered: 1
 - Ready for generalization audit execution: False
-- Recommended next stage: `create_or_expand_second_fresh_candidate_source_for_shadow_generalization_v1`
+- Recommended next stage: `create_second_surface_labeling_plan_for_shadow_generalization_v1`
 
 ## Selected Second Surface
 
-- No qualifying second surface was selected.
+- `ranking_run_id`: rank-83787b91ef
+- `family`: emerging
+- `corpus_snapshot_version`: source-snapshot-shadow-generalization-v1-20260521
+- `embedding_version`: shadow-generalization-text-embedding-v1
+- `candidate_pool_work_count`: 528
+- `candidate_pool_work_set_sha256`: f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc
+- `confirmatory_metric_eligible_work_count`: 168
+- `final_score_coverage_count`: 528
+- `missing_final_score_count`: 0
+- `learned_probability_coverage_count`: 0
+- `missing_learned_probability_count`: 528
+- `distinct_from_first_validated_surface`: True
 
 ## Sources Considered
 
 | Ranking run | Candidate count | Confirmatory eligible | SHA | Status |
 | --- | ---: | ---: | --- | --- |
-| `rank-3904fec89d` | 59 | 43 | `1a62e9802e8562854e9b4fd2c44ad72a183d81fe8dbb86b50b09d94fb496e926` | distinct |
-| `rank-38a09c7368` | 51 | 36 | `891b2cdd0b0b9ed14b315994a7dca4020f52ad828f988ebc7763e95fb6ba7320` | distinct |
-| `rank-83976f1097` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-808f9d7f4d` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-b39d9e0d4f` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-cf04ae30c6` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-16c1cfb490` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-17658d0f74` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-c34fa85261` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-c765e2de5c` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-63710a0277` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-19a2c8671f` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-d18414d7e7` | 38 | 23 | `468f34ca2b7edb80c1d87b67114f80ccb5a04af4037e82d30bb46378c408ece3` | distinct |
-| `rank-9f4b2a2084` | 358 | 0 | `927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6` | ranking_run_id_matches_first_validated_surface, candidate_sha_matches_first_validated_surface |
-| `rank-60910a47b4` | 217 | 0 | `213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a` | distinct |
-| `rank-9a02c81d40` | 217 | 0 | `213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a` | distinct |
-| `rank-bc1123e00c` | 217 | 0 | `213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a` | distinct |
-| `rank-ee2ba6c816` | 217 | 0 | `213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a` | distinct |
-| `rank-ed3f090ad7` | 217 | 0 | `213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a` | distinct |
+| `rank-83787b91ef` | 528 | 168 | `f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc` | distinct |
 
 ## Overlap Report
 
 - `old_217_eval_work_set_sha256`: 213986401c1c9ba354b8356a73e8b70777d7061072fe5645fc248f2ac9fe8f8a
 - `first_validated_candidate_work_set_sha256`: 927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6
-- `old_217_overlap_count`: 0
-- `rank_9f4b2a2084_overlap_count`: 0
-- `combined_prior_surface_overlap_count`: 0
+- `old_217_overlap_count`: 217
+- `rank_9f4b2a2084_overlap_count`: 358
+- `combined_prior_surface_overlap_count`: 360
 - `confirmatory_denominator_excludes_prior_overlaps`: True
 
 ## Threshold Check
 
+- `minimum_confirmatory_candidate_work_count`: observed `168` / threshold `100` / passed `True`
+- `minimum_confirmatory_labeled_work_count`: observed `0` / threshold `100` / passed `False`
+- `minimum_confirmatory_positive_work_count`: observed `0` / threshold `50` / passed `False`
+- `minimum_confirmatory_negative_work_count`: observed `0` / threshold `20` / passed `False`
+- `minimum_distinct_negative_work_count`: observed `0` / threshold `20` / passed `False`
+- `minimum_confirmatory_label_coverage_rate`: observed `0.0000` / threshold `0.6000` / passed `False`
+- `unresolved_label_conflicts`: observed `0` / threshold `0` / passed `True`
+- `final_score_coverage`: observed `528` / threshold `528` / passed `True`
+- `learned_probability_coverage`: observed `0` / threshold `528` / passed `False`
 
 ## Learned Probability Coverage
 
 - `learned_probability_coverage_count`: 0
-- `missing_learned_probability_count`: 0
-- `approved_upstream_probability_probe`: n/a
-- `embedding_coverage_probe`: n/a
+- `missing_learned_probability_count`: 528
+- `approved_upstream_probability_probe`: {'probe_status': 'not_found', 'source_artifact_path': None, 'learned_probability_coverage_count': 0, 'full_coverage': False}
+- `embedding_coverage_probe`: {'embedding_version': 'shadow-generalization-text-embedding-v1', 'embedding_coverage_count': 528, 'candidate_pool_work_count': 528, 'full_embedding_coverage': True}
 - `scorer_execution_used`: False
 
 ## Blockers
