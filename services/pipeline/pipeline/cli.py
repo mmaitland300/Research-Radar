@@ -4171,6 +4171,87 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-surface-labeling-worksheet",
+        help="Write reviewer-blank CSV/context for all second-surface confirmatory-eligible works",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--generalization-second-surface",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-second-surface-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v10 JSON",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to ml-label-conflict-policy Markdown",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--offline-production-candidate-scoring-v3",
+        required=True,
+        help="Path to ml-offline-production-candidate-scoring-v3 JSON",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--first-validated-surface",
+        required=True,
+        help="Path to ml-fresh-eval-surface-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--fresh-surface-policy",
+        default=None,
+        help="Optional path to ml-fresh-eval-surface-policy-hybrid-v1 JSON for threshold provenance",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Optional local Postgres URL for SELECT-only worksheet context",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--requested-rows",
+        type=int,
+        default=0,
+        help="Rows to include; 0 means all confirmatory-eligible rows (default: 0)",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--worksheet-version",
+        default="ml-shadow-scorer-second-surface-labeling-worksheet-v1",
+        help="Worksheet version string to write",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--review-pool-variant",
+        default="ml_shadow_scorer_second_surface_generalization_v1",
+        help="Review pool variant string to write",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--seed",
+        type=int,
+        default=20260522,
+        help="Deterministic row_id seed (default: 20260522)",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write reviewer-blank CSV worksheet",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--context-output",
+        required=True,
+        help="Path to write row context sidecar JSON",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_surface_labeling_worksheet_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_source_expansion_plan_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-source-expansion-plan",
         help="Write a plan-only artifact to expand/create a second fresh candidate source for shadow generalization",
@@ -6412,6 +6493,41 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["discovery_summary"]["status"])
         print(payload["readiness_for_generalization_audit"]["ready_for_generalization_audit_execution"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-surface-labeling-worksheet":
+        from pipeline.ml_shadow_scorer_second_surface_labeling_worksheet import (
+            MLShadowScorerSecondSurfaceLabelingWorksheetError,
+            write_ml_shadow_scorer_second_surface_labeling_worksheet,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = write_ml_shadow_scorer_second_surface_labeling_worksheet(
+                generalization_second_surface_path=Path(args.generalization_second_surface),
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                offline_production_candidate_scoring_v3_path=Path(args.offline_production_candidate_scoring_v3),
+                first_validated_surface_path=Path(args.first_validated_surface),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy) if args.fresh_surface_policy else None,
+                database_url=str(args.database_url) if args.database_url else None,
+                requested_rows=int(args.requested_rows),
+                worksheet_version=str(args.worksheet_version),
+                review_pool_variant=str(args.review_pool_variant),
+                seed=int(args.seed),
+                output_path=Path(args.output),
+                context_output_path=Path(args.context_output),
+                markdown_output_path=Path(args.markdown_output),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondSurfaceLabelingWorksheetError as e:
+            print(f"ml-shadow-scorer-second-surface-labeling-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.context_output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(payload["selection_summary"]["selected_row_count"])
         print(payload["recommended_next_stage"])
         return
 
