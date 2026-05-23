@@ -69,20 +69,20 @@
       "final_score_coverage_count": 528,
       "finished_at": "2026-05-22T15:45:25.997296+00:00",
       "label_coverage": {
-        "label_coverage_rate": 0.0,
+        "label_coverage_rate": 1.0,
         "silent_conflict_merge_used": false,
         "work_level": {
           "confirmatory_candidate_work_count": 168,
-          "confirmatory_labeled_work_count": 0,
-          "confirmatory_negative_work_count": 0,
-          "confirmatory_positive_work_count": 0,
-          "confirmatory_unlabeled_work_count": 168,
+          "confirmatory_labeled_work_count": 168,
+          "confirmatory_negative_work_count": 74,
+          "confirmatory_positive_work_count": 94,
+          "confirmatory_unlabeled_work_count": 0,
           "conflicting_target_work_group_count": 0,
           "conflicting_work_ids_preview": [],
-          "distinct_negative_work_count": 0,
+          "distinct_negative_work_count": 74,
           "duplicate_labeled_work_group_count": 0,
           "duplicate_work_ids_preview": [],
-          "label_coverage_rate": 0.0
+          "label_coverage_rate": 1.0
         }
       },
       "learned_probability_coverage_count": 0,
@@ -138,28 +138,28 @@
           "threshold": 100
         },
         "minimum_confirmatory_label_coverage_rate": {
-          "observed": 0.0,
-          "passed": false,
+          "observed": 1.0,
+          "passed": true,
           "threshold": 0.6
         },
         "minimum_confirmatory_labeled_work_count": {
-          "observed": 0,
-          "passed": false,
+          "observed": 168,
+          "passed": true,
           "threshold": 100
         },
         "minimum_confirmatory_negative_work_count": {
-          "observed": 0,
-          "passed": false,
+          "observed": 74,
+          "passed": true,
           "threshold": 20
         },
         "minimum_confirmatory_positive_work_count": {
-          "observed": 0,
-          "passed": false,
+          "observed": 94,
+          "passed": true,
           "threshold": 50
         },
         "minimum_distinct_negative_work_count": {
-          "observed": 0,
-          "passed": false,
+          "observed": 74,
+          "passed": true,
           "threshold": 20
         },
         "unresolved_label_conflicts": {
@@ -180,25 +180,25 @@
     "candidate_sources_considered_count": 1,
     "explicit_ranking_run_id": "rank-83787b91ef",
     "family": "emerging",
-    "recommended_next_stage": "create_second_surface_labeling_plan_for_shadow_generalization_v1",
+    "recommended_next_stage": "create_second_surface_learned_probability_coverage_plan_v1",
     "selected_ranking_run_id": "rank-83787b91ef",
-    "status": "selected_needs_labels"
+    "status": "selected_needs_learned_probability_coverage"
   },
   "label_coverage": {
-    "label_coverage_rate": 0.0,
+    "label_coverage_rate": 1.0,
     "silent_conflict_merge_used": false,
     "work_level": {
       "confirmatory_candidate_work_count": 168,
-      "confirmatory_labeled_work_count": 0,
-      "confirmatory_negative_work_count": 0,
-      "confirmatory_positive_work_count": 0,
-      "confirmatory_unlabeled_work_count": 168,
+      "confirmatory_labeled_work_count": 168,
+      "confirmatory_negative_work_count": 74,
+      "confirmatory_positive_work_count": 94,
+      "confirmatory_unlabeled_work_count": 0,
       "conflicting_target_work_group_count": 0,
       "conflicting_work_ids_preview": [],
-      "distinct_negative_work_count": 0,
+      "distinct_negative_work_count": 74,
       "duplicate_labeled_work_group_count": 0,
       "duplicate_work_ids_preview": [],
-      "label_coverage_rate": 0.0
+      "label_coverage_rate": 1.0
     }
   },
   "learned_probability_coverage": {
@@ -237,7 +237,7 @@
     "database_target_redacted": "postgresql://research_radar:***@localhost:5432/research_radar",
     "database_unavailable_error": null,
     "generalization_audit_executed": false,
-    "generated_at": "2026-05-22T15:59:00Z",
+    "generated_at": "2026-05-23T12:58:00Z",
     "inputs": [
       {
         "name": "generalization_audit_plan",
@@ -256,8 +256,8 @@
       },
       {
         "name": "label_dataset",
-        "path": "docs/audit/ml-label-dataset-v10.json",
-        "sha256": "6cbdc5542ac1c74d5a8e1d83b4cbb2deec452b099cbf7a5de2baea9164ddef58"
+        "path": "docs/audit/ml-label-dataset-v11.json",
+        "sha256": "d3870a97febd92776bf99aecda7b26851e961017614c9bb79010259791c6a328"
       },
       {
         "name": "conflict_policy",
@@ -289,7 +289,7 @@
       ]
     },
     "runtime_implementation_authorized": false,
-    "source_label_dataset_version": "ml-label-dataset-v10",
+    "source_label_dataset_version": "ml-label-dataset-v11",
     "source_offline_scoring_version": "ml-offline-production-candidate-scoring-v3",
     "source_online_shadow_policy_version": "ml-shadow-scorer-v1-online-shadow-policy",
     "source_plan_version": "ml-shadow-scorer-v1-generalization-audit-v1",
@@ -308,9 +308,9 @@
     "candidate_source_selected": true,
     "generalization_audit_executed": false,
     "ready_for_generalization_audit_execution": false,
-    "status": "selected_needs_labels"
+    "status": "selected_needs_learned_probability_coverage"
   },
-  "recommended_next_stage": "create_second_surface_labeling_plan_for_shadow_generalization_v1",
+  "recommended_next_stage": "create_second_surface_learned_probability_coverage_plan_v1",
   "selected_second_surface": {
     "candidate_pool_work_count": 528,
     "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
@@ -355,28 +355,28 @@
       "threshold": 100
     },
     "minimum_confirmatory_label_coverage_rate": {
-      "observed": 0.0,
-      "passed": false,
+      "observed": 1.0,
+      "passed": true,
       "threshold": 0.6
     },
     "minimum_confirmatory_labeled_work_count": {
-      "observed": 0,
-      "passed": false,
+      "observed": 168,
+      "passed": true,
       "threshold": 100
     },
     "minimum_confirmatory_negative_work_count": {
-      "observed": 0,
-      "passed": false,
+      "observed": 74,
+      "passed": true,
       "threshold": 20
     },
     "minimum_confirmatory_positive_work_count": {
-      "observed": 0,
-      "passed": false,
+      "observed": 94,
+      "passed": true,
       "threshold": 50
     },
     "minimum_distinct_negative_work_count": {
-      "observed": 0,
-      "passed": false,
+      "observed": 74,
+      "passed": true,
       "threshold": 20
     },
     "unresolved_label_conflicts": {

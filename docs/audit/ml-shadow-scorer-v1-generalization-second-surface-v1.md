@@ -4,10 +4,10 @@
 
 This artifact performs read-only source discovery for a distinct second fresh surface. It does not execute the generalization audit or shadow scorer and does not authorize runtime or production behavior.
 
-- Status: `selected_needs_labels`
+- Status: `selected_needs_learned_probability_coverage`
 - Sources considered: 1
 - Ready for generalization audit execution: False
-- Recommended next stage: `create_second_surface_labeling_plan_for_shadow_generalization_v1`
+- Recommended next stage: `create_second_surface_learned_probability_coverage_plan_v1`
 
 ## Selected Second Surface
 
@@ -42,11 +42,11 @@ This artifact performs read-only source discovery for a distinct second fresh su
 ## Threshold Check
 
 - `minimum_confirmatory_candidate_work_count`: observed `168` / threshold `100` / passed `True`
-- `minimum_confirmatory_labeled_work_count`: observed `0` / threshold `100` / passed `False`
-- `minimum_confirmatory_positive_work_count`: observed `0` / threshold `50` / passed `False`
-- `minimum_confirmatory_negative_work_count`: observed `0` / threshold `20` / passed `False`
-- `minimum_distinct_negative_work_count`: observed `0` / threshold `20` / passed `False`
-- `minimum_confirmatory_label_coverage_rate`: observed `0.0000` / threshold `0.6000` / passed `False`
+- `minimum_confirmatory_labeled_work_count`: observed `168` / threshold `100` / passed `True`
+- `minimum_confirmatory_positive_work_count`: observed `94` / threshold `50` / passed `True`
+- `minimum_confirmatory_negative_work_count`: observed `74` / threshold `20` / passed `True`
+- `minimum_distinct_negative_work_count`: observed `74` / threshold `20` / passed `True`
+- `minimum_confirmatory_label_coverage_rate`: observed `1.00` / threshold `0.6000` / passed `True`
 - `unresolved_label_conflicts`: observed `0` / threshold `0` / passed `True`
 - `final_score_coverage`: observed `528` / threshold `528` / passed `True`
 - `learned_probability_coverage`: observed `0` / threshold `528` / passed `False`

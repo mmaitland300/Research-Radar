@@ -75,7 +75,7 @@ def _fresh_policy_payload() -> dict:
     }
 
 
-def _label_dataset_payload(ids: list[str] | None = None, *, positives: int = 60) -> dict:
+def _label_dataset_payload(ids: list[str] | None = None, *, positives: int = 60, version: str = "ml-label-dataset-v11") -> dict:
     ids = ids or [f"W{i:06d}" for i in range(1, 121)]
     rows = []
     for index, work_id in enumerate(ids):
@@ -90,7 +90,7 @@ def _label_dataset_payload(ids: list[str] | None = None, *, positives: int = 60)
                 "good_or_acceptable": index < positives,
             }
         )
-    return {"dataset_version": "ml-label-dataset-v10", "metadata": {"dataset_version": "ml-label-dataset-v10"}, "rows": rows}
+    return {"dataset_version": version, "metadata": {"dataset_version": version}, "rows": rows}
 
 
 def _offline_scoring_payload() -> dict:
@@ -407,7 +407,7 @@ def test_label_dataset_version_check_uses_top_level_or_metadata(tmp_path: Path, 
 
     payload = _build(tmp_path, monkeypatch, labels=labels)
 
-    assert payload["metadata"]["source_label_dataset_version"] == "ml-label-dataset-v10"
+    assert payload["metadata"]["source_label_dataset_version"] == "ml-label-dataset-v11"
 
 
 def test_cli_writes_blocked_database_unavailable_artifact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

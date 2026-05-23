@@ -40,7 +40,7 @@ ONLINE_POLICY_ARTIFACT_TYPE = "ml_shadow_scorer_online_shadow_policy"
 ONLINE_POLICY_VERSION = "ml-shadow-scorer-v1-online-shadow-policy"
 FRESH_SURFACE_POLICY_ARTIFACT_TYPE = "ml_fresh_eval_surface_policy_hybrid"
 FRESH_SURFACE_POLICY_VERSION = "ml-fresh-eval-surface-policy-hybrid-v1"
-LABEL_DATASET_VERSION = "ml-label-dataset-v10"
+LABEL_DATASET_VERSION = "ml-label-dataset-v11"
 OFFLINE_SCORING_ARTIFACT_TYPE = "ml_offline_production_candidate_scoring"
 OFFLINE_SCORING_VERSION = "ml-offline-production-candidate-scoring-v3"
 
