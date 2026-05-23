@@ -56,6 +56,14 @@ FRESH_HYBRID_SURFACE_VERSION = "ml-fresh-eval-surface-hybrid-v1"
 TOPUP_WORKSHEET_VERSION = "ml-fresh-eval-positive-topup-worksheet-hybrid-v1"
 TOPUP_REVIEW_POOL_VARIANT = "ml_fresh_hybrid_positive_topup_v1"
 TOPUP_CONTEXT_ARTIFACT_TYPE = "ml_fresh_eval_positive_topup_worksheet_hybrid"
+SHADOW_GENERALIZATION_WORKSHEET_VERSION = "ml-shadow-scorer-second-surface-labeling-worksheet-v1"
+SHADOW_GENERALIZATION_REVIEW_POOL_VARIANT = "ml_shadow_scorer_second_surface_generalization_v1"
+SHADOW_GENERALIZATION_CONTEXT_ARTIFACT_TYPE = "ml_shadow_scorer_second_surface_labeling_worksheet"
+SHADOW_GENERALIZATION_DISCOVERY_ARTIFACT_TYPE = "ml_shadow_scorer_generalization_second_surface"
+SHADOW_GENERALIZATION_RANKING_RUN_ID = "rank-83787b91ef"
+SHADOW_GENERALIZATION_FAMILY = "emerging"
+SHADOW_GENERALIZATION_CANDIDATE_SHA = "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc"
+SHADOW_GENERALIZATION_EXPECTED_ROWS = 168
 ALLOWED_RELEVANCE_LABELS = {"good", "acceptable", "miss", "irrelevant"}
 ALLOWED_NOVELTY_LABELS = {"surprising", "useful", "obvious", "not_useful", "neither"}
 ALLOWED_BRIDGE_LIKE_LABELS = {"yes", "partial", "no", "not_applicable"}
@@ -426,6 +434,15 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     return raw
 
 
+def _json_get(payload: dict[str, Any], dotted_path: str) -> Any:
+    current: Any = payload
+    for part in dotted_path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
+
+
 def _read_v2_sidecar_rows(context_sidecar_path: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     payload = _load_json_object(context_sidecar_path)
     rows = payload.get("rows")
@@ -560,6 +577,35 @@ def _read_fresh_hybrid_positive_topup_sidecar_rows(
         row_id = _norm_ws(row.get("row_id"))
         if not row_id:
             raise MLLabelDatasetError(f"{context_sidecar_path} positive-topup sidecar row {idx} has blank row_id")
+        if row_id in by_id:
+            raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
+        by_id[row_id] = row
+    return payload, by_id
+
+
+def _read_shadow_generalization_sidecar_rows(
+    context_sidecar_path: Path,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    payload = _load_json_object(context_sidecar_path)
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        raise MLLabelDatasetError(f"{context_sidecar_path} missing metadata object")
+    artifact_type = _norm_ws(metadata.get("artifact_type"))
+    if artifact_type != SHADOW_GENERALIZATION_CONTEXT_ARTIFACT_TYPE:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} metadata.artifact_type={artifact_type!r} does not match "
+            f"{SHADOW_GENERALIZATION_CONTEXT_ARTIFACT_TYPE!r}"
+        )
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise MLLabelDatasetError(f"{context_sidecar_path} missing rows array")
+    by_id: dict[str, dict[str, Any]] = {}
+    for idx, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise MLLabelDatasetError(f"{context_sidecar_path} shadow-generalization sidecar row {idx} is not an object")
+        row_id = _norm_ws(row.get("row_id"))
+        if not row_id:
+            raise MLLabelDatasetError(f"{context_sidecar_path} shadow-generalization sidecar row {idx} has blank row_id")
         if row_id in by_id:
             raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
         by_id[row_id] = row
@@ -2633,6 +2679,437 @@ def build_ml_label_dataset_v10_fresh_positive_topup_ingest(
     )
 
 
+def _threshold_value(discovery_payload: dict[str, Any], key: str, default: int | float) -> int | float:
+    value = _json_get(discovery_payload, f"threshold_check.{key}.threshold")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value
+    return default
+
+
+def _shadow_generalization_threshold_summary(
+    *,
+    discovery_payload: dict[str, Any],
+    labeled_count: int,
+    positive_count: int,
+    negative_count: int,
+    distinct_negative_count: int,
+    conflict_count: int,
+    eligible_count: int,
+) -> dict[str, Any]:
+    coverage_rate = labeled_count / eligible_count if eligible_count else 0.0
+    checks = {
+        "minimum_confirmatory_labeled_work_count": {
+            "observed": labeled_count,
+            "threshold": _threshold_value(discovery_payload, "minimum_confirmatory_labeled_work_count", 100),
+        },
+        "minimum_confirmatory_positive_work_count": {
+            "observed": positive_count,
+            "threshold": _threshold_value(discovery_payload, "minimum_confirmatory_positive_work_count", 50),
+        },
+        "minimum_confirmatory_negative_work_count": {
+            "observed": negative_count,
+            "threshold": _threshold_value(discovery_payload, "minimum_confirmatory_negative_work_count", 20),
+        },
+        "minimum_distinct_negative_work_count": {
+            "observed": distinct_negative_count,
+            "threshold": _threshold_value(discovery_payload, "minimum_distinct_negative_work_count", 20),
+        },
+        "minimum_confirmatory_label_coverage_rate": {
+            "observed": coverage_rate,
+            "threshold": _threshold_value(discovery_payload, "minimum_confirmatory_label_coverage_rate", 0.60),
+        },
+        "unresolved_label_conflicts": {
+            "observed": conflict_count,
+            "threshold": _threshold_value(discovery_payload, "unresolved_label_conflicts", 0),
+        },
+    }
+    for item in checks.values():
+        observed = item["observed"]
+        threshold = item["threshold"]
+        if item is checks["unresolved_label_conflicts"]:
+            item["passed"] = observed <= threshold
+        else:
+            item["passed"] = observed >= threshold
+    return {
+        "checks": checks,
+        "all_passed": all(bool(item["passed"]) for item in checks.values()),
+    }
+
+
+def build_ml_label_dataset_v11_shadow_generalization_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    generalization_second_surface_path: Path,
+    conflict_policy_path: Path,
+    dataset_version: str = "ml-label-dataset-v11",
+) -> dict[str, Any]:
+    """Build v11 as v10 rows unchanged plus second-surface shadow-generalization labels."""
+
+    root = repo_root.resolve()
+    base_path = base_dataset_path.resolve()
+    blank_path = blank_worksheet_path.resolve()
+    labeled_path = labeled_worksheet_path.resolve()
+    sidecar_path = context_sidecar_path.resolve()
+    discovery_path = generalization_second_surface_path.resolve()
+    conflict_path = conflict_policy_path.resolve()
+    input_paths = [base_path, blank_path, labeled_path, sidecar_path, discovery_path, conflict_path]
+    for path in input_paths:
+        if not path.is_file():
+            raise MLLabelDatasetError(f"required input not found: {path}")
+
+    base_payload = _load_json_object(base_path)
+    base_metadata = base_payload.get("metadata") if isinstance(base_payload.get("metadata"), dict) else {}
+    base_version = _norm_ws(base_payload.get("dataset_version") or base_metadata.get("dataset_version"))
+    if base_version != "ml-label-dataset-v10":
+        raise MLLabelDatasetError(f"{base_path} dataset_version={base_version!r}; expected 'ml-label-dataset-v10'")
+    base_rows_raw = base_payload.get("rows")
+    if not isinstance(base_rows_raw, list):
+        raise MLLabelDatasetError(f"{base_path} missing rows array")
+    base_rows: list[dict[str, Any]] = copy.deepcopy(base_rows_raw)
+
+    blank_fieldnames, blank_rows = _read_csv_rows(blank_path)
+    labeled_fieldnames, labeled_rows = _read_csv_rows(labeled_path)
+    if len(labeled_rows) != SHADOW_GENERALIZATION_EXPECTED_ROWS:
+        raise MLLabelDatasetError(
+            f"{labeled_path} must contain exactly {SHADOW_GENERALIZATION_EXPECTED_ROWS} shadow-generalization labeled data rows"
+        )
+    _validate_labeled_matches_blank_template(
+        blank_path=blank_path,
+        blank_fieldnames=blank_fieldnames,
+        blank_rows=blank_rows,
+        labeled_path=labeled_path,
+        labeled_fieldnames=labeled_fieldnames,
+        labeled_rows=labeled_rows,
+    )
+
+    sidecar_payload, sidecar_by_id = _read_shadow_generalization_sidecar_rows(sidecar_path)
+    sidecar_metadata = sidecar_payload["metadata"]
+    labeled_ids = {_norm_ws(r.get("row_id")) for r in labeled_rows}
+    if set(sidecar_by_id) != labeled_ids:
+        missing = sorted(labeled_ids - set(sidecar_by_id))
+        extra = sorted(set(sidecar_by_id) - labeled_ids)
+        raise MLLabelDatasetError(
+            f"shadow-generalization sidecar row_id set differs from labeled CSV; missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    sidecar_ws_version = _norm_ws(sidecar_metadata.get("worksheet_version"))
+    if sidecar_ws_version != SHADOW_GENERALIZATION_WORKSHEET_VERSION:
+        raise MLLabelDatasetError(
+            f"shadow-generalization sidecar worksheet_version={sidecar_ws_version!r} does not match "
+            f"{SHADOW_GENERALIZATION_WORKSHEET_VERSION!r}"
+        )
+    sidecar_pool = _norm_ws(sidecar_metadata.get("review_pool_variant"))
+    if sidecar_pool != SHADOW_GENERALIZATION_REVIEW_POOL_VARIANT:
+        raise MLLabelDatasetError(
+            f"shadow-generalization sidecar review_pool_variant={sidecar_pool!r} does not match "
+            f"{SHADOW_GENERALIZATION_REVIEW_POOL_VARIANT!r}"
+        )
+    seed = sidecar_metadata.get("seed")
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        raise MLLabelDatasetError("shadow-generalization sidecar metadata.seed must be an integer")
+    provenance = sidecar_payload.get("discovery_provenance")
+    if not isinstance(provenance, dict):
+        raise MLLabelDatasetError("shadow-generalization sidecar missing discovery_provenance object")
+    selection_summary = sidecar_payload.get("selection_summary")
+    if not isinstance(selection_summary, dict):
+        raise MLLabelDatasetError("shadow-generalization sidecar missing selection_summary object")
+    if provenance.get("ranking_run_id") != SHADOW_GENERALIZATION_RANKING_RUN_ID:
+        raise MLLabelDatasetError("shadow-generalization sidecar ranking_run_id mismatch")
+    if provenance.get("family") != SHADOW_GENERALIZATION_FAMILY:
+        raise MLLabelDatasetError("shadow-generalization sidecar family mismatch")
+    if provenance.get("candidate_pool_work_set_sha256") != SHADOW_GENERALIZATION_CANDIDATE_SHA:
+        raise MLLabelDatasetError("shadow-generalization sidecar candidate_pool_work_set_sha256 mismatch")
+    if provenance.get("confirmatory_metric_eligible_work_count") != SHADOW_GENERALIZATION_EXPECTED_ROWS:
+        raise MLLabelDatasetError("shadow-generalization sidecar confirmatory_metric_eligible_work_count mismatch")
+    if selection_summary.get("selected_row_count") != SHADOW_GENERALIZATION_EXPECTED_ROWS:
+        raise MLLabelDatasetError("shadow-generalization sidecar selected_row_count mismatch")
+
+    discovery_payload = _load_json_object(discovery_path)
+    discovery_metadata = discovery_payload.get("metadata")
+    if not isinstance(discovery_metadata, dict):
+        raise MLLabelDatasetError(f"{discovery_path} missing metadata object")
+    if discovery_metadata.get("artifact_type") != SHADOW_GENERALIZATION_DISCOVERY_ARTIFACT_TYPE:
+        raise MLLabelDatasetError("generalization second surface metadata.artifact_type mismatch")
+    if discovery_metadata.get("surface_version") != "ml-shadow-scorer-v1-generalization-second-surface-v1":
+        raise MLLabelDatasetError("generalization second surface surface_version mismatch")
+    if _json_get(discovery_payload, "discovery_summary.status") != "selected_needs_labels":
+        raise MLLabelDatasetError("generalization second surface status must be selected_needs_labels")
+    if _json_get(discovery_payload, "selected_second_surface.ranking_run_id") != SHADOW_GENERALIZATION_RANKING_RUN_ID:
+        raise MLLabelDatasetError("selected_second_surface.ranking_run_id mismatch")
+    if _json_get(discovery_payload, "selected_second_surface.confirmatory_metric_eligible_work_count") != SHADOW_GENERALIZATION_EXPECTED_ROWS:
+        raise MLLabelDatasetError("selected_second_surface.confirmatory_metric_eligible_work_count mismatch")
+    if _json_get(discovery_payload, "selected_second_surface.candidate_pool_work_set_sha256") != SHADOW_GENERALIZATION_CANDIDATE_SHA:
+        raise MLLabelDatasetError("selected_second_surface.candidate_pool_work_set_sha256 mismatch")
+
+    source_rel = _repo_relative(labeled_path, repo_root=root)
+    source_sha = sha256_file(labeled_path)
+    shadow_rows: list[dict[str, Any]] = []
+    seen_row_ids: set[str] = set()
+    seen_work_ids: set[str] = set()
+    worksheet_conflicts: list[dict[str, Any]] = []
+    for source_row_number, row in enumerate(labeled_rows, start=2):
+        row_id = _norm_ws(row.get("row_id"))
+        if row_id in seen_row_ids:
+            raise MLLabelDatasetError(f"duplicate shadow-generalization labeled row_id {row_id}")
+        seen_row_ids.add(row_id)
+        _validate_nonempty_allowed_labels(row, source_row_number=source_row_number)
+        bridge_label = _norm_label_token(row.get("bridge_like_label"))
+        if bridge_label != "not_applicable":
+            raise MLLabelDatasetError(
+                f"shadow-generalization labeled row {source_row_number} bridge_like_label must be 'not_applicable'"
+            )
+
+        worksheet_version = _norm_ws(row.get("worksheet_version"))
+        if worksheet_version != SHADOW_GENERALIZATION_WORKSHEET_VERSION:
+            raise MLLabelDatasetError(
+                f"shadow-generalization labeled row {source_row_number} has worksheet_version={worksheet_version!r}"
+            )
+        review_pool_variant = _norm_ws(row.get("review_pool_variant"))
+        if review_pool_variant != SHADOW_GENERALIZATION_REVIEW_POOL_VARIANT:
+            raise MLLabelDatasetError(
+                f"shadow-generalization labeled row {source_row_number} has review_pool_variant={review_pool_variant!r}"
+            )
+
+        paper_id = _norm_ws(row.get("paper_id"))
+        openalex_work_id = _norm_ws(row.get("openalex_work_id"))
+        work_id = _norm_ws(row.get("work_id"))
+        expected_work_id = paper_id_to_work_id(paper_id)
+        if not expected_work_id:
+            raise MLLabelDatasetError(
+                f"shadow-generalization labeled row {source_row_number} has non-OpenAlex paper_id={paper_id!r}"
+            )
+        if work_id != expected_work_id or openalex_work_id != expected_work_id:
+            raise MLLabelDatasetError(
+                f"shadow-generalization labeled row {source_row_number} must keep OpenAlex W token in work_id/openalex_work_id"
+            )
+        if work_id in seen_work_ids:
+            raise MLLabelDatasetError(f"duplicate shadow-generalization work_id {work_id}")
+        seen_work_ids.add(work_id)
+
+        context_row = copy.deepcopy(sidecar_by_id[row_id])
+        context_canonical = _norm_ws(context_row.get("canonical_openalex_work_id"))
+        if context_canonical != expected_work_id:
+            raise MLLabelDatasetError(f"shadow-generalization sidecar canonical_openalex_work_id mismatch for row_id={row_id}")
+        expected_row_id = _sha256_text(f"{sidecar_ws_version}|{seed}|{context_canonical}")
+        if row_id != expected_row_id:
+            raise MLLabelDatasetError(
+                f"shadow-generalization labeled row {source_row_number} row_id does not match worksheet_version|seed|canonical_openalex_work_id"
+            )
+        if _norm_ws(context_row.get("ranking_run_id")) != SHADOW_GENERALIZATION_RANKING_RUN_ID:
+            raise MLLabelDatasetError(f"shadow-generalization sidecar ranking_run_id mismatch for row_id={row_id}")
+        if _norm_ws(context_row.get("family")) != SHADOW_GENERALIZATION_FAMILY:
+            raise MLLabelDatasetError(f"shadow-generalization sidecar family mismatch for row_id={row_id}")
+
+        rel_l = _raw_csv_or_none(row, "relevance_label")
+        nov_l = _raw_csv_or_none(row, "novelty_label")
+        br_l = _raw_csv_or_none(row, "bridge_like_label")
+        notes = _raw_csv_or_none(row, "reviewer_notes")
+        rank_in_family = row.get("rank_in_family", "")
+        out: dict[str, Any] = {
+            "dataset_version": dataset_version,
+            "row_id": row_id,
+            "paper_id": paper_id,
+            "work_id": work_id,
+            "title": row.get("title", ""),
+            "year": row.get("year", ""),
+            "citation_count": row.get("citation_count", ""),
+            "source_slug": row.get("source_slug", ""),
+            "topics": row.get("topics", ""),
+            "abstract_preview": row.get("abstract_preview", ""),
+            "ranking_run_id": row.get("ranking_run_id", ""),
+            "ranking_version": None,
+            "corpus_snapshot_version": provenance.get("corpus_snapshot_version"),
+            "embedding_version": provenance.get("embedding_version"),
+            "cluster_version": None,
+            "family": row.get("family", ""),
+            "review_pool_variant": review_pool_variant,
+            "rank": rank_in_family,
+            "rank_in_family": rank_in_family,
+            "experiment_rank": None,
+            "final_score": row.get("final_score", ""),
+            "sample_reason": row.get("sample_reason", ""),
+            "source_worksheet_path": source_rel,
+            "source_worksheet_sha256": source_sha,
+            "source_row_number": source_row_number,
+            "relevance_label": rel_l,
+            "novelty_label": nov_l,
+            "bridge_like_label": br_l,
+            "reviewer_notes": notes,
+            "label_provenance": "manual_review_worksheet_csv",
+            "split": "audit_only",
+            "good_or_acceptable": good_or_acceptable(rel_l),
+            "surprising_or_useful": surprising_or_useful(nov_l),
+            "bridge_like_yes_or_partial": bridge_like_yes_or_partial(br_l),
+            "worksheet_version": worksheet_version,
+            "sample_seed": seed,
+            "openalex_work_id": openalex_work_id,
+            "shadow_generalization_second_surface_context": context_row,
+        }
+        shadow_rows.append(out)
+
+    label_distribution = _appended_label_distribution(shadow_rows)
+    positive_count = sum(1 for row in shadow_rows if row.get("good_or_acceptable") is True)
+    negative_count = sum(1 for row in shadow_rows if row.get("good_or_acceptable") is False)
+    good_count = sum(1 for row in shadow_rows if _norm_label_token(row.get("relevance_label")) == "good")
+    acceptable_count = sum(1 for row in shadow_rows if _norm_label_token(row.get("relevance_label")) == "acceptable")
+    miss_count = sum(1 for row in shadow_rows if _norm_label_token(row.get("relevance_label")) == "miss")
+    irrelevant_count = sum(1 for row in shadow_rows if _norm_label_token(row.get("relevance_label")) == "irrelevant")
+    negative_work_ids = {str(row["work_id"]) for row in shadow_rows if row.get("good_or_acceptable") is False}
+    threshold_summary = _shadow_generalization_threshold_summary(
+        discovery_payload=discovery_payload,
+        labeled_count=len(shadow_rows),
+        positive_count=positive_count,
+        negative_count=negative_count,
+        distinct_negative_count=len(negative_work_ids),
+        conflict_count=len(worksheet_conflicts),
+        eligible_count=SHADOW_GENERALIZATION_EXPECTED_ROWS,
+    )
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    source_worksheets = list(base_payload.get("source_worksheets") or [])
+    source_worksheets.append(source_rel)
+    source_sha256 = dict(base_payload.get("source_worksheet_sha256") or {})
+    source_sha256[source_rel] = source_sha
+    row_counts_by_source = dict(base_metadata.get("row_counts_by_source") or {})
+    row_counts_by_source[source_rel] = len(labeled_rows)
+    included_by_source = dict(base_metadata.get("included_labeled_row_counts_by_source") or {})
+    included_by_source[source_rel] = len(shadow_rows)
+    blank_rows_by_source = dict(base_metadata.get("skipped_blank_row_counts_by_source") or {})
+    blank_rows_by_source[source_rel] = 0
+    skipped_blank_worksheets = list(base_metadata.get("skipped_blank_worksheets") or [])
+    skipped_malformed_rows = copy.deepcopy(base_metadata.get("skipped_malformed_rows") or [])
+    manual_review_dir_rel = str(base_metadata.get("manual_review_dir") or "docs/audit/manual-review")
+
+    previous_ingests = {
+        key: copy.deepcopy(value)
+        for key, value in base_metadata.items()
+        if key.endswith("_ingest") or key.startswith("previous_")
+    }
+    base_sha = sha256_file(base_path)
+    blank_sha = sha256_file(blank_path)
+    sidecar_sha = sha256_file(sidecar_path)
+    discovery_sha = sha256_file(discovery_path)
+    conflict_sha = sha256_file(conflict_path)
+    inputs = [
+        _input_record("base_dataset", base_path, repo_root=root),
+        _input_record("blank_worksheet", blank_path, repo_root=root),
+        _input_record("labeled_worksheet", labeled_path, repo_root=root),
+        _input_record("context_sidecar", sidecar_path, repo_root=root),
+        _input_record("generalization_second_surface", discovery_path, repo_root=root),
+        _input_record("conflict_policy", conflict_path, repo_root=root),
+    ]
+
+    extra_metadata = {
+        **previous_ingests,
+        "dataset_version": dataset_version,
+        "previous_dataset_version": base_version,
+        "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+        "previous_dataset_sha256": base_sha,
+        "inputs": inputs,
+        "shadow_generalization_second_surface_v1_ingest": {
+            "row_count_appended": len(shadow_rows),
+            "base_row_count": len(base_rows),
+            "output_row_count": len(base_rows) + len(shadow_rows),
+            "worksheet_version": SHADOW_GENERALIZATION_WORKSHEET_VERSION,
+            "review_pool_variant": SHADOW_GENERALIZATION_REVIEW_POOL_VARIANT,
+            "ranking_run_id": SHADOW_GENERALIZATION_RANKING_RUN_ID,
+            "family": SHADOW_GENERALIZATION_FAMILY,
+            "candidate_pool_work_set_sha256": SHADOW_GENERALIZATION_CANDIDATE_SHA,
+            "confirmatory_metric_eligible_work_count": SHADOW_GENERALIZATION_EXPECTED_ROWS,
+            "labeled_count": len(shadow_rows),
+            "positive_count": positive_count,
+            "negative_count": negative_count,
+            "good_count": good_count,
+            "acceptable_count": acceptable_count,
+            "miss_count": miss_count,
+            "irrelevant_count": irrelevant_count,
+            "distinct_negative_work_count": len(negative_work_ids),
+            "label_thresholds_passed": threshold_summary["all_passed"],
+            "label_threshold_summary": threshold_summary,
+            "label_distribution": label_distribution,
+            "context_preserved_field_name": "shadow_generalization_second_surface_context",
+            "shadow_generalization_second_surface_context_fields_preserved": (
+                "entire sidecar row object preserved verbatim under shadow_generalization_second_surface_context"
+            ),
+            "row_id_policy": {
+                "source": "CSV canonical; sidecar parity required",
+                "formula": "sha256(f\"{worksheet_version}|{seed}|{canonical_openalex_work_id}\")",
+                "stable_row_id_formula_validated": True,
+                "csv_row_id_set_equals_sidecar_row_id_set": True,
+            },
+            "source_row_number_convention": "physical CSV line including header; first data row = 2",
+            "blank_worksheet_path": _repo_relative(blank_path, repo_root=root),
+            "blank_worksheet_sha256": blank_sha,
+            "labeled_worksheet_path": source_rel,
+            "labeled_worksheet_sha256": source_sha,
+            "context_sidecar_path": _repo_relative(sidecar_path, repo_root=root),
+            "context_sidecar_sha256": sidecar_sha,
+            "generalization_second_surface_path": _repo_relative(discovery_path, repo_root=root),
+            "generalization_second_surface_sha256": discovery_sha,
+            "conflict_policy_path": _repo_relative(conflict_path, repo_root=root),
+            "conflict_policy_sha256": conflict_sha,
+            "previous_dataset_version": base_version,
+            "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+            "previous_dataset_sha256": base_sha,
+            "discovery_provenance": copy.deepcopy(provenance),
+            "selection_summary": copy.deepcopy(selection_summary),
+            "validation_summary": {
+                "labeled_rows_found": len(labeled_rows),
+                "blank_and_labeled_row_id_sets_matched": True,
+                "non_review_columns_unchanged": True,
+                "review_columns_required_non_empty": True,
+                "closed_label_sets_validated": True,
+                "bridge_like_labels_all_not_applicable": True,
+                "sidecar_row_ids_matched": True,
+                "context_sidecar_provenance_matched": True,
+                "discovery_status_matched": True,
+                "duplicate_row_id_count": 0,
+                "duplicate_work_id_count": 0,
+                "conflict_policy_recorded_as_provenance_only": True,
+            },
+            "conflict_report_policy": {
+                "policy_path": _repo_relative(conflict_path, repo_root=root),
+                "policy_sha256": conflict_sha,
+                "silent_deduplication_used": False,
+                "base_conflicting_label_count": (base_metadata.get("conflicting_label_report") or {}).get(
+                    "conflicting_label_count",
+                    0,
+                )
+                if isinstance(base_metadata.get("conflicting_label_report"), dict)
+                else 0,
+                "post_ingest_conflict_report_location": "metadata.conflicting_label_report",
+            },
+            "recommended_next_stage": "rerun_second_shadow_generalization_surface_discovery_v1",
+        },
+    }
+    extra_caveats = [
+        "Second-surface shadow generalization labels are audit/eval labels only.",
+        "This dataset versioning step does not run discovery, ranking, scoring, learned probability generation, training, embeddings, or label ingest into a database.",
+        "No production, API, default ranking, or online shadow behavior changes are authorized by this artifact.",
+        "Labels support second-surface generalization evaluation only.",
+        "Learned probability coverage remains a separate blocker before the second-surface generalization audit can run.",
+    ]
+    return _assemble_dataset_payload_from_rows(
+        dataset_version=dataset_version,
+        generated_at=generated_at,
+        source_worksheets=source_worksheets,
+        source_sha256=source_sha256,
+        all_rows=base_rows + shadow_rows,
+        manual_review_dir_rel=manual_review_dir_rel,
+        row_counts_by_source=row_counts_by_source,
+        included_by_source=included_by_source,
+        blank_rows_by_source=blank_rows_by_source,
+        skipped_blank_worksheets=skipped_blank_worksheets,
+        skipped_malformed_rows=skipped_malformed_rows,
+        extra_metadata=extra_metadata,
+        extra_caveats=extra_caveats,
+    )
+
+
 def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     meta = payload["metadata"]
     dup = meta["duplicate_paper_id_report"]
@@ -2645,7 +3122,19 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     v8_ingest = meta.get("transfer_gap_v1_ingest")
     v9_ingest = meta.get("fresh_hybrid_v1_ingest")
     v10_ingest = meta.get("fresh_hybrid_positive_topup_v1_ingest")
-    if isinstance(v10_ingest, dict):
+    v11_ingest = meta.get("shadow_generalization_second_surface_v1_ingest")
+    if isinstance(v11_ingest, dict):
+        regenerate_command = (
+            "Machine-readable export: regenerate via `python -m pipeline.cli "
+            "ml-label-dataset-v11-shadow-generalization-ingest "
+            f"--base-dataset {v11_ingest['previous_dataset_path']} "
+            f"--blank-worksheet {v11_ingest['blank_worksheet_path']} "
+            f"--labeled-worksheet {v11_ingest['labeled_worksheet_path']} "
+            f"--context-sidecar {v11_ingest['context_sidecar_path']} "
+            f"--generalization-second-surface {v11_ingest['generalization_second_surface_path']} "
+            f"--conflict-policy {v11_ingest['conflict_policy_path']} --output <path>.json`."
+        )
+    elif isinstance(v10_ingest, dict):
         regenerate_command = (
             "Machine-readable export: regenerate via `python -m pipeline.cli "
             "ml-label-dataset-v10-fresh-positive-topup-ingest "
@@ -2708,6 +3197,16 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
             "Machine-readable export: regenerate via `python -m pipeline.cli "
             f"ml-label-dataset --dataset-version {payload['dataset_version']} --output <path>.json`."
         )
+    v10_projected_positive = "unknown"
+    if isinstance(v10_ingest, dict):
+        projected = v10_ingest.get("projected_positive_work_count_if_unique")
+        threshold = v10_ingest.get("positive_threshold_before_labeling")
+        observed = threshold.get("observed") if isinstance(threshold, dict) else None
+        positives = v10_ingest.get("good_or_acceptable_positive_count")
+        if projected is not None and observed is not None and positives is not None:
+            v10_projected_positive = f"{projected} = {observed} + {positives}"
+        elif projected is not None:
+            v10_projected_positive = str(projected)
     lines = [
         f"# Manual label dataset ({payload['dataset_version']})",
         "",
@@ -2821,18 +3320,49 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "full row-id keyed sidecar object under nested `fresh_hybrid_positive_topup_context`. The sidecar is provenance "
         "only; the authoritative threshold pass/fail comes from rerunning the fresh-surface materializer.",
         "",
+        "## Shadow generalization second-surface context fields",
+        "",
+        "Rows from worksheets with `review_pool_variant=ml_shadow_scorer_second_surface_generalization_v1` are manual "
+        "labels for the second fresh surface needed before ml-shadow-scorer-v1 online runtime work can be considered. "
+        "They have `split=audit_only`, preserve ranking-run context from `rank-83787b91ef`, and keep the full row-id "
+        "keyed sidecar object under nested `shadow_generalization_second_surface_context`. The sidecar is provenance "
+        "only; labels are metric evidence and are never scorer features.",
+        "",
+        *(
+            [
+                "### Shadow generalization second surface v1 ingest",
+                "",
+                f"- **Rows appended:** {v11_ingest['row_count_appended']}",
+                "- **Legacy rows:** copied from v10 unchanged field-for-field, including their existing per-row `dataset_version` values.",
+                f"- **Final dataset rows:** {v11_ingest['output_row_count']}",
+                f"- **Ranking run / family:** `{v11_ingest['ranking_run_id']}` / `{v11_ingest['family']}`",
+                f"- **Candidate SHA:** `{v11_ingest['candidate_pool_work_set_sha256']}`",
+                f"- **Source row numbering:** {v11_ingest['source_row_number_convention']}.",
+                f"- **Raw relevance distribution:** `{v11_ingest['label_distribution']['relevance_label']}`",
+                f"- **Raw novelty distribution:** `{v11_ingest['label_distribution']['novelty_label']}`",
+                f"- **Raw bridge-like distribution:** `{v11_ingest['label_distribution']['bridge_like_label']}`",
+                f"- **good_or_acceptable positives / negatives:** {v11_ingest['positive_count']} / {v11_ingest['negative_count']}",
+                f"- **Label thresholds passed:** {v11_ingest['label_thresholds_passed']}",
+                "- **Conflict report:** preserved in JSON metadata; no silent dedupe or overwrite is performed.",
+                "- **Current blocker after labels:** learned probability coverage remains separate from label ingest.",
+                "- **Next step:** rerun `ml-shadow-scorer-generalization-second-surface` pinned to `rank-83787b91ef` with `--label-dataset ../../docs/audit/ml-label-dataset-v11.json`.",
+                "",
+            ]
+            if isinstance(v11_ingest, dict)
+            else []
+        ),
         *(
             [
                 "### Fresh hybrid positive top-up v1 ingest",
                 "",
-                f"- **Rows appended:** {v10_ingest['row_count_appended']}",
+                f"- **Rows appended:** {v10_ingest.get('row_count_appended', 'unknown')}",
                 "- **Legacy rows:** copied from v9 unchanged field-for-field, including their existing per-row `dataset_version` values.",
-                f"- **Source row numbering:** {v10_ingest['source_row_number_convention']}.",
-                f"- **Raw relevance distribution:** `{v10_ingest['label_distribution']['relevance_label']}`",
-                f"- **Raw novelty distribution:** `{v10_ingest['label_distribution']['novelty_label']}`",
-                f"- **Raw bridge-like distribution:** `{v10_ingest['label_distribution']['bridge_like_label']}`",
-                f"- **good_or_acceptable positives / negatives:** {v10_ingest['good_or_acceptable_positive_count']} / {v10_ingest['good_or_acceptable_negative_count']}",
-                f"- **Projected positive count:** {v10_ingest['projected_positive_work_count_if_unique']} = {v10_ingest['positive_threshold_before_labeling']['observed']} + {v10_ingest['good_or_acceptable_positive_count']}",
+                f"- **Source row numbering:** {v10_ingest.get('source_row_number_convention', 'physical CSV line including header; first data row = 2')}.",
+                f"- **Raw relevance distribution:** `{v10_ingest.get('label_distribution', {}).get('relevance_label', {})}`",
+                f"- **Raw novelty distribution:** `{v10_ingest.get('label_distribution', {}).get('novelty_label', {})}`",
+                f"- **Raw bridge-like distribution:** `{v10_ingest.get('label_distribution', {}).get('bridge_like_label', {})}`",
+                f"- **good_or_acceptable positives / negatives:** {v10_ingest.get('good_or_acceptable_positive_count', 'unknown')} / {v10_ingest.get('good_or_acceptable_negative_count', 'unknown')}",
+                f"- **Projected positive count:** {v10_projected_positive}",
                 "- **Materializer source of truth:** rematerialize with `ml-label-dataset-v10` to confirm final work-level threshold pass/fail.",
                 "- **Next step:** rerun `ml-fresh-eval-surface-hybrid-materialize` with `--label-dataset ../../docs/audit/ml-label-dataset-v10.json --expected-label-dataset-version ml-label-dataset-v10`.",
                 "",
@@ -3104,6 +3634,37 @@ def write_ml_label_dataset_v10_fresh_positive_topup_ingest(
         context_sidecar_path=context_sidecar_path,
         conflict_policy_path=conflict_policy_path,
         fresh_eval_surface_path=fresh_eval_surface_path,
+        dataset_version=dataset_version,
+    )
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    if markdown_path is not None:
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(markdown_from_ml_label_dataset(payload), encoding="utf-8")
+    return payload
+
+
+def write_ml_label_dataset_v11_shadow_generalization_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    generalization_second_surface_path: Path,
+    conflict_policy_path: Path,
+    json_path: Path,
+    markdown_path: Path | None,
+    dataset_version: str = "ml-label-dataset-v11",
+) -> dict[str, Any]:
+    payload = build_ml_label_dataset_v11_shadow_generalization_ingest(
+        repo_root=repo_root,
+        base_dataset_path=base_dataset_path,
+        blank_worksheet_path=blank_worksheet_path,
+        labeled_worksheet_path=labeled_worksheet_path,
+        context_sidecar_path=context_sidecar_path,
+        generalization_second_surface_path=generalization_second_surface_path,
+        conflict_policy_path=conflict_policy_path,
         dataset_version=dataset_version,
     )
     json_path.parent.mkdir(parents=True, exist_ok=True)

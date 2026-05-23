@@ -1923,6 +1923,63 @@ def main() -> None:
         default="ml-label-dataset-v10",
         help="Version string for the new artifact and appended positive top-up rows (default: ml-label-dataset-v10)",
     )
+    ml_label_dataset_v11_parser = subparsers.add_parser(
+        "ml-label-dataset-v11-shadow-generalization-ingest",
+        help=(
+            "Build ml-label-dataset v11 from v10 plus the completed second-surface "
+            "shadow-generalization labeled worksheet"
+        ),
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--base-dataset",
+        required=True,
+        help="Path to base ml-label-dataset JSON (for v11, docs/audit/ml-label-dataset-v10.json)",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--blank-worksheet",
+        required=True,
+        help="Path to blank second-surface shadow-generalization CSV template",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--labeled-worksheet",
+        required=True,
+        help="Path to completed second-surface shadow-generalization labeled CSV",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--context-sidecar",
+        required=True,
+        help="Path to second-surface shadow-generalization row_id-keyed context sidecar JSON",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--generalization-second-surface",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-second-surface-v1 JSON",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to label conflict policy Markdown (provenance only; no conflict resolution)",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-label-dataset v11 JSON",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown data card",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Repository root (default: parent of services/pipeline)",
+    )
+    ml_label_dataset_v11_parser.add_argument(
+        "--dataset-version",
+        default="ml-label-dataset-v11",
+        help="Version string for the new artifact and appended shadow-generalization rows (default: ml-label-dataset-v11)",
+    )
     ml_offline_baseline_parser = subparsers.add_parser(
         "ml-offline-baseline-eval",
         help="Read-only offline label baseline metrics (join ml-label-dataset to paper_scores for one ranking_run_id)",
@@ -7234,6 +7291,33 @@ def main() -> None:
             )
         except MLLabelDatasetError as e:
             print(f"ml-label-dataset-v10-fresh-positive-topup-ingest: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-label-dataset-v11-shadow-generalization-ingest":
+        from pipeline.ml_label_dataset import MLLabelDatasetError, write_ml_label_dataset_v11_shadow_generalization_ingest
+
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parents[3]
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        dver = (args.dataset_version or "").strip() or "ml-label-dataset-v11"
+        try:
+            write_ml_label_dataset_v11_shadow_generalization_ingest(
+                repo_root=repo_root,
+                base_dataset_path=Path(args.base_dataset),
+                blank_worksheet_path=Path(args.blank_worksheet),
+                labeled_worksheet_path=Path(args.labeled_worksheet),
+                context_sidecar_path=Path(args.context_sidecar),
+                generalization_second_surface_path=Path(args.generalization_second_surface),
+                conflict_policy_path=Path(args.conflict_policy),
+                json_path=out_json,
+                markdown_path=out_md,
+                dataset_version=dver,
+            )
+        except MLLabelDatasetError as e:
+            print(f"ml-label-dataset-v11-shadow-generalization-ingest: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
