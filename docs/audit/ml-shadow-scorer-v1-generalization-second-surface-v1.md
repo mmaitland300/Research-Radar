@@ -4,10 +4,10 @@
 
 This artifact performs read-only source discovery for a distinct second fresh surface. It does not execute the generalization audit or shadow scorer and does not authorize runtime or production behavior.
 
-- Status: `selected_needs_learned_probability_coverage`
+- Status: `selected_ready_for_generalization_audit`
 - Sources considered: 1
-- Ready for generalization audit execution: False
-- Recommended next stage: `create_second_surface_learned_probability_coverage_plan_v1`
+- Ready for generalization audit execution: True
+- Recommended next stage: `audit_ml_shadow_scorer_v1_on_second_fresh_surface`
 
 ## Selected Second Surface
 
@@ -20,8 +20,8 @@ This artifact performs read-only source discovery for a distinct second fresh su
 - `confirmatory_metric_eligible_work_count`: 168
 - `final_score_coverage_count`: 528
 - `missing_final_score_count`: 0
-- `learned_probability_coverage_count`: 0
-- `missing_learned_probability_count`: 528
+- `learned_probability_coverage_count`: 528
+- `missing_learned_probability_count`: 0
 - `distinct_from_first_validated_surface`: True
 
 ## Sources Considered
@@ -49,20 +49,20 @@ This artifact performs read-only source discovery for a distinct second fresh su
 - `minimum_confirmatory_label_coverage_rate`: observed `1.00` / threshold `0.6000` / passed `True`
 - `unresolved_label_conflicts`: observed `0` / threshold `0` / passed `True`
 - `final_score_coverage`: observed `528` / threshold `528` / passed `True`
-- `learned_probability_coverage`: observed `0` / threshold `528` / passed `False`
+- `learned_probability_coverage`: observed `528` / threshold `528` / passed `True`
 
 ## Learned Probability Coverage
 
-- `learned_probability_coverage_count`: 0
-- `missing_learned_probability_count`: 528
-- `approved_upstream_probability_probe`: {'probe_status': 'not_found', 'source_artifact_path': None, 'learned_probability_coverage_count': 0, 'full_coverage': False}
+- `learned_probability_coverage_count`: 528
+- `missing_learned_probability_count`: 0
+- `approved_upstream_probability_probe`: {'probe_status': 'found', 'source_artifact_path': 'docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json', 'learned_probability_coverage_count': 528, 'full_coverage': True}
 - `embedding_coverage_probe`: {'embedding_version': 'shadow-generalization-text-embedding-v1', 'embedding_coverage_count': 528, 'candidate_pool_work_count': 528, 'full_embedding_coverage': True}
 - `scorer_execution_used`: False
 
 ## Blockers
 
 - `missing_generalization_audit_plan_v1`: False
-- `missing_generalization_second_surface_selected`: True
+- `missing_generalization_second_surface_selected`: False
 - `missing_generalization_audit_on_second_surface`: True
 - `missing_generalization_audit_gates`: True
 - `missing_online_shadow_implementation_disabled_by_default`: True

@@ -530,6 +530,7 @@ def _approved_probability_probe(
     candidate_work_count: int,
 ) -> dict[str, Any]:
     probes = [
+        repo_root / "docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json",
         repo_root / "docs/audit/ml-shadow-scorer-v1-audit-output.json",
         repo_root / "docs/audit/ml-hybrid-validation-on-fresh-surface-v1.json",
     ]

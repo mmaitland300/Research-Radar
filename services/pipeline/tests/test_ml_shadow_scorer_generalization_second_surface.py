@@ -351,6 +351,79 @@ def test_selected_needs_learned_probability_coverage_when_probe_incomplete(
     assert payload["recommended_next_stage"] == "create_second_surface_learned_probability_coverage_plan_v1"
 
 
+def test_real_probability_probe_reads_second_surface_artifact_and_preserves_legacy_probe(tmp_path: Path) -> None:
+    artifact_dir = tmp_path / "docs/audit"
+    artifact_dir.mkdir(parents=True)
+    ranking_run_id = "rank-83787b91ef"
+    candidate_sha = "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc"
+    second_surface_artifact = artifact_dir / "ml-shadow-scorer-v1-second-surface-learned-probability-v1.json"
+    second_surface_payload = {
+        "metadata": {
+            "artifact_type": "ml_shadow_scorer_second_surface_learned_probability",
+            "ranking_run_id": ranking_run_id,
+            "candidate_pool_work_set_sha256": candidate_sha,
+        },
+        "candidate_work_scores": [
+            {"canonical_openalex_work_id": "W1", "audit_embedding_probability_work": 0.1},
+            {"canonical_openalex_work_id": "W2", "audit_embedding_probability_work": 0.2},
+            {"canonical_openalex_work_id": "W3", "audit_embedding_probability_work": 0.3},
+        ],
+    }
+    _write_json(tmp_path, "docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json", second_surface_payload)
+
+    found = second_surface._approved_probability_probe(
+        repo_root=tmp_path,
+        ranking_run_id=ranking_run_id,
+        candidate_sha=candidate_sha,
+        candidate_work_count=3,
+    )
+
+    assert found["probe_status"] == "found"
+    assert found["source_artifact_path"] == "docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json"
+    assert found["learned_probability_coverage_count"] == 3
+    assert found["full_coverage"] is True
+
+    run_mismatch = second_surface._approved_probability_probe(
+        repo_root=tmp_path,
+        ranking_run_id="rank-other",
+        candidate_sha=candidate_sha,
+        candidate_work_count=3,
+    )
+    assert run_mismatch["probe_status"] == "not_found"
+
+    sha_mismatch = second_surface._approved_probability_probe(
+        repo_root=tmp_path,
+        ranking_run_id=ranking_run_id,
+        candidate_sha="different-sha",
+        candidate_work_count=3,
+    )
+    assert sha_mismatch["probe_status"] == "not_found"
+
+    second_surface_artifact.unlink()
+    legacy_payload = {
+        "metadata": {
+            "artifact_type": "ml_shadow_scorer_v1_audit_output",
+            "ranking_run_id": "rank-legacy",
+            "candidate_pool_work_set_sha256": "legacy-sha",
+        },
+        "shadow_output_rows": [
+            {"canonical_openalex_work_id": "W10", "audit_embedding_probability_work": 0.4},
+            {"canonical_openalex_work_id": "W11", "audit_embedding_probability_work": 0.5},
+        ],
+    }
+    _write_json(tmp_path, "docs/audit/ml-shadow-scorer-v1-audit-output.json", legacy_payload)
+
+    legacy = second_surface._approved_probability_probe(
+        repo_root=tmp_path,
+        ranking_run_id="rank-legacy",
+        candidate_sha="legacy-sha",
+        candidate_work_count=2,
+    )
+    assert legacy["probe_status"] == "found"
+    assert legacy["source_artifact_path"] == "docs/audit/ml-shadow-scorer-v1-audit-output.json"
+    assert legacy["learned_probability_coverage_count"] == 2
+
+
 def test_blocked_no_candidate_source_meets_minimum(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pool = _candidate_rows("G", 80)
     _install_query_fixtures(monkeypatch, [_source("rank-small")], {"rank-small": pool})

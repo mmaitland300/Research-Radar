@@ -13,10 +13,10 @@
   "candidate_sources_considered": [
     {
       "approved_upstream_probability_probe": {
-        "full_coverage": false,
-        "learned_probability_coverage_count": 0,
-        "probe_status": "not_found",
-        "source_artifact_path": null
+        "full_coverage": true,
+        "learned_probability_coverage_count": 528,
+        "probe_status": "found",
+        "source_artifact_path": "docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json"
       },
       "candidate_minimum_pass": true,
       "candidate_pool_work_count": 528,
@@ -85,9 +85,9 @@
           "label_coverage_rate": 1.0
         }
       },
-      "learned_probability_coverage_count": 0,
+      "learned_probability_coverage_count": 528,
       "missing_final_score_count": 0,
-      "missing_learned_probability_count": 528,
+      "missing_learned_probability_count": 0,
       "old_217_overlap_count": 217,
       "overlap_work_ids_preview": [
         "W4388189390",
@@ -128,8 +128,8 @@
           "threshold": 528
         },
         "learned_probability_coverage": {
-          "observed": 0,
-          "passed": false,
+          "observed": 528,
+          "passed": true,
           "threshold": 528
         },
         "minimum_confirmatory_candidate_work_count": {
@@ -180,9 +180,9 @@
     "candidate_sources_considered_count": 1,
     "explicit_ranking_run_id": "rank-83787b91ef",
     "family": "emerging",
-    "recommended_next_stage": "create_second_surface_learned_probability_coverage_plan_v1",
+    "recommended_next_stage": "audit_ml_shadow_scorer_v1_on_second_fresh_surface",
     "selected_ranking_run_id": "rank-83787b91ef",
-    "status": "selected_needs_learned_probability_coverage"
+    "status": "selected_ready_for_generalization_audit"
   },
   "label_coverage": {
     "label_coverage_rate": 1.0,
@@ -203,10 +203,10 @@
   },
   "learned_probability_coverage": {
     "approved_upstream_probability_probe": {
-      "full_coverage": false,
-      "learned_probability_coverage_count": 0,
-      "probe_status": "not_found",
-      "source_artifact_path": null
+      "full_coverage": true,
+      "learned_probability_coverage_count": 528,
+      "probe_status": "found",
+      "source_artifact_path": "docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json"
     },
     "embedding_coverage_probe": {
       "candidate_pool_work_count": 528,
@@ -214,8 +214,8 @@
       "embedding_version": "shadow-generalization-text-embedding-v1",
       "full_embedding_coverage": true
     },
-    "learned_probability_coverage_count": 0,
-    "missing_learned_probability_count": 528,
+    "learned_probability_coverage_count": 528,
+    "missing_learned_probability_count": 0,
     "scorer_execution_used": false
   },
   "metadata": {
@@ -237,7 +237,7 @@
     "database_target_redacted": "postgresql://research_radar:***@localhost:5432/research_radar",
     "database_unavailable_error": null,
     "generalization_audit_executed": false,
-    "generated_at": "2026-05-23T12:58:00Z",
+    "generated_at": "2026-05-25T16:30:47Z",
     "inputs": [
       {
         "name": "generalization_audit_plan",
@@ -307,10 +307,10 @@
   "readiness_for_generalization_audit": {
     "candidate_source_selected": true,
     "generalization_audit_executed": false,
-    "ready_for_generalization_audit_execution": false,
-    "status": "selected_needs_learned_probability_coverage"
+    "ready_for_generalization_audit_execution": true,
+    "status": "selected_ready_for_generalization_audit"
   },
-  "recommended_next_stage": "create_second_surface_learned_probability_coverage_plan_v1",
+  "recommended_next_stage": "audit_ml_shadow_scorer_v1_on_second_fresh_surface",
   "selected_second_surface": {
     "candidate_pool_work_count": 528,
     "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
@@ -320,16 +320,16 @@
     "embedding_version": "shadow-generalization-text-embedding-v1",
     "family": "emerging",
     "final_score_coverage_count": 528,
-    "learned_probability_coverage_count": 0,
+    "learned_probability_coverage_count": 528,
     "missing_final_score_count": 0,
-    "missing_learned_probability_count": 528,
+    "missing_learned_probability_count": 0,
     "ranking_run_id": "rank-83787b91ef"
   },
   "shadow_and_production_blockers": {
     "missing_generalization_audit_gates": true,
     "missing_generalization_audit_on_second_surface": true,
     "missing_generalization_audit_plan_v1": false,
-    "missing_generalization_second_surface_selected": true,
+    "missing_generalization_second_surface_selected": false,
     "missing_online_shadow_implementation_disabled_by_default": true,
     "missing_production_readiness_authorization": true,
     "missing_shadow_runtime_isolation_verification": true,
@@ -345,8 +345,8 @@
       "threshold": 528
     },
     "learned_probability_coverage": {
-      "observed": 0,
-      "passed": false,
+      "observed": 528,
+      "passed": true,
       "threshold": 528
     },
     "minimum_confirmatory_candidate_work_count": {
