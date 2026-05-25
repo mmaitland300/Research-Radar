@@ -4556,6 +4556,80 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-surface-learned-probability-apply",
+        help="Apply frozen audit embedding scorer to second-surface embeddings and write audit-only probabilities",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--learned-probability-coverage-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-surface-learned-probability-coverage-plan-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--generalization-second-surface",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-second-surface-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v11 JSON",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--second-snapshot-embeddings",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-embeddings-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--offline-audit-embedding-scorer",
+        required=True,
+        help="Path to ml-offline-audit-embedding-scorer-v2 JSON",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Optional local Postgres URL for SELECT-only probability application",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--ranking-run-id",
+        default="rank-83787b91ef",
+        help="Ranking run to score (default: rank-83787b91ef)",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--family",
+        default="emerging",
+        help="Recommendation family to score (default: emerging)",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--corpus-snapshot-version",
+        default="source-snapshot-shadow-generalization-v1-20260521",
+        help="Corpus snapshot version to read (default: source-snapshot-shadow-generalization-v1-20260521)",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--embedding-version",
+        default="shadow-generalization-text-embedding-v1",
+        help="Embedding version to read (default: shadow-generalization-text-embedding-v1)",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write learned-probability application JSON",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--artifact-version",
+        default="ml-shadow-scorer-v1-second-surface-learned-probability-v1",
+        help="Artifact version string to write (default: ml-shadow-scorer-v1-second-surface-learned-probability-v1)",
+    )
+    ml_shadow_scorer_second_surface_learned_probability_apply_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -6702,6 +6776,41 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(payload["evidence_summary"]["learned_probability_coverage"]["learned_probability_coverage_count"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-surface-learned-probability-apply":
+        from pipeline.ml_shadow_scorer_second_surface_learned_probability_apply import (
+            MLShadowScorerSecondSurfaceLearnedProbabilityApplyError,
+            write_ml_shadow_scorer_second_surface_learned_probability_apply,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_second_surface_learned_probability_apply(
+                learned_probability_coverage_plan_path=Path(args.learned_probability_coverage_plan),
+                generalization_second_surface_path=Path(args.generalization_second_surface),
+                label_dataset_path=Path(args.label_dataset),
+                second_snapshot_embeddings_path=Path(args.second_snapshot_embeddings),
+                offline_audit_embedding_scorer_path=Path(args.offline_audit_embedding_scorer),
+                database_url=args.database_url,
+                ranking_run_id=str(args.ranking_run_id),
+                family=str(args.family),
+                corpus_snapshot_version=str(args.corpus_snapshot_version),
+                embedding_version=str(args.embedding_version),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                artifact_version=str(args.artifact_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondSurfaceLearnedProbabilityApplyError as e:
+            print(f"ml-shadow-scorer-second-surface-learned-probability-apply: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["execution_summary"]["learned_probability_coverage_count"])
         print(payload["recommended_next_stage"])
         return
 
