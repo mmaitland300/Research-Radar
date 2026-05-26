@@ -4692,6 +4692,60 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_generalization_audit_gates_parser = subparsers.add_parser(
+        "ml-shadow-scorer-generalization-audit-gates",
+        help="Evaluate second-surface ml-shadow-scorer-v1 generalization audit gates",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--second-surface-generalization-audit",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-surface-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--generalization-second-surface",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-second-surface-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write generalization audit gates JSON",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--gates-version",
+        default="ml-shadow-scorer-v1-generalization-audit-gates-v1",
+        help="Gates version string to write (default: ml-shadow-scorer-v1-generalization-audit-gates-v1)",
+    )
+    ml_shadow_scorer_generalization_audit_gates_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -6905,6 +6959,37 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(payload["audit_scope"]["confirmatory_metric_work_count"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-generalization-audit-gates":
+        from pipeline.ml_shadow_scorer_generalization_audit_gates import (
+            MLShadowScorerGeneralizationAuditGatesError,
+            write_ml_shadow_scorer_generalization_audit_gates,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_generalization_audit_gates(
+                second_surface_generalization_audit_path=Path(args.second_surface_generalization_audit),
+                generalization_second_surface_path=Path(args.generalization_second_surface),
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                gates_version=str(args.gates_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerGeneralizationAuditGatesError as e:
+            print(f"ml-shadow-scorer-generalization-audit-gates: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["generalization_audit_gates_passed"])
         print(payload["recommended_next_stage"])
         return
 
