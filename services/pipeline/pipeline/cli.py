@@ -4630,6 +4630,68 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_second_surface_generalization_audit_parser = subparsers.add_parser(
+        "ml-shadow-scorer-second-surface-generalization-audit",
+        help="Audit ml-shadow-scorer-v1 on the selected second fresh shadow surface",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--generalization-second-surface",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-second-surface-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--learned-probability-artifact",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-surface-learned-probability-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset-v11 JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--shadow-scorer-spec",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-spec JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--generalization-audit-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--fresh-surface-policy",
+        required=True,
+        help="Path to ml-fresh-eval-surface-policy-hybrid-v1 JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write second-surface generalization audit JSON",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--artifact-version",
+        default="ml-shadow-scorer-v1-second-surface-generalization-audit-v1",
+        help=(
+            "Artifact version string to write "
+            "(default: ml-shadow-scorer-v1-second-surface-generalization-audit-v1)"
+        ),
+    )
+    ml_shadow_scorer_second_surface_generalization_audit_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -6811,6 +6873,38 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(payload["execution_summary"]["learned_probability_coverage_count"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-second-surface-generalization-audit":
+        from pipeline.ml_shadow_scorer_second_surface_generalization_audit import (
+            MLShadowScorerSecondSurfaceGeneralizationAuditError,
+            write_ml_shadow_scorer_second_surface_generalization_audit,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_second_surface_generalization_audit(
+                generalization_second_surface_path=Path(args.generalization_second_surface),
+                learned_probability_artifact_path=Path(args.learned_probability_artifact),
+                label_dataset_path=Path(args.label_dataset),
+                shadow_scorer_spec_path=Path(args.shadow_scorer_spec),
+                generalization_audit_plan_path=Path(args.generalization_audit_plan),
+                fresh_surface_policy_path=Path(args.fresh_surface_policy),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                artifact_version=str(args.artifact_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerSecondSurfaceGeneralizationAuditError as e:
+            print(f"ml-shadow-scorer-second-surface-generalization-audit: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["audit_scope"]["confirmatory_metric_work_count"])
         print(payload["recommended_next_stage"])
         return
 
