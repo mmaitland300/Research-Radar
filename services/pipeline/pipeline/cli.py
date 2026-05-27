@@ -4990,6 +4990,45 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-phase1-no-write-pilot-plan",
+        help="Prepare the ml-shadow-scorer-v1 online shadow Phase 1 no-write pilot plan without running it",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser.add_argument(
+        "--authorization-grant",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser.add_argument(
+        "--online-shadow-runtime",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write online shadow Phase 1 no-write pilot plan JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser.add_argument(
+        "--plan-version",
+        default="ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-plan-v1",
+        help="Plan version string to write (default: ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-plan-v1)",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7406,6 +7445,35 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["authorization_granted"])
         print(payload["online_shadow_execution_authorized"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-phase1-no-write-pilot-plan":
+        from pipeline.ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan import (
+            MLShadowScorerOnlineShadowPhase1NoWritePilotPlanError,
+            write_ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_online_shadow_phase1_no_write_pilot_plan(
+                authorization_grant_path=Path(args.authorization_grant),
+                online_shadow_runtime_path=Path(args.online_shadow_runtime),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                plan_version=str(args.plan_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerOnlineShadowPhase1NoWritePilotPlanError as e:
+            print(f"ml-shadow-scorer-online-shadow-phase1-no-write-pilot-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["phase1_no_write_pilot_plan_defined"])
+        print(payload["phase1_no_write_pilot_executed"])
         print(payload["recommended_next_stage"])
         return
 
