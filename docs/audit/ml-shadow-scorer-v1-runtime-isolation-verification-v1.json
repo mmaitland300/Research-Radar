@@ -1,0 +1,517 @@
+{
+  "api_web_changes_allowed": false,
+  "blocker_update": {
+    "missing_shadow_runtime_isolation_verification_after": false,
+    "missing_shadow_runtime_isolation_verification_before": true,
+    "production_readiness_authorization_remains_required": true
+  },
+  "caveats": [
+    "Passing runtime isolation verification does not enable online shadow execution.",
+    "Passing does not authorize production/default/API/web behavior.",
+    "The runtime remains disabled by default.",
+    "Any future enablement still needs a separate gates/authorization artifact and production-readiness remains separate."
+  ],
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_runtime_isolation_verification",
+    "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+    "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "family": "emerging",
+    "gates_version": "ml-shadow-scorer-v1-generalization-audit-gates-v1",
+    "generated_at": "2026-05-27T05:20:36Z",
+    "inputs": [
+      {
+        "name": "online_shadow_runtime",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1.json",
+        "sha256": "a942bea9cd6feac234e9bc377bcada653309963a2b061829b0302ab7760be13e"
+      },
+      {
+        "name": "generalization_audit_gates",
+        "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+        "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84"
+      },
+      {
+        "name": "online_shadow_policy",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+      }
+    ],
+    "policy_version": "ml-shadow-scorer-v1-online-shadow-policy",
+    "ranking_run_id": "rank-83787b91ef",
+    "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+    "runtime_version": "ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1",
+    "verification_version": "ml-shadow-scorer-v1-runtime-isolation-verification-v1"
+  },
+  "online_shadow_execution_enabled": false,
+  "policy_alignment": {
+    "gates_recommended_next_stage": "implement_online_shadow_runtime_disabled_by_default",
+    "identity_matches_gates": true,
+    "policy_disable_switch_default": "off",
+    "policy_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+    "policy_feature_flag_default_off": true,
+    "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+    "runtime_recommended_next_stage": "run_ml_shadow_scorer_v1_runtime_isolation_verification_v1"
+  },
+  "production_default_allowed": false,
+  "recommended_next_stage": "draft_online_shadow_execution_enablement_gates_v1",
+  "runtime_disabled_by_default": true,
+  "runtime_execution_authorized": false,
+  "runtime_implementation_present": true,
+  "runtime_isolation_verification_passed": true,
+  "runtime_probe_results": {
+    "flag_off_results": {
+      "empty": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "false": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "off": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "unknown": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "unset": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "zero": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      }
+    },
+    "flag_on_results": {
+      "1": {
+        "labels_used_for_scoring": false,
+        "matches_compute_shadow_score_rows": true,
+        "production_default_changed": false,
+        "shadow_row_count": 3,
+        "status": "succeeded_test_only",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "on": {
+        "labels_used_for_scoring": false,
+        "matches_compute_shadow_score_rows": true,
+        "production_default_changed": false,
+        "shadow_row_count": 3,
+        "status": "succeeded_test_only",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "true": {
+        "labels_used_for_scoring": false,
+        "matches_compute_shadow_score_rows": true,
+        "production_default_changed": false,
+        "shadow_row_count": 3,
+        "status": "succeeded_test_only",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      }
+    },
+    "flag_parser_results": {
+      "off_values": {
+        "0": false,
+        "<empty>": false,
+        "disabled": false,
+        "false": false,
+        "no": false,
+        "off": false
+      },
+      "on_values": {
+        "1": true,
+        "enabled": true,
+        "on": true,
+        "true": true,
+        "yes": true
+      },
+      "unknown_value": false,
+      "unset_value": false
+    },
+    "identity_rejection_results": {
+      "wrong_candidate_pool_work_set_sha256": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "rejected_identity_mismatch",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "wrong_ranking_run_id": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "rejected_identity_mismatch",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      }
+    },
+    "incomplete_coverage_results": {
+      "missing_audit_embedding_probability_work": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_incomplete_coverage",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "missing_final_score": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "skipped_incomplete_coverage",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      }
+    },
+    "label_field_rejection_results": {
+      "good_or_acceptable": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "rejected_label_fields_present",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "label_any_positive": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "rejected_label_fields_present",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      },
+      "reviewer_notes": {
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "shadow_row_count": 0,
+        "status": "rejected_label_fields_present",
+        "user_visible_ranking_changed": false,
+        "writes_performed": false
+      }
+    }
+  },
+  "shadow_and_production_blockers": {
+    "missing_generalization_audit_gates": false,
+    "missing_generalization_audit_on_second_surface": false,
+    "missing_online_shadow_implementation_disabled_by_default": false,
+    "missing_production_readiness_authorization": true,
+    "missing_shadow_runtime_isolation_verification": false,
+    "online_shadow_execution_enabled": false,
+    "production_default_allowed": false,
+    "runtime_implementation_authorized": false,
+    "shadow_scoring_allowed": false
+  },
+  "shadow_scoring_allowed": false,
+  "source_guard_results": {
+    "forbidden_import_tokens_present": [],
+    "passed": true,
+    "runtime_module_path": "services/pipeline/pipeline/ml_shadow_scorer_online_shadow_runtime.py",
+    "web_api_import_tokens_present": [],
+    "write_sql_verbs_present": []
+  },
+  "verification_results": [
+    {
+      "gate_id": "V01_default_off_behavior",
+      "observed_value": {
+        "empty": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "false": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "off": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "unknown": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "unset": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "zero": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        }
+      },
+      "passed": true,
+      "rationale": "Unset and explicit off-like feature flag values must skip with zero rows and no writes.",
+      "status": "pass",
+      "title": "Default-off behavior"
+    },
+    {
+      "gate_id": "V02_flag_parser_contract",
+      "observed_value": {
+        "off_values": {
+          "0": false,
+          "<empty>": false,
+          "disabled": false,
+          "false": false,
+          "no": false,
+          "off": false
+        },
+        "on_values": {
+          "1": true,
+          "enabled": true,
+          "on": true,
+          "true": true,
+          "yes": true
+        },
+        "unknown_value": false,
+        "unset_value": false
+      },
+      "passed": true,
+      "rationale": "Only the approved on values enable in-memory scoring; all other values are off.",
+      "status": "pass",
+      "title": "Feature flag parser contract"
+    },
+    {
+      "gate_id": "V03_in_memory_scoring_only",
+      "observed_value": {
+        "1": {
+          "labels_used_for_scoring": false,
+          "matches_compute_shadow_score_rows": true,
+          "production_default_changed": false,
+          "shadow_row_count": 3,
+          "status": "succeeded_test_only",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "on": {
+          "labels_used_for_scoring": false,
+          "matches_compute_shadow_score_rows": true,
+          "production_default_changed": false,
+          "shadow_row_count": 3,
+          "status": "succeeded_test_only",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "true": {
+          "labels_used_for_scoring": false,
+          "matches_compute_shadow_score_rows": true,
+          "production_default_changed": false,
+          "shadow_row_count": 3,
+          "status": "succeeded_test_only",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        }
+      },
+      "passed": true,
+      "rationale": "Explicitly enabled fixture probes must match compute_shadow_score_rows and perform no writes.",
+      "status": "pass",
+      "title": "In-memory scoring only"
+    },
+    {
+      "gate_id": "V04_skip_on_incomplete_coverage",
+      "observed_value": {
+        "missing_audit_embedding_probability_work": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_incomplete_coverage",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "missing_final_score": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "skipped_incomplete_coverage",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        }
+      },
+      "passed": true,
+      "rationale": "Missing final_score or audit_embedding_probability_work must skip the whole run.",
+      "status": "pass",
+      "title": "Skip on incomplete coverage"
+    },
+    {
+      "gate_id": "V05_label_field_rejection",
+      "observed_value": {
+        "good_or_acceptable": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "rejected_label_fields_present",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "label_any_positive": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "rejected_label_fields_present",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "reviewer_notes": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "rejected_label_fields_present",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        }
+      },
+      "passed": true,
+      "rationale": "Runtime rows containing label or reviewer fields must be rejected before scoring.",
+      "status": "pass",
+      "title": "Label field rejection"
+    },
+    {
+      "gate_id": "V06_identity_scope_rejection",
+      "observed_value": {
+        "wrong_candidate_pool_work_set_sha256": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "rejected_identity_mismatch",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        },
+        "wrong_ranking_run_id": {
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "shadow_row_count": 0,
+          "status": "rejected_identity_mismatch",
+          "user_visible_ranking_changed": false,
+          "writes_performed": false
+        }
+      },
+      "passed": true,
+      "rationale": "Runtime rows with mismatched second-surface identity fields must be rejected.",
+      "status": "pass",
+      "title": "Identity scope rejection"
+    },
+    {
+      "gate_id": "V07_no_db_or_network_or_training_imports",
+      "observed_value": {
+        "forbidden_import_tokens_present": [],
+        "web_api_import_tokens_present": []
+      },
+      "passed": true,
+      "rationale": "Runtime source must not import DB, network/API, or training libraries.",
+      "status": "pass",
+      "title": "No DB/network/training imports"
+    },
+    {
+      "gate_id": "V08_no_write_sql_or_production_mutation_paths",
+      "observed_value": {
+        "flag_on_writes_performed": [
+          false,
+          false,
+          false
+        ],
+        "production_default_changed": [
+          false,
+          false,
+          false
+        ],
+        "user_visible_ranking_changed": [
+          false,
+          false,
+          false
+        ],
+        "write_sql_verbs_present": []
+      },
+      "passed": true,
+      "rationale": "Runtime source and fixture probes must show no write SQL, production mutation, or user-visible ranking mutation.",
+      "status": "pass",
+      "title": "No write SQL or production mutation paths"
+    },
+    {
+      "gate_id": "V09_policy_and_gates_alignment",
+      "observed_value": {
+        "gates_passed": true,
+        "policy_default_off": true,
+        "policy_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+        "runtime_disabled_by_default": true,
+        "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
+      },
+      "passed": true,
+      "rationale": "Runtime artifact, policy, and passed gates must agree on identity and default-off contract.",
+      "status": "pass",
+      "title": "Policy and gates alignment"
+    },
+    {
+      "gate_id": "V10_runtime_isolation_verification_decision",
+      "observed_value": {
+        "required_gates_passed": true
+      },
+      "passed": true,
+      "rationale": "All runtime isolation verification gates must pass.",
+      "status": "pass",
+      "title": "Runtime isolation verification decision"
+    }
+  ],
+  "verification_summary": {
+    "flag_off_cases_verified": 6,
+    "flag_on_cases_verified": 3,
+    "identity_rejection_cases_verified": 2,
+    "incomplete_coverage_cases_verified": 2,
+    "label_rejection_cases_verified": 3,
+    "runtime_execution_authorized": false,
+    "source_guard_passed": true,
+    "verification_gates_passed": 10,
+    "verification_gates_total": 10
+  }
+}

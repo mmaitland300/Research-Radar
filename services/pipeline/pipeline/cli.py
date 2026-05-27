@@ -4795,6 +4795,45 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_runtime_isolation_verification_parser = subparsers.add_parser(
+        "ml-shadow-scorer-runtime-isolation-verification",
+        help="Verify ml-shadow-scorer-v1 runtime isolation with in-memory probes",
+    )
+    ml_shadow_scorer_runtime_isolation_verification_parser.add_argument(
+        "--online-shadow-runtime",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1 JSON",
+    )
+    ml_shadow_scorer_runtime_isolation_verification_parser.add_argument(
+        "--generalization-audit-gates",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-gates-v1 JSON",
+    )
+    ml_shadow_scorer_runtime_isolation_verification_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_runtime_isolation_verification_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write runtime isolation verification JSON",
+    )
+    ml_shadow_scorer_runtime_isolation_verification_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_runtime_isolation_verification_parser.add_argument(
+        "--verification-version",
+        default="ml-shadow-scorer-v1-runtime-isolation-verification-v1",
+        help="Verification version string to write (default: ml-shadow-scorer-v1-runtime-isolation-verification-v1)",
+    )
+    ml_shadow_scorer_runtime_isolation_verification_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7069,6 +7108,34 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(payload["last_disabled_run"]["status"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-runtime-isolation-verification":
+        from pipeline.ml_shadow_scorer_runtime_isolation_verification import (
+            MLShadowScorerRuntimeIsolationVerificationError,
+            write_ml_shadow_scorer_runtime_isolation_verification,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_runtime_isolation_verification(
+                online_shadow_runtime_path=Path(args.online_shadow_runtime),
+                generalization_audit_gates_path=Path(args.generalization_audit_gates),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                verification_version=str(args.verification_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerRuntimeIsolationVerificationError as e:
+            print(f"ml-shadow-scorer-runtime-isolation-verification: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["runtime_isolation_verification_passed"])
         print(payload["recommended_next_stage"])
         return
 
