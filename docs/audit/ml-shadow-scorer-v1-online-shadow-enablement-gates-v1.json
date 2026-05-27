@@ -1,4 +1,5 @@
 {
+  "all_prerequisite_gates_satisfied": true,
   "api_web_changes_allowed": false,
   "blocked_actions": [
     "online_shadow_execution",
@@ -111,8 +112,12 @@
       ],
       "gate_id": "E05_no_production_default_or_api_web_change",
       "observed_evidence": {
+        "gates_api_web_changes_allowed": false,
         "gates_online_shadow_execution_enabled": false,
         "gates_production_default_allowed": false,
+        "policy_api_web_changes_allowed": false,
+        "policy_production_default_allowed": false,
+        "runtime_api_web_changes_allowed": false,
         "runtime_online_shadow_execution_enabled": false,
         "runtime_production_default_allowed": false,
         "verification_api_web_changes_allowed": false,
@@ -133,7 +138,10 @@
       ],
       "gate_id": "E06_shadow_write_isolation_requirement_documented_not_enabled",
       "observed_evidence": {
+        "allowed_write_scope_future_only_after_later_gates": true,
         "allowed_write_scope_present": true,
+        "allowed_write_scope_required_fields_present": true,
+        "allowed_write_scope_targets_present": true,
         "forbidden_write_scope_present": true,
         "last_disabled_run_writes_performed": false,
         "runtime_contract_writes_performed": false
@@ -151,8 +159,10 @@
       ],
       "gate_id": "E07_observability_requirements_defined_for_future_online_run",
       "observed_evidence": {
+        "future_runtime_verification_requirements_must_prove_present": true,
         "future_runtime_verification_requirements_present": true,
-        "observability_contract_present": true
+        "observability_contract_present": true,
+        "observability_expected_keys_true": true
       },
       "prerequisite_evidence_present": true,
       "rationale": "Future online shadow evaluation must emit observability before any execution gate can pass.",
@@ -167,7 +177,9 @@
       ],
       "gate_id": "E08_skip_on_incomplete_coverage_verified",
       "observed_evidence": {
+        "runtime_contract_partial_scoring_allowed": false,
         "runtime_contract_skip_on_incomplete_coverage": true,
+        "verification_gate_v04_passed": true,
         "verification_gate_v04_status": "pass",
         "verification_incomplete_cases": 2
       },
@@ -188,6 +200,7 @@
         "future_online_shadow_gates_do_not_set_production_default_allowed": true,
         "good_or_acceptable_production_eligible": false,
         "overall_status": "research_only",
+        "policy_separation_production_default_allowed": false,
         "production_default_authorized": null,
         "production_plan_blocked": true
       },
@@ -219,6 +232,25 @@
     "generalization_audit_gates_passed": true,
     "material_lift_gate_passed": true,
     "online_shadow_policy_defined": true,
+    "policy_scope_note": {
+      "enablement_identity_scope": "surface-2 second-shadow-generalization run",
+      "policy_contract_scope": "surface-1 validation snapshot (historical evidence anchor)",
+      "policy_used_as": "default-off / write-scope / observability contract only",
+      "policy_validation_snapshot_scope": {
+        "candidate_pool_size": 358,
+        "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+        "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+        "embedding_version": "fresh-hybrid-text-embedding-v1",
+        "evidence_applies_only_to_this_scope": true,
+        "family": "emerging",
+        "formula_generalization_beyond_validated_surface_asserted": false,
+        "ranking_run_id": "rank-9f4b2a2084",
+        "scope_extension_requires": [
+          "new ml-hybrid-validation-on-fresh-surface cycle for that surface",
+          "or completed ml-shadow-scorer-v1 generalization audit on a second fresh surface"
+        ]
+      }
+    },
     "production_plan_blocked": true,
     "production_plan_observed": {
       "good_or_acceptable_production_eligible": false,
@@ -249,7 +281,7 @@
     "embedding_version": "shadow-generalization-text-embedding-v1",
     "family": "emerging",
     "gates_version": "ml-shadow-scorer-v1-online-shadow-enablement-gates-v1",
-    "generated_at": "2026-05-27T05:45:01Z",
+    "generated_at": "2026-05-27T15:50:52Z",
     "inputs": [
       {
         "name": "runtime_isolation_verification",

@@ -79,6 +79,7 @@ def _runtime_payload(*, disabled: bool = True) -> dict:
         "runtime_contract": {
             "writes_performed": False,
             "skip_on_incomplete_coverage": True,
+            "partial_scoring_allowed": False,
         },
     }
 
@@ -97,6 +98,7 @@ def _generalization_gates_payload(*, passed: bool = True) -> dict:
         "online_shadow_execution_enabled": False,
         "shadow_scoring_allowed": False,
         "production_default_allowed": False,
+        "api_web_changes_allowed": False,
     }
 
 
@@ -109,6 +111,8 @@ def _policy_payload(*, default_off: bool = True) -> dict:
         "online_shadow_execution_policy_defined": True,
         "online_shadow_execution_enabled": False,
         "runtime_implementation_authorized": False,
+        "production_default_allowed": False,
+        "api_web_changes_allowed": False,
         "runtime_isolation_policy": {
             "feature_flag": FEATURE_FLAG,
             "feature_flag_default": "off" if default_off else "on",
@@ -116,12 +120,37 @@ def _policy_payload(*, default_off: bool = True) -> dict:
         },
         "disable_and_rollback_policy": {"disable_switch_default": "off" if default_off else "on"},
         "separation_from_production_default_chain": {
-            "future_online_shadow_gates_do_not_set_production_default_allowed": True
+            "future_online_shadow_gates_do_not_set_production_default_allowed": True,
+            "production_default_allowed": False,
         },
-        "allowed_write_scope": {"future_isolated_shadow_scope_only": True},
+        "allowed_write_scope": {
+            "future_only_after_later_gates": True,
+            "targets": ["isolated shadow/audit table"],
+            "required_fields": ["run_id", "scorer_id"],
+        },
         "forbidden_write_scope": ["ranking_runs", "paper_scores"],
-        "observability_contract": {"component_coverage": True},
-        "future_runtime_verification_requirements": {"disable_path_tested": True},
+        "observability_contract": {
+            "component_coverage": True,
+            "missing_learned_probability": True,
+            "score_distributions": True,
+            "top_k_overlap_with_heuristic": True,
+            "rank_displacement": True,
+            "family_counts": True,
+            "output_completeness": True,
+            "runtime_errors": True,
+            "latency": True,
+            "skipped_candidates_and_reasons": True,
+            "skipped_ranking_run_records": True,
+            "write_counts_by_isolated_target": True,
+        },
+        "future_runtime_verification_requirements": {
+            "future_artifact": "ml-shadow-scorer-v1-runtime-isolation-verification",
+            "must_prove": ["disable path tested", "skip-on-incomplete-coverage tested"],
+        },
+        "validation_snapshot_scope": {
+            "ranking_run_id": "rank-9f4b2a2084",
+            "candidate_pool_work_set_sha256": "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6",
+        },
     }
 
 
@@ -161,6 +190,10 @@ def _paths(
     }
 
 
+def _gate_by_id(payload: dict, gate_id: str) -> dict:
+    return {gate["gate_id"]: gate for gate in payload["enablement_gate_contract"]}[gate_id]
+
+
 def test_happy_path_writes_definition_only_gates(tmp_path: Path) -> None:
     payload = build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
         **_paths(tmp_path),
@@ -170,6 +203,7 @@ def test_happy_path_writes_definition_only_gates(tmp_path: Path) -> None:
 
     assert payload["online_shadow_enablement_gates_defined"] is True
     assert payload["online_shadow_enablement_gates_executed"] is False
+    assert payload["all_prerequisite_gates_satisfied"] is True
     assert payload["recommended_next_stage"] == "run_ml_shadow_scorer_v1_online_shadow_enablement_gates_v1"
     assert payload["runtime_execution_authorized"] is False
     assert payload["online_shadow_execution_enabled"] is False
@@ -179,6 +213,9 @@ def test_happy_path_writes_definition_only_gates(tmp_path: Path) -> None:
     assert blockers["missing_online_shadow_enablement_gates"] is False
     assert blockers["missing_online_shadow_execution_authorization"] is True
     assert blockers["missing_production_readiness_authorization"] is True
+    assert payload["evidence_summary"]["policy_scope_note"]["policy_used_as"] == (
+        "default-off / write-scope / observability contract only"
+    )
 
 
 def test_rejects_runtime_isolation_verification_not_passed(tmp_path: Path) -> None:
@@ -209,6 +246,26 @@ def test_rejects_policy_feature_flag_default_off_mismatch(tmp_path: Path) -> Non
     with pytest.raises(MLShadowScorerOnlineShadowEnablementGatesError, match="feature_flag_default_off"):
         build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
             **_paths(tmp_path, policy=_policy_payload(default_off=False)),
+            repo_root=tmp_path,
+        )
+
+
+def test_rejects_runtime_isolation_api_web_change_allowed(tmp_path: Path) -> None:
+    verification = _verification_payload()
+    verification["api_web_changes_allowed"] = True
+    with pytest.raises(MLShadowScorerOnlineShadowEnablementGatesError, match="api_web_changes_allowed"):
+        build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
+            **_paths(tmp_path, verification=verification),
+            repo_root=tmp_path,
+        )
+
+
+def test_rejects_policy_production_default_allowed(tmp_path: Path) -> None:
+    policy = _policy_payload()
+    policy["production_default_allowed"] = True
+    with pytest.raises(MLShadowScorerOnlineShadowEnablementGatesError, match="production_default_allowed"):
+        build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
+            **_paths(tmp_path, policy=policy),
             repo_root=tmp_path,
         )
 
@@ -255,6 +312,66 @@ def test_e10_records_enablement_decision_not_executed(tmp_path: Path) -> None:
     assert e10["observed_evidence"]["runtime_execution_authorized"] is False
 
 
+def test_e06_missing_write_scope_marks_prerequisite_missing(tmp_path: Path) -> None:
+    policy = _policy_payload()
+    policy.pop("allowed_write_scope")
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
+        **_paths(tmp_path, policy=policy),
+        repo_root=tmp_path,
+    )
+    e06 = _gate_by_id(payload, "E06_shadow_write_isolation_requirement_documented_not_enabled")
+
+    assert payload["all_prerequisite_gates_satisfied"] is False
+    assert e06["prerequisite_evidence_present"] is False
+    assert e06["decision"] == "definition_only_missing_prerequisite_evidence"
+    assert e06["observed_evidence"]["allowed_write_scope_present"] is False
+
+
+def test_e07_missing_observability_contract_marks_prerequisite_missing(tmp_path: Path) -> None:
+    policy = _policy_payload()
+    policy.pop("observability_contract")
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
+        **_paths(tmp_path, policy=policy),
+        repo_root=tmp_path,
+    )
+    e07 = _gate_by_id(payload, "E07_observability_requirements_defined_for_future_online_run")
+
+    assert payload["all_prerequisite_gates_satisfied"] is False
+    assert e07["prerequisite_evidence_present"] is False
+    assert e07["decision"] == "definition_only_missing_prerequisite_evidence"
+    assert e07["observed_evidence"]["observability_contract_present"] is False
+
+
+def test_e08_skip_on_incomplete_coverage_false_marks_prerequisite_missing(tmp_path: Path) -> None:
+    runtime = _runtime_payload()
+    runtime["runtime_contract"]["skip_on_incomplete_coverage"] = False
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
+        **_paths(tmp_path, runtime=runtime),
+        repo_root=tmp_path,
+    )
+    e08 = _gate_by_id(payload, "E08_skip_on_incomplete_coverage_verified")
+
+    assert payload["all_prerequisite_gates_satisfied"] is False
+    assert e08["prerequisite_evidence_present"] is False
+    assert e08["observed_evidence"]["runtime_contract_skip_on_incomplete_coverage"] is False
+
+
+def test_e08_failed_v04_marks_prerequisite_missing(tmp_path: Path) -> None:
+    verification = _verification_payload()
+    verification["verification_results"][0]["status"] = "fail"
+    verification["verification_results"][0]["passed"] = False
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
+        **_paths(tmp_path, verification=verification),
+        repo_root=tmp_path,
+    )
+    e08 = _gate_by_id(payload, "E08_skip_on_incomplete_coverage_verified")
+
+    assert payload["all_prerequisite_gates_satisfied"] is False
+    assert e08["prerequisite_evidence_present"] is False
+    assert e08["observed_evidence"]["verification_gate_v04_status"] == "fail"
+    assert e08["observed_evidence"]["verification_gate_v04_passed"] is False
+
+
 def test_rejects_identity_mismatch_across_runtime_verification_and_gates(tmp_path: Path) -> None:
     gates = copy.deepcopy(_generalization_gates_payload())
     gates["metadata"]["ranking_run_id"] = "rank-other"
@@ -294,6 +411,7 @@ def test_cli_smoke_writes_json_and_markdown(tmp_path: Path) -> None:
     assert payload["metadata"]["artifact_type"] == "ml_shadow_scorer_online_shadow_enablement_gates"
     assert payload["online_shadow_enablement_gates_defined"] is True
     assert payload["online_shadow_enablement_gates_executed"] is False
+    assert payload["all_prerequisite_gates_satisfied"] is True
     assert payload["recommended_next_stage"] == "run_ml_shadow_scorer_v1_online_shadow_enablement_gates_v1"
     assert "True" in result.stdout
     assert "Online Shadow Enablement Gates" in out_md.read_text(encoding="utf-8")

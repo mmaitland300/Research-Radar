@@ -65,6 +65,23 @@ BLOCKED_ACTIONS = (
     "label_ingest",
 )
 
+PREREQUISITE_GATE_PREFIXES = tuple(f"E{index:02d}_" for index in range(1, 10))
+
+EXPECTED_OBSERVABILITY_CONTRACT_KEYS = (
+    "component_coverage",
+    "missing_learned_probability",
+    "score_distributions",
+    "top_k_overlap_with_heuristic",
+    "rank_displacement",
+    "family_counts",
+    "output_completeness",
+    "runtime_errors",
+    "latency",
+    "skipped_candidates_and_reasons",
+    "skipped_ranking_run_records",
+    "write_counts_by_isolated_target",
+)
+
 
 class MLShadowScorerOnlineShadowEnablementGatesError(Exception):
     def __init__(self, message: str, *, code: int = 2) -> None:
@@ -119,6 +136,14 @@ def _require_equal(name: str, observed: Any, expected: Any) -> None:
         raise MLShadowScorerOnlineShadowEnablementGatesError(f"{name} must be {expected!r}, got {observed!r}")
 
 
+def _non_empty_sequence(value: Any) -> bool:
+    return isinstance(value, (list, tuple)) and len(value) > 0
+
+
+def _non_empty_mapping(value: Any) -> bool:
+    return isinstance(value, Mapping) and len(value) > 0
+
+
 def _validate_identity(
     payload: Mapping[str, Any],
     *,
@@ -158,6 +183,7 @@ def _validate_runtime_isolation(payload: Mapping[str, Any]) -> Mapping[str, Any]
         "online_shadow_execution_enabled": False,
         "shadow_scoring_allowed": False,
         "production_default_allowed": False,
+        "api_web_changes_allowed": False,
     }
     for path, expected in required.items():
         _require_equal(f"runtime isolation {path}", _get(payload, path), expected)
@@ -184,6 +210,7 @@ def _validate_runtime(payload: Mapping[str, Any]) -> Mapping[str, Any]:
         "online_shadow_execution_enabled": False,
         "shadow_scoring_allowed": False,
         "production_default_allowed": False,
+        "api_web_changes_allowed": False,
         "last_disabled_run.status": "skipped_runtime_disabled",
         "last_disabled_run.shadow_row_count": 0,
         "last_disabled_run.writes_performed": False,
@@ -211,6 +238,7 @@ def _validate_generalization_gates(payload: Mapping[str, Any]) -> Mapping[str, A
         "online_shadow_execution_enabled": False,
         "shadow_scoring_allowed": False,
         "production_default_allowed": False,
+        "api_web_changes_allowed": False,
     }
     for path, expected in required.items():
         _require_equal(f"generalization gates {path}", _get(payload, path), expected)
@@ -231,6 +259,8 @@ def _validate_policy(payload: Mapping[str, Any]) -> Mapping[str, Any]:
         "online_shadow_execution_policy_defined": True,
         "online_shadow_execution_enabled": False,
         "runtime_implementation_authorized": False,
+        "production_default_allowed": False,
+        "api_web_changes_allowed": False,
         "runtime_isolation_policy.feature_flag": FEATURE_FLAG,
         "runtime_isolation_policy.feature_flag_default_off": True,
         "disable_and_rollback_policy.disable_switch_default": "off",
@@ -312,6 +342,51 @@ def _gate(
     }
 
 
+def _verification_gate_result(payload: Mapping[str, Any], gate_id: str) -> Mapping[str, Any] | None:
+    results = payload.get("verification_results")
+    if not isinstance(results, list):
+        return None
+    for result in results:
+        if isinstance(result, Mapping) and result.get("gate_id") == gate_id:
+            return result
+    return None
+
+
+def _observability_contract_ready(policy_payload: Mapping[str, Any]) -> bool:
+    contract = policy_payload.get("observability_contract")
+    if not isinstance(contract, Mapping):
+        return False
+    return all(contract.get(key) is True for key in EXPECTED_OBSERVABILITY_CONTRACT_KEYS)
+
+
+def _write_scope_ready(policy_payload: Mapping[str, Any]) -> bool:
+    allowed = policy_payload.get("allowed_write_scope")
+    forbidden = policy_payload.get("forbidden_write_scope")
+    return (
+        isinstance(allowed, Mapping)
+        and allowed.get("future_only_after_later_gates") is True
+        and _non_empty_sequence(allowed.get("targets"))
+        and _non_empty_sequence(allowed.get("required_fields"))
+        and _non_empty_sequence(forbidden)
+    )
+
+
+def _future_runtime_verification_requirements_ready(policy_payload: Mapping[str, Any]) -> bool:
+    requirements = policy_payload.get("future_runtime_verification_requirements")
+    return isinstance(requirements, Mapping) and _non_empty_sequence(requirements.get("must_prove"))
+
+
+def _all_prerequisite_gates_satisfied(contract: list[Mapping[str, Any]]) -> bool:
+    prerequisite_gates = [
+        gate
+        for gate in contract
+        if isinstance(gate.get("gate_id"), str) and gate["gate_id"].startswith(PREREQUISITE_GATE_PREFIXES)
+    ]
+    return len(prerequisite_gates) == len(PREREQUISITE_GATE_PREFIXES) and all(
+        gate.get("prerequisite_evidence_present") is True for gate in prerequisite_gates
+    )
+
+
 def _enablement_gate_contract(
     *,
     verification_payload: Mapping[str, Any],
@@ -321,6 +396,69 @@ def _enablement_gate_contract(
     production_payload: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     production_observed = _production_plan_observed_fields(production_payload)
+    e04_observed = {
+        "runtime_feature_flag": runtime_payload["runtime_feature_flag"],
+        "policy_feature_flag": _get(policy_payload, "runtime_isolation_policy.feature_flag"),
+        "policy_feature_flag_default_off": _get(policy_payload, "runtime_isolation_policy.feature_flag_default_off"),
+        "disable_switch_default": _get(policy_payload, "disable_and_rollback_policy.disable_switch_default"),
+    }
+    e05_observed = {
+        "runtime_online_shadow_execution_enabled": runtime_payload["online_shadow_execution_enabled"],
+        "verification_online_shadow_execution_enabled": verification_payload["online_shadow_execution_enabled"],
+        "gates_online_shadow_execution_enabled": gates_payload["online_shadow_execution_enabled"],
+        "runtime_production_default_allowed": runtime_payload["production_default_allowed"],
+        "verification_production_default_allowed": verification_payload["production_default_allowed"],
+        "gates_production_default_allowed": gates_payload["production_default_allowed"],
+        "policy_production_default_allowed": policy_payload["production_default_allowed"],
+        "runtime_api_web_changes_allowed": runtime_payload["api_web_changes_allowed"],
+        "verification_api_web_changes_allowed": verification_payload["api_web_changes_allowed"],
+        "gates_api_web_changes_allowed": gates_payload["api_web_changes_allowed"],
+        "policy_api_web_changes_allowed": policy_payload["api_web_changes_allowed"],
+    }
+    e06_observed = {
+        "allowed_write_scope_present": _non_empty_mapping(policy_payload.get("allowed_write_scope")),
+        "allowed_write_scope_future_only_after_later_gates": _get(
+            policy_payload,
+            "allowed_write_scope.future_only_after_later_gates",
+        ),
+        "allowed_write_scope_targets_present": _non_empty_sequence(_get(policy_payload, "allowed_write_scope.targets")),
+        "allowed_write_scope_required_fields_present": _non_empty_sequence(
+            _get(policy_payload, "allowed_write_scope.required_fields")
+        ),
+        "forbidden_write_scope_present": _non_empty_sequence(policy_payload.get("forbidden_write_scope")),
+        "runtime_contract_writes_performed": _get(runtime_payload, "runtime_contract.writes_performed"),
+        "last_disabled_run_writes_performed": _get(runtime_payload, "last_disabled_run.writes_performed"),
+    }
+    e07_observed = {
+        "observability_contract_present": _non_empty_mapping(policy_payload.get("observability_contract")),
+        "observability_expected_keys_true": _observability_contract_ready(policy_payload),
+        "future_runtime_verification_requirements_present": _non_empty_mapping(
+            policy_payload.get("future_runtime_verification_requirements")
+        ),
+        "future_runtime_verification_requirements_must_prove_present": _future_runtime_verification_requirements_ready(
+            policy_payload
+        ),
+    }
+    v04_result = _verification_gate_result(verification_payload, "V04_skip_on_incomplete_coverage")
+    e08_observed = {
+        "runtime_contract_skip_on_incomplete_coverage": _get(runtime_payload, "runtime_contract.skip_on_incomplete_coverage"),
+        "runtime_contract_partial_scoring_allowed": _get(runtime_payload, "runtime_contract.partial_scoring_allowed"),
+        "verification_incomplete_cases": _get(verification_payload, "verification_summary.incomplete_coverage_cases_verified"),
+        "verification_gate_v04_status": str(v04_result.get("status")) if isinstance(v04_result, Mapping) else None,
+        "verification_gate_v04_passed": v04_result.get("passed") if isinstance(v04_result, Mapping) else None,
+    }
+    e09_observed = {
+        "future_online_shadow_gates_do_not_set_production_default_allowed": _get(
+            policy_payload,
+            "separation_from_production_default_chain.future_online_shadow_gates_do_not_set_production_default_allowed",
+        ),
+        "policy_separation_production_default_allowed": _get(
+            policy_payload,
+            "separation_from_production_default_chain.production_default_allowed",
+        ),
+        "production_plan_blocked": _production_plan_blocked(production_payload),
+        **production_observed,
+    }
     return [
         _gate(
             "E01_generalization_gates_passed",
@@ -361,83 +499,72 @@ def _enablement_gate_contract(
         _gate(
             "E04_feature_flag_default_off_and_disable_path_defined",
             "Feature flag default off and disable path defined",
-            prerequisite_evidence_present=True,
+            prerequisite_evidence_present=(
+                e04_observed["runtime_feature_flag"] == FEATURE_FLAG
+                and e04_observed["policy_feature_flag"] == FEATURE_FLAG
+                and e04_observed["policy_feature_flag_default_off"] is True
+                and e04_observed["disable_switch_default"] == "off"
+            ),
             expected_evidence=["feature flag ML_SHADOW_SCORER_V1_RUNTIME_ENABLED", "default off", "disable switch off"],
-            observed_evidence={
-                "runtime_feature_flag": runtime_payload["runtime_feature_flag"],
-                "policy_feature_flag": _get(policy_payload, "runtime_isolation_policy.feature_flag"),
-                "policy_feature_flag_default_off": _get(policy_payload, "runtime_isolation_policy.feature_flag_default_off"),
-                "disable_switch_default": _get(policy_payload, "disable_and_rollback_policy.disable_switch_default"),
-            },
+            observed_evidence=e04_observed,
             rationale="A future shadow path must stay controlled by the documented default-off flag and disable switch.",
         ),
         _gate(
             "E05_no_production_default_or_api_web_change",
             "No production default or API/web change",
-            prerequisite_evidence_present=True,
+            prerequisite_evidence_present=all(value is False for value in e05_observed.values()),
             expected_evidence=["all current artifacts keep online shadow/prod/API flags false"],
-            observed_evidence={
-                "runtime_online_shadow_execution_enabled": runtime_payload["online_shadow_execution_enabled"],
-                "verification_online_shadow_execution_enabled": verification_payload["online_shadow_execution_enabled"],
-                "gates_online_shadow_execution_enabled": gates_payload["online_shadow_execution_enabled"],
-                "runtime_production_default_allowed": runtime_payload["production_default_allowed"],
-                "verification_production_default_allowed": verification_payload["production_default_allowed"],
-                "gates_production_default_allowed": gates_payload["production_default_allowed"],
-                "verification_api_web_changes_allowed": verification_payload["api_web_changes_allowed"],
-            },
+            observed_evidence=e05_observed,
             rationale="The current chain documents no user-visible, API/web, or production default mutation.",
         ),
         _gate(
             "E06_shadow_write_isolation_requirement_documented_not_enabled",
             "Shadow write isolation requirement documented, not enabled",
-            prerequisite_evidence_present=True,
+            prerequisite_evidence_present=(
+                _write_scope_ready(policy_payload)
+                and e06_observed["runtime_contract_writes_performed"] is False
+                and e06_observed["last_disabled_run_writes_performed"] is False
+            ),
             expected_evidence=["policy documents isolated shadow/audit write scope", "runtime performs no writes"],
-            observed_evidence={
-                "allowed_write_scope_present": isinstance(policy_payload.get("allowed_write_scope"), Mapping),
-                "forbidden_write_scope_present": isinstance(policy_payload.get("forbidden_write_scope"), (list, tuple)),
-                "runtime_contract_writes_performed": _get(runtime_payload, "runtime_contract.writes_performed"),
-                "last_disabled_run_writes_performed": _get(runtime_payload, "last_disabled_run.writes_performed"),
-            },
+            observed_evidence=e06_observed,
             rationale="Future shadow writes require isolated audit scope, while this definition enables none.",
         ),
         _gate(
             "E07_observability_requirements_defined_for_future_online_run",
             "Observability requirements defined for future online run",
-            prerequisite_evidence_present=True,
+            prerequisite_evidence_present=(
+                e07_observed["observability_expected_keys_true"] is True
+                and e07_observed["future_runtime_verification_requirements_must_prove_present"] is True
+            ),
             expected_evidence=["policy observability contract present"],
-            observed_evidence={
-                "observability_contract_present": isinstance(policy_payload.get("observability_contract"), Mapping),
-                "future_runtime_verification_requirements_present": isinstance(
-                    policy_payload.get("future_runtime_verification_requirements"), Mapping
-                ),
-            },
+            observed_evidence=e07_observed,
             rationale="Future online shadow evaluation must emit observability before any execution gate can pass.",
         ),
         _gate(
             "E08_skip_on_incomplete_coverage_verified",
             "Skip on incomplete coverage verified",
-            prerequisite_evidence_present=True,
+            prerequisite_evidence_present=(
+                e08_observed["runtime_contract_skip_on_incomplete_coverage"] is True
+                and e08_observed["runtime_contract_partial_scoring_allowed"] is False
+                and isinstance(e08_observed["verification_incomplete_cases"], int)
+                and e08_observed["verification_incomplete_cases"] > 0
+                and e08_observed["verification_gate_v04_status"] == "pass"
+                and e08_observed["verification_gate_v04_passed"] is True
+            ),
             expected_evidence=["runtime isolation probes skipped incomplete coverage"],
-            observed_evidence={
-                "runtime_contract_skip_on_incomplete_coverage": _get(runtime_payload, "runtime_contract.skip_on_incomplete_coverage"),
-                "verification_incomplete_cases": _get(verification_payload, "verification_summary.incomplete_coverage_cases_verified"),
-                "verification_gate_v04_status": _gate_status(verification_payload, "V04_skip_on_incomplete_coverage"),
-            },
+            observed_evidence=e08_observed,
             rationale="Incomplete learned probability or final score coverage must never produce partial shadow scoring.",
         ),
         _gate(
             "E09_production_default_chain_remains_separate",
             "Production default chain remains separate",
-            prerequisite_evidence_present=True,
+            prerequisite_evidence_present=(
+                e09_observed["future_online_shadow_gates_do_not_set_production_default_allowed"] is True
+                and e09_observed["policy_separation_production_default_allowed"] is False
+                and e09_observed["production_plan_blocked"] is True
+            ),
             expected_evidence=["policy separation true", "production readiness research_only"],
-            observed_evidence={
-                "future_online_shadow_gates_do_not_set_production_default_allowed": _get(
-                    policy_payload,
-                    "separation_from_production_default_chain.future_online_shadow_gates_do_not_set_production_default_allowed",
-                ),
-                "production_plan_blocked": _production_plan_blocked(production_payload),
-                **production_observed,
-            },
+            observed_evidence=e09_observed,
             rationale="Even future online shadow gates cannot authorize production default promotion.",
         ),
         {
@@ -457,16 +584,6 @@ def _enablement_gate_contract(
             "rationale": "This artifact defines the future contract only; a separate run command must execute gates later.",
         },
     ]
-
-
-def _gate_status(payload: Mapping[str, Any], gate_id: str) -> str | None:
-    results = payload.get("verification_results")
-    if not isinstance(results, list):
-        return None
-    for result in results:
-        if isinstance(result, Mapping) and result.get("gate_id") == gate_id:
-            return str(result.get("status"))
-    return None
 
 
 def build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
@@ -518,6 +635,7 @@ def build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
         policy_payload=policy_payload,
         production_payload=production_payload,
     )
+    all_prerequisite_gates_satisfied = _all_prerequisite_gates_satisfied(contract)
     blockers = {
         "missing_generalization_audit_on_second_surface": False,
         "missing_generalization_audit_gates": False,
@@ -549,6 +667,7 @@ def build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
         },
         "online_shadow_enablement_gates_defined": True,
         "online_shadow_enablement_gates_executed": False,
+        "all_prerequisite_gates_satisfied": all_prerequisite_gates_satisfied,
         "online_shadow_execution_enabled": False,
         "shadow_scoring_allowed": False,
         "runtime_execution_authorized": False,
@@ -567,6 +686,12 @@ def build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
             "online_shadow_policy_defined": policy_payload["online_shadow_execution_policy_defined"],
             "production_plan_blocked": _production_plan_blocked(production_payload),
             "production_plan_observed": _production_plan_observed_fields(production_payload),
+            "policy_scope_note": {
+                "policy_contract_scope": "surface-1 validation snapshot (historical evidence anchor)",
+                "enablement_identity_scope": "surface-2 second-shadow-generalization run",
+                "policy_used_as": "default-off / write-scope / observability contract only",
+                "policy_validation_snapshot_scope": policy_payload.get("validation_snapshot_scope"),
+            },
             "current_blocker_truth_source": "generalization audit gates + runtime isolation verification",
         },
         "enablement_gate_contract": contract,
@@ -607,6 +732,7 @@ def markdown_from_ml_shadow_scorer_online_shadow_enablement_gates(payload: Mappi
         "",
         f"- Enablement gates defined: {payload['online_shadow_enablement_gates_defined']}",
         f"- Enablement gates executed: {payload['online_shadow_enablement_gates_executed']}",
+        f"- All prerequisite gates satisfied: {payload['all_prerequisite_gates_satisfied']}",
         f"- Online shadow execution enabled: {payload['online_shadow_execution_enabled']}",
         f"- Runtime execution authorized: {payload['runtime_execution_authorized']}",
         f"- Recommended next stage: `{payload['recommended_next_stage']}`",
@@ -619,6 +745,9 @@ def markdown_from_ml_shadow_scorer_online_shadow_enablement_gates(payload: Mappi
         f"- Runtime feature flag: `{evidence['runtime_feature_flag']}`",
         f"- Generalization audit gates passed: {evidence['generalization_audit_gates_passed']}",
         f"- Production plan blocked: {evidence['production_plan_blocked']}",
+        f"- Policy contract scope: {evidence['policy_scope_note']['policy_contract_scope']}",
+        f"- Enablement identity scope: {evidence['policy_scope_note']['enablement_identity_scope']}",
+        f"- Policy used as: {evidence['policy_scope_note']['policy_used_as']}",
         "",
         "## Enablement Gate Contract",
         "",

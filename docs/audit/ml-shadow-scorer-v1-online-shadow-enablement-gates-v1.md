@@ -6,6 +6,7 @@ This artifact defines the future online shadow enablement gate contract for ml-s
 
 - Enablement gates defined: True
 - Enablement gates executed: False
+- All prerequisite gates satisfied: True
 - Online shadow execution enabled: False
 - Runtime execution authorized: False
 - Recommended next stage: `run_ml_shadow_scorer_v1_online_shadow_enablement_gates_v1`
@@ -18,6 +19,9 @@ This artifact defines the future online shadow enablement gate contract for ml-s
 - Runtime feature flag: `ML_SHADOW_SCORER_V1_RUNTIME_ENABLED`
 - Generalization audit gates passed: True
 - Production plan blocked: True
+- Policy contract scope: surface-1 validation snapshot (historical evidence anchor)
+- Enablement identity scope: surface-2 second-shadow-generalization run
+- Policy used as: default-off / write-scope / observability contract only
 
 ## Enablement Gate Contract
 
