@@ -724,8 +724,9 @@
       "gate_id": "G09_production_readiness_still_separate",
       "observed_value": {
         "good_or_acceptable_production_eligible": false,
-        "overall_status": null,
-        "production_default_authorized": null
+        "overall_status": "research_only",
+        "production_default_authorized": null,
+        "production_plan_blocked": true
       },
       "passed": true,
       "rationale": "Production readiness remains research-only and separate from shadow generalization gates.",
@@ -770,7 +771,7 @@
     "embedding_version": "shadow-generalization-text-embedding-v1",
     "family": "emerging",
     "gates_version": "ml-shadow-scorer-v1-generalization-audit-gates-v1",
-    "generated_at": "2026-05-26T06:07:50Z",
+    "generated_at": "2026-05-27T04:32:10Z",
     "inputs": [
       {
         "name": "second_surface_generalization_audit",

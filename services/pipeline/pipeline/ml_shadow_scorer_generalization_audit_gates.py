@@ -422,13 +422,21 @@ def _validate_fresh_policy(payload: Mapping[str, Any]) -> tuple[Mapping[str, Any
     return metadata, {"delta_roc_auc_gte": float(roc), "or_delta_average_precision_gte": float(ap)}
 
 
-def _production_plan_blocked(payload: Mapping[str, Any]) -> bool:
+def _production_plan_observed_fields(payload: Mapping[str, Any]) -> dict[str, Any]:
     good = _get(payload, "targets.good_or_acceptable")
+    return {
+        "overall_status": payload.get("overall_status") or _get(payload, "metadata.overall_status"),
+        "production_default_authorized": payload.get("production_default_authorized"),
+        "good_or_acceptable_production_eligible": good.get("production_eligible") if isinstance(good, Mapping) else None,
+    }
+
+
+def _production_plan_blocked(payload: Mapping[str, Any]) -> bool:
+    observed = _production_plan_observed_fields(payload)
     return (
-        (payload.get("overall_status") == "research_only" or _get(payload, "metadata.overall_status") == "research_only")
-        and payload.get("production_default_authorized") is not True
-        and isinstance(good, Mapping)
-        and good.get("production_eligible") is False
+        observed["overall_status"] == "research_only"
+        and observed["production_default_authorized"] is not True
+        and observed["good_or_acceptable_production_eligible"] is False
     )
 
 
@@ -479,6 +487,10 @@ def build_ml_shadow_scorer_generalization_audit_gates_payload(
     row_schema, formula_replay = _validate_rows(audit_payload.get("shadow_output_rows"))
     material = _material_lift(audit_payload, material_thresholds)
     production_plan_blocked = _production_plan_blocked(production_plan_payload)
+    production_plan_observed = {
+        **_production_plan_observed_fields(production_plan_payload),
+        "production_plan_blocked": production_plan_blocked,
+    }
     shadow_runtime_blocked = (
         audit_payload.get("runtime_implementation_authorized") is False
         and audit_payload.get("online_shadow_execution_enabled") is False
@@ -627,13 +639,7 @@ def build_ml_shadow_scorer_generalization_audit_gates_payload(
             "G09_production_readiness_still_separate",
             "Production Readiness Still Separate",
             g09,
-            {
-                "overall_status": production_plan_payload.get("overall_status"),
-                "production_default_authorized": production_plan_payload.get("production_default_authorized"),
-                "good_or_acceptable_production_eligible": _get(
-                    production_plan_payload, "targets.good_or_acceptable.production_eligible"
-                ),
-            },
+            production_plan_observed,
             "Production readiness remains research-only and separate from shadow generalization gates.",
         ),
         _gate(

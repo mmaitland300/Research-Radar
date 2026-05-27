@@ -363,6 +363,26 @@ def test_production_readiness_must_remain_blocked_research_only(
     assert g09["passed"] is False
 
 
+def test_g09_reports_metadata_overall_status_and_absent_default_authorization(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    production_plan = _production_plan_payload()
+    production_plan["metadata"]["overall_status"] = production_plan.pop("overall_status")
+    production_plan.pop("production_default_authorized")
+
+    payload = _build(tmp_path, monkeypatch, production_plan=production_plan)
+    g09 = next(gate for gate in payload["gate_results"] if gate["gate_id"] == "G09_production_readiness_still_separate")
+    observed = g09["observed_value"]
+
+    assert g09["passed"] is True
+    assert observed["overall_status"] == "research_only"
+    assert observed["production_default_authorized"] is None
+    assert observed["production_default_authorized"] is not True
+    assert observed["good_or_acceptable_production_eligible"] is False
+    assert observed["production_plan_blocked"] is True
+    assert payload["generalization_audit_gates_passed"] is True
+
+
 def test_runtime_prod_api_shadow_remain_false(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     payload = _build(tmp_path, monkeypatch)
 
