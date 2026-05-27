@@ -23,6 +23,11 @@ This artifact records a bounded non-production pilot grant for ml-shadow-scorer-
 - Phase 1: no_writes
 - Phase 2: isolated_audit_only_writes_after_phase1_and_write_mode_proof
 
+## Observability
+
+- Policy contract keys: ['component_coverage', 'missing_learned_probability', 'score_distributions', 'top_k_overlap_with_heuristic', 'rank_displacement', 'family_counts', 'output_completeness', 'runtime_errors', 'latency', 'skipped_candidates_and_reasons', 'skipped_ranking_run_records', 'write_counts_by_isolated_target']
+- Run-level fields: ['status', 'shadow_row_count', 'writes_performed', 'production_default_changed', 'user_visible_ranking_changed', 'api_web_changes_allowed', 'runtime_feature_flag_value']
+
 ## Rollback
 
 - Disable switch: `ML_SHADOW_SCORER_V1_RUNTIME_ENABLED=off`
@@ -45,9 +50,12 @@ This artifact records a bounded non-production pilot grant for ml-shadow-scorer-
 - `missing_shadow_runtime_isolation_verification`: False
 - `online_shadow_execution_enabled`: False
 - `production_default_allowed`: False
-- `runtime_execution_authorized`: False
+- `runtime_execution_authorized`: True
 - `runtime_implementation_authorized`: False
-- `shadow_scoring_allowed`: False
+- `shadow_scoring_allowed`: True
+- `api_web_changes_allowed`: False
+- `user_visible_ranking_changed`: False
+- `authorization_scope`: bounded_non_prod_pilot_only
 - `blockers_changed_by_grant`: ['missing_online_shadow_execution_authorization']
 
 ## Caveats

@@ -49,15 +49,18 @@
     "executed_truth_source": "Use enablement_gate_results as executed truth.",
     "flag_global_default": "Grant does not enable the flag globally; default off outside pilot.",
     "grant_scope_limit": "Top-level runtime_execution_authorized and shadow_scoring_allowed apply solely within pilot_authorization scope.",
+    "inherit_required_observability": "Pilot plans must inherit required_observability verbatim.",
     "no_production_default": "Grant does not authorize production default or production readiness.",
-    "phase_1_no_writes": "Allowed write mode is no writes for Phase 1."
+    "online_shadow_execution_enabled_meaning": "False means the feature flag remains default-off globally; it does not negate the bounded pilot grant.",
+    "phase_1_no_writes": "Allowed write mode is no writes for Phase 1.",
+    "pilot_plan_authorization_source": "Use authorization_granted, online_shadow_execution_authorized, pilot_authorization, and aligned shadow_and_production_blockers."
   },
   "feature_flag_default_off": true,
   "flag_may_be_enabled_only_in_pilot_env": true,
   "grant_decision": {
     "decision": "granted",
     "expiry_date": "2026-08-27",
-    "granted_at": "2026-05-27T17:02:33Z",
+    "granted_at": "2026-05-27T17:44:10Z",
     "owner": "Matt Maitland",
     "review_by": "2026-08-27"
   },
@@ -76,7 +79,7 @@
     "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
     "embedding_version": "shadow-generalization-text-embedding-v1",
     "family": "emerging",
-    "generated_at": "2026-05-27T17:02:33Z",
+    "generated_at": "2026-05-27T17:44:10Z",
     "grant_version": "ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1",
     "inputs": [
       {
@@ -156,17 +159,29 @@
   "production_separation_note": "This grant does not grant production default, production readiness, API/web behavior, or user-visible ranking changes.",
   "recommended_next_stage": "prepare_online_shadow_phase1_no_write_pilot_plan_v1",
   "required_observability": {
-    "component_coverage": true,
-    "family_counts": true,
-    "latency": true,
-    "missing_learned_probability_count": true,
-    "output_completeness": true,
-    "rank_displacement": true,
-    "runtime_errors": true,
-    "score_distributions": true,
-    "skipped_candidates_and_reasons": true,
-    "top_k_overlap": true,
-    "write_counts_by_isolated_target": true
+    "policy_contract": {
+      "component_coverage": true,
+      "family_counts": true,
+      "latency": true,
+      "missing_learned_probability": true,
+      "output_completeness": true,
+      "rank_displacement": true,
+      "runtime_errors": true,
+      "score_distributions": true,
+      "skipped_candidates_and_reasons": true,
+      "skipped_ranking_run_records": true,
+      "top_k_overlap_with_heuristic": true,
+      "write_counts_by_isolated_target": true
+    },
+    "run_level_fields": [
+      "status",
+      "shadow_row_count",
+      "writes_performed",
+      "production_default_changed",
+      "user_visible_ranking_changed",
+      "api_web_changes_allowed",
+      "runtime_feature_flag_value"
+    ]
   },
   "revocation_policy": {
     "flag_off_first": true,
@@ -184,6 +199,8 @@
   "runtime_execution_authorized": true,
   "runtime_implementation_authorized": false,
   "shadow_and_production_blockers": {
+    "api_web_changes_allowed": false,
+    "authorization_scope": "bounded_non_prod_pilot_only",
     "blockers_changed_by_grant": [
       "missing_online_shadow_execution_authorization"
     ],
@@ -197,9 +214,10 @@
     "missing_shadow_runtime_isolation_verification": false,
     "online_shadow_execution_enabled": false,
     "production_default_allowed": false,
-    "runtime_execution_authorized": false,
+    "runtime_execution_authorized": true,
     "runtime_implementation_authorized": false,
-    "shadow_scoring_allowed": false
+    "shadow_scoring_allowed": true,
+    "user_visible_ranking_changed": false
   },
   "shadow_scoring_allowed": true,
   "user_visible_ranking_changed": false,

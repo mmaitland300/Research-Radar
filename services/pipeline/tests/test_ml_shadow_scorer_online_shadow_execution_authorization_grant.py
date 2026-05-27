@@ -159,11 +159,40 @@ def test_happy_path_records_bounded_pilot_grant(tmp_path: Path) -> None:
     assert payload["missing_online_shadow_execution_authorization"] is False
     assert payload["shadow_and_production_blockers"]["missing_online_shadow_execution_authorization"] is False
     assert payload["shadow_and_production_blockers"]["missing_production_readiness_authorization"] is True
+    assert payload["shadow_and_production_blockers"]["runtime_execution_authorized"] is True
+    assert payload["shadow_and_production_blockers"]["shadow_scoring_allowed"] is True
+    assert payload["shadow_and_production_blockers"]["authorization_scope"] == "bounded_non_prod_pilot_only"
     assert payload["online_shadow_execution_enabled"] is False
     assert payload["write_mode_policy"]["phase_1"] == "no_writes"
     assert payload["write_mode_policy"]["phase_1_writes_allowed"] is False
     assert payload["pilot_authorization"]["initial_ranking_run_ids"] == [runtime_module.RANKING_RUN_ID]
     assert payload["runtime_implementation_authorized"] is False
+    policy_contract = payload["required_observability"]["policy_contract"]
+    for key in (
+        "component_coverage",
+        "missing_learned_probability",
+        "score_distributions",
+        "top_k_overlap_with_heuristic",
+        "rank_displacement",
+        "family_counts",
+        "output_completeness",
+        "runtime_errors",
+        "latency",
+        "skipped_candidates_and_reasons",
+        "skipped_ranking_run_records",
+        "write_counts_by_isolated_target",
+    ):
+        assert policy_contract[key] is True
+    for field in (
+        "status",
+        "shadow_row_count",
+        "writes_performed",
+        "production_default_changed",
+        "user_visible_ranking_changed",
+        "api_web_changes_allowed",
+        "runtime_feature_flag_value",
+    ):
+        assert field in payload["required_observability"]["run_level_fields"]
     assert payload["recommended_next_stage"] == "prepare_online_shadow_phase1_no_write_pilot_plan_v1"
 
 
