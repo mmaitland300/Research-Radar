@@ -1,0 +1,159 @@
+{
+  "all_prerequisite_gates_satisfied": true,
+  "api_web_changes_allowed": false,
+  "authorization_granted": false,
+  "caveats": [
+    "Request artifact only; online shadow execution is not authorized.",
+    "This request does not clear missing_online_shadow_execution_authorization.",
+    "This request does not grant production readiness or production default authorization.",
+    "The runtime feature flag remains default off and must not be enabled by this artifact.",
+    "A separate future grant artifact is required before any online shadow execution.",
+    "Production default authorization remains a separate chain."
+  ],
+  "consumer_guidance": {
+    "authorization_note": "This request artifact does not grant authorization and does not clear missing_online_shadow_execution_authorization.",
+    "definition_provenance_note": "source_enablement_gate_contract is definition provenance only; do not use definition_only_* decisions.",
+    "executed_truth_source": "Use enablement_gate_results from the run artifact for executed gate truth."
+  },
+  "enablement_summary": {
+    "e10_decision": "enablement_evaluation_only_not_authorized",
+    "failed_gate_ids": [],
+    "prerequisite_gates": [
+      {
+        "decision": "passed",
+        "gate_id": "E01_generalization_gates_passed",
+        "title": "Generalization gates passed"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E02_runtime_disabled_by_default_implemented",
+        "title": "Runtime disabled by default implemented"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E03_runtime_isolation_verification_passed",
+        "title": "Runtime isolation verification passed"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E04_feature_flag_default_off_and_disable_path_defined",
+        "title": "Feature flag default off and disable path defined"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E05_no_production_default_or_api_web_change",
+        "title": "No production default or API/web change"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E06_shadow_write_isolation_requirement_documented_not_enabled",
+        "title": "Shadow write isolation requirement documented, not enabled"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E07_observability_requirements_defined_for_future_online_run",
+        "title": "Observability requirements defined for future online run"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E08_skip_on_incomplete_coverage_verified",
+        "title": "Skip on incomplete coverage verified"
+      },
+      {
+        "decision": "passed",
+        "gate_id": "E09_production_default_chain_remains_separate",
+        "title": "Production default chain remains separate"
+      }
+    ]
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_online_shadow_execution_authorization_request",
+    "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+    "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "family": "emerging",
+    "generated_at": "2026-05-27T16:27:53Z",
+    "inputs": [
+      {
+        "name": "enablement_gates_run",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1.json",
+        "sha256": "51315c1fd9fc25115c7ab64bf444c1b671044a7781c5e7882760b3d2a9fec314"
+      }
+    ],
+    "ranking_run_id": "rank-83787b91ef",
+    "request_version": "ml-shadow-scorer-v1-online-shadow-execution-authorization-request-v1",
+    "source_gates_run_version": "ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1",
+    "verified_input_chain": [
+      {
+        "name": "runtime_isolation_verification",
+        "path": "docs/audit/ml-shadow-scorer-v1-runtime-isolation-verification-v1.json",
+        "sha256": "a039dfdc813363747a9abce31f850a7e6a9321fda24e78d0507a208c1d878451",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "online_shadow_runtime",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1.json",
+        "sha256": "a942bea9cd6feac234e9bc377bcada653309963a2b061829b0302ab7760be13e",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "generalization_audit_gates",
+        "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+        "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "online_shadow_policy",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc",
+        "verification_status": "confirmed"
+      }
+    ]
+  },
+  "online_shadow_enablement_gates_executed": true,
+  "online_shadow_execution_authorization_requested": true,
+  "online_shadow_execution_authorized": false,
+  "online_shadow_execution_enabled": false,
+  "production_default_allowed": false,
+  "production_separation_note": "This request does not affect production_default_allowed, production readiness, API/web behavior, or user-visible ranking. Production default authorization remains a separate chain.",
+  "recommended_next_stage": "record_online_shadow_execution_authorization_grant_v1",
+  "remaining_blockers_before_execution": [
+    "No owner grant artifact.",
+    "missing_online_shadow_execution_authorization remains true and is unchanged by this artifact.",
+    "Feature flag ML_SHADOW_SCORER_V1_RUNTIME_ENABLED remains default off.",
+    "No isolated pilot, observability sink verification, or write-mode isolation proof has been granted for execution.",
+    "Production readiness remains research_only; production default authorization is a separate chain."
+  ],
+  "required_future_runbook": {
+    "future_command": "ml-shadow-scorer-online-shadow-execution-authorization-grant",
+    "implemented_in_this_task": false,
+    "must_remain_separate_from": "ml-production-readiness-plan / production_default authorization",
+    "only_future_grant_may_clear_missing_online_shadow_execution_authorization": true,
+    "only_future_grant_may_set_online_shadow_execution_authorized_true": true
+  },
+  "runtime_execution_authorized": false,
+  "runtime_implementation_authorized": false,
+  "shadow_and_production_blockers": {
+    "blockers_unchanged_by_request": true,
+    "missing_generalization_audit_gates": false,
+    "missing_generalization_audit_on_second_surface": false,
+    "missing_online_shadow_enablement_gates": false,
+    "missing_online_shadow_execution_authorization": true,
+    "missing_online_shadow_implementation_disabled_by_default": false,
+    "missing_production_readiness_authorization": true,
+    "missing_shadow_runtime_isolation_verification": false,
+    "online_shadow_execution_enabled": false,
+    "production_default_allowed": false,
+    "runtime_execution_authorized": false,
+    "runtime_implementation_authorized": false,
+    "shadow_scoring_allowed": false
+  },
+  "shadow_scoring_allowed": false,
+  "user_visible_ranking_changed": false
+}

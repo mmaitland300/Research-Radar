@@ -4932,6 +4932,35 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_online_shadow_execution_authorization_request_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-execution-authorization-request",
+        help="Record a request for future ml-shadow-scorer-v1 online shadow execution authorization",
+    )
+    ml_shadow_scorer_online_shadow_execution_authorization_request_parser.add_argument(
+        "--enablement-gates-run",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_execution_authorization_request_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write online shadow execution authorization request JSON",
+    )
+    ml_shadow_scorer_online_shadow_execution_authorization_request_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_online_shadow_execution_authorization_request_parser.add_argument(
+        "--request-version",
+        default="ml-shadow-scorer-v1-online-shadow-execution-authorization-request-v1",
+        help="Request version string to write (default: ml-shadow-scorer-v1-online-shadow-execution-authorization-request-v1)",
+    )
+    ml_shadow_scorer_online_shadow_execution_authorization_request_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7294,6 +7323,33 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(payload["all_prerequisite_gates_satisfied"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-execution-authorization-request":
+        from pipeline.ml_shadow_scorer_online_shadow_execution_authorization_request import (
+            MLShadowScorerOnlineShadowExecutionAuthorizationRequestError,
+            write_ml_shadow_scorer_online_shadow_execution_authorization_request,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_online_shadow_execution_authorization_request(
+                enablement_gates_run_path=Path(args.enablement_gates_run),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                request_version=str(args.request_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerOnlineShadowExecutionAuthorizationRequestError as e:
+            print(f"ml-shadow-scorer-online-shadow-execution-authorization-request: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["online_shadow_execution_authorization_requested"])
+        print(payload["online_shadow_execution_authorized"])
         print(payload["recommended_next_stage"])
         return
 
