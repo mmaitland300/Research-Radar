@@ -4883,6 +4883,55 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-enablement-gates-run",
+        help="Execute ml-shadow-scorer-v1 online shadow enablement prerequisite gates without authorizing execution",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--runtime-isolation-verification",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-runtime-isolation-verification-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--online-shadow-runtime",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--generalization-audit-gates",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-generalization-audit-gates-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--production-readiness-plan",
+        required=True,
+        help="Path to ml-production-readiness-plan-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write online shadow enablement gates run JSON",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--gates-run-version",
+        default="ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1",
+        help="Gates run version string to write (default: ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1)",
+    )
+    ml_shadow_scorer_online_shadow_enablement_gates_run_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7215,6 +7264,36 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(payload["online_shadow_enablement_gates_defined"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-enablement-gates-run":
+        from pipeline.ml_shadow_scorer_online_shadow_enablement_gates import (
+            MLShadowScorerOnlineShadowEnablementGatesError,
+            write_ml_shadow_scorer_online_shadow_enablement_gates_run,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_online_shadow_enablement_gates_run(
+                runtime_isolation_verification_path=Path(args.runtime_isolation_verification),
+                online_shadow_runtime_path=Path(args.online_shadow_runtime),
+                generalization_audit_gates_path=Path(args.generalization_audit_gates),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                production_readiness_plan_path=Path(args.production_readiness_plan),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                gates_run_version=str(args.gates_run_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerOnlineShadowEnablementGatesError as e:
+            print(f"ml-shadow-scorer-online-shadow-enablement-gates-run: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["all_prerequisite_gates_satisfied"])
         print(payload["recommended_next_stage"])
         return
 

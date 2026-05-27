@@ -15,6 +15,7 @@ from pipeline.ml_shadow_scorer_online_shadow_enablement_gates import (
     FEATURE_FLAG,
     MLShadowScorerOnlineShadowEnablementGatesError,
     build_ml_shadow_scorer_online_shadow_enablement_gates_payload,
+    build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload,
 )
 
 
@@ -415,6 +416,173 @@ def test_cli_smoke_writes_json_and_markdown(tmp_path: Path) -> None:
     assert payload["recommended_next_stage"] == "run_ml_shadow_scorer_v1_online_shadow_enablement_gates_v1"
     assert "True" in result.stdout
     assert "Online Shadow Enablement Gates" in out_md.read_text(encoding="utf-8")
+
+
+def test_run_happy_path_writes_executed_json_markdown(tmp_path: Path) -> None:
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload(
+        **_paths(tmp_path),
+        repo_root=tmp_path,
+        generated_at="2026-05-27T00:00:00Z",
+    )
+
+    assert payload["metadata"]["artifact_type"] == "ml_shadow_scorer_online_shadow_enablement_gates_run"
+    assert payload["metadata"]["gates_run_version"] == "ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1"
+    assert payload["online_shadow_enablement_gates_defined"] is True
+    assert payload["online_shadow_enablement_gates_executed"] is True
+    assert payload["all_prerequisite_gates_satisfied"] is True
+    assert payload["recommended_next_stage"] == "request_online_shadow_execution_authorization_v1"
+    e01 = _gate_by_id({"enablement_gate_contract": payload["enablement_gate_results"]}, "E01_generalization_gates_passed")
+    assert e01["enablement_gate_executed"] is True
+    assert e01["decision"] == "passed"
+    e10 = _gate_by_id(
+        {"enablement_gate_contract": payload["enablement_gate_results"]},
+        "E10_online_shadow_enablement_decision_not_executed",
+    )
+    assert e10["decision"] == "enablement_evaluation_only_not_authorized"
+    assert e10["observed_evidence"]["all_prerequisite_gates_satisfied"] is True
+
+
+def test_run_e06_missing_write_scope_writes_failed_artifact(tmp_path: Path) -> None:
+    policy = _policy_payload()
+    policy.pop("allowed_write_scope")
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload(
+        **_paths(tmp_path, policy=policy),
+        repo_root=tmp_path,
+    )
+    e06 = _gate_by_id(
+        {"enablement_gate_contract": payload["enablement_gate_results"]},
+        "E06_shadow_write_isolation_requirement_documented_not_enabled",
+    )
+
+    assert payload["all_prerequisite_gates_satisfied"] is False
+    assert payload["recommended_next_stage"] == "harden_online_shadow_enablement_prerequisites_v1"
+    assert e06["enablement_gate_executed"] is True
+    assert e06["decision"] == "failed"
+    assert e06["observed_evidence"]["allowed_write_scope_present"] is False
+
+
+def test_run_e07_missing_observability_writes_failed_artifact(tmp_path: Path) -> None:
+    policy = _policy_payload()
+    policy.pop("observability_contract")
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload(
+        **_paths(tmp_path, policy=policy),
+        repo_root=tmp_path,
+    )
+    e07 = _gate_by_id(
+        {"enablement_gate_contract": payload["enablement_gate_results"]},
+        "E07_observability_requirements_defined_for_future_online_run",
+    )
+
+    assert payload["all_prerequisite_gates_satisfied"] is False
+    assert payload["recommended_next_stage"] == "harden_online_shadow_enablement_prerequisites_v1"
+    assert e07["decision"] == "failed"
+    assert e07["observed_evidence"]["observability_contract_present"] is False
+
+
+def test_run_e08_failed_v04_writes_failed_artifact(tmp_path: Path) -> None:
+    verification = _verification_payload()
+    verification["verification_results"][0]["status"] = "fail"
+    verification["verification_results"][0]["passed"] = False
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload(
+        **_paths(tmp_path, verification=verification),
+        repo_root=tmp_path,
+    )
+    e08 = _gate_by_id(
+        {"enablement_gate_contract": payload["enablement_gate_results"]},
+        "E08_skip_on_incomplete_coverage_verified",
+    )
+
+    assert payload["all_prerequisite_gates_satisfied"] is False
+    assert payload["recommended_next_stage"] == "harden_online_shadow_enablement_prerequisites_v1"
+    assert e08["decision"] == "failed"
+    assert e08["observed_evidence"]["verification_gate_v04_status"] == "fail"
+
+
+def test_run_authorization_flags_remain_false_when_prerequisites_pass(tmp_path: Path) -> None:
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload(**_paths(tmp_path), repo_root=tmp_path)
+
+    for key in (
+        "online_shadow_execution_enabled",
+        "shadow_scoring_allowed",
+        "runtime_execution_authorized",
+        "runtime_implementation_authorized",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed",
+    ):
+        assert payload[key] is False
+    blockers = payload["shadow_and_production_blockers"]
+    assert blockers["missing_online_shadow_execution_authorization"] is True
+    assert blockers["missing_production_readiness_authorization"] is True
+    assert blockers["runtime_implementation_authorized"] is False
+
+
+def test_run_cli_ingress_error_exits_nonzero_and_writes_no_artifact(tmp_path: Path) -> None:
+    verification = _verification_payload()
+    verification["api_web_changes_allowed"] = True
+    paths = _paths(tmp_path, verification=verification)
+    out_json = tmp_path / "run.json"
+    out_md = tmp_path / "run.md"
+    cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-online-shadow-enablement-gates-run",
+        "--runtime-isolation-verification",
+        str(paths["runtime_isolation_verification_path"]),
+        "--online-shadow-runtime",
+        str(paths["online_shadow_runtime_path"]),
+        "--generalization-audit-gates",
+        str(paths["generalization_audit_gates_path"]),
+        "--online-shadow-policy",
+        str(paths["online_shadow_policy_path"]),
+        "--production-readiness-plan",
+        str(paths["production_readiness_plan_path"]),
+        "--output",
+        str(out_json),
+        "--markdown-output",
+        str(out_md),
+    ]
+    result = subprocess.run(cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True)
+
+    assert result.returncode != 0
+    assert "api_web_changes_allowed" in result.stderr
+    assert not out_json.exists()
+    assert not out_md.exists()
+
+
+def test_run_cli_smoke_writes_json_and_markdown(tmp_path: Path) -> None:
+    out_json = tmp_path / "enablement-gates-run.json"
+    out_md = tmp_path / "enablement-gates-run.md"
+    cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-online-shadow-enablement-gates-run",
+        "--runtime-isolation-verification",
+        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-runtime-isolation-verification-v1.json"),
+        "--online-shadow-runtime",
+        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1.json"),
+        "--generalization-audit-gates",
+        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json"),
+        "--online-shadow-policy",
+        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json"),
+        "--production-readiness-plan",
+        str(REPO_ROOT / "docs/audit/ml-production-readiness-plan-v1.json"),
+        "--output",
+        str(out_json),
+        "--markdown-output",
+        str(out_md),
+    ]
+    result = subprocess.run(cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True, check=True)
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+
+    assert payload["metadata"]["artifact_type"] == "ml_shadow_scorer_online_shadow_enablement_gates_run"
+    assert payload["online_shadow_enablement_gates_executed"] is True
+    assert payload["all_prerequisite_gates_satisfied"] is True
+    assert payload["recommended_next_stage"] == "request_online_shadow_execution_authorization_v1"
+    assert result.stdout.splitlines() == ["True", "request_online_shadow_execution_authorization_v1"]
+    assert "Online Shadow Enablement Gates Run" in out_md.read_text(encoding="utf-8")
 
 
 def test_new_module_has_no_forbidden_imports_and_cli_has_no_database_url() -> None:

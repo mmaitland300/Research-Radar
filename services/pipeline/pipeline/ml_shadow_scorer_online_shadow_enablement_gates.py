@@ -28,6 +28,8 @@ from pipeline.repo_paths import default_repo_root, portable_repo_path
 
 ARTIFACT_TYPE = "ml_shadow_scorer_online_shadow_enablement_gates"
 GATES_VERSION = "ml-shadow-scorer-v1-online-shadow-enablement-gates-v1"
+RUN_ARTIFACT_TYPE = "ml_shadow_scorer_online_shadow_enablement_gates_run"
+GATES_RUN_VERSION = "ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1"
 
 VERIFICATION_ARTIFACT_TYPE = "ml_shadow_scorer_runtime_isolation_verification"
 RUNTIME_ARTIFACT_TYPE = "ml_shadow_scorer_online_shadow_runtime_disabled"
@@ -39,6 +41,8 @@ PRODUCTION_PLAN_ARTIFACT_TYPE = "ml_production_readiness_plan"
 PRODUCTION_PLAN_VERSION = "ml-production-readiness-plan-v1"
 
 RECOMMENDED_NEXT_STAGE = "run_ml_shadow_scorer_v1_online_shadow_enablement_gates_v1"
+RUN_PASS_NEXT_STAGE = "request_online_shadow_execution_authorization_v1"
+RUN_FAIL_NEXT_STAGE = "harden_online_shadow_enablement_prerequisites_v1"
 
 CAVEATS = (
     "This defines gates only; it does not execute online shadow enablement gates.",
@@ -597,44 +601,26 @@ def build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
     repo_root: Path | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
-    verification_path = Path(runtime_isolation_verification_path).resolve()
-    runtime_path = Path(online_shadow_runtime_path).resolve()
-    gates_path = Path(generalization_audit_gates_path).resolve()
-    policy_path = Path(online_shadow_policy_path).resolve()
-    production_path = Path(production_readiness_plan_path).resolve()
-
-    verification_payload = _load_json_object(verification_path)
-    runtime_payload = _load_json_object(runtime_path)
-    gates_payload = _load_json_object(gates_path)
-    policy_payload = _load_json_object(policy_path)
-    production_payload = _load_json_object(production_path)
-
-    verification_metadata = _validate_runtime_isolation(verification_payload)
-    runtime_metadata = _validate_runtime(runtime_payload)
-    gates_metadata = _validate_generalization_gates(gates_payload)
-    policy_metadata = _validate_policy(policy_payload)
-    production_metadata = _validate_production_plan(production_payload)
-    _assert_identity_match(
-        runtime_isolation_metadata=verification_metadata,
-        runtime_metadata=runtime_metadata,
-        gates_metadata=gates_metadata,
+    validated = load_and_validate_enablement_inputs(
+        runtime_isolation_verification_path=runtime_isolation_verification_path,
+        online_shadow_runtime_path=online_shadow_runtime_path,
+        generalization_audit_gates_path=generalization_audit_gates_path,
+        online_shadow_policy_path=online_shadow_policy_path,
+        production_readiness_plan_path=production_readiness_plan_path,
+        repo_root=repo_root,
     )
-
-    inputs = [
-        _input_record("runtime_isolation_verification", verification_path, repo_root=root),
-        _input_record("online_shadow_runtime", runtime_path, repo_root=root),
-        _input_record("generalization_audit_gates", gates_path, repo_root=root),
-        _input_record("online_shadow_policy", policy_path, repo_root=root),
-        _input_record("production_readiness_plan", production_path, repo_root=root),
-    ]
-    contract = _enablement_gate_contract(
-        verification_payload=verification_payload,
-        runtime_payload=runtime_payload,
-        gates_payload=gates_payload,
-        policy_payload=policy_payload,
-        production_payload=production_payload,
-    )
+    verification_payload = validated["verification_payload"]
+    runtime_payload = validated["runtime_payload"]
+    gates_payload = validated["gates_payload"]
+    policy_payload = validated["policy_payload"]
+    production_payload = validated["production_payload"]
+    verification_metadata = validated["verification_metadata"]
+    runtime_metadata = validated["runtime_metadata"]
+    gates_metadata = validated["gates_metadata"]
+    policy_metadata = validated["policy_metadata"]
+    production_metadata = validated["production_metadata"]
+    inputs = validated["inputs"]
+    contract = validated["contract"]
     all_prerequisite_gates_satisfied = _all_prerequisite_gates_satisfied(contract)
     blockers = {
         "missing_generalization_audit_on_second_surface": False,
@@ -719,6 +705,219 @@ def build_ml_shadow_scorer_online_shadow_enablement_gates_payload(
     }
 
 
+def load_and_validate_enablement_inputs(
+    *,
+    runtime_isolation_verification_path: Path,
+    online_shadow_runtime_path: Path,
+    generalization_audit_gates_path: Path,
+    online_shadow_policy_path: Path,
+    production_readiness_plan_path: Path,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
+    verification_path = Path(runtime_isolation_verification_path).resolve()
+    runtime_path = Path(online_shadow_runtime_path).resolve()
+    gates_path = Path(generalization_audit_gates_path).resolve()
+    policy_path = Path(online_shadow_policy_path).resolve()
+    production_path = Path(production_readiness_plan_path).resolve()
+
+    verification_payload = _load_json_object(verification_path)
+    runtime_payload = _load_json_object(runtime_path)
+    gates_payload = _load_json_object(gates_path)
+    policy_payload = _load_json_object(policy_path)
+    production_payload = _load_json_object(production_path)
+
+    verification_metadata = _validate_runtime_isolation(verification_payload)
+    runtime_metadata = _validate_runtime(runtime_payload)
+    gates_metadata = _validate_generalization_gates(gates_payload)
+    policy_metadata = _validate_policy(policy_payload)
+    production_metadata = _validate_production_plan(production_payload)
+    _assert_identity_match(
+        runtime_isolation_metadata=verification_metadata,
+        runtime_metadata=runtime_metadata,
+        gates_metadata=gates_metadata,
+    )
+
+    inputs = [
+        _input_record("runtime_isolation_verification", verification_path, repo_root=root),
+        _input_record("online_shadow_runtime", runtime_path, repo_root=root),
+        _input_record("generalization_audit_gates", gates_path, repo_root=root),
+        _input_record("online_shadow_policy", policy_path, repo_root=root),
+        _input_record("production_readiness_plan", production_path, repo_root=root),
+    ]
+    contract = _enablement_gate_contract(
+        verification_payload=verification_payload,
+        runtime_payload=runtime_payload,
+        gates_payload=gates_payload,
+        policy_payload=policy_payload,
+        production_payload=production_payload,
+    )
+    return {
+        "inputs": inputs,
+        "verification_payload": verification_payload,
+        "runtime_payload": runtime_payload,
+        "gates_payload": gates_payload,
+        "policy_payload": policy_payload,
+        "production_payload": production_payload,
+        "verification_metadata": verification_metadata,
+        "runtime_metadata": runtime_metadata,
+        "gates_metadata": gates_metadata,
+        "policy_metadata": policy_metadata,
+        "production_metadata": production_metadata,
+        "contract": contract,
+    }
+
+
+def _to_executed_gate(gate: Mapping[str, Any]) -> dict[str, Any]:
+    prerequisite_present = gate.get("prerequisite_evidence_present") is True
+    return {
+        "gate_id": gate["gate_id"],
+        "title": gate["title"],
+        "definition_ready": gate.get("definition_ready") is True,
+        "prerequisite_evidence_present": prerequisite_present,
+        "enablement_gate_executed": True,
+        "decision": "passed" if prerequisite_present else "failed",
+        "expected_evidence": list(gate.get("expected_evidence") or []),
+        "observed_evidence": dict(gate.get("observed_evidence") or {}),
+        "rationale": gate.get("rationale"),
+    }
+
+
+def _executed_enablement_gate_results(contract: list[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], bool]:
+    prerequisite_results = [
+        _to_executed_gate(gate)
+        for gate in contract
+        if isinstance(gate.get("gate_id"), str) and gate["gate_id"].startswith(PREREQUISITE_GATE_PREFIXES)
+    ]
+    all_prerequisites = len(prerequisite_results) == len(PREREQUISITE_GATE_PREFIXES) and all(
+        gate["decision"] == "passed" for gate in prerequisite_results
+    )
+    prerequisite_results.append(
+        {
+            "gate_id": "E10_online_shadow_enablement_decision_not_executed",
+            "title": "Online shadow enablement evaluation only, not authorized",
+            "definition_ready": True,
+            "prerequisite_evidence_present": True,
+            "enablement_gate_executed": True,
+            "decision": "enablement_evaluation_only_not_authorized",
+            "expected_evidence": ["this run evaluates enablement gates but must not authorize execution"],
+            "observed_evidence": {
+                "online_shadow_enablement_gates_defined": True,
+                "online_shadow_enablement_gates_executed": True,
+                "all_prerequisite_gates_satisfied": all_prerequisites,
+                "online_shadow_execution_enabled": False,
+                "shadow_scoring_allowed": False,
+                "runtime_execution_authorized": False,
+                "runtime_implementation_authorized": False,
+                "production_default_allowed": False,
+                "api_web_changes_allowed": False,
+                "user_visible_ranking_changed": False,
+            },
+            "rationale": "Even a passing prerequisite evaluation only routes to a later authorization step.",
+        }
+    )
+    return prerequisite_results, all_prerequisites
+
+
+def build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload(
+    *,
+    runtime_isolation_verification_path: Path,
+    online_shadow_runtime_path: Path,
+    generalization_audit_gates_path: Path,
+    online_shadow_policy_path: Path,
+    production_readiness_plan_path: Path,
+    gates_run_version: str = GATES_RUN_VERSION,
+    repo_root: Path | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    validated = load_and_validate_enablement_inputs(
+        runtime_isolation_verification_path=runtime_isolation_verification_path,
+        online_shadow_runtime_path=online_shadow_runtime_path,
+        generalization_audit_gates_path=generalization_audit_gates_path,
+        online_shadow_policy_path=online_shadow_policy_path,
+        production_readiness_plan_path=production_readiness_plan_path,
+        repo_root=repo_root,
+    )
+    verification_payload = validated["verification_payload"]
+    runtime_payload = validated["runtime_payload"]
+    gates_payload = validated["gates_payload"]
+    policy_payload = validated["policy_payload"]
+    production_payload = validated["production_payload"]
+    verification_metadata = validated["verification_metadata"]
+    runtime_metadata = validated["runtime_metadata"]
+    gates_metadata = validated["gates_metadata"]
+    policy_metadata = validated["policy_metadata"]
+    production_metadata = validated["production_metadata"]
+    contract = validated["contract"]
+    executed_results, all_prerequisite_gates_satisfied = _executed_enablement_gate_results(contract)
+    identity = _identity_fields()
+    blockers = {
+        "missing_generalization_audit_on_second_surface": False,
+        "missing_generalization_audit_gates": False,
+        "missing_online_shadow_implementation_disabled_by_default": False,
+        "missing_shadow_runtime_isolation_verification": False,
+        "missing_online_shadow_enablement_gates": False,
+        "missing_online_shadow_execution_authorization": True,
+        "missing_production_readiness_authorization": True,
+        "online_shadow_execution_enabled": False,
+        "shadow_scoring_allowed": False,
+        "production_default_allowed": False,
+        "runtime_implementation_authorized": False,
+        "runtime_execution_authorized": False,
+    }
+    return {
+        "metadata": {
+            "artifact_type": RUN_ARTIFACT_TYPE,
+            "gates_run_version": gates_run_version,
+            "generated_at": generated_at or _now_iso_z(),
+            "inputs": validated["inputs"],
+            "source_runtime_isolation_verification_version": verification_metadata.get("verification_version"),
+            "source_runtime_version": runtime_metadata.get("runtime_version"),
+            "source_generalization_audit_gates_version": gates_metadata.get("gates_version"),
+            "source_online_shadow_policy_version": policy_metadata.get("policy_version"),
+            "source_production_readiness_plan_version": production_metadata.get("plan_version"),
+            "runtime_feature_flag": FEATURE_FLAG,
+            **identity,
+        },
+        "online_shadow_enablement_gates_defined": True,
+        "online_shadow_enablement_gates_executed": True,
+        "all_prerequisite_gates_satisfied": all_prerequisite_gates_satisfied,
+        "online_shadow_execution_enabled": False,
+        "shadow_scoring_allowed": False,
+        "runtime_execution_authorized": False,
+        "runtime_implementation_authorized": False,
+        "production_default_allowed": False,
+        "api_web_changes_allowed": False,
+        "user_visible_ranking_changed": False,
+        "evidence_summary": {
+            "runtime_isolation_verification_passed": verification_payload["runtime_isolation_verification_passed"],
+            "runtime_implementation_present": runtime_payload["runtime_implementation_present"],
+            "runtime_disabled_by_default": runtime_payload["runtime_disabled_by_default"],
+            "runtime_feature_flag": runtime_payload["runtime_feature_flag"],
+            "generalization_audit_gates_passed": gates_payload["generalization_audit_gates_passed"],
+            "second_surface_generalization_passed": gates_payload["second_surface_generalization_passed"],
+            "material_lift_gate_passed": gates_payload["material_lift_gate_passed"],
+            "online_shadow_policy_defined": policy_payload["online_shadow_execution_policy_defined"],
+            "production_plan_blocked": _production_plan_blocked(production_payload),
+            "production_plan_observed": _production_plan_observed_fields(production_payload),
+            "current_blocker_truth_source": "generalization audit gates + runtime isolation verification",
+        },
+        "source_enablement_gate_contract": contract,
+        "enablement_gate_results": executed_results,
+        "blocked_actions": list(BLOCKED_ACTIONS),
+        "shadow_and_production_blockers": blockers,
+        "recommended_next_stage": (
+            RUN_PASS_NEXT_STAGE if all_prerequisite_gates_satisfied else RUN_FAIL_NEXT_STAGE
+        ),
+        "caveats": [
+            "This run evaluates enablement gates only; it does not enable online shadow execution.",
+            "This run does not authorize runtime execution, production default, API/web behavior, or user-visible ranking changes.",
+            "Production readiness remains separate and research_only.",
+            "A passing result routes only to an explicit online shadow execution authorization step.",
+        ],
+    }
+
+
 def markdown_from_ml_shadow_scorer_online_shadow_enablement_gates(payload: Mapping[str, Any]) -> str:
     metadata = payload["metadata"]
     evidence = payload["evidence_summary"]
@@ -765,6 +964,47 @@ def markdown_from_ml_shadow_scorer_online_shadow_enablement_gates(payload: Mappi
     return "\n".join(lines).rstrip() + "\n"
 
 
+def markdown_from_ml_shadow_scorer_online_shadow_enablement_gates_run(payload: Mapping[str, Any]) -> str:
+    metadata = payload["metadata"]
+    evidence = payload["evidence_summary"]
+    blockers = payload["shadow_and_production_blockers"]
+    lines = [
+        f"# ml-shadow-scorer-v1 Online Shadow Enablement Gates Run ({metadata['gates_run_version']})",
+        "",
+        "## Executive Summary",
+        "",
+        "This artifact executes the prerequisite evidence checks for future ml-shadow-scorer-v1 online shadow enablement. It evaluates gates only; it does not authorize or enable online shadow execution.",
+        "",
+        f"- Enablement gates defined: {payload['online_shadow_enablement_gates_defined']}",
+        f"- Enablement gates executed: {payload['online_shadow_enablement_gates_executed']}",
+        f"- All prerequisite gates satisfied: {payload['all_prerequisite_gates_satisfied']}",
+        f"- Online shadow execution enabled: {payload['online_shadow_execution_enabled']}",
+        f"- Runtime execution authorized: {payload['runtime_execution_authorized']}",
+        f"- Recommended next stage: `{payload['recommended_next_stage']}`",
+        "",
+        "## Evidence Chain",
+        "",
+        f"- Runtime isolation verification passed: {evidence['runtime_isolation_verification_passed']}",
+        f"- Runtime implementation present: {evidence['runtime_implementation_present']}",
+        f"- Runtime disabled by default: {evidence['runtime_disabled_by_default']}",
+        f"- Runtime feature flag: `{evidence['runtime_feature_flag']}`",
+        f"- Generalization audit gates passed: {evidence['generalization_audit_gates_passed']}",
+        f"- Production plan blocked: {evidence['production_plan_blocked']}",
+        "",
+        "## Gate Results",
+        "",
+    ]
+    lines.extend(
+        f"- `{gate['gate_id']}`: executed={gate['enablement_gate_executed']}, prerequisite_evidence_present={gate['prerequisite_evidence_present']}, decision=`{gate['decision']}`"
+        for gate in payload["enablement_gate_results"]
+    )
+    lines.extend(["", "## Remaining Blockers", ""])
+    lines.extend(f"- `{key}`: {value}" for key, value in blockers.items())
+    lines.extend(["", "## Caveats", ""])
+    lines.extend(f"- {item}" for item in payload["caveats"])
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def write_ml_shadow_scorer_online_shadow_enablement_gates(
     *,
     runtime_isolation_verification_path: Path,
@@ -791,6 +1031,37 @@ def write_ml_shadow_scorer_online_shadow_enablement_gates(
     markdown_output_path.parent.mkdir(parents=True, exist_ok=True)
     markdown_output_path.write_text(
         markdown_from_ml_shadow_scorer_online_shadow_enablement_gates(payload),
+        encoding="utf-8",
+    )
+    return payload
+
+
+def write_ml_shadow_scorer_online_shadow_enablement_gates_run(
+    *,
+    runtime_isolation_verification_path: Path,
+    online_shadow_runtime_path: Path,
+    generalization_audit_gates_path: Path,
+    online_shadow_policy_path: Path,
+    production_readiness_plan_path: Path,
+    output_path: Path,
+    markdown_output_path: Path,
+    gates_run_version: str = GATES_RUN_VERSION,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    payload = build_ml_shadow_scorer_online_shadow_enablement_gates_run_payload(
+        runtime_isolation_verification_path=runtime_isolation_verification_path,
+        online_shadow_runtime_path=online_shadow_runtime_path,
+        generalization_audit_gates_path=generalization_audit_gates_path,
+        online_shadow_policy_path=online_shadow_policy_path,
+        production_readiness_plan_path=production_readiness_plan_path,
+        gates_run_version=gates_run_version,
+        repo_root=repo_root,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    markdown_output_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_output_path.write_text(
+        markdown_from_ml_shadow_scorer_online_shadow_enablement_gates_run(payload),
         encoding="utf-8",
     )
     return payload

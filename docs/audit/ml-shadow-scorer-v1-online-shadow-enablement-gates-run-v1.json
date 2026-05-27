@@ -1,0 +1,519 @@
+{
+  "all_prerequisite_gates_satisfied": true,
+  "api_web_changes_allowed": false,
+  "blocked_actions": [
+    "online_shadow_execution",
+    "runtime_execution",
+    "production_default_change",
+    "api_web_change",
+    "user_visible_ranking_change",
+    "database_writes",
+    "shadow_output_table_creation",
+    "ranking_run_creation",
+    "embedding_generation",
+    "learned_probability_generation",
+    "scorer_refit",
+    "label_ingest"
+  ],
+  "caveats": [
+    "This run evaluates enablement gates only; it does not enable online shadow execution.",
+    "This run does not authorize runtime execution, production default, API/web behavior, or user-visible ranking changes.",
+    "Production readiness remains separate and research_only.",
+    "A passing result routes only to an explicit online shadow execution authorization step."
+  ],
+  "enablement_gate_results": [
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "generalization_audit_gates_passed true",
+        "second_surface_generalization_passed true"
+      ],
+      "gate_id": "E01_generalization_gates_passed",
+      "observed_evidence": {
+        "generalization_audit_gates_passed": true,
+        "material_lift_gate_passed": true,
+        "second_surface_generalization_passed": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Second-surface offline generalization evidence is present before enablement can be considered.",
+      "title": "Generalization gates passed"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "runtime implementation present",
+        "runtime default state off",
+        "last disabled run skipped"
+      ],
+      "gate_id": "E02_runtime_disabled_by_default_implemented",
+      "observed_evidence": {
+        "last_disabled_run": {
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "writes_performed": false
+        },
+        "runtime_default_state": "off",
+        "runtime_disabled_by_default": true,
+        "runtime_implementation_present": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Runtime code exists but defaults off and does not run unless separately authorized later.",
+      "title": "Runtime disabled by default implemented"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "runtime isolation verification passed"
+      ],
+      "gate_id": "E03_runtime_isolation_verification_passed",
+      "observed_evidence": {
+        "recommended_next_stage": "draft_online_shadow_execution_enablement_gates_v1",
+        "runtime_isolation_verification_passed": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Pure runtime probes passed without DB/API/production side effects.",
+      "title": "Runtime isolation verification passed"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "feature flag ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+        "default off",
+        "disable switch off"
+      ],
+      "gate_id": "E04_feature_flag_default_off_and_disable_path_defined",
+      "observed_evidence": {
+        "disable_switch_default": "off",
+        "policy_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+        "policy_feature_flag_default_off": true,
+        "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "A future shadow path must stay controlled by the documented default-off flag and disable switch.",
+      "title": "Feature flag default off and disable path defined"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "all current artifacts keep online shadow/prod/API flags false"
+      ],
+      "gate_id": "E05_no_production_default_or_api_web_change",
+      "observed_evidence": {
+        "gates_api_web_changes_allowed": false,
+        "gates_online_shadow_execution_enabled": false,
+        "gates_production_default_allowed": false,
+        "policy_api_web_changes_allowed": false,
+        "policy_production_default_allowed": false,
+        "runtime_api_web_changes_allowed": false,
+        "runtime_online_shadow_execution_enabled": false,
+        "runtime_production_default_allowed": false,
+        "verification_api_web_changes_allowed": false,
+        "verification_online_shadow_execution_enabled": false,
+        "verification_production_default_allowed": false
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "The current chain documents no user-visible, API/web, or production default mutation.",
+      "title": "No production default or API/web change"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "policy documents isolated shadow/audit write scope",
+        "runtime performs no writes"
+      ],
+      "gate_id": "E06_shadow_write_isolation_requirement_documented_not_enabled",
+      "observed_evidence": {
+        "allowed_write_scope_future_only_after_later_gates": true,
+        "allowed_write_scope_present": true,
+        "allowed_write_scope_required_fields_present": true,
+        "allowed_write_scope_targets_present": true,
+        "forbidden_write_scope_present": true,
+        "last_disabled_run_writes_performed": false,
+        "runtime_contract_writes_performed": false
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Future shadow writes require isolated audit scope, while this definition enables none.",
+      "title": "Shadow write isolation requirement documented, not enabled"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "policy observability contract present"
+      ],
+      "gate_id": "E07_observability_requirements_defined_for_future_online_run",
+      "observed_evidence": {
+        "future_runtime_verification_requirements_must_prove_present": true,
+        "future_runtime_verification_requirements_present": true,
+        "observability_contract_present": true,
+        "observability_expected_keys_true": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Future online shadow evaluation must emit observability before any execution gate can pass.",
+      "title": "Observability requirements defined for future online run"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "runtime isolation probes skipped incomplete coverage"
+      ],
+      "gate_id": "E08_skip_on_incomplete_coverage_verified",
+      "observed_evidence": {
+        "runtime_contract_partial_scoring_allowed": false,
+        "runtime_contract_skip_on_incomplete_coverage": true,
+        "verification_gate_v04_passed": true,
+        "verification_gate_v04_status": "pass",
+        "verification_incomplete_cases": 2
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Incomplete learned probability or final score coverage must never produce partial shadow scoring.",
+      "title": "Skip on incomplete coverage verified"
+    },
+    {
+      "decision": "passed",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "policy separation true",
+        "production readiness research_only"
+      ],
+      "gate_id": "E09_production_default_chain_remains_separate",
+      "observed_evidence": {
+        "future_online_shadow_gates_do_not_set_production_default_allowed": true,
+        "good_or_acceptable_production_eligible": false,
+        "overall_status": "research_only",
+        "policy_separation_production_default_allowed": false,
+        "production_default_authorized": null,
+        "production_plan_blocked": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Even future online shadow gates cannot authorize production default promotion.",
+      "title": "Production default chain remains separate"
+    },
+    {
+      "decision": "enablement_evaluation_only_not_authorized",
+      "definition_ready": true,
+      "enablement_gate_executed": true,
+      "expected_evidence": [
+        "this run evaluates enablement gates but must not authorize execution"
+      ],
+      "gate_id": "E10_online_shadow_enablement_decision_not_executed",
+      "observed_evidence": {
+        "all_prerequisite_gates_satisfied": true,
+        "api_web_changes_allowed": false,
+        "online_shadow_enablement_gates_defined": true,
+        "online_shadow_enablement_gates_executed": true,
+        "online_shadow_execution_enabled": false,
+        "production_default_allowed": false,
+        "runtime_execution_authorized": false,
+        "runtime_implementation_authorized": false,
+        "shadow_scoring_allowed": false,
+        "user_visible_ranking_changed": false
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Even a passing prerequisite evaluation only routes to a later authorization step.",
+      "title": "Online shadow enablement evaluation only, not authorized"
+    }
+  ],
+  "evidence_summary": {
+    "current_blocker_truth_source": "generalization audit gates + runtime isolation verification",
+    "generalization_audit_gates_passed": true,
+    "material_lift_gate_passed": true,
+    "online_shadow_policy_defined": true,
+    "production_plan_blocked": true,
+    "production_plan_observed": {
+      "good_or_acceptable_production_eligible": false,
+      "overall_status": "research_only",
+      "production_default_authorized": null
+    },
+    "runtime_disabled_by_default": true,
+    "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+    "runtime_implementation_present": true,
+    "runtime_isolation_verification_passed": true,
+    "second_surface_generalization_passed": true
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_online_shadow_enablement_gates_run",
+    "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+    "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "family": "emerging",
+    "gates_run_version": "ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1",
+    "generated_at": "2026-05-27T16:10:58Z",
+    "inputs": [
+      {
+        "name": "runtime_isolation_verification",
+        "path": "docs/audit/ml-shadow-scorer-v1-runtime-isolation-verification-v1.json",
+        "sha256": "a039dfdc813363747a9abce31f850a7e6a9321fda24e78d0507a208c1d878451"
+      },
+      {
+        "name": "online_shadow_runtime",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1.json",
+        "sha256": "a942bea9cd6feac234e9bc377bcada653309963a2b061829b0302ab7760be13e"
+      },
+      {
+        "name": "generalization_audit_gates",
+        "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+        "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84"
+      },
+      {
+        "name": "online_shadow_policy",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      }
+    ],
+    "ranking_run_id": "rank-83787b91ef",
+    "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+    "source_generalization_audit_gates_version": "ml-shadow-scorer-v1-generalization-audit-gates-v1",
+    "source_online_shadow_policy_version": "ml-shadow-scorer-v1-online-shadow-policy",
+    "source_production_readiness_plan_version": "ml-production-readiness-plan-v1",
+    "source_runtime_isolation_verification_version": "ml-shadow-scorer-v1-runtime-isolation-verification-v1",
+    "source_runtime_version": "ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1"
+  },
+  "online_shadow_enablement_gates_defined": true,
+  "online_shadow_enablement_gates_executed": true,
+  "online_shadow_execution_enabled": false,
+  "production_default_allowed": false,
+  "recommended_next_stage": "request_online_shadow_execution_authorization_v1",
+  "runtime_execution_authorized": false,
+  "runtime_implementation_authorized": false,
+  "shadow_and_production_blockers": {
+    "missing_generalization_audit_gates": false,
+    "missing_generalization_audit_on_second_surface": false,
+    "missing_online_shadow_enablement_gates": false,
+    "missing_online_shadow_execution_authorization": true,
+    "missing_online_shadow_implementation_disabled_by_default": false,
+    "missing_production_readiness_authorization": true,
+    "missing_shadow_runtime_isolation_verification": false,
+    "online_shadow_execution_enabled": false,
+    "production_default_allowed": false,
+    "runtime_execution_authorized": false,
+    "runtime_implementation_authorized": false,
+    "shadow_scoring_allowed": false
+  },
+  "shadow_scoring_allowed": false,
+  "source_enablement_gate_contract": [
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "generalization_audit_gates_passed true",
+        "second_surface_generalization_passed true"
+      ],
+      "gate_id": "E01_generalization_gates_passed",
+      "observed_evidence": {
+        "generalization_audit_gates_passed": true,
+        "material_lift_gate_passed": true,
+        "second_surface_generalization_passed": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Second-surface offline generalization evidence is present before enablement can be considered.",
+      "title": "Generalization gates passed"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "runtime implementation present",
+        "runtime default state off",
+        "last disabled run skipped"
+      ],
+      "gate_id": "E02_runtime_disabled_by_default_implemented",
+      "observed_evidence": {
+        "last_disabled_run": {
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "writes_performed": false
+        },
+        "runtime_default_state": "off",
+        "runtime_disabled_by_default": true,
+        "runtime_implementation_present": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Runtime code exists but defaults off and does not run unless separately authorized later.",
+      "title": "Runtime disabled by default implemented"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "runtime isolation verification passed"
+      ],
+      "gate_id": "E03_runtime_isolation_verification_passed",
+      "observed_evidence": {
+        "recommended_next_stage": "draft_online_shadow_execution_enablement_gates_v1",
+        "runtime_isolation_verification_passed": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Pure runtime probes passed without DB/API/production side effects.",
+      "title": "Runtime isolation verification passed"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "feature flag ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+        "default off",
+        "disable switch off"
+      ],
+      "gate_id": "E04_feature_flag_default_off_and_disable_path_defined",
+      "observed_evidence": {
+        "disable_switch_default": "off",
+        "policy_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+        "policy_feature_flag_default_off": true,
+        "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "A future shadow path must stay controlled by the documented default-off flag and disable switch.",
+      "title": "Feature flag default off and disable path defined"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "all current artifacts keep online shadow/prod/API flags false"
+      ],
+      "gate_id": "E05_no_production_default_or_api_web_change",
+      "observed_evidence": {
+        "gates_api_web_changes_allowed": false,
+        "gates_online_shadow_execution_enabled": false,
+        "gates_production_default_allowed": false,
+        "policy_api_web_changes_allowed": false,
+        "policy_production_default_allowed": false,
+        "runtime_api_web_changes_allowed": false,
+        "runtime_online_shadow_execution_enabled": false,
+        "runtime_production_default_allowed": false,
+        "verification_api_web_changes_allowed": false,
+        "verification_online_shadow_execution_enabled": false,
+        "verification_production_default_allowed": false
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "The current chain documents no user-visible, API/web, or production default mutation.",
+      "title": "No production default or API/web change"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "policy documents isolated shadow/audit write scope",
+        "runtime performs no writes"
+      ],
+      "gate_id": "E06_shadow_write_isolation_requirement_documented_not_enabled",
+      "observed_evidence": {
+        "allowed_write_scope_future_only_after_later_gates": true,
+        "allowed_write_scope_present": true,
+        "allowed_write_scope_required_fields_present": true,
+        "allowed_write_scope_targets_present": true,
+        "forbidden_write_scope_present": true,
+        "last_disabled_run_writes_performed": false,
+        "runtime_contract_writes_performed": false
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Future shadow writes require isolated audit scope, while this definition enables none.",
+      "title": "Shadow write isolation requirement documented, not enabled"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "policy observability contract present"
+      ],
+      "gate_id": "E07_observability_requirements_defined_for_future_online_run",
+      "observed_evidence": {
+        "future_runtime_verification_requirements_must_prove_present": true,
+        "future_runtime_verification_requirements_present": true,
+        "observability_contract_present": true,
+        "observability_expected_keys_true": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Future online shadow evaluation must emit observability before any execution gate can pass.",
+      "title": "Observability requirements defined for future online run"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "runtime isolation probes skipped incomplete coverage"
+      ],
+      "gate_id": "E08_skip_on_incomplete_coverage_verified",
+      "observed_evidence": {
+        "runtime_contract_partial_scoring_allowed": false,
+        "runtime_contract_skip_on_incomplete_coverage": true,
+        "verification_gate_v04_passed": true,
+        "verification_gate_v04_status": "pass",
+        "verification_incomplete_cases": 2
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Incomplete learned probability or final score coverage must never produce partial shadow scoring.",
+      "title": "Skip on incomplete coverage verified"
+    },
+    {
+      "decision": "definition_only_prerequisite_evidence_present",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "policy separation true",
+        "production readiness research_only"
+      ],
+      "gate_id": "E09_production_default_chain_remains_separate",
+      "observed_evidence": {
+        "future_online_shadow_gates_do_not_set_production_default_allowed": true,
+        "good_or_acceptable_production_eligible": false,
+        "overall_status": "research_only",
+        "policy_separation_production_default_allowed": false,
+        "production_default_authorized": null,
+        "production_plan_blocked": true
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "Even future online shadow gates cannot authorize production default promotion.",
+      "title": "Production default chain remains separate"
+    },
+    {
+      "decision": "online_shadow_enablement_decision_not_executed",
+      "definition_ready": true,
+      "enablement_gate_executed": false,
+      "expected_evidence": [
+        "this definition artifact must not execute enablement gates"
+      ],
+      "gate_id": "E10_online_shadow_enablement_decision_not_executed",
+      "observed_evidence": {
+        "online_shadow_enablement_gates_defined": true,
+        "online_shadow_enablement_gates_executed": false,
+        "online_shadow_execution_enabled": false,
+        "runtime_execution_authorized": false
+      },
+      "prerequisite_evidence_present": true,
+      "rationale": "This artifact defines the future contract only; a separate run command must execute gates later.",
+      "title": "Online shadow enablement decision not executed"
+    }
+  ],
+  "user_visible_ranking_changed": false
+}
