@@ -5248,6 +5248,55 @@ def main() -> None:
     ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.set_defaults(
         cleanup_after_proof=True
     )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-authorization-request",
+        help="Request owner authorization for a Phase 2 isolated audit write pilot without granting it",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--phase2-write-mode-proof",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--phase2-write-mode-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--authorization-grant",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--phase1-no-write-pilot-review",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write Phase 2 isolated audit write authorization request JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--phase1-no-write-pilot-run",
+        default=None,
+        help="Optional path to ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-run-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--request-version",
+        default="ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-request-v1",
+        help="Request version string to write (default: ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-request-v1)",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7825,6 +7874,42 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["phase2_write_mode_proof_executed"])
         print(payload["phase2_write_mode_proof_passed"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-authorization-request":
+        from pipeline.ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request import (
+            MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteAuthorizationRequestError,
+            write_ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_authorization_request(
+                phase2_write_mode_proof_path=Path(args.phase2_write_mode_proof),
+                phase2_write_mode_plan_path=Path(args.phase2_write_mode_plan),
+                authorization_grant_path=Path(args.authorization_grant),
+                phase1_no_write_pilot_review_path=Path(args.phase1_no_write_pilot_review),
+                phase1_no_write_pilot_run_path=(
+                    Path(args.phase1_no_write_pilot_run) if args.phase1_no_write_pilot_run else None
+                ),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                request_version=str(args.request_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteAuthorizationRequestError as e:
+            print(
+                f"ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-authorization-request: {e}",
+                file=sys.stderr,
+            )
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["phase2_isolated_audit_write_authorization_requested"])
+        print(payload["phase2_isolated_audit_write_authorization_granted"])
         print(payload["recommended_next_stage"])
         return
 
