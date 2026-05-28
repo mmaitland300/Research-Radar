@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import subprocess
@@ -13,6 +14,7 @@ import pytest
 
 from pipeline.ml_shadow_scorer_online_shadow_phase1_no_write_pilot_run import (
     MLShadowScorerOnlineShadowPhase1NoWritePilotRunError,
+    _verify_recorded_records,
     build_ml_shadow_scorer_online_shadow_phase1_no_write_pilot_run_payload,
     write_ml_shadow_scorer_online_shadow_phase1_no_write_pilot_run,
 )
@@ -86,6 +88,21 @@ def _build(
         repo_root=REPO_ROOT,
         generated_at=generated_at,
     )
+
+
+def test_recorded_sha_accepts_line_ending_equivalent_text_artifact(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.json"
+    lf_bytes = b'{\n  "ok": true\n}\n'
+    crlf_sha = hashlib.sha256(lf_bytes.replace(b"\n", b"\r\n")).hexdigest()
+    artifact.write_bytes(lf_bytes)
+
+    verified = _verify_recorded_records(
+        [{"name": "artifact", "path": "artifact.json", "sha256": crlf_sha}],
+        repo_root=tmp_path,
+        label="test metadata.inputs",
+    )
+
+    assert verified[0]["verification_status"] == "confirmed"
 
 
 def test_happy_path_runs_flag_on_528_rows_and_writes_no_shadow_storage() -> None:

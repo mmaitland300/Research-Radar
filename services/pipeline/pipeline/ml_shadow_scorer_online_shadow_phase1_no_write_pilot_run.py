@@ -19,6 +19,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Iterator, Mapping, Sequence
 
+from pipeline.audit_artifact_hash import recorded_sha256_matches_text_artifact
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.ml_shadow_scorer_online_shadow_execution_authorization_grant import (
     ARTIFACT_TYPE as GRANT_ARTIFACT_TYPE,
@@ -242,7 +243,7 @@ def _verify_recorded_records(
                 f"{label} input {name} missing on disk: {recorded_path}"
             )
         actual_sha = sha256_file(resolved)
-        if actual_sha != recorded_sha:
+        if not recorded_sha256_matches_text_artifact(resolved, recorded_sha):
             raise MLShadowScorerOnlineShadowPhase1NoWritePilotRunError(
                 f"{label} input {name} sha256 mismatch: recorded {recorded_sha}, actual {actual_sha}"
             )
