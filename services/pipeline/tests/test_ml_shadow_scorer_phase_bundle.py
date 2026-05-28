@@ -15,6 +15,7 @@ import pytest
 from pipeline.ml_shadow_scorer_phase_bundle import (
     MLShadowScorerPhaseBundleError,
     apply_phase2_write_pilot_execution,
+    apply_phase2_write_pilot_review,
     assemble_ml_shadow_scorer_phase_bundle_payload,
     verify_ml_shadow_scorer_phase_bundle,
     verify_ml_shadow_scorer_phase_bundle_payload,
@@ -139,11 +140,49 @@ def _post_pilot_execution_slice() -> dict[str, Any]:
                 "ranking_runs": 0,
             },
         },
-        "pilot_runtime_summary": {"status": "succeeded_test_only", "shadow_row_count": 528},
+        "input_join_summary": {"joined_candidate_count": 528},
+        "pilot_runtime_summary": {
+            "status": "succeeded_test_only",
+            "shadow_row_count": 528,
+            "writes_performed": False,
+        },
         "disable_drill": {"passed": True, "environment_restored": True},
         "cleanup_performed": False,
         "executed_at": "2026-05-28T23:00:00Z",
+        "runtime_writes_performed": False,
+        "isolated_artifact_tree_writes_performed": True,
+        "production_default_changed": False,
+        "user_visible_ranking_changed": False,
+        "api_web_changes_allowed": False,
+        "labels_used_for_scoring": False,
     }
+
+
+def _accepted_review_slice() -> dict[str, Any]:
+    return {
+        "phase2_write_pilot_reviewed": True,
+        "phase2_write_pilot_accepted": True,
+        "review_decision": {
+            "decision": "accepted",
+            "reviewer": "Matt Maitland",
+            "reviewed_at": "2026-05-28T23:30:00Z",
+            "review_notes": None,
+            "checks": {"pilot_runtime_succeeded": True},
+            "failed_review_checks": [],
+            "accepted_evidence": ["Phase 2 write pilot passed all pass/fail checks"],
+            "limitations": ["Production readiness authorization remains separate and missing"],
+        },
+    }
+
+
+def _not_accepted_review_slice() -> dict[str, Any]:
+    review = _accepted_review_slice()
+    review["phase2_write_pilot_accepted"] = False
+    review["review_decision"]["decision"] = "not_accepted"
+    review["review_decision"]["checks"] = {"pilot_runtime_succeeded": False}
+    review["review_decision"]["failed_review_checks"] = ["pilot_runtime_succeeded"]
+    review["review_decision"].pop("accepted_evidence", None)
+    return review
 
 
 def test_happy_path_assembles_bundle_json_markdown_from_committed_fixtures(tmp_path: Path) -> None:
@@ -297,6 +336,67 @@ def test_verify_modes_accept_pre_and_post_pilot_bundles(tmp_path: Path) -> None:
     assert post_bundle["recommended_next_stage"] == "review_online_shadow_phase2_isolated_audit_write_pilot_v1"
 
 
+def test_apply_phase2_write_pilot_review_produces_valid_revision_3_and_preserves_execution(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    post_bundle = apply_phase2_write_pilot_execution(_build(root), _post_pilot_execution_slice())
+    execution_before = copy.deepcopy(post_bundle["execution"])
+
+    reviewed = apply_phase2_write_pilot_review(post_bundle, _accepted_review_slice())
+    result = verify_ml_shadow_scorer_phase_bundle_payload(
+        reviewed,
+        repo_root=root,
+        expect_pilot_reviewed=True,
+    )
+    inferred = verify_ml_shadow_scorer_phase_bundle_payload(reviewed, repo_root=root)
+
+    assert reviewed["metadata"]["bundle_revision"] == 3
+    assert reviewed["execution"] == execution_before
+    assert reviewed["recommended_next_stage"] == "begin_production_readiness_authorization_v1"
+    assert result["verification_mode"] == "post_review"
+    assert inferred["verification_mode"] == "post_review"
+
+
+def test_post_review_verify_passes_for_not_accepted_fixture(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    post_bundle = apply_phase2_write_pilot_execution(_build(root), _post_pilot_execution_slice())
+    reviewed = apply_phase2_write_pilot_review(post_bundle, _not_accepted_review_slice())
+
+    result = verify_ml_shadow_scorer_phase_bundle_payload(
+        reviewed,
+        repo_root=root,
+        expect_pilot_reviewed=True,
+    )
+
+    assert result["verification_mode"] == "post_review"
+    assert reviewed["recommended_next_stage"] == "remediate_online_shadow_phase2_write_pilot_v1"
+
+
+def test_post_review_verify_rejects_wrong_decision_or_null_acceptance(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    post_bundle = apply_phase2_write_pilot_execution(_build(root), _post_pilot_execution_slice())
+    reviewed = apply_phase2_write_pilot_review(post_bundle, _accepted_review_slice())
+
+    wrong_decision = copy.deepcopy(reviewed)
+    wrong_decision["review"]["review_decision"]["decision"] = "maybe"
+    with pytest.raises(MLShadowScorerPhaseBundleError, match="decision"):
+        verify_ml_shadow_scorer_phase_bundle_payload(wrong_decision, repo_root=root, expect_pilot_reviewed=True)
+
+    null_acceptance = copy.deepcopy(reviewed)
+    null_acceptance["review"]["phase2_write_pilot_accepted"] = None
+    with pytest.raises(MLShadowScorerPhaseBundleError, match="phase2_write_pilot_accepted"):
+        verify_ml_shadow_scorer_phase_bundle_payload(null_acceptance, repo_root=root, expect_pilot_reviewed=True)
+
+
+def test_post_review_verify_rejects_invalid_execution_invariants(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    post_bundle = apply_phase2_write_pilot_execution(_build(root), _post_pilot_execution_slice())
+    reviewed = apply_phase2_write_pilot_review(post_bundle, _accepted_review_slice())
+    reviewed["execution"]["runtime_writes_performed"] = True
+
+    with pytest.raises(MLShadowScorerPhaseBundleError, match="runtime_writes_performed"):
+        verify_ml_shadow_scorer_phase_bundle_payload(reviewed, repo_root=root, expect_pilot_reviewed=True)
+
+
 def test_posture_recommended_next_stage_and_caveats_are_stable(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     bundle = _build(root)
@@ -381,19 +481,23 @@ def test_cli_smoke_for_assemble_and_verify(tmp_path: Path) -> None:
 def test_cli_verify_mode_flags_are_mutually_exclusive(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     bundle_path = _write_bundle(root)
-    cmd = [
-        sys.executable,
-        "-m",
-        "pipeline.cli",
-        "ml-shadow-scorer-phase-bundle-verify",
-        "--bundle",
-        str(bundle_path),
-        "--expect-pilot-executed",
-        "--expect-pilot-not-executed",
-    ]
-    result = subprocess.run(cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True)
 
-    assert result.returncode != 0
+    for flags in (
+        ["--expect-pilot-executed", "--expect-pilot-not-executed"],
+        ["--expect-pilot-not-executed", "--expect-pilot-reviewed"],
+        ["--expect-pilot-executed", "--expect-pilot-reviewed"],
+    ):
+        cmd = [
+            sys.executable,
+            "-m",
+            "pipeline.cli",
+            "ml-shadow-scorer-phase-bundle-verify",
+            "--bundle",
+            str(bundle_path),
+            *flags,
+        ]
+        result = subprocess.run(cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True)
+        assert result.returncode != 0
 
 
 def test_no_forbidden_imports_and_no_database_url_on_bundle_cli() -> None:

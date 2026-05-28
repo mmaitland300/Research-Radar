@@ -4,11 +4,11 @@
 
 This bundle is the canonical forward-facing Phase 2 write-path status view. It references frozen legacy artifacts by path and SHA; it does not run a pilot, enable runtime execution, or change production behavior.
 
-- Bundle revision: 2
+- Bundle revision: 3
 - Phase 2 write pilot authorized: True
 - Phase 2 writes authorized: True
 - Online shadow execution enabled: False
-- Recommended next stage: `review_online_shadow_phase2_isolated_audit_write_pilot_v1`
+- Recommended next stage: `begin_production_readiness_authorization_v1`
 
 ## Pinned Identity
 
@@ -50,7 +50,7 @@ This bundle is the canonical forward-facing Phase 2 write-path status view. It r
 ## Execution And Review
 
 - Phase 2 write pilot executed: True
-- Phase 2 write pilot reviewed: False
+- Phase 2 write pilot reviewed: True
 - Phase 2 write pilot passed: True
 - Pilot run id: `rank-83787b91ef-20260528T212715Z`
 - Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/rank-83787b91ef-20260528T212715Z/`
@@ -64,6 +64,15 @@ This bundle is the canonical forward-facing Phase 2 write-path status view. It r
 - `observability.json`: 2992 bytes, sha256 `dce84142bd4e8c5a02a50d5b3e2050c492ecb07da57bcf6995b698ed60e6e7cb`
 - `write_counts.json`: 565 bytes, sha256 `4484153b6a6645ad8aa4944743940e3e392ab3c4bcaed2d1ee404b4338a16b18`
 
+## Pilot Review
+
+- Phase 2 write pilot reviewed: True
+- Phase 2 write pilot accepted: True
+- Review decision: `accepted`
+- Reviewer: Matt Maitland
+- Reviewed at: 2026-05-28T21:51:02Z
+- Failed review checks: none
+
 ## Production/API/Default Separation
 
 - Production default allowed: False
@@ -74,7 +83,7 @@ This bundle is the canonical forward-facing Phase 2 write-path status view. It r
 
 ## Recommended Next Stage
 
-`review_online_shadow_phase2_isolated_audit_write_pilot_v1`
+`begin_production_readiness_authorization_v1`
 
 ## Caveats
 

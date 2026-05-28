@@ -5431,6 +5431,16 @@ def main() -> None:
         action="store_true",
         help="Require pre-pilot bundle execution fields",
     )
+    phase_bundle_verify_mode_group.add_argument(
+        "--expect-pilot-reviewed",
+        action="store_true",
+        help="Require post-review bundle fields",
+    )
+    phase_bundle_verify_mode_group.add_argument(
+        "--expect-pilot-not-reviewed",
+        action="store_true",
+        help="Require post-pilot, pre-review bundle fields",
+    )
     ml_shadow_scorer_phase2_write_pilot_parser = subparsers.add_parser(
         "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-pilot",
         help="Run the authorized bounded Phase 2 isolated audit write pilot and optionally update the bundle",
@@ -5474,6 +5484,46 @@ def main() -> None:
         help="Run the pilot without mutating the bundle",
     )
     ml_shadow_scorer_phase2_write_pilot_parser.set_defaults(update_bundle=True)
+    ml_shadow_scorer_phase2_write_pilot_review_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-phase2-write-pilot-review",
+        help="Review the completed Phase 2 isolated audit write pilot from the bundle without rerunning it",
+    )
+    ml_shadow_scorer_phase2_write_pilot_review_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to canonical Phase 2 bundle JSON",
+    )
+    ml_shadow_scorer_phase2_write_pilot_review_parser.add_argument(
+        "--reviewer",
+        default="Matt Maitland",
+        help="Reviewer name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_phase2_write_pilot_review_parser.add_argument(
+        "--review-notes",
+        default=None,
+        help="Optional free-text review notes recorded verbatim",
+    )
+    ml_shadow_scorer_phase2_write_pilot_review_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
+    phase2_write_pilot_review_update_group = (
+        ml_shadow_scorer_phase2_write_pilot_review_parser.add_mutually_exclusive_group()
+    )
+    phase2_write_pilot_review_update_group.add_argument(
+        "--update-bundle",
+        dest="update_bundle",
+        action="store_true",
+        help="Rewrite bundle.json and bundle.md after review (default)",
+    )
+    phase2_write_pilot_review_update_group.add_argument(
+        "--no-update-bundle",
+        dest="update_bundle",
+        action="store_false",
+        help="Compute review without mutating the bundle",
+    )
+    ml_shadow_scorer_phase2_write_pilot_review_parser.set_defaults(update_bundle=True)
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -8165,15 +8215,21 @@ def main() -> None:
 
         repo_root = Path(args.repo_root) if args.repo_root else None
         expect_pilot_executed = None
+        expect_pilot_reviewed = None
         if args.expect_pilot_executed:
             expect_pilot_executed = True
         elif args.expect_pilot_not_executed:
             expect_pilot_executed = False
+        elif args.expect_pilot_reviewed:
+            expect_pilot_reviewed = True
+        elif args.expect_pilot_not_reviewed:
+            expect_pilot_reviewed = False
         try:
             result = verify_ml_shadow_scorer_phase_bundle(
                 bundle_path=Path(args.bundle),
                 repo_root=repo_root,
                 expect_pilot_executed=expect_pilot_executed,
+                expect_pilot_reviewed=expect_pilot_reviewed,
             )
         except MLShadowScorerPhaseBundleError as e:
             print(f"ml-shadow-scorer-phase-bundle-verify: {e}", file=sys.stderr)
@@ -8181,6 +8237,29 @@ def main() -> None:
         print(result["verification_status"])
         print(result["verification_mode"])
         print(result["bundle_version"])
+        print(result["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-phase2-write-pilot-review":
+        from pipeline.ml_shadow_scorer_online_shadow_phase2_write_pilot_review import (
+            MLShadowScorerOnlineShadowPhase2WritePilotReviewError,
+            review_ml_shadow_scorer_online_shadow_phase2_write_pilot,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = review_ml_shadow_scorer_online_shadow_phase2_write_pilot(
+                bundle_path=Path(args.bundle),
+                reviewer=str(args.reviewer),
+                review_notes=args.review_notes,
+                repo_root=repo_root,
+                update_bundle=bool(args.update_bundle),
+            )
+        except MLShadowScorerOnlineShadowPhase2WritePilotReviewError as e:
+            print(f"ml-shadow-scorer-online-shadow-phase2-write-pilot-review: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["review"]["review_decision"]["decision"])
+        print(result["phase2_write_pilot_accepted"])
         print(result["recommended_next_stage"])
         return
 

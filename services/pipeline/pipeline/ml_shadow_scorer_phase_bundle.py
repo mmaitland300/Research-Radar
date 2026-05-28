@@ -25,6 +25,9 @@ RECOMMENDED_NEXT_STAGE = "run_online_shadow_phase2_isolated_audit_write_pilot_v1
 POST_PILOT_REVIEW_NEXT_STAGE = "review_online_shadow_phase2_isolated_audit_write_pilot_v1"
 POST_PILOT_REMEDIATE_NEXT_STAGE = "remediate_online_shadow_phase2_isolated_audit_write_pilot_v1"
 POST_PILOT_BUNDLE_REVISION = 2
+POST_REVIEW_ACCEPTED_NEXT_STAGE = "begin_production_readiness_authorization_v1"
+POST_REVIEW_REMEDIATE_NEXT_STAGE = "remediate_online_shadow_phase2_write_pilot_v1"
+POST_REVIEW_BUNDLE_REVISION = 3
 
 PINNED_IDENTITY: dict[str, str] = {
     "ranking_run_id": "rank-83787b91ef",
@@ -470,10 +473,56 @@ def apply_phase2_write_pilot_execution(
     return updated
 
 
-def _infer_expected_pilot_executed(bundle: Mapping[str, Any], expect_pilot_executed: bool | None) -> bool:
-    if expect_pilot_executed is not None:
-        return expect_pilot_executed
-    return _get(bundle, "execution.phase2_write_pilot_executed") is True
+def apply_phase2_write_pilot_review(
+    bundle: Mapping[str, Any],
+    review_slice: Mapping[str, Any],
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(review_slice, Mapping):
+        raise MLShadowScorerPhaseBundleError("review_slice must be an object")
+    updated = deepcopy(dict(bundle))
+    execution_before = deepcopy(updated.get("execution"))
+    metadata = deepcopy(dict(_metadata(updated, label="phase bundle")))
+    legacy_index_before = deepcopy(metadata.get("legacy_artifacts_index"))
+    metadata["bundle_revision"] = POST_REVIEW_BUNDLE_REVISION
+    metadata["generated_at"] = generated_at or str(_get(review_slice, "review_decision.reviewed_at") or _now_iso_z())
+    if metadata.get("legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerPhaseBundleError("legacy_artifacts_index must remain unchanged")
+    updated["metadata"] = metadata
+    updated["review"] = deepcopy(dict(review_slice))
+    if updated.get("execution") != execution_before:
+        raise MLShadowScorerPhaseBundleError("apply_phase2_write_pilot_review must not modify execution")
+    decision = _get(review_slice, "review_decision.decision")
+    updated["recommended_next_stage"] = (
+        POST_REVIEW_ACCEPTED_NEXT_STAGE
+        if decision == "accepted"
+        else POST_REVIEW_REMEDIATE_NEXT_STAGE
+    )
+    return updated
+
+
+def _infer_verification_mode(
+    bundle: Mapping[str, Any],
+    *,
+    expect_pilot_executed: bool | None,
+    expect_pilot_reviewed: bool | None,
+) -> str:
+    if expect_pilot_executed is False and expect_pilot_reviewed is not None:
+        raise MLShadowScorerPhaseBundleError("pilot execution/review expectations conflict")
+    if expect_pilot_reviewed is True:
+        return "post_review"
+    if expect_pilot_reviewed is False:
+        return "post_pilot"
+    if expect_pilot_executed is True:
+        return "post_pilot"
+    if expect_pilot_executed is False:
+        return "pre_pilot"
+    if _get(bundle, "review.phase2_write_pilot_reviewed") is True:
+        return "post_review"
+    if _get(bundle, "execution.phase2_write_pilot_executed") is True:
+        return "post_pilot"
+    return "pre_pilot"
 
 
 def _verify_pre_pilot_execution_and_next_stage(
@@ -491,11 +540,9 @@ def _verify_pre_pilot_execution_and_next_stage(
     _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), RECOMMENDED_NEXT_STAGE)
 
 
-def _verify_post_pilot_execution_and_next_stage(
+def _verify_post_pilot_execution_invariants(
     *,
-    bundle: Mapping[str, Any],
     execution: Mapping[str, Any],
-    review_section: Mapping[str, Any],
 ) -> None:
     _require_true("bundle execution.phase2_write_pilot_executed", execution.get("phase2_write_pilot_executed"))
     if not isinstance(execution.get("pilot_run_id"), str) or not execution.get("pilot_run_id"):
@@ -518,6 +565,15 @@ def _verify_post_pilot_execution_and_next_stage(
         "bundle execution.write_count_verification.forbidden_targets_zero",
         write_counts.get("forbidden_targets_zero"),
     )
+
+
+def _verify_post_pilot_execution_and_next_stage(
+    *,
+    bundle: Mapping[str, Any],
+    execution: Mapping[str, Any],
+    review_section: Mapping[str, Any],
+) -> None:
+    _verify_post_pilot_execution_invariants(execution=execution)
     _require_false("bundle review.phase2_write_pilot_reviewed", review_section.get("phase2_write_pilot_reviewed"))
     _require_equal("bundle review.phase2_write_pilot_accepted", review_section.get("phase2_write_pilot_accepted"), None)
     if execution.get("phase2_write_pilot_passed") is True:
@@ -530,11 +586,52 @@ def _verify_post_pilot_execution_and_next_stage(
         )
 
 
+def _verify_post_review_execution_invariants(execution: Mapping[str, Any]) -> None:
+    _verify_post_pilot_execution_invariants(execution=execution)
+    _require_true("bundle execution.phase2_write_pilot_passed", execution.get("phase2_write_pilot_passed"))
+    _require_equal(
+        "bundle execution.input_join_summary.joined_candidate_count",
+        _get(execution, "input_join_summary.joined_candidate_count"),
+        528,
+    )
+    _require_true("bundle execution.disable_drill.passed", _get(execution, "disable_drill.passed"))
+    _require_false("bundle execution.runtime_writes_performed", execution.get("runtime_writes_performed"))
+    _require_false("bundle execution.production_default_changed", execution.get("production_default_changed"))
+    _require_false("bundle execution.user_visible_ranking_changed", execution.get("user_visible_ranking_changed"))
+    _require_false("bundle execution.api_web_changes_allowed", execution.get("api_web_changes_allowed"))
+    _require_false("bundle execution.labels_used_for_scoring", execution.get("labels_used_for_scoring"))
+
+
+def _verify_post_review_and_next_stage(
+    *,
+    bundle: Mapping[str, Any],
+    execution: Mapping[str, Any],
+    review_section: Mapping[str, Any],
+) -> None:
+    _verify_post_review_execution_invariants(execution)
+    _require_true("bundle review.phase2_write_pilot_reviewed", review_section.get("phase2_write_pilot_reviewed"))
+    if not isinstance(review_section.get("phase2_write_pilot_accepted"), bool):
+        raise MLShadowScorerPhaseBundleError("bundle review.phase2_write_pilot_accepted must be bool")
+    decision = _get(review_section, "review_decision.decision")
+    if decision not in {"accepted", "not_accepted"}:
+        raise MLShadowScorerPhaseBundleError("bundle review.review_decision.decision must be accepted or not_accepted")
+    checks = _get(review_section, "review_decision.checks")
+    if not isinstance(checks, Mapping) or not checks:
+        raise MLShadowScorerPhaseBundleError("bundle review.review_decision.checks must be present and non-empty")
+    if decision == "accepted":
+        _require_true("bundle review.phase2_write_pilot_accepted", review_section.get("phase2_write_pilot_accepted"))
+        _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), POST_REVIEW_ACCEPTED_NEXT_STAGE)
+    else:
+        _require_false("bundle review.phase2_write_pilot_accepted", review_section.get("phase2_write_pilot_accepted"))
+        _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), POST_REVIEW_REMEDIATE_NEXT_STAGE)
+
+
 def verify_ml_shadow_scorer_phase_bundle_payload(
     bundle: Mapping[str, Any],
     *,
     repo_root: Path | None = None,
     expect_pilot_executed: bool | None = None,
+    expect_pilot_reviewed: bool | None = None,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     metadata = _metadata(bundle, label="phase bundle")
@@ -657,20 +754,32 @@ def verify_ml_shadow_scorer_phase_bundle_payload(
         raise MLShadowScorerPhaseBundleError("execution must be an object")
     if not isinstance(review_section, Mapping):
         raise MLShadowScorerPhaseBundleError("review must be an object")
-    pilot_executed = _infer_expected_pilot_executed(bundle, expect_pilot_executed)
-    if pilot_executed:
+    verification_mode = _infer_verification_mode(
+        bundle,
+        expect_pilot_executed=expect_pilot_executed,
+        expect_pilot_reviewed=expect_pilot_reviewed,
+    )
+    if verification_mode == "post_review":
+        _verify_post_review_and_next_stage(
+            bundle=bundle,
+            execution=execution,
+            review_section=review_section,
+        )
+    elif verification_mode == "post_pilot":
         _verify_post_pilot_execution_and_next_stage(
             bundle=bundle,
             execution=execution,
             review_section=review_section,
         )
-    else:
+    elif verification_mode == "pre_pilot":
         _verify_pre_pilot_execution_and_next_stage(
             bundle=bundle,
             execution=execution,
             review_section=review_section,
             grant=grant,
         )
+    else:  # pragma: no cover - defensive closed set guard
+        raise MLShadowScorerPhaseBundleError(f"unknown verification mode {verification_mode!r}")
     posture_required = {
         "online_shadow_execution_enabled": False,
         "runtime_execution_authorized": True,
@@ -701,7 +810,7 @@ def verify_ml_shadow_scorer_phase_bundle_payload(
         raise MLShadowScorerPhaseBundleError("bundle caveats must be present")
     return {
         "verification_status": "passed",
-        "verification_mode": "post_pilot" if pilot_executed else "pre_pilot",
+        "verification_mode": verification_mode,
         "bundle_version": metadata.get("bundle_version"),
         "bundle_revision": revision,
         "recommended_next_stage": bundle.get("recommended_next_stage"),
@@ -714,12 +823,14 @@ def verify_ml_shadow_scorer_phase_bundle(
     bundle_path: Path,
     repo_root: Path | None = None,
     expect_pilot_executed: bool | None = None,
+    expect_pilot_reviewed: bool | None = None,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
     return verify_ml_shadow_scorer_phase_bundle_payload(
         payload,
         repo_root=repo_root,
         expect_pilot_executed=expect_pilot_executed,
+        expect_pilot_reviewed=expect_pilot_reviewed,
     )
 
 
@@ -805,6 +916,24 @@ def markdown_from_ml_shadow_scorer_phase_bundle(payload: Mapping[str, Any]) -> s
                     lines.append(
                         f"- `{record.get('relative_path')}`: {record.get('byte_count')} bytes, sha256 `{record.get('sha256')}`"
                     )
+    lines.extend(
+        [
+            "",
+            "## Pilot Review",
+            "",
+            f"- Phase 2 write pilot reviewed: {review.get('phase2_write_pilot_reviewed')}",
+            f"- Phase 2 write pilot accepted: {review.get('phase2_write_pilot_accepted')}",
+        ]
+    )
+    if review.get("phase2_write_pilot_reviewed") is True:
+        lines.extend(
+            [
+                f"- Review decision: `{_get(review, 'review_decision.decision')}`",
+                f"- Reviewer: {_get(review, 'review_decision.reviewer')}",
+                f"- Reviewed at: {_get(review, 'review_decision.reviewed_at')}",
+                f"- Failed review checks: {', '.join(_get(review, 'review_decision.failed_review_checks') or []) or 'none'}",
+            ]
+        )
     lines.extend(
         [
             "",

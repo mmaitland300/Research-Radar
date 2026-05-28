@@ -325,9 +325,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_phase_bundle",
-    "bundle_revision": 2,
+    "bundle_revision": 3,
     "bundle_version": "online-shadow-phase2-v1",
-    "generated_at": "2026-05-28T21:27:15Z",
+    "generated_at": "2026-05-28T21:51:02Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1.json",
@@ -406,10 +406,42 @@
     "shadow_scoring_allowed": true,
     "user_visible_ranking_changed": false
   },
-  "recommended_next_stage": "review_online_shadow_phase2_isolated_audit_write_pilot_v1",
+  "recommended_next_stage": "begin_production_readiness_authorization_v1",
   "review": {
-    "phase2_write_pilot_accepted": null,
-    "phase2_write_pilot_reviewed": false
+    "phase2_write_pilot_accepted": true,
+    "phase2_write_pilot_reviewed": true,
+    "review_decision": {
+      "accepted_evidence": [
+        "Phase 2 write pilot passed all pass/fail checks",
+        "528 rows scored and persisted in isolated audit tree",
+        "Forbidden write targets all zero; isolated_audit_shadow_tables zero",
+        "runtime_writes_performed false; runtime flag scoped to process only",
+        "Disable drill passed; environment restored; correct call order",
+        "No production/API/user-visible changes; labels not used"
+      ],
+      "checks": {
+        "complete_row_coverage": true,
+        "disable_drill_passed": true,
+        "forbidden_write_targets_zero": true,
+        "isolated_files_written": true,
+        "labels_not_used": true,
+        "observability_policy_contract_satisfied": true,
+        "pass_fail_evaluation_passed": true,
+        "pilot_runtime_succeeded": true,
+        "production_api_user_visible_unchanged": true,
+        "runtime_writes_false": true
+      },
+      "decision": "accepted",
+      "failed_review_checks": [],
+      "limitations": [
+        "Review is of isolated audit file-tree pilot only; not production shadow",
+        "online_shadow_execution_enabled remains false globally",
+        "Production readiness authorization remains separate and missing"
+      ],
+      "review_notes": null,
+      "reviewed_at": "2026-05-28T21:51:02Z",
+      "reviewer": "Matt Maitland"
+    }
   },
   "shadow_and_production_blockers": {
     "api_web_changes_allowed": false,

@@ -26,8 +26,8 @@ jobs:
       - name: Run Python unit tests
         run: pytest services/pipeline/tests apps/api/tests -q
 
-      - name: Verify Phase 2 bundle (post-pilot)
-        run: python -m pipeline.cli ml-shadow-scorer-phase-bundle-verify --bundle ../../docs/audit/bundles/phase2-v1/bundle.json --expect-pilot-executed
+      - name: Verify Phase 2 bundle (post-review)
+        run: python -m pipeline.cli ml-shadow-scorer-phase-bundle-verify --bundle ../../docs/audit/bundles/phase2-v1/bundle.json --expect-pilot-reviewed
         working-directory: services/pipeline
 
   web-build:
