@@ -14,6 +14,7 @@ import pytest
 
 from pipeline.ml_shadow_scorer_phase_bundle import (
     MLShadowScorerPhaseBundleError,
+    apply_phase2_write_pilot_execution,
     assemble_ml_shadow_scorer_phase_bundle_payload,
     verify_ml_shadow_scorer_phase_bundle,
     verify_ml_shadow_scorer_phase_bundle_payload,
@@ -97,6 +98,54 @@ def _shadow_runs_files(root: Path) -> set[str]:
     return {str(path.relative_to(root)).replace("\\", "/") for path in shadow_root.rglob("*") if path.is_file()}
 
 
+def _post_pilot_execution_slice() -> dict[str, Any]:
+    return {
+        "phase2_write_pilot_executed": True,
+        "phase2_write_pilot_passed": True,
+        "phase2_write_pilot_run": {
+            "pilot_run_id": "post-pilot-fixture",
+            "status": "succeeded_test_only",
+            "shadow_row_count": 528,
+            "expected_shadow_row_count": 528,
+        },
+        "pilot_run_id": "post-pilot-fixture",
+        "pilot_run_directory": {
+            "root_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/",
+            "relative_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/post-pilot-fixture/",
+            "resolved_path": "not-required-in-ci",
+            "local_gitignored": True,
+        },
+        "isolated_file_writes": {
+            "files_written": [
+                {
+                    "relative_path": "manifest.json",
+                    "byte_count": 10,
+                    "sha256": "a" * 64,
+                    "row_count": None,
+                    "write_target": "isolated_audit_shadow_artifacts",
+                }
+            ],
+            "file_count": 1,
+            "bytes_written": 10,
+            "write_target": "isolated_audit_shadow_artifacts",
+            "pilot_directory_retained_for_inspection": True,
+        },
+        "write_count_verification": {
+            "forbidden_targets_zero": True,
+            "forbidden_nonzero_write_counts": {},
+            "write_counts_by_isolated_target": {
+                "isolated_audit_shadow_artifacts": 1,
+                "isolated_audit_shadow_tables": 0,
+                "ranking_runs": 0,
+            },
+        },
+        "pilot_runtime_summary": {"status": "succeeded_test_only", "shadow_row_count": 528},
+        "disable_drill": {"passed": True, "environment_restored": True},
+        "cleanup_performed": False,
+        "executed_at": "2026-05-28T23:00:00Z",
+    }
+
+
 def test_happy_path_assembles_bundle_json_markdown_from_committed_fixtures(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     out_json = root / "docs/audit/bundles/phase2-v1/bundle.json"
@@ -135,6 +184,7 @@ def test_verify_command_passes_on_assembled_bundle(tmp_path: Path) -> None:
     result = verify_ml_shadow_scorer_phase_bundle(bundle_path=bundle_path, repo_root=root)
 
     assert result["verification_status"] == "passed"
+    assert result["verification_mode"] == "pre_pilot"
     assert result["bundle_version"] == "online-shadow-phase2-v1"
     assert result["recommended_next_stage"] == "run_online_shadow_phase2_isolated_audit_write_pilot_v1"
 
@@ -221,7 +271,30 @@ def test_rejects_bundle_with_phase2_write_pilot_executed_true_before_pilot_pr(tm
     bundle["execution"]["phase2_write_pilot_executed"] = True
 
     with pytest.raises(MLShadowScorerPhaseBundleError, match="phase2_write_pilot_executed"):
-        verify_ml_shadow_scorer_phase_bundle_payload(bundle, repo_root=root)
+        verify_ml_shadow_scorer_phase_bundle_payload(bundle, repo_root=root, expect_pilot_executed=False)
+
+
+def test_verify_modes_accept_pre_and_post_pilot_bundles(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    pre_bundle = _build(root)
+    pre_result = verify_ml_shadow_scorer_phase_bundle_payload(
+        pre_bundle,
+        repo_root=root,
+        expect_pilot_executed=False,
+    )
+    post_bundle = apply_phase2_write_pilot_execution(pre_bundle, _post_pilot_execution_slice())
+    post_result = verify_ml_shadow_scorer_phase_bundle_payload(
+        post_bundle,
+        repo_root=root,
+        expect_pilot_executed=True,
+    )
+    inferred_post_result = verify_ml_shadow_scorer_phase_bundle_payload(post_bundle, repo_root=root)
+
+    assert pre_result["verification_mode"] == "pre_pilot"
+    assert post_result["verification_mode"] == "post_pilot"
+    assert inferred_post_result["verification_mode"] == "post_pilot"
+    assert post_bundle["metadata"]["bundle_revision"] == 2
+    assert post_bundle["recommended_next_stage"] == "review_online_shadow_phase2_isolated_audit_write_pilot_v1"
 
 
 def test_posture_recommended_next_stage_and_caveats_are_stable(tmp_path: Path) -> None:
@@ -292,15 +365,35 @@ def test_cli_smoke_for_assemble_and_verify(tmp_path: Path) -> None:
         "ml-shadow-scorer-phase-bundle-verify",
         "--bundle",
         str(out_json),
+        "--expect-pilot-not-executed",
         "--repo-root",
         str(root),
     ]
     verify = subprocess.run(verify_cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True, check=True)
     assert verify.stdout.splitlines() == [
         "passed",
+        "pre_pilot",
         "online-shadow-phase2-v1",
         "run_online_shadow_phase2_isolated_audit_write_pilot_v1",
     ]
+
+
+def test_cli_verify_mode_flags_are_mutually_exclusive(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_bundle(root)
+    cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-phase-bundle-verify",
+        "--bundle",
+        str(bundle_path),
+        "--expect-pilot-executed",
+        "--expect-pilot-not-executed",
+    ]
+    result = subprocess.run(cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True)
+
+    assert result.returncode != 0
 
 
 def test_no_forbidden_imports_and_no_database_url_on_bundle_cli() -> None:

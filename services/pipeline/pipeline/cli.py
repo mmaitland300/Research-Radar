@@ -5420,6 +5420,60 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    phase_bundle_verify_mode_group = ml_shadow_scorer_phase_bundle_verify_parser.add_mutually_exclusive_group()
+    phase_bundle_verify_mode_group.add_argument(
+        "--expect-pilot-executed",
+        action="store_true",
+        help="Require post-pilot bundle execution fields",
+    )
+    phase_bundle_verify_mode_group.add_argument(
+        "--expect-pilot-not-executed",
+        action="store_true",
+        help="Require pre-pilot bundle execution fields",
+    )
+    ml_shadow_scorer_phase2_write_pilot_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-pilot",
+        help="Run the authorized bounded Phase 2 isolated audit write pilot and optionally update the bundle",
+    )
+    ml_shadow_scorer_phase2_write_pilot_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to canonical Phase 2 bundle JSON",
+    )
+    ml_shadow_scorer_phase2_write_pilot_parser.add_argument(
+        "--learned-probability-artifact",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-surface-learned-probability-v1 JSON",
+    )
+    ml_shadow_scorer_phase2_write_pilot_parser.add_argument(
+        "--second-surface-generalization-audit",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-surface-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_phase2_write_pilot_parser.add_argument(
+        "--pilot-run-id",
+        default=None,
+        help="Optional safe pilot run id (default: generated from scorer identity and UTC timestamp)",
+    )
+    ml_shadow_scorer_phase2_write_pilot_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references and pilot output",
+    )
+    phase2_write_pilot_update_group = ml_shadow_scorer_phase2_write_pilot_parser.add_mutually_exclusive_group()
+    phase2_write_pilot_update_group.add_argument(
+        "--update-bundle",
+        dest="update_bundle",
+        action="store_true",
+        help="Rewrite bundle.json and bundle.md after a successful pilot (default)",
+    )
+    phase2_write_pilot_update_group.add_argument(
+        "--no-update-bundle",
+        dest="update_bundle",
+        action="store_false",
+        help="Run the pilot without mutating the bundle",
+    )
+    ml_shadow_scorer_phase2_write_pilot_parser.set_defaults(update_bundle=True)
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -8110,16 +8164,47 @@ def main() -> None:
         )
 
         repo_root = Path(args.repo_root) if args.repo_root else None
+        expect_pilot_executed = None
+        if args.expect_pilot_executed:
+            expect_pilot_executed = True
+        elif args.expect_pilot_not_executed:
+            expect_pilot_executed = False
         try:
             result = verify_ml_shadow_scorer_phase_bundle(
                 bundle_path=Path(args.bundle),
                 repo_root=repo_root,
+                expect_pilot_executed=expect_pilot_executed,
             )
         except MLShadowScorerPhaseBundleError as e:
             print(f"ml-shadow-scorer-phase-bundle-verify: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(result["verification_status"])
+        print(result["verification_mode"])
         print(result["bundle_version"])
+        print(result["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-pilot":
+        from pipeline.ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_pilot import (
+            MLShadowScorerOnlineShadowPhase2IsolatedAuditWritePilotError,
+            run_ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_pilot,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = run_ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_pilot(
+                bundle_path=Path(args.bundle),
+                learned_probability_artifact_path=Path(args.learned_probability_artifact),
+                second_surface_generalization_audit_path=Path(args.second_surface_generalization_audit),
+                pilot_run_id=args.pilot_run_id,
+                repo_root=repo_root,
+                update_bundle=bool(args.update_bundle),
+            )
+        except MLShadowScorerOnlineShadowPhase2IsolatedAuditWritePilotError as e:
+            print(f"ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-pilot: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["pilot_run_id"])
+        print(result["phase2_write_pilot_passed"])
         print(result["recommended_next_stage"])
         return
 

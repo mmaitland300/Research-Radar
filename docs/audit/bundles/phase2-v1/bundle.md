@@ -4,20 +4,20 @@
 
 This bundle is the canonical forward-facing Phase 2 write-path status view. It references frozen legacy artifacts by path and SHA; it does not run a pilot, enable runtime execution, or change production behavior.
 
-- Bundle revision: 1
+- Bundle revision: 2
 - Phase 2 write pilot authorized: True
 - Phase 2 writes authorized: True
 - Online shadow execution enabled: False
-- Recommended next stage: `run_online_shadow_phase2_isolated_audit_write_pilot_v1`
+- Recommended next stage: `review_online_shadow_phase2_isolated_audit_write_pilot_v1`
 
 ## Pinned Identity
 
-- ranking_run_id: `rank-83787b91ef`
-- family: `emerging`
+- candidate_pool_work_set_sha256: `f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc`
 - corpus_snapshot_version: `source-snapshot-shadow-generalization-v1-20260521`
 - embedding_version: `shadow-generalization-text-embedding-v1`
-- candidate_pool_work_set_sha256: `f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc`
+- family: `emerging`
 - formula_id: `hybrid_rank_mean_50_50`
+- ranking_run_id: `rank-83787b91ef`
 - scorer_id: `ml-shadow-scorer-v1`
 
 ## Legacy Artifact Index
@@ -49,8 +49,20 @@ This bundle is the canonical forward-facing Phase 2 write-path status view. It r
 
 ## Execution And Review
 
-- Phase 2 write pilot executed: False
+- Phase 2 write pilot executed: True
 - Phase 2 write pilot reviewed: False
+- Phase 2 write pilot passed: True
+- Pilot run id: `rank-83787b91ef-20260528T212715Z`
+- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/rank-83787b91ef-20260528T212715Z/`
+- Isolated files written: 4
+- Forbidden write targets zero: True
+
+### Pilot Files
+
+- `manifest.json`: 1759 bytes, sha256 `92d15c6f09224c6a6b3ecaf24c3517f8e6c6d9de6a00fb603d2588f8def4735b`
+- `shadow_rows.jsonl`: 355191 bytes, sha256 `2e7846c7520038f5f4f8847cba0cc512e57dad16b263caca559359061fb26256`
+- `observability.json`: 2992 bytes, sha256 `dce84142bd4e8c5a02a50d5b3e2050c492ecb07da57bcf6995b698ed60e6e7cb`
+- `write_counts.json`: 565 bytes, sha256 `4484153b6a6645ad8aa4944743940e3e392ab3c4bcaed2d1ee404b4338a16b18`
 
 ## Production/API/Default Separation
 
@@ -62,7 +74,7 @@ This bundle is the canonical forward-facing Phase 2 write-path status view. It r
 
 ## Recommended Next Stage
 
-`run_online_shadow_phase2_isolated_audit_write_pilot_v1`
+`review_online_shadow_phase2_isolated_audit_write_pilot_v1`
 
 ## Caveats
 

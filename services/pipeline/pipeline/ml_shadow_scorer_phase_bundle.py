@@ -22,6 +22,9 @@ ARTIFACT_TYPE = "ml_shadow_scorer_phase_bundle"
 BUNDLE_VERSION = "online-shadow-phase2-v1"
 BUNDLE_REVISION = 1
 RECOMMENDED_NEXT_STAGE = "run_online_shadow_phase2_isolated_audit_write_pilot_v1"
+POST_PILOT_REVIEW_NEXT_STAGE = "review_online_shadow_phase2_isolated_audit_write_pilot_v1"
+POST_PILOT_REMEDIATE_NEXT_STAGE = "remediate_online_shadow_phase2_isolated_audit_write_pilot_v1"
+POST_PILOT_BUNDLE_REVISION = 2
 
 PINNED_IDENTITY: dict[str, str] = {
     "ranking_run_id": "rank-83787b91ef",
@@ -439,10 +442,99 @@ def _resolve_bundle_pointer(pointer: str, *, grant: Mapping[str, Any]) -> Any:
     return grant.get("proof_summary")
 
 
+def apply_phase2_write_pilot_execution(
+    bundle: Mapping[str, Any],
+    execution_slice: Mapping[str, Any],
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(execution_slice, Mapping):
+        raise MLShadowScorerPhaseBundleError("execution_slice must be an object")
+    updated = deepcopy(dict(bundle))
+    metadata = deepcopy(dict(_metadata(updated, label="phase bundle")))
+    legacy_index_before = deepcopy(metadata.get("legacy_artifacts_index"))
+    metadata["bundle_revision"] = POST_PILOT_BUNDLE_REVISION
+    metadata["generated_at"] = generated_at or str(execution_slice.get("executed_at") or _now_iso_z())
+    if metadata.get("legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerPhaseBundleError("legacy_artifacts_index must remain unchanged")
+    updated["metadata"] = metadata
+    updated["execution"] = deepcopy(dict(execution_slice))
+    review_section = updated.get("review")
+    if not isinstance(review_section, Mapping):
+        raise MLShadowScorerPhaseBundleError("review must be an object")
+    updated["review"] = deepcopy(dict(review_section))
+    pilot_passed = execution_slice.get("phase2_write_pilot_passed") is True
+    updated["recommended_next_stage"] = (
+        POST_PILOT_REVIEW_NEXT_STAGE if pilot_passed else POST_PILOT_REMEDIATE_NEXT_STAGE
+    )
+    return updated
+
+
+def _infer_expected_pilot_executed(bundle: Mapping[str, Any], expect_pilot_executed: bool | None) -> bool:
+    if expect_pilot_executed is not None:
+        return expect_pilot_executed
+    return _get(bundle, "execution.phase2_write_pilot_executed") is True
+
+
+def _verify_pre_pilot_execution_and_next_stage(
+    *,
+    bundle: Mapping[str, Any],
+    execution: Mapping[str, Any],
+    review_section: Mapping[str, Any],
+    grant: Mapping[str, Any],
+) -> None:
+    _require_false("bundle execution.phase2_write_pilot_executed", execution.get("phase2_write_pilot_executed"))
+    _require_equal("bundle execution.phase2_write_pilot_run", execution.get("phase2_write_pilot_run"), None)
+    _require_false("bundle review.phase2_write_pilot_reviewed", review_section.get("phase2_write_pilot_reviewed"))
+    _require_equal("bundle review.phase2_write_pilot_accepted", review_section.get("phase2_write_pilot_accepted"), None)
+    _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), grant.get("recommended_next_stage"))
+    _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), RECOMMENDED_NEXT_STAGE)
+
+
+def _verify_post_pilot_execution_and_next_stage(
+    *,
+    bundle: Mapping[str, Any],
+    execution: Mapping[str, Any],
+    review_section: Mapping[str, Any],
+) -> None:
+    _require_true("bundle execution.phase2_write_pilot_executed", execution.get("phase2_write_pilot_executed"))
+    if not isinstance(execution.get("pilot_run_id"), str) or not execution.get("pilot_run_id"):
+        raise MLShadowScorerPhaseBundleError("bundle execution.pilot_run_id must be populated")
+    if not isinstance(execution.get("pilot_run_directory"), Mapping):
+        raise MLShadowScorerPhaseBundleError("bundle execution.pilot_run_directory must be populated")
+    isolated_writes = execution.get("isolated_file_writes")
+    if not isinstance(isolated_writes, Mapping):
+        raise MLShadowScorerPhaseBundleError("bundle execution.isolated_file_writes must be an object")
+    files_written = isolated_writes.get("files_written")
+    if not isinstance(files_written, list) or not files_written:
+        raise MLShadowScorerPhaseBundleError("bundle execution.isolated_file_writes.files_written must be populated")
+    file_count = isolated_writes.get("file_count")
+    if not isinstance(file_count, int) or file_count < 1:
+        raise MLShadowScorerPhaseBundleError("bundle execution.isolated_file_writes.file_count must be >= 1")
+    write_counts = execution.get("write_count_verification")
+    if not isinstance(write_counts, Mapping):
+        raise MLShadowScorerPhaseBundleError("bundle execution.write_count_verification must be an object")
+    _require_true(
+        "bundle execution.write_count_verification.forbidden_targets_zero",
+        write_counts.get("forbidden_targets_zero"),
+    )
+    _require_false("bundle review.phase2_write_pilot_reviewed", review_section.get("phase2_write_pilot_reviewed"))
+    _require_equal("bundle review.phase2_write_pilot_accepted", review_section.get("phase2_write_pilot_accepted"), None)
+    if execution.get("phase2_write_pilot_passed") is True:
+        _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), POST_PILOT_REVIEW_NEXT_STAGE)
+    else:
+        _require_equal(
+            "bundle recommended_next_stage",
+            bundle.get("recommended_next_stage"),
+            POST_PILOT_REMEDIATE_NEXT_STAGE,
+        )
+
+
 def verify_ml_shadow_scorer_phase_bundle_payload(
     bundle: Mapping[str, Any],
     *,
     repo_root: Path | None = None,
+    expect_pilot_executed: bool | None = None,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     metadata = _metadata(bundle, label="phase bundle")
@@ -565,10 +657,20 @@ def verify_ml_shadow_scorer_phase_bundle_payload(
         raise MLShadowScorerPhaseBundleError("execution must be an object")
     if not isinstance(review_section, Mapping):
         raise MLShadowScorerPhaseBundleError("review must be an object")
-    _require_false("bundle execution.phase2_write_pilot_executed", execution.get("phase2_write_pilot_executed"))
-    _require_equal("bundle execution.phase2_write_pilot_run", execution.get("phase2_write_pilot_run"), None)
-    _require_false("bundle review.phase2_write_pilot_reviewed", review_section.get("phase2_write_pilot_reviewed"))
-    _require_equal("bundle review.phase2_write_pilot_accepted", review_section.get("phase2_write_pilot_accepted"), None)
+    pilot_executed = _infer_expected_pilot_executed(bundle, expect_pilot_executed)
+    if pilot_executed:
+        _verify_post_pilot_execution_and_next_stage(
+            bundle=bundle,
+            execution=execution,
+            review_section=review_section,
+        )
+    else:
+        _verify_pre_pilot_execution_and_next_stage(
+            bundle=bundle,
+            execution=execution,
+            review_section=review_section,
+            grant=grant,
+        )
     posture_required = {
         "online_shadow_execution_enabled": False,
         "runtime_execution_authorized": True,
@@ -597,10 +699,9 @@ def verify_ml_shadow_scorer_phase_bundle_payload(
     caveats = bundle.get("caveats")
     if not isinstance(caveats, list) or len(caveats) < len(CAVEATS):
         raise MLShadowScorerPhaseBundleError("bundle caveats must be present")
-    _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), grant.get("recommended_next_stage"))
-    _require_equal("bundle recommended_next_stage", bundle.get("recommended_next_stage"), RECOMMENDED_NEXT_STAGE)
     return {
         "verification_status": "passed",
+        "verification_mode": "post_pilot" if pilot_executed else "pre_pilot",
         "bundle_version": metadata.get("bundle_version"),
         "bundle_revision": revision,
         "recommended_next_stage": bundle.get("recommended_next_stage"),
@@ -612,9 +713,14 @@ def verify_ml_shadow_scorer_phase_bundle(
     *,
     bundle_path: Path,
     repo_root: Path | None = None,
+    expect_pilot_executed: bool | None = None,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
-    return verify_ml_shadow_scorer_phase_bundle_payload(payload, repo_root=repo_root)
+    return verify_ml_shadow_scorer_phase_bundle_payload(
+        payload,
+        repo_root=repo_root,
+        expect_pilot_executed=expect_pilot_executed,
+    )
 
 
 def markdown_from_ml_shadow_scorer_phase_bundle(payload: Mapping[str, Any]) -> str:
@@ -677,6 +783,30 @@ def markdown_from_ml_shadow_scorer_phase_bundle(payload: Mapping[str, Any]) -> s
             "",
             f"- Phase 2 write pilot executed: {execution['phase2_write_pilot_executed']}",
             f"- Phase 2 write pilot reviewed: {review['phase2_write_pilot_reviewed']}",
+        ]
+    )
+    if execution.get("phase2_write_pilot_executed") is True:
+        lines.extend(
+            [
+                f"- Phase 2 write pilot passed: {execution.get('phase2_write_pilot_passed')}",
+                f"- Pilot run id: `{execution.get('pilot_run_id')}`",
+                f"- Pilot run directory: `{_get(execution, 'pilot_run_directory.relative_path')}`",
+                f"- Isolated files written: {_get(execution, 'isolated_file_writes.file_count')}",
+                f"- Forbidden write targets zero: {_get(execution, 'write_count_verification.forbidden_targets_zero')}",
+                "",
+                "### Pilot Files",
+                "",
+            ]
+        )
+        files_written = _get(execution, "isolated_file_writes.files_written")
+        if isinstance(files_written, list):
+            for record in files_written:
+                if isinstance(record, Mapping):
+                    lines.append(
+                        f"- `{record.get('relative_path')}`: {record.get('byte_count')} bytes, sha256 `{record.get('sha256')}`"
+                    )
+    lines.extend(
+        [
             "",
             "## Production/API/Default Separation",
             "",

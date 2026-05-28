@@ -42,14 +42,292 @@
     "proof_summary_ref": "phase2_write_authorization_grant.proof_summary"
   },
   "execution": {
-    "phase2_write_pilot_executed": false,
-    "phase2_write_pilot_run": null
+    "api_web_changes_allowed": false,
+    "cleanup_performed": false,
+    "disable_drill": {
+      "call_order": [
+        "preflight_disabled",
+        "pilot_enabled",
+        "postflight_disabled"
+      ],
+      "environment_restored": true,
+      "passed": true,
+      "postflight": {
+        "elapsed_ms": 0.014699995517730713,
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
+        "runtime_enabled": false,
+        "runtime_errors": [],
+        "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+        "runtime_feature_flag_value": null,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "write_count": 0,
+        "writes_performed": false
+      },
+      "preflight": {
+        "elapsed_ms": 0.03300001844763756,
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
+        "runtime_enabled": false,
+        "runtime_errors": [],
+        "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+        "runtime_feature_flag_value": null,
+        "shadow_row_count": 0,
+        "status": "skipped_runtime_disabled",
+        "user_visible_ranking_changed": false,
+        "write_count": 0,
+        "writes_performed": false
+      }
+    },
+    "executed_at": "2026-05-28T21:27:15Z",
+    "input_join_summary": {
+      "audit_row_count": 528,
+      "final_score_source": "second_surface_generalization_audit.shadow_output_rows.final_score",
+      "forbidden_label_fields_on_runtime_rows": [],
+      "joined_candidate_count": 528,
+      "learned_probability_source": "second_surface_learned_probability.candidate_work_scores.audit_embedding_probability_work",
+      "learned_row_count": 528,
+      "recomputed_candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+      "runtime_input_fields": [
+        "canonical_openalex_work_id",
+        "final_score",
+        "audit_embedding_probability_work",
+        "ranking_run_id",
+        "family",
+        "candidate_pool_work_set_sha256",
+        "corpus_snapshot_version",
+        "embedding_version"
+      ],
+      "runtime_row_count": 528
+    },
+    "isolated_artifact_tree_writes_performed": true,
+    "isolated_file_writes": {
+      "bytes_written": 360507,
+      "file_count": 4,
+      "files_written": [
+        {
+          "byte_count": 1759,
+          "relative_path": "manifest.json",
+          "row_count": null,
+          "sha256": "92d15c6f09224c6a6b3ecaf24c3517f8e6c6d9de6a00fb603d2588f8def4735b",
+          "write_target": "isolated_audit_shadow_artifacts"
+        },
+        {
+          "byte_count": 355191,
+          "relative_path": "shadow_rows.jsonl",
+          "row_count": 528,
+          "sha256": "2e7846c7520038f5f4f8847cba0cc512e57dad16b263caca559359061fb26256",
+          "write_target": "isolated_audit_shadow_artifacts"
+        },
+        {
+          "byte_count": 2992,
+          "relative_path": "observability.json",
+          "row_count": null,
+          "sha256": "dce84142bd4e8c5a02a50d5b3e2050c492ecb07da57bcf6995b698ed60e6e7cb",
+          "write_target": "isolated_audit_shadow_artifacts"
+        },
+        {
+          "byte_count": 565,
+          "relative_path": "write_counts.json",
+          "row_count": null,
+          "sha256": "4484153b6a6645ad8aa4944743940e3e392ab3c4bcaed2d1ee404b4338a16b18",
+          "write_target": "isolated_audit_shadow_artifacts"
+        }
+      ],
+      "pilot_directory_retained_for_inspection": true,
+      "write_target": "isolated_audit_shadow_artifacts"
+    },
+    "labels_used_for_scoring": false,
+    "observability": {
+      "component_coverage": {
+        "complete": true,
+        "expected_candidate_count": 528,
+        "final_score_present_count": 528,
+        "learned_probability_present_count": 528,
+        "runtime_candidate_count": 528
+      },
+      "family_counts": {
+        "emerging": 528
+      },
+      "latency": {
+        "pilot_elapsed_ms": 2.815899992128834,
+        "postflight_elapsed_ms": 0.014699995517730713,
+        "preflight_elapsed_ms": 0.03300001844763756
+      },
+      "missing_learned_probability": {
+        "missing_count": 0,
+        "missing_work_ids": []
+      },
+      "output_completeness": {
+        "complete": true,
+        "expected_shadow_row_count": 528,
+        "shadow_row_count": 528
+      },
+      "plan_policy_contract_keys": [
+        "component_coverage",
+        "missing_learned_probability",
+        "score_distributions",
+        "top_k_overlap_with_heuristic",
+        "rank_displacement",
+        "family_counts",
+        "output_completeness",
+        "runtime_errors",
+        "latency",
+        "skipped_candidates_and_reasons",
+        "skipped_ranking_run_records",
+        "write_counts_by_isolated_target"
+      ],
+      "policy_contract_satisfied": {
+        "component_coverage": true,
+        "family_counts": true,
+        "latency": true,
+        "missing_learned_probability": true,
+        "output_completeness": true,
+        "rank_displacement": true,
+        "runtime_errors": true,
+        "score_distributions": true,
+        "skipped_candidates_and_reasons": true,
+        "skipped_ranking_run_records": true,
+        "top_k_overlap_with_heuristic": true,
+        "write_counts_by_isolated_target": true
+      },
+      "rank_displacement": "not_recomputed_in_phase2_write_mode_proof",
+      "run_level": {
+        "api_web_changes_allowed": false,
+        "isolated_artifact_tree_writes_performed": true,
+        "labels_used_for_scoring": false,
+        "production_default_changed": false,
+        "runtime_feature_flag_value": "true",
+        "runtime_writes_performed": false,
+        "shadow_row_count": 528,
+        "status": "succeeded_test_only",
+        "user_visible_ranking_changed": false
+      },
+      "runtime_errors": [],
+      "score_distributions": {
+        "audit_embedding_probability_work": {
+          "count": 528,
+          "max": 0.9999245310558568,
+          "mean": 0.5934206384326455,
+          "min": 1.3694895944786864e-05,
+          "p50": 0.7249574204355311
+        },
+        "final_score": {
+          "count": 528,
+          "max": 0.728258,
+          "mean": 0.22246560037878788,
+          "min": 0.135094,
+          "p50": 0.169526
+        },
+        "ml_shadow_scorer_v1_score": {
+          "count": 528,
+          "max": 0.9962049335863377,
+          "mean": 0.5,
+          "min": 0.009487666034155573,
+          "p50": 0.5170777988614801
+        }
+      },
+      "skipped_candidates_and_reasons": [],
+      "skipped_ranking_run_records": [],
+      "top_k_overlap_with_heuristic": "not_recomputed_in_phase2_write_mode_proof",
+      "write_counts_by_isolated_target": {
+        "api_visible_tables": 0,
+        "embeddings": 0,
+        "isolated_audit_shadow_artifacts": 4,
+        "isolated_audit_shadow_tables": 0,
+        "labels": 0,
+        "paper_scores": 0,
+        "production_config": 0,
+        "production_default_pins": 0,
+        "ranking_runs": 0,
+        "scorer_artifacts": 0
+      }
+    },
+    "pass_fail_evaluation": {
+      "checks": {
+        "cleanup_policy_satisfied": true,
+        "environment_restored": true,
+        "forbidden_write_counts_zero": true,
+        "identity_and_coverage": true,
+        "isolated_artifact_files_written": true,
+        "isolated_audit_shadow_tables_zero": true,
+        "labels_not_used": true,
+        "pilot_runtime_succeeded": true,
+        "postflight_disabled": true,
+        "preflight_disabled": true,
+        "production_api_user_visible_unchanged": true,
+        "runtime_writes_false": true
+      },
+      "failed_checks": [],
+      "forbidden_nonzero_write_counts": {},
+      "passed": true
+    },
+    "phase2_write_pilot_executed": true,
+    "phase2_write_pilot_passed": true,
+    "phase2_write_pilot_run": {
+      "expected_shadow_row_count": 528,
+      "pilot_run_id": "rank-83787b91ef-20260528T212715Z",
+      "shadow_row_count": 528,
+      "status": "succeeded_test_only"
+    },
+    "pilot_run_directory": {
+      "local_gitignored": true,
+      "relative_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/rank-83787b91ef-20260528T212715Z/",
+      "root_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/"
+    },
+    "pilot_run_id": "rank-83787b91ef-20260528T212715Z",
+    "pilot_runtime_summary": {
+      "elapsed_ms": 2.815899992128834,
+      "labels_used_for_scoring": false,
+      "production_default_changed": false,
+      "reason": "feature flag enabled in explicit test-only context; no writes performed",
+      "runtime_enabled": true,
+      "runtime_errors": [],
+      "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+      "runtime_feature_flag_value": "true",
+      "shadow_row_count": 528,
+      "status": "succeeded_test_only",
+      "user_visible_ranking_changed": false,
+      "write_count": 0,
+      "writes_performed": false
+    },
+    "production_default_changed": false,
+    "runtime_row_count": 528,
+    "runtime_writes_performed": false,
+    "user_visible_ranking_changed": false,
+    "write_count_verification": {
+      "bytes_written": 360507,
+      "file_count": 4,
+      "forbidden_nonzero_write_counts": {},
+      "forbidden_targets_zero": true,
+      "isolated_artifact_tree_writes_performed": true,
+      "pilot_run_id": "rank-83787b91ef-20260528T212715Z",
+      "runtime_writes_performed": false,
+      "write_count": 4,
+      "write_counts_by_isolated_target": {
+        "api_visible_tables": 0,
+        "embeddings": 0,
+        "isolated_audit_shadow_artifacts": 4,
+        "isolated_audit_shadow_tables": 0,
+        "labels": 0,
+        "paper_scores": 0,
+        "production_config": 0,
+        "production_default_pins": 0,
+        "ranking_runs": 0,
+        "scorer_artifacts": 0
+      },
+      "writes_performed": true
+    }
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_phase_bundle",
-    "bundle_revision": 1,
+    "bundle_revision": 2,
     "bundle_version": "online-shadow-phase2-v1",
-    "generated_at": "2026-05-28T21:00:49Z",
+    "generated_at": "2026-05-28T21:27:15Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1.json",
@@ -128,7 +406,7 @@
     "shadow_scoring_allowed": true,
     "user_visible_ranking_changed": false
   },
-  "recommended_next_stage": "run_online_shadow_phase2_isolated_audit_write_pilot_v1",
+  "recommended_next_stage": "review_online_shadow_phase2_isolated_audit_write_pilot_v1",
   "review": {
     "phase2_write_pilot_accepted": null,
     "phase2_write_pilot_reviewed": false

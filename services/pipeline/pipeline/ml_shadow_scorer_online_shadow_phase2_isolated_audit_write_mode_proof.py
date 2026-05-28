@@ -15,7 +15,6 @@ import json
 import math
 import os
 from pathlib import Path
-import re
 import shutil
 from datetime import UTC, datetime
 from time import perf_counter
@@ -55,6 +54,13 @@ from pipeline.ml_shadow_scorer_online_shadow_runtime import (
     run_ml_shadow_scorer_v1_online_shadow_runtime,
 )
 from pipeline.repo_paths import default_repo_root, portable_repo_path
+from pipeline.shadow_write_path_guards import (
+    ShadowWritePathGuardError,
+    assert_write_path_allowed,
+    phase2_proof_root,
+    resolve_pilot_directory,
+    validate_pilot_run_id,
+)
 
 ARTIFACT_TYPE = "ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof"
 PROOF_VERSION = "ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1"
@@ -70,7 +76,6 @@ PASS_NEXT_STAGE = "request_phase2_isolated_audit_write_authorization_v1"
 FAIL_NEXT_STAGE = "remediate_online_shadow_phase2_write_mode_proof_v1"
 AUTHORIZATION_SCOPE = "bounded_non_prod_pilot_only"
 PROOF_SCOPE = "isolated_audit_artifact_tree_only"
-PILOT_RUN_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 RUNTIME_INPUT_FIELDS = (
     "canonical_openalex_work_id",
@@ -614,30 +619,20 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
 
 
 def _validate_pilot_run_id(pilot_run_id: str) -> None:
-    if not isinstance(pilot_run_id, str) or not pilot_run_id:
-        raise MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError("pilot_run_id must be non-empty")
-    if not PILOT_RUN_ID_RE.fullmatch(pilot_run_id):
-        raise MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError(
-            "pilot_run_id may contain only letters, digits, dot, underscore, or hyphen"
-        )
-    if ".." in pilot_run_id or "/" in pilot_run_id or "\\" in pilot_run_id or Path(pilot_run_id).is_absolute():
-        raise MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError(
-            "pilot_run_id must not contain path traversal, separators, or absolute paths"
-        )
+    try:
+        validate_pilot_run_id(pilot_run_id)
+    except ShadowWritePathGuardError as exc:
+        raise MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError(str(exc)) from exc
 
 
 def _pilot_paths(*, repo_root: Path, pilot_run_id: str) -> tuple[Path, Path]:
-    _validate_pilot_run_id(pilot_run_id)
-    proof_root = (repo_root / PRIMARY_TARGET_ROOT).resolve()
-    pilot_dir = (proof_root / pilot_run_id).resolve()
-    if pilot_dir == proof_root or pilot_dir.parent != proof_root:
-        raise MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError(
-            "pilot output directory must be a direct child of the phase2-proof root"
-        )
-    if not _is_relative_to(proof_root, repo_root.resolve()) or not _is_relative_to(pilot_dir, proof_root):
-        raise MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError(
-            "pilot output directory must remain under the repository phase2-proof root"
-        )
+    try:
+        _validate_pilot_run_id(pilot_run_id)
+        proof_root = phase2_proof_root(repo_root)
+        pilot_dir = resolve_pilot_directory(repo_root, pilot_run_id)
+        assert_write_path_allowed(pilot_dir, repo_root)
+    except ShadowWritePathGuardError as exc:
+        raise MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError(str(exc)) from exc
     return proof_root, pilot_dir
 
 
