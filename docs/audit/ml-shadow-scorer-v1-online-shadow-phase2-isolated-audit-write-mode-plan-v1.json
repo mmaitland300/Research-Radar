@@ -1,0 +1,436 @@
+{
+  "allowed_write_contract": {
+    "allowed_only_in_future_proof_step": true,
+    "allowed_root": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/",
+    "allowed_targets": [
+      "isolated audit shadow artifacts"
+    ],
+    "initial_ranking_run_id": "rank-83787b91ef",
+    "manual_or_scheduled_jobs_only": true,
+    "no_fleet_wide_enable": true,
+    "non_prod_only": true,
+    "phase2_writes_authorized_now": false,
+    "policy_allowed_targets": [
+      "isolated shadow/audit table",
+      "isolated shadow/audit artifact"
+    ]
+  },
+  "api_web_changes_allowed": false,
+  "caveats": [
+    "Plan only; no writes, no directory creation with data, no runtime persistence, and no feature flag enablement.",
+    "Does not authorize Phase 2 writes or clear missing_phase2_write_mode_isolation_proof.",
+    "Does not enable online shadow globally or change production/API/user-visible ranking.",
+    "Production readiness remains separate.",
+    "Primary target is audit file tree only; DB table path is deferred."
+  ],
+  "forbidden_write_contract": {
+    "explicitly_forbidden": [
+      "ranking_runs",
+      "production/default pins",
+      "paper_scores used for production",
+      "API-visible tables",
+      "production config",
+      "labels",
+      "embeddings",
+      "scorer artifacts",
+      "user-visible paths"
+    ],
+    "forbid_overwriting_committed_audit_gate_json": true,
+    "only_future_new_files_under_shadow_runs_tree": true,
+    "policy_forbidden_write_scope": [
+      "ranking_runs production/default pins",
+      "paper_scores used by production/default ranking",
+      "API-visible result tables",
+      "production config/env/default bridge weights",
+      "label datasets",
+      "training/scorer artifacts",
+      "embedding storage writes",
+      "user-visible UI/API paths"
+    ]
+  },
+  "grant_and_policy_basis": {
+    "grant_expiry_date": "2026-08-27",
+    "grant_owner": "Matt Maitland",
+    "grant_phase2_policy": "isolated_audit_only_writes_after_phase1_and_write_mode_proof",
+    "grant_phase2_requires_separate_authorization": true,
+    "grant_review_by": "2026-08-27",
+    "policy_allowed_write_scope": {
+      "future_only_after_later_gates": true,
+      "required_fields": [
+        "run_id",
+        "scorer_id",
+        "scorer_version",
+        "formula_id",
+        "input_hashes",
+        "candidate_pool_work_set_sha256",
+        "family",
+        "component_coverage",
+        "generated_at",
+        "snapshot_identifiers"
+      ],
+      "targets": [
+        "isolated shadow/audit table",
+        "isolated shadow/audit artifact"
+      ]
+    },
+    "policy_forbidden_write_scope": [
+      "ranking_runs production/default pins",
+      "paper_scores used by production/default ranking",
+      "API-visible result tables",
+      "production config/env/default bridge weights",
+      "label datasets",
+      "training/scorer artifacts",
+      "embedding storage writes",
+      "user-visible UI/API paths"
+    ]
+  },
+  "isolated_write_target": {
+    "deferred_alternate_not_authorized": {
+      "db_namespace_table_prefix": "ml_shadow_scorer_v1_audit_shadow",
+      "requires": [
+        "separate proof design",
+        "DDL/migration controls",
+        "explicit Phase 2 authorization before table writes"
+      ]
+    },
+    "file_formats": [
+      "JSON",
+      "JSONL"
+    ],
+    "persisted_content": [
+      "run manifest",
+      "shadow row export",
+      "observability",
+      "write-count report"
+    ],
+    "pilot_run_subdirectory_pattern": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/<pilot_run_id>/",
+    "primary_target": "isolated audit artifact tree only",
+    "rationale": "Future proof can stay non-prod, avoid DB DDL, and align with the existing audit artifact workflow.",
+    "root_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/",
+    "scope": "non-prod pilot environment only"
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_plan",
+    "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+    "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "family": "emerging",
+    "formula_id": "hybrid_rank_mean_50_50",
+    "generated_at": "2026-05-28T04:36:56Z",
+    "inputs": [
+      {
+        "name": "phase1_no_write_pilot_review",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1.json",
+        "sha256": "2c898a1207aaf769c43c49fe0b736404a8eb2b7f17766f39c28d5a976c25de18"
+      },
+      {
+        "name": "authorization_grant",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1.json",
+        "sha256": "e9505ebad2033598c6b8f923a2cfc58f362154a1076a2e3014ebafa7d23525f8"
+      },
+      {
+        "name": "online_shadow_policy",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+      }
+    ],
+    "plan_version": "ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1",
+    "ranking_run_id": "rank-83787b91ef",
+    "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+    "scorer_id": "ml-shadow-scorer-v1",
+    "source_grant_version": "ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1",
+    "source_policy_version": "ml-shadow-scorer-v1-online-shadow-policy",
+    "source_review_version": "ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1",
+    "verified_grant_input_chain": [
+      {
+        "name": "runtime_isolation_verification",
+        "path": "docs/audit/ml-shadow-scorer-v1-runtime-isolation-verification-v1.json",
+        "sha256": "a039dfdc813363747a9abce31f850a7e6a9321fda24e78d0507a208c1d878451",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "online_shadow_runtime",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1.json",
+        "sha256": "a942bea9cd6feac234e9bc377bcada653309963a2b061829b0302ab7760be13e",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "generalization_audit_gates",
+        "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+        "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "online_shadow_policy",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc",
+        "verification_status": "confirmed"
+      }
+    ],
+    "verified_grant_inputs": [
+      {
+        "name": "authorization_request",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-request-v1.json",
+        "sha256": "9e9df68414de9631d2ebd89955b7d84a56ccda2b283596c62e0bd11acaccd719",
+        "verification_status": "confirmed"
+      }
+    ],
+    "verified_grant_request_inputs": [
+      {
+        "name": "enablement_gates_run",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-enablement-gates-run-v1.json",
+        "sha256": "51315c1fd9fc25115c7ab64bf444c1b671044a7781c5e7882760b3d2a9fec314",
+        "verification_status": "confirmed"
+      }
+    ],
+    "verified_optional_plan_inputs": [],
+    "verified_optional_run_inputs": [],
+    "verified_policy_inputs": [
+      {
+        "name": "shadow_scorer_audit_output_gates",
+        "path": "docs/audit/ml-shadow-scorer-v1-audit-output-gates.json",
+        "sha256": "731db8bf9788a99f76134057795bf2430269e44d42097f095f3f35aedeba0ab6",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "shadow_scorer_audit_output",
+        "path": "docs/audit/ml-shadow-scorer-v1-audit-output.json",
+        "sha256": "482b7c937653eae4416e6611b3b7c12ca09ab07cbbc3e4db15933f580ec06ae6",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "shadow_scorer_execution_readiness_gates",
+        "path": "docs/audit/ml-shadow-scorer-v1-execution-readiness-gates.json",
+        "sha256": "3f8ffaaea33faa6377b4d723ea7e5530cea5e3f847d66a6b8a81a855a5a4ddd3",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "shadow_scorer_spec",
+        "path": "docs/audit/ml-shadow-scorer-v1-spec.json",
+        "sha256": "65d5650f216c582beb556799dd9b2db70c4dd354da7440a8acc48da44586a792",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "hybrid_validation_on_fresh_surface",
+        "path": "docs/audit/ml-hybrid-validation-on-fresh-surface-v1.json",
+        "sha256": "5a9a778e2e0bf5d775b061d9a228a564cf6e99c3cd4a60c6cc2050a3e1caf240",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "production_readiness_plan",
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc",
+        "verification_status": "confirmed"
+      }
+    ],
+    "verified_review_inputs": [
+      {
+        "name": "phase1_no_write_pilot_run",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-run-v1.json",
+        "sha256": "12aba239890b06fbea82a9736d1b3de4659ecf7ac73cc7de56156a7fcba96123",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "phase1_no_write_pilot_plan",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-plan-v1.json",
+        "sha256": "4030c72930f563a7e42593c895bb6634039bc63dbf289e2182b3c034893caa97",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "authorization_grant",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1.json",
+        "sha256": "e9505ebad2033598c6b8f923a2cfc58f362154a1076a2e3014ebafa7d23525f8",
+        "verification_status": "confirmed"
+      },
+      {
+        "name": "online_shadow_runtime",
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1.json",
+        "sha256": "a942bea9cd6feac234e9bc377bcada653309963a2b061829b0302ab7760be13e",
+        "verification_status": "confirmed"
+      }
+    ]
+  },
+  "missing_production_readiness_authorization": true,
+  "online_shadow_execution_authorized": true,
+  "online_shadow_execution_enabled": false,
+  "out_of_scope": [
+    "running Phase 2 proof or write path",
+    "creating shadow-runs pilot data",
+    "runtime persistence",
+    "global feature flag enablement",
+    "database tables or schemas",
+    "production/default/API/user-visible changes",
+    "Phase 2 write authorization",
+    "production readiness authorization"
+  ],
+  "phase1_no_write_pilot_result_accepted": true,
+  "phase1_prerequisite_summary": {
+    "phase1_no_write_pilot_executed": true,
+    "phase1_review_accepted": true,
+    "phase1_review_decision": "accepted",
+    "phase1_writes_performed": false,
+    "phase2_writes_authorized_by_review": false
+  },
+  "phase2_isolated_audit_write_mode_plan_defined": true,
+  "phase2_isolated_audit_write_mode_plan_executed": false,
+  "phase2_scope": {
+    "approved_candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+    "approved_family": "emerging",
+    "approved_formula_id": "hybrid_rank_mean_50_50",
+    "approved_ranking_run_id": "rank-83787b91ef",
+    "approved_scorer_id": "ml-shadow-scorer-v1",
+    "feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+    "feature_flag_default_off": true,
+    "flag_on_only_in_pilot_env": true,
+    "manual_or_scheduled_jobs_only": true,
+    "no_fleet_wide_enable": true,
+    "non_prod_only": true
+  },
+  "phase2_write_mode_proof_executed": false,
+  "phase2_writes_authorized": false,
+  "preflight_checklist": [
+    "Phase 1 review accepted and this plan artifact committed.",
+    "Grant still valid by exact review_by string 2026-08-27.",
+    "Target directory exists or is created only under shadow-runs/phase2-proof/ for pilot run_id.",
+    "No writes configured to forbidden targets.",
+    "Feature flag remains default off and may be on only in pilot env for proof/run.",
+    "Complete input coverage is present for 528 rows or the entire run is skipped per policy.",
+    "Production/API/user-visible baselines unchanged before proof.",
+    "Schema and manifest mapping validated before first file write."
+  ],
+  "production_default_allowed": false,
+  "production_separation_note": {
+    "api_web_changes_allowed": false,
+    "phase2_file_tree_proof_is_not_production_readiness": true,
+    "production_default_allowed": false,
+    "production_readiness_authorization_remains_missing": true,
+    "user_visible_ranking_changed": false
+  },
+  "proof_requirements_for_future_step": {
+    "does_not_authorize_production_or_fleet_wide_enablement": true,
+    "future_command": "implement_online_shadow_phase2_isolated_audit_write_mode_proof_v1",
+    "must_demonstrate": [
+      "Writes occur only under docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/",
+      "All forbidden write_counts remain zero.",
+      "Observability complete including write_counts_by_isolated_target.",
+      "Preflight checklist satisfied.",
+      "Rollback drill disables flag, verifies no further writes, and cleans up pilot subdirectory.",
+      "production_default_changed == false",
+      "user_visible_ranking_changed == false",
+      "api_web_changes_allowed == false"
+    ],
+    "non_prod_only": true,
+    "separate_phase2_write_authorization_required_before_production_adjacent_write_pilot": true
+  },
+  "recommended_next_stage": "implement_online_shadow_phase2_isolated_audit_write_mode_proof_v1",
+  "rollback_and_cleanup_policy": {
+    "cleanup_action": "delete or archive pilot run subdirectory only",
+    "cleanup_scope": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/<pilot_run_id>/",
+    "committed_gate_artifact_cleanup_allowed": false,
+    "first_disable_switch": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED=off",
+    "production_tables_cleanup_required": false,
+    "reverify_production_ranking_unchanged_with_writes_on_vs_off": true,
+    "revoke_via": "superseding grant or denied Phase 2 authorization",
+    "stop_pilot_jobs": true
+  },
+  "runtime_execution_authorization_scope": "bounded_non_prod_pilot_only",
+  "runtime_execution_authorized": true,
+  "schema_and_namespace": {
+    "audit_only_markers_required": true,
+    "committed_gate_paths_may_not_be_overwritten": true,
+    "files": {
+      "manifest.json": [
+        "run_id",
+        "scorer_id",
+        "scorer_version",
+        "formula_id",
+        "identity_fields",
+        "input_hashes",
+        "generated_at"
+      ],
+      "observability.json": "runtime and write-mode observability",
+      "shadow_rows.jsonl_or_json": "audit-only shadow scores aligned with runtime output",
+      "write_counts.json": "per-target write counts"
+    },
+    "future_writes_restricted_to_shadow_runs_subtree": true,
+    "label_fields_allowed": false,
+    "must_mark_audit_only": true,
+    "per_row_shadow_fields_aligned_with_runtime_output": true,
+    "required_fields_on_every_persisted_record": [
+      "run_id",
+      "scorer_id",
+      "scorer_version",
+      "formula_id",
+      "input_hashes",
+      "candidate_pool_work_set_sha256",
+      "family",
+      "component_coverage",
+      "generated_at",
+      "snapshot_identifiers"
+    ],
+    "root_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/"
+  },
+  "shadow_and_production_blockers": {
+    "api_web_changes_allowed": false,
+    "authorization_scope": "bounded_non_prod_pilot_only",
+    "blockers_changed_by_grant": [
+      "missing_online_shadow_execution_authorization"
+    ],
+    "blockers_unchanged_by_request": true,
+    "missing_generalization_audit_gates": false,
+    "missing_generalization_audit_on_second_surface": false,
+    "missing_online_shadow_enablement_gates": false,
+    "missing_online_shadow_execution_authorization": false,
+    "missing_online_shadow_implementation_disabled_by_default": false,
+    "missing_phase1_no_write_pilot_review": false,
+    "missing_phase2_write_mode_isolation_proof": true,
+    "missing_production_readiness_authorization": true,
+    "missing_shadow_runtime_isolation_verification": false,
+    "online_shadow_execution_enabled": false,
+    "phase1_no_write_pilot_executed": true,
+    "phase2_isolated_audit_write_mode_plan_defined": true,
+    "phase2_writes_authorized": false,
+    "production_default_allowed": false,
+    "runtime_execution_authorized": true,
+    "runtime_implementation_authorized": false,
+    "shadow_scoring_allowed": true,
+    "user_visible_ranking_changed": false
+  },
+  "shadow_scoring_allowed": true,
+  "shadow_scoring_allowed_scope": "bounded_non_prod_pilot_only",
+  "user_visible_ranking_changed": false,
+  "write_count_observability_plan": {
+    "extends_phase1_observability": true,
+    "forbidden_targets_must_remain_zero": true,
+    "isolated_audit_shadow_tables_expected_count": 0,
+    "only_target_allowed_to_be_positive_in_future_proof": "isolated_audit_shadow_artifacts",
+    "per_target_counts": [
+      "ranking_runs",
+      "paper_scores",
+      "embeddings",
+      "labels",
+      "scorer_artifacts",
+      "production_config",
+      "production_default_pins",
+      "api_visible_tables",
+      "isolated_audit_shadow_artifacts",
+      "isolated_audit_shadow_tables"
+    ],
+    "proof_must_record": [
+      "writes_performed",
+      "write_count",
+      "file_count",
+      "bytes_written",
+      "write_counts_by_isolated_target"
+    ],
+    "write_counts_by_isolated_target_required": true
+  },
+  "writes_allowed": false,
+  "writes_performed": false
+}
