@@ -5078,6 +5078,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-phase1-no-write-pilot-review",
+        help="Review the ml-shadow-scorer-v1 online shadow Phase 1 no-write pilot result without rerunning it",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--phase1-no-write-pilot-run",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-run-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--phase1-no-write-pilot-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-plan-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--authorization-grant",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--online-shadow-runtime",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-runtime-disabled-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write online shadow Phase 1 no-write pilot review JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--review-version",
+        default="ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1",
+        help="Review version string to write (default: ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1)",
+    )
+    ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7554,6 +7598,36 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["phase1_no_write_pilot_executed"])
         print(payload["phase1_no_write_pilot_passed"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-phase1-no-write-pilot-review":
+        from pipeline.ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review import (
+            MLShadowScorerOnlineShadowPhase1NoWritePilotReviewError,
+            write_ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_online_shadow_phase1_no_write_pilot_review(
+                phase1_no_write_pilot_run_path=Path(args.phase1_no_write_pilot_run),
+                phase1_no_write_pilot_plan_path=Path(args.phase1_no_write_pilot_plan),
+                authorization_grant_path=Path(args.authorization_grant),
+                online_shadow_runtime_path=Path(args.online_shadow_runtime),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                review_version=str(args.review_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerOnlineShadowPhase1NoWritePilotReviewError as e:
+            print(f"ml-shadow-scorer-online-shadow-phase1-no-write-pilot-review: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["phase1_no_write_pilot_review_executed"])
+        print(payload["phase1_no_write_pilot_result_accepted"])
         print(payload["recommended_next_stage"])
         return
 
