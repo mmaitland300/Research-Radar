@@ -5171,6 +5171,83 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser = subparsers.add_parser(
+        "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-mode-proof",
+        help="Run the ml-shadow-scorer-v1 Phase 2 isolated audit write-mode proof and write its gate artifact",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--phase2-write-mode-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--authorization-grant",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--phase1-no-write-pilot-review",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--learned-probability-artifact",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-surface-learned-probability-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--second-surface-generalization-audit",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-surface-generalization-audit-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write online shadow Phase 2 isolated audit write-mode proof JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--phase1-no-write-pilot-run",
+        default=None,
+        help="Optional path to ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-run-v1 JSON",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--pilot-run-id",
+        default=None,
+        help="Optional safe pilot run id (default: generated from scorer identity and UTC timestamp)",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--proof-version",
+        default="ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1",
+        help="Proof version string to write (default: ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1)",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths and isolated pilot output",
+    )
+    phase2_proof_cleanup_group = (
+        ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.add_mutually_exclusive_group()
+    )
+    phase2_proof_cleanup_group.add_argument(
+        "--cleanup-after-proof",
+        dest="cleanup_after_proof",
+        action="store_true",
+        help="Remove only the resolved pilot_run_id directory after hashing written files (default)",
+    )
+    phase2_proof_cleanup_group.add_argument(
+        "--no-cleanup-after-proof",
+        dest="cleanup_after_proof",
+        action="store_false",
+        help="Leave isolated pilot files on disk for local inspection",
+    )
+    ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof_parser.set_defaults(
+        cleanup_after_proof=True
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7712,6 +7789,42 @@ def main() -> None:
         print(out_md.resolve(), file=sys.stderr)
         print(payload["phase2_isolated_audit_write_mode_plan_defined"])
         print(payload["phase2_writes_authorized"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-mode-proof":
+        from pipeline.ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof import (
+            MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError,
+            write_ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof(
+                phase2_write_mode_plan_path=Path(args.phase2_write_mode_plan),
+                authorization_grant_path=Path(args.authorization_grant),
+                phase1_no_write_pilot_review_path=Path(args.phase1_no_write_pilot_review),
+                learned_probability_artifact_path=Path(args.learned_probability_artifact),
+                second_surface_generalization_audit_path=Path(args.second_surface_generalization_audit),
+                phase1_no_write_pilot_run_path=(
+                    Path(args.phase1_no_write_pilot_run) if args.phase1_no_write_pilot_run else None
+                ),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                pilot_run_id=args.pilot_run_id,
+                proof_version=str(args.proof_version),
+                repo_root=repo_root,
+                cleanup_after_proof=bool(args.cleanup_after_proof),
+            )
+        except MLShadowScorerOnlineShadowPhase2IsolatedAuditWriteModeProofError as e:
+            print(f"ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-mode-proof: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["phase2_write_mode_proof_executed"])
+        print(payload["phase2_write_mode_proof_passed"])
         print(payload["recommended_next_stage"])
         return
 
