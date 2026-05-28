@@ -1,0 +1,165 @@
+{
+  "authorization": {
+    "grant_decision": {
+      "decision": "granted",
+      "expiry_date": "2026-08-27",
+      "owner": "Matt Maitland",
+      "review_by": "2026-08-27"
+    },
+    "phase2_isolated_audit_write_authorization_granted": true,
+    "phase2_write_authorization_grant": {
+      "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-grant-v1.json",
+      "sha256": "531e1ee3866afdc3c30d83c6aed85def7494e125d856f8b399f423283a50c410"
+    },
+    "phase2_write_authorization_request": {
+      "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-request-v1.json",
+      "sha256": "5702578360002cee65edd36ae123e804b8d6117871e7de7a2d8fcd647ec3c6e8"
+    },
+    "phase2_write_pilot_authorization_scope": "bounded_non_prod_phase2_isolated_audit_write_pilot_only",
+    "phase2_write_pilot_authorized": true,
+    "phase2_writes_authorization_scope": "isolated_audit_shadow_artifacts_only",
+    "phase2_writes_authorized": true
+  },
+  "caveats": [
+    "Bundle only; does not run the Phase 2 write pilot.",
+    "Bundle does not enable online shadow execution.",
+    "Bundle does not authorize production default/API/user-visible ranking behavior.",
+    "Bundle does not authorize production readiness.",
+    "Legacy artifacts remain frozen evidence and are referenced by path + SHA.",
+    "Future pilot updates should modify the bundle execution section, not create new request/grant/proof artifact families."
+  ],
+  "evidence": {
+    "phase1_no_write_pilot_review": {
+      "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1.json",
+      "phase1_no_write_pilot_result_accepted": true,
+      "sha256": "2c898a1207aaf769c43c49fe0b736404a8eb2b7f17766f39c28d5a976c25de18"
+    },
+    "phase2_write_mode_proof": {
+      "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1.json",
+      "phase2_write_mode_proof_passed": true,
+      "sha256": "9f4529992025c7b9621ec1c922ec38ee434e8aee3841e7fb038ada972c938d14"
+    },
+    "proof_summary_ref": "phase2_write_authorization_grant.proof_summary"
+  },
+  "execution": {
+    "phase2_write_pilot_executed": false,
+    "phase2_write_pilot_run": null
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_phase_bundle",
+    "bundle_revision": 1,
+    "bundle_version": "online-shadow-phase2-v1",
+    "generated_at": "2026-05-28T21:00:49Z",
+    "legacy_artifacts_index": [
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1.json",
+        "role": "phase2_write_mode_plan",
+        "sha256": "2e12d1e81b1e2eb13e13c271b36ab407091076976c4877caec8a4a7d9a1b1e42"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1.json",
+        "role": "phase2_write_mode_proof",
+        "sha256": "9f4529992025c7b9621ec1c922ec38ee434e8aee3841e7fb038ada972c938d14"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-request-v1.json",
+        "role": "phase2_write_authorization_request",
+        "sha256": "5702578360002cee65edd36ae123e804b8d6117871e7de7a2d8fcd647ec3c6e8"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-grant-v1.json",
+        "role": "phase2_write_authorization_grant",
+        "sha256": "531e1ee3866afdc3c30d83c6aed85def7494e125d856f8b399f423283a50c410"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1.json",
+        "role": "phase1_no_write_pilot_review",
+        "sha256": "2c898a1207aaf769c43c49fe0b736404a8eb2b7f17766f39c28d5a976c25de18"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1.json",
+        "role": "prior_execution_authorization_grant",
+        "sha256": "e9505ebad2033598c6b8f923a2cfc58f362154a1076a2e3014ebafa7d23525f8"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "role": "online_shadow_policy",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+      }
+    ],
+    "pinned_identity": {
+      "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+      "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+      "embedding_version": "shadow-generalization-text-embedding-v1",
+      "family": "emerging",
+      "formula_id": "hybrid_rank_mean_50_50",
+      "ranking_run_id": "rank-83787b91ef",
+      "scorer_id": "ml-shadow-scorer-v1"
+    }
+  },
+  "policy_ref": {
+    "online_shadow_policy": {
+      "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+      "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+    },
+    "phase2_write_mode_plan": {
+      "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1.json",
+      "sha256": "2e12d1e81b1e2eb13e13c271b36ab407091076976c4877caec8a4a7d9a1b1e42"
+    }
+  },
+  "posture": {
+    "api_web_changes_allowed": false,
+    "missing_online_shadow_execution_authorization": false,
+    "missing_phase2_isolated_audit_write_pilot_authorization": false,
+    "missing_phase2_write_mode_isolation_proof": false,
+    "missing_production_readiness_authorization": true,
+    "online_shadow_execution_enabled": false,
+    "pinned_identity": {
+      "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+      "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+      "embedding_version": "shadow-generalization-text-embedding-v1",
+      "family": "emerging",
+      "formula_id": "hybrid_rank_mean_50_50",
+      "ranking_run_id": "rank-83787b91ef",
+      "scorer_id": "ml-shadow-scorer-v1"
+    },
+    "production_default_allowed": false,
+    "runtime_execution_authorized": true,
+    "shadow_scoring_allowed": true,
+    "user_visible_ranking_changed": false
+  },
+  "recommended_next_stage": "run_online_shadow_phase2_isolated_audit_write_pilot_v1",
+  "review": {
+    "phase2_write_pilot_accepted": null,
+    "phase2_write_pilot_reviewed": false
+  },
+  "shadow_and_production_blockers": {
+    "api_web_changes_allowed": false,
+    "authorization_scope": "bounded_non_prod_phase2_isolated_audit_write_pilot_only",
+    "blockers_changed_by_grant": [
+      "missing_phase2_isolated_audit_write_pilot_authorization",
+      "phase2_write_pilot_authorized",
+      "phase2_writes_authorized"
+    ],
+    "missing_generalization_audit_gates": false,
+    "missing_generalization_audit_on_second_surface": false,
+    "missing_online_shadow_enablement_gates": false,
+    "missing_online_shadow_execution_authorization": false,
+    "missing_online_shadow_implementation_disabled_by_default": false,
+    "missing_phase1_no_write_pilot_review": false,
+    "missing_phase2_isolated_audit_write_pilot_authorization": false,
+    "missing_phase2_write_mode_isolation_proof": false,
+    "missing_production_readiness_authorization": true,
+    "missing_shadow_runtime_isolation_verification": false,
+    "online_shadow_execution_enabled": false,
+    "phase1_no_write_pilot_executed": true,
+    "phase2_isolated_audit_write_mode_plan_defined": true,
+    "phase2_write_pilot_authorized": true,
+    "phase2_writes_authorized": true,
+    "production_default_allowed": false,
+    "runtime_execution_authorized": true,
+    "runtime_implementation_authorized": false,
+    "shadow_scoring_allowed": true,
+    "user_visible_ranking_changed": false
+  }
+}

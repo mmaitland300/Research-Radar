@@ -5341,6 +5341,85 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    ml_shadow_scorer_phase_bundle_assemble_parser = subparsers.add_parser(
+        "ml-shadow-scorer-phase-bundle-assemble",
+        help="Assemble the canonical Phase 2 online shadow bundle from frozen legacy artifacts",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--phase2-write-mode-plan",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1 JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--phase2-write-mode-proof",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1 JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--phase2-write-authorization-request",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-request-v1 JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--phase2-write-authorization-grant",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-grant-v1 JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--phase1-no-write-pilot-review",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1 JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--prior-execution-authorization-grant",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1 JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-online-shadow-policy JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write canonical Phase 2 bundle JSON",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--bundle-version",
+        default="online-shadow-phase2-v1",
+        help="Bundle version string to write (default: online-shadow-phase2-v1)",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--bundle-revision",
+        default=1,
+        type=int,
+        help="Positive bundle revision to write (default: 1)",
+    )
+    ml_shadow_scorer_phase_bundle_assemble_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for portable provenance paths",
+    )
+    ml_shadow_scorer_phase_bundle_verify_parser = subparsers.add_parser(
+        "ml-shadow-scorer-phase-bundle-verify",
+        help="Verify the canonical Phase 2 online shadow bundle and referenced artifact hashes",
+    )
+    ml_shadow_scorer_phase_bundle_verify_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to canonical Phase 2 bundle JSON",
+    )
+    ml_shadow_scorer_phase_bundle_verify_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -7988,6 +8067,60 @@ def main() -> None:
         print(payload["phase2_isolated_audit_write_authorization_granted"])
         print(payload["phase2_write_pilot_authorized"])
         print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-phase-bundle-assemble":
+        from pipeline.ml_shadow_scorer_phase_bundle import (
+            MLShadowScorerPhaseBundleError,
+            write_ml_shadow_scorer_phase_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_phase_bundle(
+                phase2_write_mode_plan_path=Path(args.phase2_write_mode_plan),
+                phase2_write_mode_proof_path=Path(args.phase2_write_mode_proof),
+                phase2_write_authorization_request_path=Path(args.phase2_write_authorization_request),
+                phase2_write_authorization_grant_path=Path(args.phase2_write_authorization_grant),
+                phase1_no_write_pilot_review_path=Path(args.phase1_no_write_pilot_review),
+                prior_execution_authorization_grant_path=Path(args.prior_execution_authorization_grant),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                bundle_version=str(args.bundle_version),
+                bundle_revision=int(args.bundle_revision),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerPhaseBundleError as e:
+            print(f"ml-shadow-scorer-phase-bundle-assemble: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["metadata"]["bundle_version"])
+        print(payload["metadata"]["bundle_revision"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-phase-bundle-verify":
+        from pipeline.ml_shadow_scorer_phase_bundle import (
+            MLShadowScorerPhaseBundleError,
+            verify_ml_shadow_scorer_phase_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = verify_ml_shadow_scorer_phase_bundle(
+                bundle_path=Path(args.bundle),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerPhaseBundleError as e:
+            print(f"ml-shadow-scorer-phase-bundle-verify: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["verification_status"])
+        print(result["bundle_version"])
+        print(result["recommended_next_stage"])
         return
 
     if args.command == "ml-shadow-scorer-second-hybrid-candidate-plan":
