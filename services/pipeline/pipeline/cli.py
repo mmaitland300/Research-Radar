@@ -5710,6 +5710,114 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-bundle-assemble",
+        help="Assemble the production-scoped shadow bundle pre-plan skeleton from frozen evidence",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--production-readiness-bundle",
+        required=True,
+        help="Path to grant-filed production-readiness bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--phase-bundle",
+        required=True,
+        help="Path to reviewed canonical Phase 2 bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--online-shadow-policy",
+        required=True,
+        help="Path to online shadow policy JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--execution-authorization-grant",
+        default=None,
+        help="Optional online shadow execution authorization grant JSON path to index",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--phase2-write-mode-plan",
+        default=None,
+        help="Optional Phase 2 isolated audit write-mode plan JSON path to index",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--phase2-write-mode-proof",
+        default=None,
+        help="Optional Phase 2 isolated audit write-mode proof JSON path to index",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--generalization-audit-gates",
+        default=None,
+        help="Optional generalization audit gates JSON path to index",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--bundle-version",
+        default="online-shadow-production-scoped-v1",
+        help="Bundle version string to write (default: online-shadow-production-scoped-v1)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_assemble_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references and portable provenance paths",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_plan_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-bundle-plan",
+        help="File the production-scoped online shadow plan in an assembled bundle",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_plan_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_plan_parser.add_argument(
+        "--planner",
+        default="Matt Maitland",
+        help="Planner name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_plan_parser.add_argument(
+        "--plan-notes",
+        default=None,
+        help="Optional free-text plan notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_plan_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-bundle-verify",
+        help="Verify the production-scoped shadow bundle and referenced artifact hashes",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    plan_bundle_verify_group = ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_mutually_exclusive_group()
+    plan_bundle_verify_group.add_argument(
+        "--expect-plan-not-filed",
+        action="store_true",
+        help="Require pre-plan production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-plan-filed",
+        action="store_true",
+        help="Require post-plan production-scoped shadow bundle state",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -8592,6 +8700,94 @@ def main() -> None:
             )
         except MLShadowScorerProductionReadinessBundleError as e:
             print(f"ml-shadow-scorer-production-readiness-bundle-verify: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["verification_status"])
+        print(result["verification_mode"])
+        print(result["bundle_version"])
+        print(result["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-assemble":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+            MLShadowScorerProductionScopedShadowBundleError,
+            write_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_production_scoped_shadow_bundle(
+                production_readiness_bundle_path=Path(args.production_readiness_bundle),
+                phase_bundle_path=Path(args.phase_bundle),
+                online_shadow_policy_path=Path(args.online_shadow_policy),
+                execution_authorization_grant_path=(
+                    Path(args.execution_authorization_grant) if args.execution_authorization_grant else None
+                ),
+                phase2_write_mode_plan_path=Path(args.phase2_write_mode_plan) if args.phase2_write_mode_plan else None,
+                phase2_write_mode_proof_path=(
+                    Path(args.phase2_write_mode_proof) if args.phase2_write_mode_proof else None
+                ),
+                generalization_audit_gates_path=(
+                    Path(args.generalization_audit_gates) if args.generalization_audit_gates else None
+                ),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                bundle_version=str(args.bundle_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowBundleError as e:
+            print(f"ml-shadow-scorer-production-scoped-shadow-bundle-assemble: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["metadata"]["bundle_version"])
+        print(payload["plan"]["prod_scoped_shadow_plan_defined"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-plan":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+            MLShadowScorerProductionScopedShadowBundleError,
+            plan_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = plan_ml_shadow_scorer_production_scoped_shadow_bundle(
+                bundle_path=Path(args.bundle),
+                planner=str(args.planner),
+                plan_notes=args.plan_notes,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowBundleError as e:
+            print(f"ml-shadow-scorer-production-scoped-shadow-bundle-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(payload["plan"]["plan_decision"]["decision"])
+        print(payload["plan"]["prod_scoped_shadow_plan_defined"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-verify":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+            MLShadowScorerProductionScopedShadowBundleError,
+            verify_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        expect_plan_filed = None
+        if args.expect_plan_filed:
+            expect_plan_filed = True
+        elif args.expect_plan_not_filed:
+            expect_plan_filed = False
+        try:
+            result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+                bundle_path=Path(args.bundle),
+                repo_root=repo_root,
+                expect_plan_filed=expect_plan_filed,
+            )
+        except MLShadowScorerProductionScopedShadowBundleError as e:
+            print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(result["verification_status"])
         print(result["verification_mode"])

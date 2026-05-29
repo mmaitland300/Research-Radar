@@ -34,6 +34,10 @@ jobs:
         run: python -m pipeline.cli ml-shadow-scorer-production-readiness-bundle-verify --bundle ../../docs/audit/bundles/production-readiness-v1/bundle.json --expect-grant-filed
         working-directory: services/pipeline
 
+      - name: Verify production-scoped-shadow bundle (post-plan)
+        run: python -m pipeline.cli ml-shadow-scorer-production-scoped-shadow-bundle-verify --bundle ../../docs/audit/bundles/production-scoped-shadow-v1/bundle.json --expect-plan-filed
+        working-directory: services/pipeline
+
   web-build:
     runs-on: ubuntu-latest
     steps:

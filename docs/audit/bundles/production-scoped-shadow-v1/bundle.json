@@ -1,0 +1,277 @@
+{
+  "authorization": {
+    "explicitly_not_included": [
+      "global flag enablement",
+      "prod default",
+      "API/web",
+      "user-visible ranking",
+      "DB writes/DDL"
+    ],
+    "prod_scoped_shadow_execution_authorized": false,
+    "prod_scoped_shadow_pilot_authorized": false,
+    "prod_scoped_shadow_plan_authorization_scope": "production_scoped_shadow_plan_paperwork_only",
+    "prod_scoped_shadow_proof_authorized": false
+  },
+  "caveats": [
+    "Bundle plan surface only; does not run runtime or shadow scoring.",
+    "Bundle does not enable online shadow execution or change the global feature flag default.",
+    "Bundle does not authorize production default/API/user-visible ranking behavior.",
+    "Bundle does not write shadow-runs files, databases, embeddings, labels, or scorer artifacts.",
+    "Frozen upstream bundles and legacy artifacts remain referenced by path and SHA only.",
+    "Plan milestone only; does not authorize production-scoped proof execution or pilot execution.",
+    "Future proof must clear missing_prod_scoped_shadow_proof before any prod-scoped pilot can be considered.",
+    "Production default/API/user-visible behavior remain separate authorization chains."
+  ],
+  "execution": {
+    "prod_scoped_shadow_pilot_executed": false,
+    "prod_scoped_shadow_plan_execution_performed": false,
+    "prod_scoped_shadow_proof_executed": false
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
+    "bundle_revision": 1,
+    "bundle_version": "online-shadow-production-scoped-v1",
+    "generated_at": "2026-05-29T04:45:03Z",
+    "legacy_artifacts_index": [
+      {
+        "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
+        "role": "production_readiness_bundle",
+        "sha256": "ddaf3e10bebf48ccd5f920bada6256d72943cc3be147b5c82050cfae41ccfb00"
+      },
+      {
+        "path": "docs/audit/bundles/phase2-v1/bundle.json",
+        "role": "phase2_bundle",
+        "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "role": "online_shadow_policy",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1.json",
+        "role": "execution_authorization_grant",
+        "sha256": "e9505ebad2033598c6b8f923a2cfc58f362154a1076a2e3014ebafa7d23525f8"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-plan-v1.json",
+        "role": "phase2_write_mode_plan",
+        "sha256": "2e12d1e81b1e2eb13e13c271b36ab407091076976c4877caec8a4a7d9a1b1e42"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-mode-proof-v1.json",
+        "role": "phase2_write_mode_proof",
+        "sha256": "9f4529992025c7b9621ec1c922ec38ee434e8aee3841e7fb038ada972c938d14"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+        "role": "generalization_audit_gates",
+        "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84"
+      }
+    ],
+    "pinned_identity": {
+      "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+      "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+      "embedding_version": "shadow-generalization-text-embedding-v1",
+      "family": "emerging",
+      "formula_id": "hybrid_rank_mean_50_50",
+      "ranking_run_id": "rank-83787b91ef",
+      "scorer_id": "ml-shadow-scorer-v1"
+    }
+  },
+  "plan": {
+    "ci_and_live_gate_requirements": {
+      "ci_must_continue_to_verify": [
+        "phase2 bundle post-review",
+        "production-readiness bundle post-grant",
+        "production-scoped-shadow bundle post-plan"
+      ],
+      "future_live_prod_execution_gates": [
+        "manual job only",
+        "explicit authorization artifact or bundle revision",
+        "forbidden-write guards",
+        "observability artifact emission",
+        "rollback drill evidence"
+      ],
+      "this_plan_commit_adds_ci_bundle_verify_only": true
+    },
+    "feature_flag_iam_config_requirements": {
+      "config_surfaces_forbidden_to_change": [
+        "production default",
+        "API response shaping",
+        "bridge weights",
+        "fleet env toggles"
+      ],
+      "config_surfaces_that_may_be_read": [
+        "ranking inputs",
+        "candidate pool hashes",
+        "scorer metadata"
+      ],
+      "feature_flag_default": "off",
+      "global_default_unchanged_by_this_plan": true,
+      "iam_config": "read-only prod input access only; no write IAM expansion; no prod config/default bridge changes",
+      "prod_scoped_flag_enablement_authorized_now": false,
+      "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
+    },
+    "observability_and_slo_plan": {
+      "extends_online_shadow_policy_observability_contract": true,
+      "forbidden_write_target_counts_must_remain_zero": true,
+      "inherits_prod_readiness_grant_slo_targets": true,
+      "required_signals": [
+        "run status",
+        "row counts",
+        "error counters",
+        "latency",
+        "component coverage",
+        "score distributions",
+        "skipped runs/reasons",
+        "forbidden write target counts",
+        "rank displacement audit-only"
+      ],
+      "slo_thresholds": "plan targets for proof/pilot verification; not enforced at this plan milestone"
+    },
+    "plan_decision": {
+      "decision": "planned",
+      "plan_notes": null,
+      "planned_at": "2026-05-29T04:45:03Z",
+      "planner": "Matt Maitland"
+    },
+    "prod_read_only_input_contract": {
+      "forbidden_writes": [
+        "ranking_runs",
+        "paper_scores production paths",
+        "embeddings",
+        "labels",
+        "scorer artifacts"
+      ],
+      "incomplete_coverage_behavior": "skip entire run per policy; no partial shadow scoring",
+      "input_hashes_traceability_required": true,
+      "inputs_are_read_only_from_approved_prod_sources": true,
+      "labels_used_for_scoring": false,
+      "must_include_fields_from_online_shadow_policy": [
+        "ranking_run_id",
+        "family",
+        "candidate_pool_work_set_sha256",
+        "final_score_rank_pct",
+        "audit_embedding_probability_rank_pct",
+        "component coverage",
+        "generated_at",
+        "input hashes"
+      ]
+    },
+    "prod_scoped_identity_and_rollout_boundaries": {
+      "environment": "prod-scoped read-only evaluation surface; distinct from Phase 2 non-prod isolated file tree",
+      "explicitly_not_in_scope": [
+        "production default pins",
+        "API-visible tables",
+        "user-visible ranking paths"
+      ],
+      "family_scope": "emerging only",
+      "future_artifact_root_proposal": "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/",
+      "pinned_identity": {
+        "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+        "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+        "embedding_version": "shadow-generalization-text-embedding-v1",
+        "family": "emerging",
+        "formula_id": "hybrid_rank_mean_50_50",
+        "ranking_run_id": "rank-83787b91ef",
+        "scorer_id": "ml-shadow-scorer-v1"
+      },
+      "ranking_run_id_scope": "rank-83787b91ef and explicitly bounded successors only",
+      "rollout": {
+        "manual_or_scheduled_jobs_only": true,
+        "no_cron_without_explicit_later_authorization": true,
+        "no_fleet_wide_enable": true
+      }
+    },
+    "prod_scoped_shadow_plan_defined": true,
+    "production_default_api_user_visible_separation": {
+      "api_web_changes_allowed": false,
+      "must_not_affect": [
+        "user-visible ranking",
+        "API responses",
+        "bridge defaults",
+        "production defaults"
+      ],
+      "production_default_allowed": false,
+      "results_use": "audit/monitoring only",
+      "user_visible_ranking_changed": false
+    },
+    "proof_and_pilot_prerequisites": {
+      "missing_prod_scoped_shadow_proof": true,
+      "pilot_prerequisites_deferred_to_post_proof_authorization_chain": true,
+      "prerequisites_before_proof": [
+        "this plan filed",
+        "production-readiness grant filed",
+        "Phase 2 pilot accepted"
+      ],
+      "proof_must_demonstrate": [
+        "read-only prod input contract honored",
+        "zero forbidden writes",
+        "observability complete",
+        "rollback drill documented and executable",
+        "CI gates pass"
+      ]
+    },
+    "rollback_and_revocation_drill_plan": {
+      "cleanup_scope": "prod-scoped pilot subdirectory only when proof/pilot exist later",
+      "derived_from": [
+        "production-readiness grant incident_response_and_revocation_plan",
+        "Phase 2 disable drill patterns"
+      ],
+      "first_response": "flag-off (ML_SHADOW_SCORER_V1_RUNTIME_ENABLED=off)",
+      "reverify": "production ranking/API/default unchanged with flag on versus off",
+      "revoke_path": "supersede bundle authorization or deny follow-up review",
+      "stop_prod_scoped_jobs_before_cleanup": true
+    }
+  },
+  "posture": {
+    "api_web_changes_allowed": false,
+    "missing_prod_scoped_shadow_proof": true,
+    "missing_production_readiness_authorization": false,
+    "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_executed": false,
+    "prod_scoped_shadow_plan_defined": true,
+    "prod_scoped_shadow_proof_authorized": false,
+    "prod_scoped_shadow_proof_passed": false,
+    "production_default_allowed": false,
+    "production_readiness_authorization_granted": true,
+    "runtime_writes_performed": false,
+    "user_visible_ranking_changed": false,
+    "writes_performed": false
+  },
+  "recommended_next_stage": "implement_production_scoped_online_shadow_proof_v1",
+  "runtime_writes_performed": false,
+  "shadow_and_production_blockers": {
+    "api_web_changes_allowed": false,
+    "blockers_changed_by_grant": [
+      "missing_production_readiness_authorization"
+    ],
+    "blockers_changed_by_plan": [],
+    "blockers_unchanged_by_grant": true,
+    "blockers_unchanged_by_plan": true,
+    "missing_prod_scoped_shadow_proof": true,
+    "missing_production_readiness_authorization": false,
+    "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_proof_authorized": false,
+    "production_default_allowed": false,
+    "production_readiness_authorization_granted": true,
+    "production_readiness_authorization_requested": true,
+    "user_visible_ranking_changed": false
+  },
+  "upstream_ref": {
+    "phase2_bundle": {
+      "bundle_revision": 3,
+      "path": "docs/audit/bundles/phase2-v1/bundle.json",
+      "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+    },
+    "phase2_write_pilot_accepted": true,
+    "production_readiness_authorization_granted": true,
+    "production_readiness_bundle": {
+      "bundle_revision": 2,
+      "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
+      "sha256": "ddaf3e10bebf48ccd5f920bada6256d72943cc3be147b5c82050cfae41ccfb00"
+    }
+  },
+  "writes_performed": false
+}
