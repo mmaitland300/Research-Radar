@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped online shadow live read-only authorization request while keeping live production source reads, global shadow enablement, production default, API/web, and user-visible behavior disabled.
+This bundle records the production-scoped online shadow live read-only authorization grant while keeping live reads at grant time, global shadow enablement, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 9
+- Bundle revision: 10
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -19,11 +19,11 @@ This bundle records the production-scoped online shadow live read-only authoriza
 - Production-scoped pilot reviewed: True
 - Production-scoped pilot accepted: True
 - Live read-only authorization requested: True
-- Live read-only authorization granted: False
-- Live read-only authorized: False
+- Live read-only authorization granted: True
+- Live read-only authorized: True
 - Live production source reads performed: False
 - Online shadow execution enabled: False
-- Recommended next stage: `record_production_scoped_online_shadow_live_read_only_authorization_grant_v1`
+- Recommended next stage: `run_production_scoped_online_shadow_live_read_only_pilot_v1`
 
 ## Pinned Identity
 
@@ -110,8 +110,8 @@ This bundle records the production-scoped online shadow live read-only authoriza
 - Execution authorized: False
 - Pilot execution authorized: True
 - Live read-only authorization requested: True
-- Live read-only authorization granted: False
-- Live read-only authorized: False
+- Live read-only authorization granted: True
+- Live read-only authorized: True
 - Proof authorized: False
 - Pilot authorized: True
 
@@ -122,7 +122,7 @@ This bundle records the production-scoped online shadow live read-only authoriza
 - Requested at: 2026-05-29T21:24:02Z
 - Request notes: Request production-scoped online shadow live read-only authorization after accepted bounded audit-artifact pilot review.
 - Requested scope: `production_scoped_shadow_live_read_only_paperwork_only`
-- Missing live read-only authorization: True
+- Missing live read-only authorization: False
 - Live reads performed: False
 
 ## Live Read-Only Future Grant Requirements
@@ -149,6 +149,41 @@ This bundle records the production-scoped online shadow live read-only authoriza
 - refit/training
 - fleet-wide enablement
 - live reads at request time
+
+## Live Read-Only Authorization Grant
+
+- Decision: `granted`
+- Owner: Matt Maitland
+- Granted at: 2026-05-29T22:16:01Z
+- Expiry date: 2026-08-27
+- Review by: 2026-08-27
+- Grant notes: Record production-scoped live read-only authorization grant paperwork; no live reads performed at grant time.
+- Second reviewer: None
+- Owner equivalent review: Owner reviewed the production-scoped live read-only request, bounded pilot review, and grant contract as equivalent authorization review.
+- Granted scope: `production_scoped_shadow_live_read_only_authorization_only`
+- Missing live read-only authorization: False
+- Live reads performed: False
+
+## Live Read-Only Grant Boundaries
+
+- read-only IAM scope
+- approved source allowlist
+- pinned identity/ranking-run/family boundaries
+- skip-whole-run incomplete coverage
+- process-scoped runtime flag
+- zero forbidden writes
+- rollback/flag-off drill
+
+## Live Read-Only Grant Explicitly Not Included
+
+- global enablement
+- production default
+- API/web
+- user-visible ranking
+- DB writes/DDL
+- refit/training
+- fleet-wide enablement
+- live reads at grant time
 
 ## Pilot Authorization Grant
 
@@ -252,7 +287,7 @@ This bundle records the production-scoped online shadow live read-only authoriza
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_live_read_only_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_live_read_only_pilot_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -290,6 +325,7 @@ This bundle records the production-scoped online shadow live read-only authoriza
 - global enablement
 - global flag enablement
 - live prod execution beyond an explicitly granted bounded pilot
+- live reads at grant time
 - live reads at request time
 - model refit, embedding generation, label ingest
 - online_shadow_execution_enabled globally
@@ -312,7 +348,7 @@ This bundle records the production-scoped online shadow live read-only authoriza
 
 ## Recommended Next Stage
 
-`record_production_scoped_online_shadow_live_read_only_authorization_grant_v1`
+`run_production_scoped_online_shadow_live_read_only_pilot_v1`
 
 ## Caveats
 
@@ -342,6 +378,9 @@ This bundle records the production-scoped online shadow live read-only authoriza
 - Pilot review does not grant live read-only production source access.
 - Pilot review does not grant global/live/fleet online shadow execution.
 - Production default/API/user-visible behavior remains unchanged after pilot review.
-- Bundle live-read-only request milestone only; grants no live production source access.
-- Accepted bounded audit-artifact pilot is necessary but not sufficient for live read-only access.
-- Live reads remain unperformed until a separate grant and run milestone.
+- Bundle live-read-only grant milestone only; does not run the live read-only pilot.
+- Clears live read-only authorization blocker for the live read-only pilot chain only.
+- Grants read-only source access authorization only; does not perform live reads at grant time.
+- Live read-only pilot run still required before any live prod source reads are recorded.
+- Does not enable global/live/fleet online shadow execution.
+- Production default/API/user-visible behavior remains unchanged.

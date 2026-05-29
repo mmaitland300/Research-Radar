@@ -13,10 +13,17 @@ from typing import Any
 import pytest
 
 from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+    LIVE_READ_ONLY_GRANT_AUTHORIZES_FOR_CHAIN_ONLY,
+    LIVE_READ_ONLY_GRANT_CAVEATS,
+    LIVE_READ_ONLY_GRANT_STILL_NOT_INCLUDED,
+    LIVE_READ_ONLY_GRANT_TIME_BOUNDARIES,
+    LIVE_READ_ONLY_GRANT_SCOPE,
     LIVE_READ_ONLY_REQUEST_EXPLICITLY_NOT_INCLUDED,
+    LIVE_READ_ONLY_REQUEST_CAVEATS,
     LIVE_READ_ONLY_REQUEST_FUTURE_GRANT_REQUIREMENTS,
     LIVE_READ_ONLY_REQUEST_SCOPE,
     MLShadowScorerProductionScopedShadowBundleError,
+    grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle,
     grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle,
     plan_ml_shadow_scorer_production_scoped_shadow_bundle,
     prove_ml_shadow_scorer_production_scoped_shadow_bundle,
@@ -171,6 +178,17 @@ def pilot_review_template_root(tmp_path_factory: pytest.TempPathFactory) -> Path
     root = _copy_fixture_repo(tmp_path_factory.mktemp("live-read-only-template"))
     _write_pilot_review_bundle(root)
     return root
+
+
+def _write_live_read_only_request_bundle(root: Path) -> Path:
+    bundle_path = root / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
+    request_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        requester="Live Requester",
+        request_notes="live read-only request notes",
+        repo_root=root,
+    )
+    return bundle_path
 
 
 def test_happy_path_request_from_revision_eight_to_revision_nine(
@@ -420,4 +438,334 @@ def test_cli_smoke_request_live_read_only_then_verify(
         "post_live_read_only_request",
         "online-shadow-production-scoped-v1",
         "record_production_scoped_online_shadow_live_read_only_authorization_grant_v1",
+    ]
+
+
+def test_happy_path_grant_from_revision_nine_to_revision_ten(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    before = _load(bundle_path)
+    shadow_before = _shadow_runs_files(root)
+
+    granted = grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner="Live Grant Owner",
+        second_reviewer="Live Grant Reviewer",
+        grant_notes="live read-only grant notes",
+        repo_root=root,
+    )
+    result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        repo_root=root,
+        expect_live_read_only_grant_filed=True,
+        verify_local_pilot_files=False,
+    )
+
+    assert before["metadata"]["bundle_revision"] == 9
+    assert granted["metadata"]["bundle_revision"] == 10
+    assert granted["plan"] == before["plan"]
+    assert granted["proof"] == before["proof"]
+    assert granted["execution"] == before["execution"]
+    assert granted["review"] == before["review"]
+    assert granted["metadata"]["legacy_artifacts_index"] == before["metadata"]["legacy_artifacts_index"]
+    assert granted["authorization"]["grant_decision"] == before["authorization"]["grant_decision"]
+    assert granted["authorization"]["granted_scope"] == before["authorization"]["granted_scope"]
+    assert granted["authorization"]["request_decision"] == before["authorization"]["request_decision"]
+    assert granted["authorization"]["requested_scope"] == before["authorization"]["requested_scope"]
+    assert granted["authorization"]["prod_scoped_shadow_live_read_only_authorization_requested"] is True
+    assert granted["authorization"]["prod_scoped_shadow_live_read_only_authorization_granted"] is True
+    assert granted["authorization"]["prod_scoped_shadow_live_read_only_authorized"] is True
+    assert granted["authorization"]["prod_scoped_shadow_live_execution_authorized"] is False
+    assert granted["authorization"]["prod_scoped_shadow_execution_authorized"] is False
+    assert granted["authorization"]["live_read_only_grant_decision"]["decision"] == "granted"
+    assert granted["authorization"]["live_read_only_grant_decision"]["owner"] == "Live Grant Owner"
+    assert granted["authorization"]["live_read_only_grant_decision"]["second_reviewer"] == "Live Grant Reviewer"
+    assert granted["authorization"]["live_read_only_grant_decision"]["grant_notes"] == "live read-only grant notes"
+    assert granted["authorization"]["live_read_only_granted_scope"]["authorization_scope"] == LIVE_READ_ONLY_GRANT_SCOPE
+    assert set(LIVE_READ_ONLY_GRANT_AUTHORIZES_FOR_CHAIN_ONLY).issubset(
+        granted["authorization"]["live_read_only_granted_scope"]["authorizes_for_chain_only"]
+    )
+    assert set(LIVE_READ_ONLY_GRANT_STILL_NOT_INCLUDED).issubset(
+        granted["authorization"]["live_read_only_granted_scope"]["explicitly_still_not_included"]
+    )
+    assert set(LIVE_READ_ONLY_GRANT_TIME_BOUNDARIES).issubset(
+        granted["authorization"]["live_read_only_granted_scope"]["grant_time_live_read_boundaries"]
+    )
+    assert granted["posture"]["missing_prod_scoped_shadow_live_read_only_authorization"] is False
+    assert granted["posture"]["live_prod_source_reads_performed"] is False
+    assert granted["shadow_and_production_blockers"]["blockers_cleared_by_live_read_only_grant"] == [
+        "missing_prod_scoped_shadow_live_read_only_authorization"
+    ]
+    assert granted["shadow_and_production_blockers"]["blockers_introduced_by_live_read_only_grant"] == []
+    assert granted["shadow_and_production_blockers"]["blockers_unchanged_by_live_read_only_grant"] is True
+    assert "blockers_changed_by_live_read_only_grant" not in granted["shadow_and_production_blockers"]
+    assert granted["recommended_next_stage"] == "run_production_scoped_online_shadow_live_read_only_pilot_v1"
+    assert set(LIVE_READ_ONLY_GRANT_CAVEATS).issubset(granted["caveats"])
+    assert all(caveat not in granted["caveats"] for caveat in LIVE_READ_ONLY_REQUEST_CAVEATS)
+    assert _shadow_runs_files(root) == shadow_before
+    assert result["verification_mode"] == "post_live_read_only_grant"
+
+
+def test_live_read_only_grant_rejects_wrong_revision(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = root / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="bundle_revision"):
+        grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            owner_documents_equivalent_review="owner equivalent live read-only review",
+            repo_root=root,
+        )
+
+
+def test_live_read_only_grant_rejects_double_grant(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent live read-only review",
+        repo_root=root,
+    )
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="already been filed"):
+        grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            owner_documents_equivalent_review="owner equivalent live read-only review",
+            repo_root=root,
+        )
+
+
+def test_live_read_only_grant_requires_independent_or_equivalent_review(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="requires second_reviewer"):
+        grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            repo_root=root,
+        )
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="second_reviewer"):
+        grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            owner="Same Reviewer",
+            second_reviewer="Same Reviewer",
+            repo_root=root,
+        )
+
+
+def test_live_read_only_grant_rejects_incomplete_request_scope(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    payload = _load(bundle_path)
+    payload["authorization"]["requested_scope"]["future_grant_would_require"].remove(
+        LIVE_READ_ONLY_REQUEST_FUTURE_GRANT_REQUIREMENTS[0]
+    )
+    _write_json(bundle_path, payload)
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="future_grant_would_require"):
+        grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            owner_documents_equivalent_review="owner equivalent live read-only review",
+            repo_root=root,
+        )
+
+
+def test_live_read_only_grant_verifier_rejects_any_live_read_performed_flag(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent live read-only review",
+        repo_root=root,
+    )
+    payload = _load(bundle_path)
+    payload["execution"]["pilot_run"]["live_prod_source_reads_performed"] = True
+    _write_json(bundle_path, payload)
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="live_prod_source_reads_performed"):
+        verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            repo_root=root,
+            expect_live_read_only_grant_filed=True,
+            verify_local_pilot_files=False,
+        )
+
+
+@pytest.mark.parametrize(
+    "field_path",
+    [
+        "authorization.prod_scoped_shadow_live_execution_authorized",
+        "authorization.prod_scoped_shadow_execution_authorized",
+        "posture.online_shadow_execution_enabled",
+        "posture.production_default_allowed",
+        "posture.api_web_changes_allowed",
+        "posture.user_visible_ranking_changed",
+        "writes_performed",
+        "runtime_writes_performed",
+    ],
+)
+def test_live_read_only_grant_verifier_rejects_global_default_api_user_visible_or_write_enablement(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+    field_path: str,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent live read-only review",
+        repo_root=root,
+    )
+    payload = _load(bundle_path)
+    _set_path(payload, field_path, True)
+    _write_json(bundle_path, payload)
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match=field_path.split(".")[-1]):
+        verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            repo_root=root,
+            expect_live_read_only_grant_filed=True,
+            verify_local_pilot_files=False,
+        )
+
+
+def test_live_read_only_grant_rejects_stale_request_only_caveat(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent live read-only review",
+        repo_root=root,
+    )
+    payload = _load(bundle_path)
+    payload["caveats"].append("Bundle live-read-only request milestone only; grants no live production source access.")
+    _write_json(bundle_path, payload)
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="request-only"):
+        verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            repo_root=root,
+            expect_live_read_only_grant_filed=True,
+            verify_local_pilot_files=False,
+        )
+
+
+def test_live_read_only_grant_does_not_import_runtime_or_database_modules(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    original_import = builtins.__import__
+    forbidden = {
+        "psycopg",
+        "openai",
+        "openalex",
+        "sklearn",
+        "pipeline.ml_shadow_scorer_online_shadow_runtime",
+    }
+
+    def guarded_import(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name in forbidden:
+            raise AssertionError(f"live read-only grant must not import {name}")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent live read-only review",
+        repo_root=root,
+    )
+
+
+def test_live_read_only_grant_does_not_open_shadow_runs_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    original_open = Path.open
+
+    def guarded_open(self: Path, *args: Any, **kwargs: Any) -> Any:
+        normalized = self.resolve().as_posix()
+        if "/docs/audit/shadow-runs/" in normalized:
+            raise AssertionError(f"live read-only grant must not open shadow-runs path: {self}")
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", guarded_open)
+
+    grant_live_read_only_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent live read-only review",
+        repo_root=root,
+    )
+
+
+def test_cli_smoke_grant_live_read_only_then_verify(
+    tmp_path: Path,
+    pilot_review_template_root: Path,
+) -> None:
+    root = _copy_template_repo(pilot_review_template_root, tmp_path)
+    bundle_path = _write_live_read_only_request_bundle(root)
+    grant_cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-production-scoped-shadow-bundle-grant-live-read-only",
+        "--bundle",
+        str(bundle_path),
+        "--owner-documents-equivalent-review",
+        "Owner reviewed the live read-only request and grant contract.",
+        "--repo-root",
+        str(root),
+    ]
+    granted = subprocess.run(grant_cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True, check=True)
+    assert granted.stdout.splitlines() == [
+        "granted",
+        "True",
+        "run_production_scoped_online_shadow_live_read_only_pilot_v1",
+    ]
+
+    verify_cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-production-scoped-shadow-bundle-verify",
+        "--bundle",
+        str(bundle_path),
+        "--expect-live-read-only-grant-filed",
+        "--repo-root",
+        str(root),
+    ]
+    verified = subprocess.run(verify_cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True, check=True)
+    assert verified.stdout.splitlines() == [
+        "passed",
+        "post_live_read_only_grant",
+        "online-shadow-production-scoped-v1",
+        "run_production_scoped_online_shadow_live_read_only_pilot_v1",
     ]
