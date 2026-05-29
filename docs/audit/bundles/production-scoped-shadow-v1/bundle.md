@@ -2,15 +2,17 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped shadow pilot authorization grant while keeping pilot execution, runtime, production default, API/web, and user-visible behavior disabled.
+This bundle records the bounded fixture production-scoped shadow pilot harness while keeping live pilot execution, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 4
+- Bundle revision: 5
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
 - Pilot authorization requested: True
 - Pilot authorization granted: True
 - Pilot authorized: True
+- Pilot harness executed: True
+- Production-scoped pilot executed: False
 - Online shadow execution enabled: False
 - Recommended next stage: `run_production_scoped_online_shadow_pilot_v1`
 
@@ -122,6 +124,25 @@ This bundle records the production-scoped shadow pilot authorization grant while
 - Granted scope: `production_scoped_shadow_pilot_authorization_only`
 - Missing pilot authorization: False
 
+## Pilot Harness
+
+- Pilot surface: `bounded_fixture_pilot_harness`
+- Pilot run id: `rank-83787b91ef-harness-20260529T162506Z`
+- Fixture row count: 3
+- Live prod source reads performed: False
+- Harness passed: True
+- Pilot executed: False
+- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/rank-83787b91ef-harness-20260529T162506Z/`
+
+## Pilot Harness Files
+
+| Path | Bytes | Rows | SHA-256 |
+| --- | ---: | ---: | --- |
+| `manifest.json` | 1074 | None | `75d2e52ab521c7c9e7998407b61167d91367953f87870cda4516a4e3a2fbc98b` |
+| `shadow_rows.jsonl` | 1685 | 3 | `925ef4b1685f30cb777097ca8b787c8df9a6cea65c7e2467084485b56f96fe0f` |
+| `observability.json` | 1774 | None | `2da9ab90eaba117b912b2bce972ef9329a33d6bd7c783c7e6b6605d054a69c44` |
+| `write_counts.json` | 741 | None | `7c8697e6c06b9300f4cd4ab6b81deabae834da500457484483f3a8796af0d457` |
+
 ## Explicitly Not Included
 
 - API/web
@@ -165,3 +186,9 @@ This bundle records the production-scoped shadow pilot authorization grant while
 - Clears prod-scoped pilot authorization blocker for the pilot chain only.
 - Bounded pilot run still required before any enablement or prod default/API/user-visible change.
 - Global shadow flag default remains off; prod default/API/user-visible remain separate chains.
+- This is a bounded fixture pilot harness, not live production traffic.
+- No live prod source reads were performed.
+- No production-scoped pilot execution is recorded.
+- Global shadow remains disabled.
+- Production default/API/user-visible behavior remains unchanged.
+- Actual production-scoped pilot remains a separate milestone.

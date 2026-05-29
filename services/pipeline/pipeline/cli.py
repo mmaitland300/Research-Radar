@@ -5909,6 +5909,46 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_scoped_shadow_pilot_harness_run_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-pilot-harness-run",
+        help="Run the bounded fixture production-scoped online shadow pilot harness",
+    )
+    ml_shadow_scorer_production_scoped_shadow_pilot_harness_run_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_pilot_harness_run_parser.add_argument(
+        "--pilot-run-id",
+        default=None,
+        help="Optional safe pilot harness run id; defaults to ranking_run_id plus UTC timestamp",
+    )
+    ml_shadow_scorer_production_scoped_shadow_pilot_harness_run_parser.add_argument(
+        "--fixture-input",
+        default=None,
+        help="Optional JSON/JSONL bounded synthetic fixture rows for the pilot harness",
+    )
+    ml_shadow_scorer_production_scoped_shadow_pilot_harness_run_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references and prod-scoped artifact paths",
+    )
+    pilot_harness_update_group = (
+        ml_shadow_scorer_production_scoped_shadow_pilot_harness_run_parser.add_mutually_exclusive_group()
+    )
+    pilot_harness_update_group.add_argument(
+        "--update-bundle",
+        dest="update_bundle",
+        action="store_true",
+        default=True,
+        help="Update the bundle JSON and Markdown after the harness passes (default)",
+    )
+    pilot_harness_update_group.add_argument(
+        "--no-update-bundle",
+        dest="update_bundle",
+        action="store_false",
+        help="Run the harness and write local artifacts without updating the bundle",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser = subparsers.add_parser(
         "ml-shadow-scorer-production-scoped-shadow-bundle-verify",
         help="Verify the production-scoped shadow bundle and referenced artifact hashes",
@@ -5943,6 +5983,11 @@ def main() -> None:
         "--expect-pilot-grant-filed",
         action="store_true",
         help="Require post-pilot-grant production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-pilot-harness-filed",
+        action="store_true",
+        help="Require post-pilot-harness production-scoped shadow bundle state",
     )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -8972,6 +9017,29 @@ def main() -> None:
         print(payload["recommended_next_stage"])
         return
 
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-pilot-harness-run":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_pilot_harness import (
+            MLShadowScorerProductionScopedShadowPilotHarnessError,
+            run_ml_shadow_scorer_production_scoped_shadow_pilot_harness,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = run_ml_shadow_scorer_production_scoped_shadow_pilot_harness(
+                bundle_path=Path(args.bundle),
+                pilot_run_id=args.pilot_run_id,
+                fixture_input_path=Path(args.fixture_input) if args.fixture_input else None,
+                repo_root=repo_root,
+                update_bundle=bool(args.update_bundle),
+            )
+        except MLShadowScorerProductionScopedShadowPilotHarnessError as e:
+            print(f"ml-shadow-scorer-production-scoped-shadow-pilot-harness-run: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["pilot_run_id"])
+        print(result["pilot_harness_passed"])
+        print(result["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-verify":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -8983,6 +9051,7 @@ def main() -> None:
         expect_proof_filed = None
         expect_pilot_request_filed = None
         expect_pilot_grant_filed = None
+        expect_pilot_harness_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -8993,6 +9062,8 @@ def main() -> None:
             expect_pilot_request_filed = True
         elif args.expect_pilot_grant_filed:
             expect_pilot_grant_filed = True
+        elif args.expect_pilot_harness_filed:
+            expect_pilot_harness_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -9001,6 +9072,7 @@ def main() -> None:
                 expect_proof_filed=expect_proof_filed,
                 expect_pilot_request_filed=expect_pilot_request_filed,
                 expect_pilot_grant_filed=expect_pilot_grant_filed,
+                expect_pilot_harness_filed=expect_pilot_harness_filed,
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
             print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)

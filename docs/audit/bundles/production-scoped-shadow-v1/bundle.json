@@ -54,6 +54,7 @@
     "prod_scoped_shadow_pilot_authorization_granted": true,
     "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": true,
+    "prod_scoped_shadow_pilot_harness_allowed_by_grant": true,
     "prod_scoped_shadow_plan_authorization_scope": "production_scoped_shadow_plan_paperwork_only",
     "prod_scoped_shadow_proof_allowed_by_plan": true,
     "prod_scoped_shadow_proof_authorized": false,
@@ -94,18 +95,236 @@
     "Bundle pilot-grant milestone only; does not run the prod-scoped pilot.",
     "Clears prod-scoped pilot authorization blocker for the pilot chain only.",
     "Bounded pilot run still required before any enablement or prod default/API/user-visible change.",
-    "Global shadow flag default remains off; prod default/API/user-visible remain separate chains."
+    "Global shadow flag default remains off; prod default/API/user-visible remain separate chains.",
+    "This is a bounded fixture pilot harness, not live production traffic.",
+    "No live prod source reads were performed.",
+    "No production-scoped pilot execution is recorded.",
+    "Global shadow remains disabled.",
+    "Production default/API/user-visible behavior remains unchanged.",
+    "Actual production-scoped pilot remains a separate milestone."
   ],
   "execution": {
+    "pilot_harness": {
+      "executed_at": "2026-05-29T16:25:06Z",
+      "files_written": [
+        {
+          "byte_count": 1074,
+          "relative_path": "manifest.json",
+          "row_count": null,
+          "sha256": "75d2e52ab521c7c9e7998407b61167d91367953f87870cda4516a4e3a2fbc98b",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        },
+        {
+          "byte_count": 1685,
+          "relative_path": "shadow_rows.jsonl",
+          "row_count": 3,
+          "sha256": "925ef4b1685f30cb777097ca8b787c8df9a6cea65c7e2467084485b56f96fe0f",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        },
+        {
+          "byte_count": 1774,
+          "relative_path": "observability.json",
+          "row_count": null,
+          "sha256": "2da9ab90eaba117b912b2bce972ef9329a33d6bd7c783c7e6b6605d054a69c44",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        },
+        {
+          "byte_count": 741,
+          "relative_path": "write_counts.json",
+          "row_count": null,
+          "sha256": "7c8697e6c06b9300f4cd4ab6b81deabae834da500457484483f3a8796af0d457",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        }
+      ],
+      "fixture_row_count": 3,
+      "live_prod_source_reads_performed": false,
+      "observability_summary": {
+        "component_coverage": {
+          "complete": true,
+          "runtime_candidate_count": 3,
+          "shadow_row_count": 3
+        },
+        "error_counters": {
+          "forbidden_write_count_errors": 0,
+          "runtime_errors": 0
+        },
+        "forbidden_write_target_counts": {
+          "api_visible_tables": 0,
+          "embeddings": 0,
+          "isolated_prod_scoped_audit_artifacts": 4,
+          "labels": 0,
+          "paper_scores": 0,
+          "prod_scoped_shadow_tables": 0,
+          "production_config": 0,
+          "production_default_pins": 0,
+          "ranking_runs": 0,
+          "scorer_artifacts": 0
+        },
+        "latency": {
+          "pilot_elapsed_ms": 0.13639999087899923,
+          "postflight_elapsed_ms": 0.010799994925037026,
+          "preflight_elapsed_ms": 0.023899978259578347
+        },
+        "live_prod_source_reads_performed": false,
+        "observability_complete": true,
+        "pilot_surface": "bounded_fixture_pilot_harness",
+        "rank_displacement_audit_only": "fixture_only",
+        "row_counts": {
+          "fixture_rows": 3,
+          "postflight_shadow_rows": 0,
+          "preflight_shadow_rows": 0,
+          "shadow_rows": 3
+        },
+        "run_status": "succeeded_test_only",
+        "score_distributions": {
+          "ml_shadow_scorer_v1_score": [
+            0.75,
+            0.75,
+            0.0
+          ]
+        },
+        "signals_emitted": [
+          "run status",
+          "row counts",
+          "error counters",
+          "latency",
+          "component coverage",
+          "score distributions",
+          "skipped runs/reasons",
+          "forbidden write target counts (all zero)",
+          "rank displacement audit-only"
+        ],
+        "skipped_runs": [
+          {
+            "phase": "preflight_disabled",
+            "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
+            "status": "skipped_runtime_disabled"
+          },
+          {
+            "phase": "postflight_disabled",
+            "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
+            "status": "skipped_runtime_disabled"
+          }
+        ]
+      },
+      "pass_fail_evaluation": {
+        "checks": {
+          "environment_restored": true,
+          "files_written_allowed": true,
+          "fixture_row_count_3": true,
+          "forbidden_write_counts_zero": true,
+          "isolated_artifact_target_count_4": true,
+          "labels_used_for_scoring_false": true,
+          "live_prod_source_reads_false": true,
+          "pilot_executed_false": true,
+          "pilot_runtime_succeeded": true,
+          "postflight_disabled": true,
+          "preflight_disabled": true,
+          "production_default_changed_false": true,
+          "runtime_drill_order": true,
+          "runtime_writes_false": true,
+          "user_visible_ranking_changed_false": true
+        },
+        "failed_checks": [],
+        "forbidden_nonzero_write_counts": {},
+        "overall_passed": true
+      },
+      "pilot_run_directory": {
+        "relative_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/rank-83787b91ef-harness-20260529T162506Z/",
+        "root_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/"
+      },
+      "pilot_run_id": "rank-83787b91ef-harness-20260529T162506Z",
+      "pilot_surface": "bounded_fixture_pilot_harness",
+      "runtime_drill": {
+        "call_order": [
+          "preflight_disabled",
+          "pilot_enabled",
+          "postflight_disabled"
+        ],
+        "environment_restored": true,
+        "pilot": {
+          "elapsed_ms": 0.13639999087899923,
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "reason": "feature flag enabled in explicit test-only context; no writes performed",
+          "runtime_enabled": true,
+          "runtime_errors": [],
+          "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+          "runtime_feature_flag_value": "true",
+          "shadow_row_count": 3,
+          "status": "succeeded_test_only",
+          "user_visible_ranking_changed": false,
+          "write_count": 0,
+          "writes_performed": false
+        },
+        "postflight": {
+          "elapsed_ms": 0.010799994925037026,
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
+          "runtime_enabled": false,
+          "runtime_errors": [],
+          "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+          "runtime_feature_flag_value": null,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "write_count": 0,
+          "writes_performed": false
+        },
+        "preflight": {
+          "elapsed_ms": 0.023899978259578347,
+          "labels_used_for_scoring": false,
+          "production_default_changed": false,
+          "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
+          "runtime_enabled": false,
+          "runtime_errors": [],
+          "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
+          "runtime_feature_flag_value": null,
+          "shadow_row_count": 0,
+          "status": "skipped_runtime_disabled",
+          "user_visible_ranking_changed": false,
+          "write_count": 0,
+          "writes_performed": false
+        }
+      },
+      "write_count_verification": {
+        "committed_artifact_writes_performed": false,
+        "file_count": 4,
+        "forbidden_nonzero_write_counts": {},
+        "forbidden_write_counts_zero": true,
+        "live_prod_source_reads_performed": false,
+        "local_artifact_tree_writes_performed": true,
+        "pilot_run_id": "rank-83787b91ef-harness-20260529T162506Z",
+        "pilot_surface": "bounded_fixture_pilot_harness",
+        "production_writes_performed": false,
+        "runtime_writes_performed": false,
+        "write_count": 4,
+        "write_counts_by_isolated_target": {
+          "api_visible_tables": 0,
+          "embeddings": 0,
+          "isolated_prod_scoped_audit_artifacts": 4,
+          "labels": 0,
+          "paper_scores": 0,
+          "prod_scoped_shadow_tables": 0,
+          "production_config": 0,
+          "production_default_pins": 0,
+          "ranking_runs": 0,
+          "scorer_artifacts": 0
+        }
+      }
+    },
     "prod_scoped_shadow_pilot_executed": false,
+    "prod_scoped_shadow_pilot_harness_executed": true,
+    "prod_scoped_shadow_pilot_harness_passed": true,
     "prod_scoped_shadow_plan_execution_performed": false,
     "prod_scoped_shadow_proof_executed": true
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 4,
+    "bundle_revision": 5,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-29T15:38:46Z",
+    "generated_at": "2026-05-29T16:25:06Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -301,6 +520,7 @@
   },
   "posture": {
     "api_web_changes_allowed": false,
+    "live_prod_source_reads_performed": false,
     "missing_prod_scoped_shadow_pilot_authorization": false,
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
@@ -309,6 +529,8 @@
     "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": true,
     "prod_scoped_shadow_pilot_executed": false,
+    "prod_scoped_shadow_pilot_harness_executed": true,
+    "prod_scoped_shadow_pilot_harness_passed": true,
     "prod_scoped_shadow_plan_defined": true,
     "prod_scoped_shadow_proof_authorized": false,
     "prod_scoped_shadow_proof_passed": true,
@@ -485,13 +707,16 @@
     "blockers_cleared_by_pilot_grant": [
       "missing_prod_scoped_shadow_pilot_authorization"
     ],
+    "blockers_cleared_by_pilot_harness": [],
     "blockers_cleared_by_pilot_request": [],
     "blockers_introduced_by_pilot_grant": [],
+    "blockers_introduced_by_pilot_harness": [],
     "blockers_introduced_by_pilot_request": [
       "missing_prod_scoped_shadow_pilot_authorization"
     ],
     "blockers_unchanged_by_grant": true,
     "blockers_unchanged_by_pilot_grant": true,
+    "blockers_unchanged_by_pilot_harness": true,
     "blockers_unchanged_by_pilot_request": true,
     "blockers_unchanged_by_plan": true,
     "blockers_unchanged_by_proof": true,
@@ -502,6 +727,7 @@
     "prod_scoped_shadow_pilot_authorization_granted": true,
     "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": true,
+    "prod_scoped_shadow_pilot_executed": false,
     "prod_scoped_shadow_proof_authorized": false,
     "production_default_allowed": false,
     "production_readiness_authorization_granted": true,
