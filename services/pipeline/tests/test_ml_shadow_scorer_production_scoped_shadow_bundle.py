@@ -1103,17 +1103,17 @@ def test_upstream_verifiers_still_pass(tmp_path: Path) -> None:
     assert production_readiness_result["verification_mode"] == "post_grant"
 
 
-def test_committed_bundle_fixture_matches_post_pilot_harness_review_if_present() -> None:
+def test_committed_bundle_fixture_matches_post_pilot_run_if_present() -> None:
     committed = REPO_ROOT / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         bundle_path=committed,
         repo_root=REPO_ROOT,
-        expect_pilot_harness_review_filed=True,
+        expect_pilot_run_filed=True,
     )
-    assert result["bundle_revision"] == 6
-    assert result["recommended_next_stage"] == "run_production_scoped_online_shadow_pilot_v1"
+    assert result["bundle_revision"] == 7
+    assert result["recommended_next_stage"] == "review_production_scoped_online_shadow_pilot_v1"
 
 
 def test_payload_verifier_infers_plan_mode(tmp_path: Path) -> None:

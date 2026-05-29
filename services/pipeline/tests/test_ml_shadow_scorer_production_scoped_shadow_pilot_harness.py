@@ -284,15 +284,14 @@ def test_restores_environment_variable(tmp_path: Path, monkeypatch: pytest.Monke
 def test_preflight_pilot_postflight_runtime_order(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = _copy_fixture_repo(tmp_path)
     monkeypatch.delenv(FEATURE_FLAG, raising=False)
-    original_runtime = pilot_module.run_ml_shadow_scorer_v1_online_shadow_runtime
+    original_runtime_call = pilot_module._runtime_call
     calls: list[tuple[str | None, int]] = []
 
-    def wrapped_runtime(candidate_rows: list[Mapping[str, Any]], *, env: Mapping[str, str] | None = None) -> dict[str, Any]:
-        flag_value = env.get(FEATURE_FLAG) if env is not None else os.environ.get(FEATURE_FLAG)
+    def wrapped_runtime_call(candidate_rows: list[Mapping[str, Any]], *, flag_value: str | None) -> dict[str, Any]:
         calls.append((flag_value, len(candidate_rows)))
-        return original_runtime(candidate_rows, env=env)
+        return original_runtime_call(candidate_rows, flag_value=flag_value)
 
-    monkeypatch.setattr(pilot_module, "run_ml_shadow_scorer_v1_online_shadow_runtime", wrapped_runtime)
+    monkeypatch.setattr(pilot_module, "_runtime_call", wrapped_runtime_call)
 
     result = _run_harness(root, pilot_run_id="drill-order")
 
@@ -338,12 +337,12 @@ def test_rejects_live_prod_source_read_claim_in_bundle(tmp_path: Path) -> None:
         )
 
 
-def test_runtime_import_call_is_limited_to_pilot_harness_module() -> None:
+def test_runtime_import_call_is_limited_to_pilot_runner_module() -> None:
     production_scoped_modules = list((PACKAGE_ROOT / "pipeline").glob("ml_shadow_scorer_production_scoped*.py"))
     assert production_scoped_modules
     for module_path in production_scoped_modules:
         source = module_path.read_text(encoding="utf-8")
-        if module_path.name == "ml_shadow_scorer_production_scoped_shadow_pilot_harness.py":
+        if module_path.name == "ml_shadow_scorer_production_scoped_shadow_pilot.py":
             assert "run_ml_shadow_scorer_v1_online_shadow_runtime" in source
         else:
             assert "run_ml_shadow_scorer_v1_online_shadow_runtime" not in source

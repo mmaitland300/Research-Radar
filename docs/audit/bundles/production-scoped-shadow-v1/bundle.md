@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the bounded fixture production-scoped shadow pilot harness review (accepted) while keeping live pilot execution, production default, API/web, and user-visible behavior disabled.
+This bundle records the bounded 528-work audit-artifact production-scoped shadow pilot while keeping live production source reads, global shadow enablement, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 6
+- Bundle revision: 7
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -14,9 +14,10 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 - Pilot harness executed: True
 - Pilot harness reviewed: True
 - Pilot harness accepted: True
-- Production-scoped pilot executed: False
+- Production-scoped pilot executed: True
+- Production-scoped pilot passed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `run_production_scoped_online_shadow_pilot_v1`
+- Recommended next stage: `review_production_scoped_online_shadow_pilot_v1`
 
 ## Pinned Identity
 
@@ -101,6 +102,7 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 - Pilot authorization requested: True
 - Live execution authorized: False
 - Execution authorized: False
+- Pilot execution authorized: True
 - Proof authorized: False
 - Pilot authorized: True
 
@@ -133,7 +135,7 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 - Fixture row count: 3
 - Live prod source reads performed: False
 - Harness passed: True
-- Pilot executed: False
+- Pilot executed: True
 - Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/rank-83787b91ef-harness-20260529T162506Z/`
 
 ## Pilot Harness Files
@@ -153,7 +155,7 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 - Review notes: None
 - Harness accepted: True
 - Failed review checks: None
-- Pilot executed: False
+- Pilot executed: True
 
 ## Pilot Harness Review Checks
 
@@ -180,6 +182,32 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 - no runtime rerun was performed
 - no shadow-runs artifact reads or writes were performed
 - actual production-scoped pilot remains unexecuted
+
+## Production-Scoped Pilot Run
+
+- Pilot surface: `bounded_read_only_audit_artifact_pilot`
+- Pilot run id: `rank-83787b91ef-20260529T210000Z`
+- Joined candidate count: 528
+- Live prod source reads performed: False
+- Pilot passed: True
+- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/rank-83787b91ef-20260529T210000Z/`
+
+## Production-Scoped Pilot Source Artifacts
+
+| Role | Path | SHA-256 |
+| --- | --- | --- |
+| learned_probability_artifact | `docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json` | `92df47cf9f49b4391404d170775cdcae6b4615423f852e2e8198562fbca778af` |
+| second_surface_generalization_audit | `docs/audit/ml-shadow-scorer-v1-second-surface-generalization-audit-v1.json` | `335d06c3ceae65c1420e12fc64bf9d9b9e20c19bfb762858d2299218e5253c96` |
+| bundle | `docs/audit/bundles/production-scoped-shadow-v1/bundle.json` | `1a7888b7ff46ab07fc91a65eed2d5087c34881f95cdeb8eeed7c4caee8322c1c` |
+
+## Production-Scoped Pilot Files
+
+| Path | Bytes | Rows | SHA-256 |
+| --- | ---: | ---: | --- |
+| `manifest.json` | 3167 | None | `4452d6cd018a84b04b504227d0253c185eb2f1f53508e2774dff065e3a22a6f9` |
+| `shadow_rows.jsonl` | 406935 | 528 | `a8fe921a4b5901de0e5a6ac66299ac5efb29297ed17c12e795929b87e7958f98` |
+| `observability.json` | 15631 | None | `dd739991032e01f8121482c2afa893c53a5e588d9aa7f7693ff0a451dab19853` |
+| `write_counts.json` | 742 | None | `9d73f2f1232f11512e138d41ca78e6ae82fc25389c05da93ded1829486cfd26a` |
 
 ## Explicitly Not Included
 
@@ -208,7 +236,7 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 
 ## Recommended Next Stage
 
-`run_production_scoped_online_shadow_pilot_v1`
+`review_production_scoped_online_shadow_pilot_v1`
 
 ## Caveats
 
@@ -220,10 +248,6 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 - Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.
 - Proof clears the prod-scoped shadow proof blocker only.
 - Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates.
-- Bundle pilot-grant milestone only; does not run the prod-scoped pilot.
-- Clears prod-scoped pilot authorization blocker for the pilot chain only.
-- Bounded pilot run still required before any enablement or prod default/API/user-visible change.
-- Global shadow flag default remains off; prod default/API/user-visible remain separate chains.
 - This is a bounded fixture pilot harness, not live production traffic.
 - No live prod source reads were performed.
 - No production-scoped pilot execution is recorded.
@@ -233,3 +257,8 @@ This bundle records the bounded fixture production-scoped shadow pilot harness r
 - Review covers bounded fixture pilot harness plumbing evidence only, not live production traffic.
 - No runtime rerun or shadow-runs artifact read was performed by the review.
 - The actual production-scoped pilot remains unexecuted and separately gated.
+- Pilot uses approved frozen second-surface audit artifacts, not live production traffic.
+- No live production DB/source reads were performed.
+- Live read-only production shadow access remains a separate future authorization chain.
+- Global online shadow enablement remains false.
+- Production default/API/user-visible behavior remains unchanged.
