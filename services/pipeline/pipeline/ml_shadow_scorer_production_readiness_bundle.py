@@ -62,12 +62,15 @@ POST_GRANT_GATE_STATUSES = {
     "blocked_separate_chain",
 }
 
-CAVEATS = (
-    "Bundle request milestone only; grants nothing.",
+COMMON_CAVEATS = (
     "Phase 2 accepted evidence is necessary but not sufficient.",
-    "Gate partial/open statuses are inputs to owner grant review, not failures of this commit.",
     "This bundle does not enable online shadow execution.",
     "This bundle does not authorize production default/API/user-visible ranking behavior.",
+)
+
+REQUEST_CAVEATS = (
+    "Bundle request milestone only; grants nothing.",
+    "Gate partial/open statuses are inputs to owner grant review, not failures of this commit.",
 )
 
 EXPLICITLY_NOT_INCLUDED = (
@@ -96,6 +99,16 @@ GRANT_CAVEATS = (
     "Prod-scoped shadow plan/proof/pilot still required before any enablement.",
     "Production default/API/user-visible ranking remain separate authorization chains.",
 )
+
+
+def _caveats_for_mode(mode: str) -> list[str]:
+    if mode == "pre_request":
+        return list(COMMON_CAVEATS)
+    if mode == "post_request":
+        return list(COMMON_CAVEATS) + list(REQUEST_CAVEATS)
+    if mode == "post_grant":
+        return list(COMMON_CAVEATS) + list(GRANT_CAVEATS)
+    raise MLShadowScorerProductionReadinessBundleError(f"unknown caveat mode {mode!r}")
 
 
 class MLShadowScorerProductionReadinessBundleError(Exception):
@@ -555,7 +568,7 @@ def assemble_ml_shadow_scorer_production_readiness_bundle_payload(
         "writes_performed": False,
         "runtime_writes_performed": False,
         "recommended_next_stage": PRE_REQUEST_NEXT_STAGE,
-        "caveats": list(CAVEATS),
+        "caveats": _caveats_for_mode("pre_request"),
     }
     verify_ml_shadow_scorer_production_readiness_bundle_payload(
         payload,
@@ -596,6 +609,7 @@ def apply_production_readiness_authorization_request(
     updated["writes_performed"] = False
     updated["runtime_writes_performed"] = False
     updated["recommended_next_stage"] = POST_REQUEST_NEXT_STAGE
+    updated["caveats"] = _caveats_for_mode("post_request")
     return updated
 
 
@@ -851,11 +865,7 @@ def apply_production_readiness_authorization_grant(
     updated["writes_performed"] = False
     updated["runtime_writes_performed"] = False
     updated["recommended_next_stage"] = POST_GRANT_NEXT_STAGE
-    caveats = list(updated.get("caveats") or [])
-    for caveat in GRANT_CAVEATS:
-        if caveat not in caveats:
-            caveats.append(caveat)
-    updated["caveats"] = caveats
+    updated["caveats"] = _caveats_for_mode("post_grant")
     return updated
 
 
@@ -1176,13 +1186,15 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
     caveats = bundle.get("caveats")
     if not isinstance(caveats, list):
         raise MLShadowScorerProductionReadinessBundleError("caveats must be a list")
-    for caveat in CAVEATS:
+    for caveat in _caveats_for_mode(mode):
         if caveat not in caveats:
             raise MLShadowScorerProductionReadinessBundleError(f"caveats missing {caveat!r}")
     if mode == "post_grant":
-        for caveat in GRANT_CAVEATS:
-            if caveat not in caveats:
-                raise MLShadowScorerProductionReadinessBundleError(f"grant caveats missing {caveat!r}")
+        for caveat in REQUEST_CAVEATS:
+            if caveat in caveats:
+                raise MLShadowScorerProductionReadinessBundleError(
+                    f"caveats must not include request-only {caveat!r}"
+                )
     return {
         "verification_status": "passed",
         "verification_mode": mode,

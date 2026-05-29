@@ -188,6 +188,26 @@ def test_grant_from_revision_1_request_and_verify_post_grant(tmp_path: Path) -> 
     assert result["verification_mode"] == "post_grant"
 
 
+def test_post_grant_caveats_exclude_request_only_text(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_request_bundle(root)
+
+    granted = grant_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=bundle_path,
+        second_reviewer="Second Reviewer",
+        repo_root=root,
+    )
+    caveats = granted["caveats"]
+
+    assert "grants nothing" not in " ".join(caveats).lower()
+    assert not any("partial/open statuses" in caveat for caveat in caveats)
+    for caveat in (
+        "Bundle grant milestone only; does not run prod shadow or enable global shadow.",
+        "Clears production-readiness authorization blocker for paperwork chain only.",
+    ):
+        assert caveat in caveats
+
+
 def test_rejects_grant_on_pre_request_bundle(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     bundle_path = _write_pre_request_bundle(root)

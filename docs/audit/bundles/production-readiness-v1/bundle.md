@@ -113,9 +113,7 @@ This bundle is the canonical production-readiness ladder view. It records a requ
 
 ## Caveats
 
-- Bundle request milestone only; grants nothing.
 - Phase 2 accepted evidence is necessary but not sufficient.
-- Gate partial/open statuses are inputs to owner grant review, not failures of this commit.
 - This bundle does not enable online shadow execution.
 - This bundle does not authorize production default/API/user-visible ranking behavior.
 - Bundle grant milestone only; does not run prod shadow or enable global shadow.
