@@ -10,15 +10,50 @@
       "model refit, embedding generation, label ingest",
       "online_shadow_execution_enabled globally",
       "prod default",
+      "production default / API / fleet-wide enablement",
       "production_default_allowed",
       "user-visible ranking",
       "user-visible ranking changes",
       "user_visible_ranking_changed"
     ],
+    "grant_decision": {
+      "decision": "granted",
+      "expiry_date": "2026-08-27",
+      "grant_notes": null,
+      "granted_at": "2026-05-29T15:38:46Z",
+      "owner": "Matt Maitland",
+      "owner_documents_equivalent_review": "Owner reviewed the production-scoped proof, pilot request, and bounded pilot contract as equivalent authorization review.",
+      "review_by": "2026-08-27"
+    },
+    "granted_scope": {
+      "authorization_scope": "production_scoped_shadow_pilot_authorization_only",
+      "authorizes_for_chain_only": [
+        "prod-scoped pilot authorization paperwork complete",
+        "bounded prod-scoped pilot run may be executed in a separate run milestone under the plan/proof contract"
+      ],
+      "explicitly_still_not_included": [
+        "online_shadow_execution_enabled globally",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed",
+        "DB writes/DDL",
+        "model refit, embedding generation, label ingest",
+        "fleet-wide flag enablement",
+        "user-visible ranking changes",
+        "production default / API / fleet-wide enablement"
+      ],
+      "grant_time_pilot_boundaries": [
+        "manual_or_scheduled_jobs_only",
+        "emerging-family / rank-83787b91ef identity only unless explicitly superseded",
+        "prod-scoped artifact root under docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/",
+        "read-only prod input contract from plan unless future run milestone explicitly expands"
+      ]
+    },
     "prod_scoped_shadow_execution_authorized": false,
     "prod_scoped_shadow_live_execution_authorized": false,
+    "prod_scoped_shadow_pilot_authorization_granted": true,
     "prod_scoped_shadow_pilot_authorization_requested": true,
-    "prod_scoped_shadow_pilot_authorized": false,
+    "prod_scoped_shadow_pilot_authorized": true,
     "prod_scoped_shadow_plan_authorization_scope": "production_scoped_shadow_plan_paperwork_only",
     "prod_scoped_shadow_proof_allowed_by_plan": true,
     "prod_scoped_shadow_proof_authorized": false,
@@ -56,9 +91,10 @@
     "Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.",
     "Proof clears the prod-scoped shadow proof blocker only.",
     "Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates.",
-    "Bundle pilot-request milestone only; grants no pilot authorization.",
-    "Accepted proof evidence is necessary but not sufficient for pilot execution.",
-    "Pilot grant remains a separate gate; does not enable global shadow or prod default/API/user-visible."
+    "Bundle pilot-grant milestone only; does not run the prod-scoped pilot.",
+    "Clears prod-scoped pilot authorization blocker for the pilot chain only.",
+    "Bounded pilot run still required before any enablement or prod default/API/user-visible change.",
+    "Global shadow flag default remains off; prod default/API/user-visible remain separate chains."
   ],
   "execution": {
     "prod_scoped_shadow_pilot_executed": false,
@@ -67,9 +103,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 3,
+    "bundle_revision": 4,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-29T15:08:18Z",
+    "generated_at": "2026-05-29T15:38:46Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -265,12 +301,13 @@
   },
   "posture": {
     "api_web_changes_allowed": false,
-    "missing_prod_scoped_shadow_pilot_authorization": true,
+    "missing_prod_scoped_shadow_pilot_authorization": false,
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_authorization_granted": true,
     "prod_scoped_shadow_pilot_authorization_requested": true,
-    "prod_scoped_shadow_pilot_authorized": false,
+    "prod_scoped_shadow_pilot_authorized": true,
     "prod_scoped_shadow_pilot_executed": false,
     "prod_scoped_shadow_plan_defined": true,
     "prod_scoped_shadow_proof_authorized": false,
@@ -434,7 +471,7 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "record_production_scoped_online_shadow_pilot_authorization_grant_v1",
+  "recommended_next_stage": "run_production_scoped_online_shadow_pilot_v1",
   "runtime_writes_performed": false,
   "shadow_and_production_blockers": {
     "api_web_changes_allowed": false,
@@ -445,20 +482,26 @@
     "blockers_changed_by_proof": [
       "missing_prod_scoped_shadow_proof"
     ],
+    "blockers_cleared_by_pilot_grant": [
+      "missing_prod_scoped_shadow_pilot_authorization"
+    ],
     "blockers_cleared_by_pilot_request": [],
+    "blockers_introduced_by_pilot_grant": [],
     "blockers_introduced_by_pilot_request": [
       "missing_prod_scoped_shadow_pilot_authorization"
     ],
     "blockers_unchanged_by_grant": true,
+    "blockers_unchanged_by_pilot_grant": true,
     "blockers_unchanged_by_pilot_request": true,
     "blockers_unchanged_by_plan": true,
     "blockers_unchanged_by_proof": true,
-    "missing_prod_scoped_shadow_pilot_authorization": true,
+    "missing_prod_scoped_shadow_pilot_authorization": false,
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_authorization_granted": true,
     "prod_scoped_shadow_pilot_authorization_requested": true,
-    "prod_scoped_shadow_pilot_authorized": false,
+    "prod_scoped_shadow_pilot_authorized": true,
     "prod_scoped_shadow_proof_authorized": false,
     "production_default_allowed": false,
     "production_readiness_authorization_granted": true,

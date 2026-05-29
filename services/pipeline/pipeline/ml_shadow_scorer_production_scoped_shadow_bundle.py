@@ -3,9 +3,10 @@
 The production-scoped-shadow bundle is the canonical ladder view after the
 production-readiness grant. Revision 0 is an assemble-only pre-plan skeleton,
 revision 1 records a paperwork-only plan contract, revision 2 records a bounded
-fixture proof, and revision 3 records a pilot authorization request. It does not
-run runtime scoring, access databases, enable feature flags, or authorize
-production/default/API/user-visible behavior.
+fixture proof, revision 3 records a pilot authorization request, and revision 4
+records a pilot authorization grant. It does not run runtime scoring, access
+databases, enable feature flags, or authorize production/default/API/user-visible
+behavior.
 """
 
 from __future__ import annotations
@@ -46,13 +47,16 @@ PRE_PLAN_BUNDLE_REVISION = 0
 POST_PLAN_BUNDLE_REVISION = 1
 POST_PROOF_BUNDLE_REVISION = 2
 POST_PILOT_REQUEST_BUNDLE_REVISION = 3
+POST_PILOT_GRANT_BUNDLE_REVISION = 4
 PRE_PLAN_NEXT_STAGE = "begin_production_scoped_online_shadow_plan_v1"
 POST_PLAN_NEXT_STAGE = "implement_production_scoped_online_shadow_proof_v1"
 POST_PROOF_NEXT_STAGE = "request_production_scoped_online_shadow_pilot_authorization_v1"
 POST_PILOT_REQUEST_NEXT_STAGE = "record_production_scoped_online_shadow_pilot_authorization_grant_v1"
+POST_PILOT_GRANT_NEXT_STAGE = "run_production_scoped_online_shadow_pilot_v1"
 FEATURE_FLAG = "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
 FUTURE_ARTIFACT_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/"
 PILOT_REQUEST_SCOPE = "production_scoped_shadow_pilot_paperwork_only"
+PILOT_GRANT_SCOPE = "production_scoped_shadow_pilot_authorization_only"
 
 FORBIDDEN_PROD_SCOPED_WRITE_TARGETS = (
     "ranking_runs",
@@ -124,6 +128,13 @@ REQUEST_CAVEATS = (
     "Pilot grant remains a separate gate; does not enable global shadow or prod default/API/user-visible.",
 )
 
+GRANT_CAVEATS = (
+    "Bundle pilot-grant milestone only; does not run the prod-scoped pilot.",
+    "Clears prod-scoped pilot authorization blocker for the pilot chain only.",
+    "Bounded pilot run still required before any enablement or prod default/API/user-visible change.",
+    "Global shadow flag default remains off; prod default/API/user-visible remain separate chains.",
+)
+
 EXPLICITLY_NOT_INCLUDED = (
     "global flag enablement",
     "prod default",
@@ -147,6 +158,30 @@ PILOT_REQUEST_EXPLICITLY_NOT_INCLUDED = (
 PILOT_REQUEST_WOULD_ENABLE_AFTER_FUTURE_GRANT = (
     "future grant may authorize bounded prod-scoped pilot execution chain only",
     "future pilot may use plan/proof contract under manual_or_scheduled_jobs_only",
+)
+
+PILOT_GRANT_AUTHORIZES_FOR_CHAIN_ONLY = (
+    "prod-scoped pilot authorization paperwork complete",
+    "bounded prod-scoped pilot run may be executed in a separate run milestone under the plan/proof contract",
+)
+
+PILOT_GRANT_STILL_NOT_INCLUDED = (
+    "online_shadow_execution_enabled globally",
+    "production_default_allowed",
+    "api_web_changes_allowed",
+    "user_visible_ranking_changed",
+    "DB writes/DDL",
+    "model refit, embedding generation, label ingest",
+    "fleet-wide flag enablement",
+    "user-visible ranking changes",
+    "production default / API / fleet-wide enablement",
+)
+
+PILOT_GRANT_TIME_BOUNDARIES = (
+    "manual_or_scheduled_jobs_only",
+    "emerging-family / rank-83787b91ef identity only unless explicitly superseded",
+    "prod-scoped artifact root under docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/",
+    "read-only prod input contract from plan unless future run milestone explicitly expands",
 )
 
 
@@ -381,6 +416,10 @@ def _caveats(*, mode: str) -> list[str]:
         caveats.extend(PROOF_CAVEATS)
         caveats.extend(REQUEST_CAVEATS)
         return caveats
+    if mode == "post_pilot_grant":
+        caveats.extend(PROOF_CAVEATS)
+        caveats.extend(GRANT_CAVEATS)
+        return caveats
     raise MLShadowScorerProductionScopedShadowBundleError(f"unknown caveat mode {mode!r}")
     return caveats
 
@@ -434,15 +473,18 @@ def _posture(
     plan_defined: bool,
     proof_passed: bool = False,
     pilot_authorization_requested: bool = False,
+    pilot_authorization_granted: bool = False,
 ) -> dict[str, Any]:
     posture = {
         "prod_scoped_shadow_plan_defined": plan_defined,
         "prod_scoped_shadow_proof_passed": proof_passed,
         "prod_scoped_shadow_pilot_executed": False,
         "prod_scoped_shadow_pilot_authorization_requested": pilot_authorization_requested,
-        "prod_scoped_shadow_pilot_authorized": False,
+        "prod_scoped_shadow_pilot_authorized": pilot_authorization_granted,
         "missing_prod_scoped_shadow_proof": not proof_passed,
-        "missing_prod_scoped_shadow_pilot_authorization": pilot_authorization_requested,
+        "missing_prod_scoped_shadow_pilot_authorization": (
+            pilot_authorization_requested and not pilot_authorization_granted
+        ),
         "prod_scoped_shadow_proof_authorized": False,
         "production_readiness_authorization_granted": True,
         "missing_production_readiness_authorization": False,
@@ -455,6 +497,8 @@ def _posture(
     }
     if not pilot_authorization_requested:
         posture.pop("missing_prod_scoped_shadow_pilot_authorization")
+    if pilot_authorization_requested:
+        posture["prod_scoped_shadow_pilot_authorization_granted"] = pilot_authorization_granted
     return posture
 
 
@@ -1201,19 +1245,179 @@ def apply_production_scoped_shadow_pilot_authorization_request(
     return updated
 
 
+def _validate_pilot_grant_review(
+    *,
+    owner: str,
+    second_reviewer: str | None,
+    owner_documents_equivalent_review: str | None,
+) -> None:
+    if not isinstance(owner, str) or not owner.strip():
+        raise MLShadowScorerProductionScopedShadowBundleError("owner must be populated")
+    has_second_reviewer = isinstance(second_reviewer, str) and bool(second_reviewer.strip())
+    has_equivalent_review = isinstance(owner_documents_equivalent_review, str) and bool(
+        owner_documents_equivalent_review.strip()
+    )
+    if has_second_reviewer and second_reviewer.strip() == owner.strip():
+        raise MLShadowScorerProductionScopedShadowBundleError("second_reviewer must differ from owner")
+    if not has_second_reviewer and not has_equivalent_review:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "pilot grant requires second_reviewer or owner_documents_equivalent_review"
+        )
+
+
+def apply_production_scoped_shadow_pilot_authorization_grant(
+    bundle: Mapping[str, Any],
+    *,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    grant_notes: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("bundle must be an object")
+    _validate_pilot_grant_review(
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+    )
+    _require_equal(
+        "metadata.bundle_revision",
+        _get(bundle, "metadata.bundle_revision"),
+        POST_PILOT_REQUEST_BUNDLE_REVISION,
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_pilot_authorization_requested",
+        _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_pilot_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized"),
+    )
+    if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_granted") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.prod_scoped_shadow_pilot_authorization_granted must be false before grant"
+        )
+    _require_true(
+        "posture.missing_prod_scoped_shadow_pilot_authorization",
+        _get(bundle, "posture.missing_prod_scoped_shadow_pilot_authorization"),
+    )
+    _require_true("posture.prod_scoped_shadow_proof_passed", _get(bundle, "posture.prod_scoped_shadow_proof_passed"))
+    _require_false("posture.missing_prod_scoped_shadow_proof", _get(bundle, "posture.missing_prod_scoped_shadow_proof"))
+    _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), POST_PILOT_REQUEST_NEXT_STAGE)
+    granted_at = generated_at or _now_iso_z()
+    resolved_review_by = review_by or expiry_date
+    updated = deepcopy(dict(bundle))
+    plan_before = deepcopy(updated.get("plan"))
+    proof_before = deepcopy(updated.get("proof"))
+    metadata = deepcopy(dict(_metadata(updated, label="production-scoped-shadow bundle")))
+    metadata["bundle_revision"] = POST_PILOT_GRANT_BUNDLE_REVISION
+    metadata["generated_at"] = granted_at
+    updated["metadata"] = metadata
+
+    authorization = deepcopy(dict(updated.get("authorization") or {}))
+    authorization.update(
+        {
+            "prod_scoped_shadow_proof_allowed_by_plan": True,
+            "prod_scoped_shadow_live_execution_authorized": False,
+            "prod_scoped_shadow_execution_authorized": False,
+            "prod_scoped_shadow_proof_authorized": False,
+            "prod_scoped_shadow_pilot_authorization_requested": True,
+            "prod_scoped_shadow_pilot_authorization_granted": True,
+            "prod_scoped_shadow_pilot_authorized": True,
+            "grant_decision": {
+                "decision": "granted",
+                "owner": owner,
+                "granted_at": granted_at,
+                "expiry_date": expiry_date,
+                "review_by": resolved_review_by,
+                "grant_notes": grant_notes,
+            },
+            "granted_scope": {
+                "authorization_scope": PILOT_GRANT_SCOPE,
+                "authorizes_for_chain_only": list(PILOT_GRANT_AUTHORIZES_FOR_CHAIN_ONLY),
+                "explicitly_still_not_included": list(PILOT_GRANT_STILL_NOT_INCLUDED),
+                "grant_time_pilot_boundaries": list(PILOT_GRANT_TIME_BOUNDARIES),
+            },
+        }
+    )
+    if second_reviewer is not None and second_reviewer.strip():
+        authorization["grant_decision"]["second_reviewer"] = second_reviewer
+    if owner_documents_equivalent_review is not None and owner_documents_equivalent_review.strip():
+        authorization["grant_decision"]["owner_documents_equivalent_review"] = owner_documents_equivalent_review
+    authorization["explicitly_not_included"] = sorted(
+        set(authorization.get("explicitly_not_included", []))
+        .union(PILOT_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        .union(PILOT_GRANT_STILL_NOT_INCLUDED)
+    )
+    updated["authorization"] = authorization
+    updated["execution"] = _execution(proof_executed=True)
+    updated["posture"] = _posture(
+        plan_defined=True,
+        proof_passed=True,
+        pilot_authorization_requested=True,
+        pilot_authorization_granted=True,
+    )
+    blockers = deepcopy(dict(updated.get("shadow_and_production_blockers") or {}))
+    blockers.update(
+        {
+            "missing_prod_scoped_shadow_proof": False,
+            "prod_scoped_shadow_pilot_authorization_requested": True,
+            "prod_scoped_shadow_pilot_authorization_granted": True,
+            "missing_prod_scoped_shadow_pilot_authorization": False,
+            "prod_scoped_shadow_pilot_authorized": True,
+            "blockers_cleared_by_pilot_grant": ["missing_prod_scoped_shadow_pilot_authorization"],
+            "blockers_introduced_by_pilot_grant": [],
+            "blockers_unchanged_by_pilot_grant": True,
+            "online_shadow_execution_enabled": False,
+            "production_default_allowed": False,
+            "api_web_changes_allowed": False,
+            "user_visible_ranking_changed": False,
+        }
+    )
+    updated["shadow_and_production_blockers"] = blockers
+    updated["writes_performed"] = False
+    updated["runtime_writes_performed"] = False
+    updated["recommended_next_stage"] = POST_PILOT_GRANT_NEXT_STAGE
+    updated["caveats"] = _caveats(mode="post_pilot_grant")
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot grant must preserve plan section")
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot grant must preserve proof section")
+    return updated
+
+
 def _infer_plan_mode(
     bundle: Mapping[str, Any],
     *,
     expect_plan_filed: bool | None,
     expect_proof_filed: bool | None,
     expect_pilot_request_filed: bool | None,
+    expect_pilot_grant_filed: bool | None,
 ) -> str:
     explicit = [
         expectation is not None
-        for expectation in (expect_plan_filed, expect_proof_filed, expect_pilot_request_filed)
+        for expectation in (
+            expect_plan_filed,
+            expect_proof_filed,
+            expect_pilot_request_filed,
+            expect_pilot_grant_filed,
+        )
     ]
     if sum(explicit) > 1:
-        raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot-request expectations conflict")
+        raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot expectations conflict")
+    if expect_pilot_grant_filed is True:
+        return "post_pilot_grant"
+    if expect_pilot_grant_filed is False:
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized") is True:
+            raise MLShadowScorerProductionScopedShadowBundleError("pilot grant must not be filed")
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested") is True:
+            return "post_pilot_request"
+        revision = _get(bundle, "metadata.bundle_revision")
+        proof_passed = _get(bundle, "posture.prod_scoped_shadow_proof_passed")
+        return "post_proof" if revision == POST_PROOF_BUNDLE_REVISION and proof_passed is True else "post_plan"
     if expect_pilot_request_filed is True:
         return "post_pilot_request"
     if expect_pilot_request_filed is False:
@@ -1238,7 +1442,16 @@ def _infer_plan_mode(
     proof_passed = _get(bundle, "posture.prod_scoped_shadow_proof_passed")
     pilot_executed = _get(bundle, "execution.prod_scoped_shadow_pilot_executed")
     pilot_request = _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested")
+    pilot_grant = _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_granted")
     pilot_authorized = _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized")
+    if (
+        revision == POST_PILOT_GRANT_BUNDLE_REVISION
+        and pilot_request is True
+        and pilot_grant is True
+        and pilot_authorized is True
+        and pilot_executed is False
+    ):
+        return "post_pilot_grant"
     if (
         revision == POST_PILOT_REQUEST_BUNDLE_REVISION
         and pilot_request is True
@@ -1409,6 +1622,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     expect_plan_filed: bool | None = None,
     expect_proof_filed: bool | None = None,
     expect_pilot_request_filed: bool | None = None,
+    expect_pilot_grant_filed: bool | None = None,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     metadata = _metadata(bundle, label="production-scoped-shadow bundle")
@@ -1419,12 +1633,14 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         expect_plan_filed=expect_plan_filed,
         expect_proof_filed=expect_proof_filed,
         expect_pilot_request_filed=expect_pilot_request_filed,
+        expect_pilot_grant_filed=expect_pilot_grant_filed,
     )
     expected_revision = {
         "pre_plan": PRE_PLAN_BUNDLE_REVISION,
         "post_plan": POST_PLAN_BUNDLE_REVISION,
         "post_proof": POST_PROOF_BUNDLE_REVISION,
         "post_pilot_request": POST_PILOT_REQUEST_BUNDLE_REVISION,
+        "post_pilot_grant": POST_PILOT_GRANT_BUNDLE_REVISION,
     }[mode]
     _require_equal("metadata.bundle_revision", metadata.get("bundle_revision"), expected_revision)
     _validate_identity(metadata.get("pinned_identity"), label="metadata.pinned_identity")
@@ -1482,7 +1698,9 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     else:
         _require_true("plan.prod_scoped_shadow_plan_defined", plan.get("prod_scoped_shadow_plan_defined"))
         _verify_plan_subsections(plan)
-        if mode == "post_pilot_request":
+        if mode == "post_pilot_grant":
+            expected_next = POST_PILOT_GRANT_NEXT_STAGE
+        elif mode == "post_pilot_request":
             expected_next = POST_PILOT_REQUEST_NEXT_STAGE
         elif mode == "post_proof":
             expected_next = POST_PROOF_NEXT_STAGE
@@ -1502,7 +1720,9 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "authorization.prod_scoped_shadow_execution_authorized",
         authorization.get("prod_scoped_shadow_execution_authorized"),
     )
-    if mode == "post_proof" or authorization.get("prod_scoped_shadow_live_execution_authorized") is not None:
+    if mode in {"post_proof", "post_pilot_request", "post_pilot_grant"} or authorization.get(
+        "prod_scoped_shadow_live_execution_authorized"
+    ) is not None:
         _require_false(
             "authorization.prod_scoped_shadow_live_execution_authorized",
             authorization.get("prod_scoped_shadow_live_execution_authorized"),
@@ -1511,13 +1731,15 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "authorization.prod_scoped_shadow_proof_authorized",
         authorization.get("prod_scoped_shadow_proof_authorized"),
     )
-    _require_false(
+    pilot_grant_expected = mode == "post_pilot_grant"
+    _require_equal(
         "authorization.prod_scoped_shadow_pilot_authorized",
         authorization.get("prod_scoped_shadow_pilot_authorized"),
+        pilot_grant_expected,
     )
-    pilot_request_expected = mode == "post_pilot_request"
+    pilot_request_expected = mode in {"post_pilot_request", "post_pilot_grant"}
     if (
-        mode == "post_pilot_request"
+        mode in {"post_pilot_request", "post_pilot_grant"}
         or authorization.get("prod_scoped_shadow_pilot_authorization_requested") is not None
     ):
         _require_equal(
@@ -1525,7 +1747,13 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             authorization.get("prod_scoped_shadow_pilot_authorization_requested"),
             pilot_request_expected,
         )
-    if mode == "post_pilot_request":
+    if mode == "post_pilot_grant" or authorization.get("prod_scoped_shadow_pilot_authorization_granted") is not None:
+        _require_equal(
+            "authorization.prod_scoped_shadow_pilot_authorization_granted",
+            authorization.get("prod_scoped_shadow_pilot_authorization_granted"),
+            pilot_grant_expected,
+        )
+    if mode in {"post_pilot_request", "post_pilot_grant"}:
         request_decision = authorization.get("request_decision")
         if not isinstance(request_decision, Mapping):
             raise MLShadowScorerProductionScopedShadowBundleError("authorization.request_decision must be an object")
@@ -1547,6 +1775,39 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"authorization.requested_scope.explicitly_not_included missing {item!r}"
                 )
+    if mode == "post_pilot_grant":
+        grant_decision = authorization.get("grant_decision")
+        if not isinstance(grant_decision, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError("authorization.grant_decision must be an object")
+        _require_equal("authorization.grant_decision.decision", grant_decision.get("decision"), "granted")
+        for field in ("owner", "granted_at", "expiry_date", "review_by"):
+            if not isinstance(grant_decision.get(field), str) or not grant_decision.get(field):
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"authorization.grant_decision.{field} must be populated"
+                )
+        granted_scope = authorization.get("granted_scope")
+        if not isinstance(granted_scope, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError("authorization.granted_scope must be an object")
+        _require_equal(
+            "authorization.granted_scope.authorization_scope",
+            granted_scope.get("authorization_scope"),
+            PILOT_GRANT_SCOPE,
+        )
+        for item in PILOT_GRANT_STILL_NOT_INCLUDED:
+            if item not in granted_scope.get("explicitly_still_not_included", []):
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"authorization.granted_scope.explicitly_still_not_included missing {item!r}"
+                )
+        for item in PILOT_GRANT_AUTHORIZES_FOR_CHAIN_ONLY:
+            if item not in granted_scope.get("authorizes_for_chain_only", []):
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"authorization.granted_scope.authorizes_for_chain_only missing {item!r}"
+                )
+        for item in PILOT_GRANT_TIME_BOUNDARIES:
+            if item not in granted_scope.get("grant_time_pilot_boundaries", []):
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"authorization.granted_scope.grant_time_pilot_boundaries missing {item!r}"
+                )
     for item in EXPLICITLY_NOT_INCLUDED:
         if item not in authorization.get("explicitly_not_included", []):
             raise MLShadowScorerProductionScopedShadowBundleError(
@@ -1563,7 +1824,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     _require_equal(
         "execution.prod_scoped_shadow_proof_executed",
         execution.get("prod_scoped_shadow_proof_executed"),
-        mode in {"post_proof", "post_pilot_request"},
+        mode in {"post_proof", "post_pilot_request", "post_pilot_grant"},
     )
     _require_false("execution.prod_scoped_shadow_pilot_executed", execution.get("prod_scoped_shadow_pilot_executed"))
 
@@ -1571,10 +1832,19 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     if not isinstance(posture, Mapping):
         raise MLShadowScorerProductionScopedShadowBundleError("posture must be an object")
     posture_required = {
-        "prod_scoped_shadow_plan_defined": mode in {"post_plan", "post_proof", "post_pilot_request"},
-        "prod_scoped_shadow_proof_passed": mode in {"post_proof", "post_pilot_request"},
+        "prod_scoped_shadow_plan_defined": mode in {
+            "post_plan",
+            "post_proof",
+            "post_pilot_request",
+            "post_pilot_grant",
+        },
+        "prod_scoped_shadow_proof_passed": mode in {"post_proof", "post_pilot_request", "post_pilot_grant"},
         "prod_scoped_shadow_pilot_executed": False,
-        "missing_prod_scoped_shadow_proof": mode not in {"post_proof", "post_pilot_request"},
+        "missing_prod_scoped_shadow_proof": mode not in {
+            "post_proof",
+            "post_pilot_request",
+            "post_pilot_grant",
+        },
         "prod_scoped_shadow_proof_authorized": False,
         "production_readiness_authorization_granted": True,
         "missing_production_readiness_authorization": False,
@@ -1587,13 +1857,16 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     }
     for field, expected in posture_required.items():
         _require_equal(f"posture.{field}", posture.get(field), expected)
-    if mode == "post_proof" or posture.get("prod_scoped_shadow_pilot_authorized") is not None:
-        _require_false(
+    if mode in {"post_proof", "post_pilot_request", "post_pilot_grant"} or posture.get(
+        "prod_scoped_shadow_pilot_authorized"
+    ) is not None:
+        _require_equal(
             "posture.prod_scoped_shadow_pilot_authorized",
             posture.get("prod_scoped_shadow_pilot_authorized"),
+            pilot_grant_expected,
         )
     if (
-        mode == "post_pilot_request"
+        mode in {"post_pilot_request", "post_pilot_grant"}
         or posture.get("prod_scoped_shadow_pilot_authorization_requested") is not None
     ):
         _require_equal(
@@ -1601,8 +1874,19 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             posture.get("prod_scoped_shadow_pilot_authorization_requested"),
             pilot_request_expected,
         )
+    if mode == "post_pilot_grant" or posture.get("prod_scoped_shadow_pilot_authorization_granted") is not None:
+        _require_equal(
+            "posture.prod_scoped_shadow_pilot_authorization_granted",
+            posture.get("prod_scoped_shadow_pilot_authorization_granted"),
+            pilot_grant_expected,
+        )
     if mode == "post_pilot_request":
         _require_true(
+            "posture.missing_prod_scoped_shadow_pilot_authorization",
+            posture.get("missing_prod_scoped_shadow_pilot_authorization"),
+        )
+    if mode == "post_pilot_grant":
+        _require_false(
             "posture.missing_prod_scoped_shadow_pilot_authorization",
             posture.get("missing_prod_scoped_shadow_pilot_authorization"),
         )
@@ -1613,7 +1897,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     _require_equal(
         "shadow_and_production_blockers.missing_prod_scoped_shadow_proof",
         blockers.get("missing_prod_scoped_shadow_proof"),
-        mode not in {"post_proof", "post_pilot_request"},
+        mode not in {"post_proof", "post_pilot_request", "post_pilot_grant"},
     )
     _require_false(
         "shadow_and_production_blockers.prod_scoped_shadow_proof_authorized",
@@ -1621,7 +1905,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     )
     _require_equal("shadow_and_production_blockers.blockers_changed_by_plan", blockers.get("blockers_changed_by_plan"), [])
     _require_true("shadow_and_production_blockers.blockers_unchanged_by_plan", blockers.get("blockers_unchanged_by_plan"))
-    if mode == "post_proof":
+    if mode in {"post_proof", "post_pilot_request", "post_pilot_grant"}:
         changed_by_proof = blockers.get("blockers_changed_by_proof")
         if "missing_prod_scoped_shadow_proof" not in (changed_by_proof or []):
             raise MLShadowScorerProductionScopedShadowBundleError(
@@ -1650,11 +1934,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     caveats = bundle.get("caveats")
     if not isinstance(caveats, list):
         raise MLShadowScorerProductionScopedShadowBundleError("caveats must be a list")
-    if mode == "post_pilot_request":
-        _require_true(
-            "shadow_and_production_blockers.missing_prod_scoped_shadow_pilot_authorization",
-            blockers.get("missing_prod_scoped_shadow_pilot_authorization"),
-        )
+    if mode in {"post_pilot_request", "post_pilot_grant"}:
         introduced = blockers.get("blockers_introduced_by_pilot_request")
         if "missing_prod_scoped_shadow_pilot_authorization" not in (introduced or []):
             raise MLShadowScorerProductionScopedShadowBundleError(
@@ -1669,11 +1949,40 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "shadow_and_production_blockers.blockers_unchanged_by_pilot_request",
             blockers.get("blockers_unchanged_by_pilot_request"),
         )
-        _require_false(
+        _require_equal(
             "shadow_and_production_blockers.prod_scoped_shadow_pilot_authorized",
             blockers.get("prod_scoped_shadow_pilot_authorized"),
+            pilot_grant_expected,
         )
-    if mode in {"post_proof", "post_pilot_request"}:
+    if mode == "post_pilot_request":
+        _require_true(
+            "shadow_and_production_blockers.missing_prod_scoped_shadow_pilot_authorization",
+            blockers.get("missing_prod_scoped_shadow_pilot_authorization"),
+        )
+    if mode == "post_pilot_grant":
+        _require_false(
+            "shadow_and_production_blockers.missing_prod_scoped_shadow_pilot_authorization",
+            blockers.get("missing_prod_scoped_shadow_pilot_authorization"),
+        )
+        _require_true(
+            "shadow_and_production_blockers.prod_scoped_shadow_pilot_authorization_granted",
+            blockers.get("prod_scoped_shadow_pilot_authorization_granted"),
+        )
+        cleared_by_grant = blockers.get("blockers_cleared_by_pilot_grant")
+        if "missing_prod_scoped_shadow_pilot_authorization" not in (cleared_by_grant or []):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                "shadow_and_production_blockers.blockers_cleared_by_pilot_grant must include missing_prod_scoped_shadow_pilot_authorization"
+            )
+        _require_equal(
+            "shadow_and_production_blockers.blockers_introduced_by_pilot_grant",
+            blockers.get("blockers_introduced_by_pilot_grant"),
+            [],
+        )
+        _require_true(
+            "shadow_and_production_blockers.blockers_unchanged_by_pilot_grant",
+            blockers.get("blockers_unchanged_by_pilot_grant"),
+        )
+    if mode in {"post_proof", "post_pilot_request", "post_pilot_grant"}:
         _verify_proof_section(bundle.get("proof"))
         _require_true(
             "authorization.prod_scoped_shadow_proof_allowed_by_plan",
@@ -1707,7 +2016,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"post-plan caveats imply forbidden enablement: {phrase}"
                 )
-    if mode in {"post_proof", "post_pilot_request"}:
+    if mode in {"post_proof", "post_pilot_request", "post_pilot_grant"}:
         for caveat in PLAN_CAVEATS:
             if caveat in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
@@ -1718,6 +2027,17 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             if caveat not in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"post_pilot_request caveats missing request caveat {caveat!r}"
+                )
+    if mode == "post_pilot_grant":
+        for caveat in GRANT_CAVEATS:
+            if caveat not in caveats:
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"post_pilot_grant caveats missing grant caveat {caveat!r}"
+                )
+        for caveat in REQUEST_CAVEATS:
+            if caveat in caveats:
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"post_pilot_grant caveats must not include request-only {caveat!r}"
                 )
 
     return {
@@ -1737,6 +2057,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
     expect_plan_filed: bool | None = None,
     expect_proof_filed: bool | None = None,
     expect_pilot_request_filed: bool | None = None,
+    expect_pilot_grant_filed: bool | None = None,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
     return verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
@@ -1745,6 +2066,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         expect_plan_filed=expect_plan_filed,
         expect_proof_filed=expect_proof_filed,
         expect_pilot_request_filed=expect_pilot_request_filed,
+        expect_pilot_grant_filed=expect_pilot_grant_filed,
     )
 
 
@@ -1757,7 +2079,12 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
     posture = payload["posture"]
     proof = payload.get("proof") if isinstance(payload.get("proof"), Mapping) else None
     pilot_request = authorization.get("request_decision") if isinstance(authorization.get("request_decision"), Mapping) else None
-    if pilot_request:
+    pilot_grant = authorization.get("grant_decision") if isinstance(authorization.get("grant_decision"), Mapping) else None
+    if pilot_grant:
+        summary = (
+            "This bundle records the production-scoped shadow pilot authorization grant while keeping pilot execution, runtime, production default, API/web, and user-visible behavior disabled."
+        )
+    elif pilot_request:
         summary = (
             "This bundle records the production-scoped shadow pilot authorization request while keeping pilot authorization, runtime, production default, API/web, and user-visible behavior disabled."
         )
@@ -1781,6 +2108,7 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         f"- Production-scoped proof passed: {posture['prod_scoped_shadow_proof_passed']}",
         f"- Missing production-scoped shadow proof: {posture['missing_prod_scoped_shadow_proof']}",
         f"- Pilot authorization requested: {authorization.get('prod_scoped_shadow_pilot_authorization_requested')}",
+        f"- Pilot authorization granted: {authorization.get('prod_scoped_shadow_pilot_authorization_granted')}",
         f"- Pilot authorized: {authorization.get('prod_scoped_shadow_pilot_authorized')}",
         f"- Online shadow execution enabled: {posture['online_shadow_execution_enabled']}",
         f"- Recommended next stage: `{payload['recommended_next_stage']}`",
@@ -1892,6 +2220,25 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
                 f"- Requested at: {request_decision['requested_at']}",
                 f"- Request notes: {request_decision.get('request_notes')}",
                 f"- Requested scope: `{authorization['requested_scope']['authorization_scope']}`",
+                f"- Missing pilot authorization: {posture.get('missing_prod_scoped_shadow_pilot_authorization')}",
+                "",
+            ]
+        )
+    if authorization.get("grant_decision"):
+        grant_decision = authorization["grant_decision"]
+        lines.extend(
+            [
+                "## Pilot Authorization Grant",
+                "",
+                f"- Decision: `{grant_decision['decision']}`",
+                f"- Owner: {grant_decision['owner']}",
+                f"- Granted at: {grant_decision['granted_at']}",
+                f"- Expiry date: {grant_decision['expiry_date']}",
+                f"- Review by: {grant_decision['review_by']}",
+                f"- Grant notes: {grant_decision.get('grant_notes')}",
+                f"- Second reviewer: {grant_decision.get('second_reviewer')}",
+                f"- Owner equivalent review: {grant_decision.get('owner_documents_equivalent_review')}",
+                f"- Granted scope: `{authorization['granted_scope']['authorization_scope']}`",
                 f"- Missing pilot authorization: {posture.get('missing_prod_scoped_shadow_pilot_authorization')}",
                 "",
             ]
@@ -2079,6 +2426,53 @@ def request_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
         updated,
         repo_root=root,
         expect_pilot_request_filed=True,
+    )
+    bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    bundle_path.with_name("bundle.md").write_text(
+        markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(updated),
+        encoding="utf-8",
+    )
+    return updated
+
+
+def grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+    *,
+    bundle_path: Path,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    grant_notes: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
+    bundle_path = Path(bundle_path).resolve()
+    payload = _load_json_object(bundle_path)
+    verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        payload,
+        repo_root=root,
+        expect_pilot_request_filed=True,
+    )
+    plan_before = deepcopy(payload.get("plan"))
+    proof_before = deepcopy(payload.get("proof"))
+    updated = apply_production_scoped_shadow_pilot_authorization_grant(
+        payload,
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+        grant_notes=grant_notes,
+        expiry_date=expiry_date,
+        review_by=review_by,
+    )
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot grant must preserve plan section")
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot grant must preserve proof section")
+    verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        updated,
+        repo_root=root,
+        expect_pilot_grant_filed=True,
     )
     bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     bundle_path.with_name("bundle.md").write_text(

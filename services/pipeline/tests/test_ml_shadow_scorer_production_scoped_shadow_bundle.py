@@ -21,7 +21,9 @@ from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
     MLShadowScorerProductionScopedShadowBundleError,
     PLAN_SUBSECTIONS,
     apply_production_scoped_shadow_plan,
+    apply_production_scoped_shadow_pilot_authorization_grant,
     apply_production_scoped_shadow_pilot_authorization_request,
+    grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle,
     prove_ml_shadow_scorer_production_scoped_shadow_bundle,
     plan_ml_shadow_scorer_production_scoped_shadow_bundle,
     request_pilot_ml_shadow_scorer_production_scoped_shadow_bundle,
@@ -133,6 +135,18 @@ def _write_pilot_request_bundle(root: Path, *, pilot_run_id: str = "proof-pilot"
     bundle_path = _write_proof_bundle(root, pilot_run_id=pilot_run_id)
     request_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
         bundle_path=bundle_path,
+        repo_root=root,
+    )
+    return bundle_path
+
+
+def _write_pilot_grant_bundle(root: Path, *, pilot_run_id: str = "proof-pilot") -> Path:
+    bundle_path = _write_pilot_request_bundle(root, pilot_run_id=pilot_run_id)
+    grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review=(
+            "Owner reviewed the production-scoped proof, pilot request, and bounded pilot contract as equivalent authorization review."
+        ),
         repo_root=root,
     )
     return bundle_path
@@ -361,6 +375,198 @@ def test_post_pilot_request_caveats_exclude_plan_caveats(tmp_path: Path) -> None
     assert "Accepted proof evidence is necessary but not sufficient for pilot execution." in caveats
     assert all("Future proof must clear missing_prod_scoped_shadow_proof" not in caveat for caveat in caveats)
     assert all("does not authorize production-scoped proof execution" not in caveat for caveat in caveats)
+
+
+def test_grant_pilot_from_revision_three_request_and_verify_grant_filed(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pilot_request_bundle(root, pilot_run_id="proof-before-grant")
+    before = _load(bundle_path)
+    plan_before = before["plan"]
+    proof_before = before["proof"]
+    shadow_before = _shadow_runs_files(root)
+
+    granted = grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner="Grant Owner",
+        second_reviewer="Second Reviewer",
+        grant_notes="grant notes",
+        repo_root=root,
+    )
+    result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        repo_root=root,
+        expect_pilot_grant_filed=True,
+    )
+
+    assert granted["metadata"]["bundle_revision"] == 4
+    assert granted["plan"] == plan_before
+    assert granted["proof"] == proof_before
+    assert granted["authorization"]["prod_scoped_shadow_pilot_authorization_requested"] is True
+    assert granted["authorization"]["prod_scoped_shadow_pilot_authorization_granted"] is True
+    assert granted["authorization"]["prod_scoped_shadow_pilot_authorized"] is True
+    assert granted["authorization"]["prod_scoped_shadow_live_execution_authorized"] is False
+    assert granted["authorization"]["prod_scoped_shadow_execution_authorized"] is False
+    assert granted["authorization"]["grant_decision"]["decision"] == "granted"
+    assert granted["authorization"]["grant_decision"]["owner"] == "Grant Owner"
+    assert granted["authorization"]["grant_decision"]["second_reviewer"] == "Second Reviewer"
+    assert granted["authorization"]["grant_decision"]["grant_notes"] == "grant notes"
+    assert granted["authorization"]["granted_scope"]["authorization_scope"] == (
+        "production_scoped_shadow_pilot_authorization_only"
+    )
+    assert granted["posture"]["missing_prod_scoped_shadow_pilot_authorization"] is False
+    assert granted["posture"]["prod_scoped_shadow_pilot_authorized"] is True
+    assert granted["execution"]["prod_scoped_shadow_pilot_executed"] is False
+    assert granted["shadow_and_production_blockers"]["missing_prod_scoped_shadow_pilot_authorization"] is False
+    assert "missing_prod_scoped_shadow_pilot_authorization" in granted["shadow_and_production_blockers"][
+        "blockers_cleared_by_pilot_grant"
+    ]
+    assert granted["shadow_and_production_blockers"]["blockers_introduced_by_pilot_grant"] == []
+    assert granted["shadow_and_production_blockers"]["blockers_unchanged_by_pilot_grant"] is True
+    assert granted["recommended_next_stage"] == "run_production_scoped_online_shadow_pilot_v1"
+    assert _shadow_runs_files(root) == shadow_before
+    assert result["verification_mode"] == "post_pilot_grant"
+
+
+def test_rejects_pilot_grant_on_wrong_or_already_granted_revisions(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    for bundle_path in (
+        _write_pre_plan_bundle(root),
+        _write_plan_bundle(root),
+        _write_proof_bundle(root, pilot_run_id="proof-grant-wrong-rev"),
+    ):
+        with pytest.raises(MLShadowScorerProductionScopedShadowBundleError):
+            grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+                bundle_path=bundle_path,
+                owner_documents_equivalent_review="owner equivalent review",
+                repo_root=root,
+            )
+
+    granted = _write_pilot_grant_bundle(root, pilot_run_id="proof-already-granted")
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError):
+        grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=granted,
+            owner_documents_equivalent_review="owner equivalent review",
+            repo_root=root,
+        )
+
+
+def test_rejects_pilot_grant_when_missing_blocker_already_false(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pilot_request_bundle(root)
+    payload = _load(bundle_path)
+    payload["posture"]["missing_prod_scoped_shadow_pilot_authorization"] = False
+    _write_json(bundle_path, payload)
+
+    with pytest.raises(
+        MLShadowScorerProductionScopedShadowBundleError,
+        match="missing_prod_scoped_shadow_pilot_authorization",
+    ):
+        grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            owner_documents_equivalent_review="owner equivalent review",
+            repo_root=root,
+        )
+
+
+def test_rejects_pilot_grant_without_independent_or_equivalent_review(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pilot_request_bundle(root)
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="requires second_reviewer"):
+        grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(bundle_path=bundle_path, repo_root=root)
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="second_reviewer"):
+        grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            owner="Same Reviewer",
+            second_reviewer="Same Reviewer",
+            repo_root=root,
+        )
+
+
+def test_accepts_pilot_grant_with_owner_equivalent_review_rationale(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pilot_request_bundle(root)
+
+    granted = grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent review rationale",
+        repo_root=root,
+    )
+
+    assert granted["authorization"]["grant_decision"]["owner_documents_equivalent_review"] == (
+        "owner equivalent review rationale"
+    )
+    assert granted["authorization"]["prod_scoped_shadow_pilot_authorized"] is True
+
+
+def test_pilot_grant_rejects_sha_tamper_and_preserves_proof_hashes(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pilot_request_bundle(root)
+    payload = _load(bundle_path)
+    payload["metadata"]["legacy_artifacts_index"][0]["sha256"] = "0" * 64
+    _write_json(bundle_path, payload)
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="sha256 mismatch"):
+        grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            owner_documents_equivalent_review="owner equivalent review",
+            repo_root=root,
+        )
+
+    bundle_path = _write_pilot_request_bundle(root, pilot_run_id="proof-grant-preserved")
+    payload = _load(bundle_path)
+    original_proof = payload["proof"]
+    granted = grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent review",
+        repo_root=root,
+    )
+    assert granted["proof"] == original_proof
+    assert [row["sha256"] for row in granted["proof"]["write_evidence"]["files_written"]] == [
+        row["sha256"] for row in original_proof["write_evidence"]["files_written"]
+    ]
+
+
+def test_post_pilot_grant_verifier_rejects_bad_blockers_or_caveats(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pilot_grant_bundle(root)
+    payload = _load(bundle_path)
+    payload["shadow_and_production_blockers"]["blockers_introduced_by_pilot_grant"] = [
+        "missing_prod_scoped_shadow_pilot_authorization"
+    ]
+    _write_json(bundle_path, payload)
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="blockers_introduced_by_pilot_grant"):
+        verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            repo_root=root,
+            expect_pilot_grant_filed=True,
+        )
+
+    payload = _load(_write_pilot_grant_bundle(root, pilot_run_id="proof-grant-bad-caveat"))
+    payload["caveats"].append("Bundle pilot-request milestone only; grants no pilot authorization.")
+    _write_json(bundle_path, payload)
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="request-only"):
+        verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            repo_root=root,
+            expect_pilot_grant_filed=True,
+        )
+
+
+def test_post_pilot_grant_non_authorizations_hold(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pilot_grant_bundle(root)
+    payload = _load(bundle_path)
+
+    assert payload["posture"]["online_shadow_execution_enabled"] is False
+    assert payload["posture"]["production_default_allowed"] is False
+    assert payload["posture"]["api_web_changes_allowed"] is False
+    assert payload["posture"]["user_visible_ranking_changed"] is False
+    assert payload["execution"]["prod_scoped_shadow_pilot_executed"] is False
+    assert payload["authorization"]["prod_scoped_shadow_live_execution_authorized"] is False
+    assert payload["authorization"]["prod_scoped_shadow_execution_authorized"] is False
+    assert payload["writes_performed"] is False
+    assert payload["runtime_writes_performed"] is False
 
 
 def test_rejects_proof_on_pre_plan_and_already_proven_bundles(tmp_path: Path) -> None:
@@ -629,6 +835,19 @@ def test_apply_pilot_request_in_memory_requires_revision_two() -> None:
         apply_production_scoped_shadow_pilot_authorization_request(payload)
 
 
+def test_apply_pilot_grant_in_memory_requires_revision_three() -> None:
+    payload = {
+        "metadata": {"bundle_revision": 2},
+        "authorization": {"prod_scoped_shadow_pilot_authorization_requested": False},
+        "posture": {"missing_prod_scoped_shadow_pilot_authorization": False},
+    }
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="bundle_revision"):
+        apply_production_scoped_shadow_pilot_authorization_grant(
+            payload,
+            owner_documents_equivalent_review="owner equivalent review",
+        )
+
+
 def test_cli_smoke_assemble_plan_verify(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     out_json = root / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
@@ -800,6 +1019,50 @@ def test_cli_smoke_assemble_plan_verify(tmp_path: Path) -> None:
         "record_production_scoped_online_shadow_pilot_authorization_grant_v1",
     ]
 
+    grant_cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-production-scoped-shadow-bundle-grant-pilot",
+        "--bundle",
+        str(out_json),
+        "--owner-documents-equivalent-review",
+        "Owner reviewed the production-scoped proof, pilot request, and bounded pilot contract.",
+        "--repo-root",
+        str(root),
+    ]
+    granted = subprocess.run(grant_cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True, check=True)
+    assert granted.stdout.splitlines() == [
+        "granted",
+        "True",
+        "run_production_scoped_online_shadow_pilot_v1",
+    ]
+
+    verify_grant_cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-production-scoped-shadow-bundle-verify",
+        "--bundle",
+        str(out_json),
+        "--expect-pilot-grant-filed",
+        "--repo-root",
+        str(root),
+    ]
+    verified_grant = subprocess.run(
+        verify_grant_cmd,
+        cwd=PACKAGE_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert verified_grant.stdout.splitlines() == [
+        "passed",
+        "post_pilot_grant",
+        "online-shadow-production-scoped-v1",
+        "run_production_scoped_online_shadow_pilot_v1",
+    ]
+
 
 def test_cli_verify_rejects_conflicting_pilot_request_flags(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
@@ -840,17 +1103,17 @@ def test_upstream_verifiers_still_pass(tmp_path: Path) -> None:
     assert production_readiness_result["verification_mode"] == "post_grant"
 
 
-def test_committed_bundle_fixture_matches_post_pilot_request_if_present() -> None:
+def test_committed_bundle_fixture_matches_post_pilot_grant_if_present() -> None:
     committed = REPO_ROOT / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         bundle_path=committed,
         repo_root=REPO_ROOT,
-        expect_pilot_request_filed=True,
+        expect_pilot_grant_filed=True,
     )
-    assert result["bundle_revision"] == 3
-    assert result["recommended_next_stage"] == "record_production_scoped_online_shadow_pilot_authorization_grant_v1"
+    assert result["bundle_revision"] == 4
+    assert result["recommended_next_stage"] == "run_production_scoped_online_shadow_pilot_v1"
 
 
 def test_payload_verifier_infers_plan_mode(tmp_path: Path) -> None:
@@ -867,11 +1130,18 @@ def test_payload_verifier_infers_plan_mode(tmp_path: Path) -> None:
     proof = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(_load(bundle_path), repo_root=root)
     request_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(bundle_path=bundle_path, repo_root=root)
     request = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(_load(bundle_path), repo_root=root)
+    grant_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="owner equivalent review",
+        repo_root=root,
+    )
+    grant = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(_load(bundle_path), repo_root=root)
 
     assert pre["verification_mode"] == "pre_plan"
     assert post["verification_mode"] == "post_plan"
     assert proof["verification_mode"] == "post_proof"
     assert request["verification_mode"] == "post_pilot_request"
+    assert grant["verification_mode"] == "post_pilot_grant"
 
 
 def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
@@ -886,4 +1156,5 @@ def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
     next_command = cli_source.index('"ml-shadow-scorer-second-candidate-plan-ingest"', assemble_start)
     assert "--database-url" not in cli_source[assemble_start:next_command]
     assert '"ml-shadow-scorer-production-scoped-shadow-bundle-request-pilot"' in cli_source[assemble_start:next_command]
+    assert '"ml-shadow-scorer-production-scoped-shadow-bundle-grant-pilot"' in cli_source[assemble_start:next_command]
     assert "run_ml_shadow_scorer_v1_online_shadow_runtime" not in module_source

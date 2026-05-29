@@ -2,16 +2,17 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped shadow pilot authorization request while keeping pilot authorization, runtime, production default, API/web, and user-visible behavior disabled.
+This bundle records the production-scoped shadow pilot authorization grant while keeping pilot execution, runtime, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 3
+- Bundle revision: 4
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
 - Pilot authorization requested: True
-- Pilot authorized: False
+- Pilot authorization granted: True
+- Pilot authorized: True
 - Online shadow execution enabled: False
-- Recommended next stage: `record_production_scoped_online_shadow_pilot_authorization_grant_v1`
+- Recommended next stage: `run_production_scoped_online_shadow_pilot_v1`
 
 ## Pinned Identity
 
@@ -97,7 +98,7 @@ This bundle records the production-scoped shadow pilot authorization request whi
 - Live execution authorized: False
 - Execution authorized: False
 - Proof authorized: False
-- Pilot authorized: False
+- Pilot authorized: True
 
 ## Pilot Authorization Request
 
@@ -106,7 +107,20 @@ This bundle records the production-scoped shadow pilot authorization request whi
 - Requested at: 2026-05-29T15:08:18Z
 - Request notes: None
 - Requested scope: `production_scoped_shadow_pilot_paperwork_only`
-- Missing pilot authorization: True
+- Missing pilot authorization: False
+
+## Pilot Authorization Grant
+
+- Decision: `granted`
+- Owner: Matt Maitland
+- Granted at: 2026-05-29T15:38:46Z
+- Expiry date: 2026-08-27
+- Review by: 2026-08-27
+- Grant notes: None
+- Second reviewer: None
+- Owner equivalent review: Owner reviewed the production-scoped proof, pilot request, and bounded pilot contract as equivalent authorization review.
+- Granted scope: `production_scoped_shadow_pilot_authorization_only`
+- Missing pilot authorization: False
 
 ## Explicitly Not Included
 
@@ -119,6 +133,7 @@ This bundle records the production-scoped shadow pilot authorization request whi
 - model refit, embedding generation, label ingest
 - online_shadow_execution_enabled globally
 - prod default
+- production default / API / fleet-wide enablement
 - production_default_allowed
 - user-visible ranking
 - user-visible ranking changes
@@ -134,7 +149,7 @@ This bundle records the production-scoped shadow pilot authorization request whi
 
 ## Recommended Next Stage
 
-`record_production_scoped_online_shadow_pilot_authorization_grant_v1`
+`run_production_scoped_online_shadow_pilot_v1`
 
 ## Caveats
 
@@ -146,6 +161,7 @@ This bundle records the production-scoped shadow pilot authorization request whi
 - Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.
 - Proof clears the prod-scoped shadow proof blocker only.
 - Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates.
-- Bundle pilot-request milestone only; grants no pilot authorization.
-- Accepted proof evidence is necessary but not sufficient for pilot execution.
-- Pilot grant remains a separate gate; does not enable global shadow or prod default/API/user-visible.
+- Bundle pilot-grant milestone only; does not run the prod-scoped pilot.
+- Clears prod-scoped pilot authorization blocker for the pilot chain only.
+- Bounded pilot run still required before any enablement or prod default/API/user-visible change.
+- Global shadow flag default remains off; prod default/API/user-visible remain separate chains.
