@@ -20,6 +20,7 @@ from time import perf_counter
 from typing import Any, Iterator, Mapping, Sequence
 
 from pipeline import ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof as proof_module
+from pipeline.audit_artifact_hash import recorded_sha256_matches_text_artifact
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.ml_shadow_scorer_online_shadow_phase2_isolated_audit_write_mode_proof import (
     EXPECTED_POOL_SIZE,
@@ -112,7 +113,7 @@ def _approved_artifact_record(
     if not resolved.exists():
         raise MLShadowScorerProductionScopedShadowPilotError(f"{name} does not exist: {expected_rel}")
     observed_sha = sha256_file(resolved)
-    if observed_sha != expected_sha256:
+    if not recorded_sha256_matches_text_artifact(resolved, expected_sha256):
         raise MLShadowScorerProductionScopedShadowPilotError(
             f"{name} sha256 mismatch: expected {expected_sha256}, got {observed_sha}"
         )

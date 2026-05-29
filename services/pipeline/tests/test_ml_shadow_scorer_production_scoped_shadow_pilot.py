@@ -220,6 +220,25 @@ def test_happy_path_runs_528_row_audit_artifact_pilot_and_updates_bundle(tmp_pat
     assert verified["verification_mode"] == "post_pilot_run"
 
 
+def test_approved_text_artifact_hashes_accept_lf_checkout(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_harness_review_bundle(root)
+    for key in ("learned_probability", "generalization_audit"):
+        artifact = _fixture(root, key)
+        lf_text = artifact.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+        artifact.write_bytes(lf_text.encode("utf-8"))
+
+    result = _run_pilot(root, bundle_path=bundle_path, pilot_run_id="line-ending-variant", update_bundle=False)
+
+    assert result["prod_scoped_shadow_pilot_passed"] is True
+    assert result["execution"]["source_artifacts"]["learned_probability_artifact"]["sha256"] == _sha256(
+        _fixture(root, "learned_probability")
+    )
+    assert result["execution"]["source_artifacts"]["second_surface_generalization_audit"]["sha256"] == _sha256(
+        _fixture(root, "generalization_audit")
+    )
+
+
 def test_rejects_fixture_input_argument_on_pilot_cli(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     bundle_path = _write_harness_review_bundle(root)
