@@ -106,7 +106,11 @@
     "No live production DB/source reads were performed.",
     "Live read-only production shadow access remains a separate future authorization chain.",
     "Global online shadow enablement remains false.",
-    "Production default/API/user-visible behavior remains unchanged."
+    "Production default/API/user-visible behavior remains unchanged.",
+    "Pilot review accepts bounded audit-artifact pilot evidence only.",
+    "Pilot review does not grant live read-only production source access.",
+    "Pilot review does not grant global/live/fleet online shadow execution.",
+    "Production default/API/user-visible behavior remains unchanged after pilot review."
   ],
   "execution": {
     "pilot_harness": {
@@ -1104,9 +1108,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 7,
+    "bundle_revision": 8,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-29T19:54:46Z",
+    "generated_at": "2026-05-29T20:35:40Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -1307,6 +1311,7 @@
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_accepted": true,
     "prod_scoped_shadow_pilot_authorization_granted": true,
     "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": true,
@@ -1317,6 +1322,7 @@
     "prod_scoped_shadow_pilot_harness_passed": true,
     "prod_scoped_shadow_pilot_harness_reviewed": true,
     "prod_scoped_shadow_pilot_passed": true,
+    "prod_scoped_shadow_pilot_reviewed": true,
     "prod_scoped_shadow_plan_defined": true,
     "prod_scoped_shadow_proof_authorized": false,
     "prod_scoped_shadow_proof_passed": true,
@@ -1479,10 +1485,51 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "review_production_scoped_online_shadow_pilot_v1",
+  "recommended_next_stage": "request_production_scoped_online_shadow_live_read_only_authorization_v1",
   "review": {
+    "pilot_review_decision": {
+      "accepted_evidence": [
+        "bounded 528-work audit-artifact pilot passed all review checks",
+        "approved source artifacts were verified by path and SHA-256",
+        "runtime drill stayed disabled before and after the scoped pilot",
+        "forbidden production write counts were zero",
+        "live production source reads were not performed",
+        "production default, API/web, and user-visible behavior remained unchanged"
+      ],
+      "checks": {
+        "environment_restored": true,
+        "expected_files_recorded": true,
+        "forbidden_write_counts_zero": true,
+        "global_live_execution_authorization_false": true,
+        "isolated_artifact_count_4": true,
+        "joined_candidate_count_528": true,
+        "live_prod_source_reads_false": true,
+        "pilot_run_pass_fail_overall_passed": true,
+        "pilot_surface_bounded_read_only_audit_artifact": true,
+        "preflight_postflight_disabled": true,
+        "production_api_user_visible_unchanged": true,
+        "runtime_drill_call_order": true,
+        "runtime_row_count_528": true,
+        "runtime_writes_false": true,
+        "source_artifacts_verified": true
+      },
+      "decision": "accepted",
+      "failed_review_checks": [],
+      "limitations": [
+        "not live production traffic",
+        "no live read-only production source access was reviewed",
+        "no runtime rerun was performed",
+        "no shadow-runs artifact reads or writes were performed",
+        "global/live/fleet online shadow execution remains unauthorized"
+      ],
+      "review_notes": "Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.",
+      "reviewed_at": "2026-05-29T20:35:40Z",
+      "reviewer": "Matt Maitland"
+    },
+    "prod_scoped_shadow_pilot_accepted": true,
     "prod_scoped_shadow_pilot_harness_accepted": true,
     "prod_scoped_shadow_pilot_harness_reviewed": true,
+    "prod_scoped_shadow_pilot_reviewed": true,
     "review_decision": {
       "accepted_evidence": [
         "runtime drill succeeded in test-only harness context",
@@ -1537,17 +1584,20 @@
     ],
     "blockers_cleared_by_pilot_harness": [],
     "blockers_cleared_by_pilot_request": [],
+    "blockers_cleared_by_pilot_review": [],
     "blockers_cleared_by_pilot_run": [],
     "blockers_introduced_by_pilot_grant": [],
     "blockers_introduced_by_pilot_harness": [],
     "blockers_introduced_by_pilot_request": [
       "missing_prod_scoped_shadow_pilot_authorization"
     ],
+    "blockers_introduced_by_pilot_review": [],
     "blockers_introduced_by_pilot_run": [],
     "blockers_unchanged_by_grant": true,
     "blockers_unchanged_by_pilot_grant": true,
     "blockers_unchanged_by_pilot_harness": true,
     "blockers_unchanged_by_pilot_request": true,
+    "blockers_unchanged_by_pilot_review": true,
     "blockers_unchanged_by_pilot_run": true,
     "blockers_unchanged_by_plan": true,
     "blockers_unchanged_by_proof": true,
@@ -1555,11 +1605,13 @@
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_accepted": true,
     "prod_scoped_shadow_pilot_authorization_granted": true,
     "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": true,
     "prod_scoped_shadow_pilot_executed": true,
     "prod_scoped_shadow_pilot_passed": true,
+    "prod_scoped_shadow_pilot_reviewed": true,
     "prod_scoped_shadow_proof_authorized": false,
     "production_default_allowed": false,
     "production_readiness_authorization_granted": true,

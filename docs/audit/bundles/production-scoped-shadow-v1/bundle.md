@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the bounded 528-work audit-artifact production-scoped shadow pilot while keeping live production source reads, global shadow enablement, production default, API/web, and user-visible behavior disabled.
+This bundle records the bounded 528-work audit-artifact production-scoped shadow pilot review (accepted) while keeping live production source reads, global shadow enablement, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 7
+- Bundle revision: 8
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -16,8 +16,10 @@ This bundle records the bounded 528-work audit-artifact production-scoped shadow
 - Pilot harness accepted: True
 - Production-scoped pilot executed: True
 - Production-scoped pilot passed: True
+- Production-scoped pilot reviewed: True
+- Production-scoped pilot accepted: True
 - Online shadow execution enabled: False
-- Recommended next stage: `review_production_scoped_online_shadow_pilot_v1`
+- Recommended next stage: `request_production_scoped_online_shadow_live_read_only_authorization_v1`
 
 ## Pinned Identity
 
@@ -196,9 +198,9 @@ This bundle records the bounded 528-work audit-artifact production-scoped shadow
 
 | Role | Path | SHA-256 |
 | --- | --- | --- |
+| bundle | `docs/audit/bundles/production-scoped-shadow-v1/bundle.json` | `1a7888b7ff46ab07fc91a65eed2d5087c34881f95cdeb8eeed7c4caee8322c1c` |
 | learned_probability_artifact | `docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json` | `92df47cf9f49b4391404d170775cdcae6b4615423f852e2e8198562fbca778af` |
 | second_surface_generalization_audit | `docs/audit/ml-shadow-scorer-v1-second-surface-generalization-audit-v1.json` | `335d06c3ceae65c1420e12fc64bf9d9b9e20c19bfb762858d2299218e5253c96` |
-| bundle | `docs/audit/bundles/production-scoped-shadow-v1/bundle.json` | `1a7888b7ff46ab07fc91a65eed2d5087c34881f95cdeb8eeed7c4caee8322c1c` |
 
 ## Production-Scoped Pilot Files
 
@@ -208,6 +210,42 @@ This bundle records the bounded 528-work audit-artifact production-scoped shadow
 | `shadow_rows.jsonl` | 406935 | 528 | `a8fe921a4b5901de0e5a6ac66299ac5efb29297ed17c12e795929b87e7958f98` |
 | `observability.json` | 15631 | None | `dd739991032e01f8121482c2afa893c53a5e588d9aa7f7693ff0a451dab19853` |
 | `write_counts.json` | 742 | None | `9d73f2f1232f11512e138d41ca78e6ae82fc25389c05da93ded1829486cfd26a` |
+
+## Production-Scoped Pilot Review
+
+- Decision: `accepted`
+- Reviewer: Matt Maitland
+- Reviewed at: 2026-05-29T20:35:40Z
+- Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
+- Pilot accepted: True
+- Failed review checks: None
+- Next stage: `request_production_scoped_online_shadow_live_read_only_authorization_v1`
+
+## Production-Scoped Pilot Review Checks
+
+- `pilot_run_pass_fail_overall_passed`: True
+- `joined_candidate_count_528`: True
+- `runtime_row_count_528`: True
+- `runtime_drill_call_order`: True
+- `preflight_postflight_disabled`: True
+- `environment_restored`: True
+- `forbidden_write_counts_zero`: True
+- `isolated_artifact_count_4`: True
+- `expected_files_recorded`: True
+- `source_artifacts_verified`: True
+- `runtime_writes_false`: True
+- `live_prod_source_reads_false`: True
+- `pilot_surface_bounded_read_only_audit_artifact`: True
+- `production_api_user_visible_unchanged`: True
+- `global_live_execution_authorization_false`: True
+
+## Production-Scoped Pilot Review Limitations
+
+- not live production traffic
+- no live read-only production source access was reviewed
+- no runtime rerun was performed
+- no shadow-runs artifact reads or writes were performed
+- global/live/fleet online shadow execution remains unauthorized
 
 ## Explicitly Not Included
 
@@ -236,7 +274,7 @@ This bundle records the bounded 528-work audit-artifact production-scoped shadow
 
 ## Recommended Next Stage
 
-`review_production_scoped_online_shadow_pilot_v1`
+`request_production_scoped_online_shadow_live_read_only_authorization_v1`
 
 ## Caveats
 
@@ -262,3 +300,7 @@ This bundle records the bounded 528-work audit-artifact production-scoped shadow
 - Live read-only production shadow access remains a separate future authorization chain.
 - Global online shadow enablement remains false.
 - Production default/API/user-visible behavior remains unchanged.
+- Pilot review accepts bounded audit-artifact pilot evidence only.
+- Pilot review does not grant live read-only production source access.
+- Pilot review does not grant global/live/fleet online shadow execution.
+- Production default/API/user-visible behavior remains unchanged after pilot review.

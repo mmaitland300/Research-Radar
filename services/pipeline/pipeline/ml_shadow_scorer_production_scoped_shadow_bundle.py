@@ -5,9 +5,10 @@ production-readiness grant. Revision 0 is an assemble-only pre-plan skeleton,
 revision 1 records a paperwork-only plan contract, revision 2 records a bounded
 fixture proof, revision 3 records a pilot authorization request, revision 4
 records a pilot authorization grant, revision 5 records a bounded pilot harness,
-revision 6 records a harness review, and revision 7 records the bounded
-528-work audit-artifact pilot run. It does not access databases, enable feature
-flags globally, or authorize production/default/API/user-visible behavior.
+revision 6 records a harness review, revision 7 records the bounded 528-work
+audit-artifact pilot run, and revision 8 records pilot review. It does not
+access databases, enable feature flags globally, or authorize
+production/default/API/user-visible behavior.
 """
 
 from __future__ import annotations
@@ -52,6 +53,7 @@ POST_PILOT_GRANT_BUNDLE_REVISION = 4
 POST_PILOT_HARNESS_BUNDLE_REVISION = 5
 POST_PILOT_HARNESS_REVIEW_BUNDLE_REVISION = 6
 POST_PILOT_RUN_BUNDLE_REVISION = 7
+POST_PILOT_REVIEW_BUNDLE_REVISION = 8
 PRE_PLAN_NEXT_STAGE = "begin_production_scoped_online_shadow_plan_v1"
 POST_PLAN_NEXT_STAGE = "implement_production_scoped_online_shadow_proof_v1"
 POST_PROOF_NEXT_STAGE = "request_production_scoped_online_shadow_pilot_authorization_v1"
@@ -62,6 +64,8 @@ POST_PILOT_HARNESS_REVIEW_ACCEPTED_NEXT_STAGE = "run_production_scoped_online_sh
 POST_PILOT_HARNESS_REVIEW_REJECTED_NEXT_STAGE = "remediate_production_scoped_online_shadow_pilot_harness_v1"
 POST_PILOT_RUN_NEXT_STAGE = "review_production_scoped_online_shadow_pilot_v1"
 POST_PILOT_RUN_REMEDIATE_NEXT_STAGE = "remediate_production_scoped_online_shadow_pilot_v1"
+POST_PILOT_REVIEW_ACCEPTED_NEXT_STAGE = "request_production_scoped_online_shadow_live_read_only_authorization_v1"
+POST_PILOT_REVIEW_REJECTED_NEXT_STAGE = "remediate_production_scoped_online_shadow_pilot_v1"
 FEATURE_FLAG = "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
 FUTURE_ARTIFACT_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/"
 PILOT_REQUEST_SCOPE = "production_scoped_shadow_pilot_paperwork_only"
@@ -86,6 +90,23 @@ PILOT_HARNESS_REVIEW_CHECKS = (
     "labels_not_used",
     "pass_fail_overall_passed",
     "pass_fail_failed_checks_empty",
+)
+PILOT_RUN_REVIEW_CHECKS = (
+    "pilot_run_pass_fail_overall_passed",
+    "joined_candidate_count_528",
+    "runtime_row_count_528",
+    "runtime_drill_call_order",
+    "preflight_postflight_disabled",
+    "environment_restored",
+    "forbidden_write_counts_zero",
+    "isolated_artifact_count_4",
+    "expected_files_recorded",
+    "source_artifacts_verified",
+    "runtime_writes_false",
+    "live_prod_source_reads_false",
+    "pilot_surface_bounded_read_only_audit_artifact",
+    "production_api_user_visible_unchanged",
+    "global_live_execution_authorization_false",
 )
 
 FORBIDDEN_PROD_SCOPED_WRITE_TARGETS = (
@@ -186,6 +207,13 @@ PILOT_RUN_CAVEATS = (
     "Live read-only production shadow access remains a separate future authorization chain.",
     "Global online shadow enablement remains false.",
     "Production default/API/user-visible behavior remains unchanged.",
+)
+
+PILOT_REVIEW_CAVEATS = (
+    "Pilot review accepts bounded audit-artifact pilot evidence only.",
+    "Pilot review does not grant live read-only production source access.",
+    "Pilot review does not grant global/live/fleet online shadow execution.",
+    "Production default/API/user-visible behavior remains unchanged after pilot review.",
 )
 
 EXPLICITLY_NOT_INCLUDED = (
@@ -490,6 +518,13 @@ def _caveats(*, mode: str) -> list[str]:
         caveats.extend(HARNESS_REVIEW_CAVEATS)
         caveats.extend(PILOT_RUN_CAVEATS)
         return caveats
+    if mode == "post_pilot_review":
+        caveats.extend(PROOF_CAVEATS)
+        caveats.extend(HARNESS_CAVEATS)
+        caveats.extend(HARNESS_REVIEW_CAVEATS)
+        caveats.extend(PILOT_RUN_CAVEATS)
+        caveats.extend(PILOT_REVIEW_CAVEATS)
+        return caveats
     raise MLShadowScorerProductionScopedShadowBundleError(f"unknown caveat mode {mode!r}")
     return caveats
 
@@ -550,6 +585,8 @@ def _posture(
     pilot_harness_accepted: bool = False,
     pilot_run_executed: bool = False,
     pilot_run_passed: bool = False,
+    pilot_reviewed: bool = False,
+    pilot_accepted: bool = False,
 ) -> dict[str, Any]:
     posture = {
         "prod_scoped_shadow_plan_defined": plan_defined,
@@ -586,6 +623,9 @@ def _posture(
         posture["prod_scoped_shadow_pilot_passed"] = pilot_run_passed
         posture["prod_scoped_shadow_pilot_execution_authorized"] = True
         posture["live_prod_source_reads_performed"] = False
+    if pilot_reviewed:
+        posture["prod_scoped_shadow_pilot_reviewed"] = True
+        posture["prod_scoped_shadow_pilot_accepted"] = pilot_accepted
     return posture
 
 
@@ -1907,6 +1947,179 @@ def apply_production_scoped_shadow_pilot_run(
     return updated
 
 
+def _validate_pilot_review_slice(review_slice: Mapping[str, Any]) -> bool:
+    _require_true(
+        "review_slice.prod_scoped_shadow_pilot_reviewed",
+        review_slice.get("prod_scoped_shadow_pilot_reviewed"),
+    )
+    accepted = review_slice.get("prod_scoped_shadow_pilot_accepted")
+    if not isinstance(accepted, bool):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.prod_scoped_shadow_pilot_accepted must be a boolean"
+        )
+    decision = review_slice.get("pilot_review_decision")
+    if not isinstance(decision, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.pilot_review_decision must be an object"
+        )
+    expected_decision = "accepted" if accepted else "not_accepted"
+    _require_equal("review_slice.pilot_review_decision.decision", decision.get("decision"), expected_decision)
+    for field in ("reviewer", "reviewed_at"):
+        if not isinstance(decision.get(field), str) or not decision.get(field):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review_slice.pilot_review_decision.{field} must be populated"
+            )
+    checks = decision.get("checks")
+    if not isinstance(checks, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("review_slice.pilot_review_decision.checks must be an object")
+    failed = decision.get("failed_review_checks")
+    if not isinstance(failed, list) or not all(isinstance(item, str) for item in failed):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.pilot_review_decision.failed_review_checks must be a string list"
+        )
+    for check_name in PILOT_RUN_REVIEW_CHECKS:
+        if check_name not in checks or not isinstance(checks.get(check_name), bool):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review_slice.pilot_review_decision.checks.{check_name} must be a boolean"
+            )
+    expected_failed = sorted(name for name in PILOT_RUN_REVIEW_CHECKS if checks.get(name) is False)
+    _require_equal("review_slice.pilot_review_decision.failed_review_checks", sorted(failed), expected_failed)
+    if accepted and failed:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "accepted pilot review must have no failed checks"
+        )
+    if not accepted and not failed:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "not_accepted pilot review must list failed checks"
+        )
+    for field in ("accepted_evidence", "limitations"):
+        value = decision.get(field)
+        if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review_slice.pilot_review_decision.{field} must be a non-empty string list"
+            )
+    return accepted
+
+
+def apply_production_scoped_shadow_pilot_review(
+    bundle: Mapping[str, Any],
+    review_slice: Mapping[str, Any],
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("bundle must be an object")
+    if not isinstance(review_slice, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("review_slice must be an object")
+    _require_equal(
+        "metadata.bundle_revision",
+        _get(bundle, "metadata.bundle_revision"),
+        POST_PILOT_RUN_BUNDLE_REVISION,
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_pilot_executed",
+        _get(bundle, "execution.prod_scoped_shadow_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_pilot_passed",
+        _get(bundle, "execution.prod_scoped_shadow_pilot_passed"),
+    )
+    _require_equal("execution.pilot_run.pilot_surface", _get(bundle, "execution.pilot_run.pilot_surface"), PILOT_RUN_SURFACE)
+    _require_false("execution.pilot_run.live_prod_source_reads_performed", _get(bundle, "execution.pilot_run.live_prod_source_reads_performed"))
+    _require_true("review.prod_scoped_shadow_pilot_harness_reviewed", _get(bundle, "review.prod_scoped_shadow_pilot_harness_reviewed"))
+    _require_true("review.prod_scoped_shadow_pilot_harness_accepted", _get(bundle, "review.prod_scoped_shadow_pilot_harness_accepted"))
+    if _get(bundle, "review.prod_scoped_shadow_pilot_reviewed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot review has already been filed")
+    _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), POST_PILOT_RUN_NEXT_STAGE)
+    _require_false("authorization.prod_scoped_shadow_live_execution_authorized", _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorized"))
+    _require_false("authorization.prod_scoped_shadow_execution_authorized", _get(bundle, "authorization.prod_scoped_shadow_execution_authorized"))
+    _require_true("authorization.prod_scoped_shadow_pilot_execution_authorized", _get(bundle, "authorization.prod_scoped_shadow_pilot_execution_authorized"))
+    accepted = _validate_pilot_review_slice(review_slice)
+    decision = review_slice["pilot_review_decision"]
+    reviewed_at = str(decision.get("reviewed_at") or generated_at or _now_iso_z())
+
+    updated = deepcopy(dict(bundle))
+    plan_before = deepcopy(updated.get("plan"))
+    proof_before = deepcopy(updated.get("proof"))
+    execution_before = deepcopy(updated.get("execution"))
+    harness_review_before = deepcopy(_get(updated, "review.review_decision"))
+    legacy_index_before = deepcopy(_get(updated, "metadata.legacy_artifacts_index"))
+
+    metadata = deepcopy(dict(_metadata(updated, label="production-scoped-shadow bundle")))
+    metadata["bundle_revision"] = POST_PILOT_REVIEW_BUNDLE_REVISION
+    metadata["generated_at"] = reviewed_at
+    updated["metadata"] = metadata
+
+    review = deepcopy(dict(updated.get("review") or {}))
+    pilot_decision = deepcopy(dict(decision))
+    pilot_decision["reviewed_at"] = reviewed_at
+    review.update(
+        {
+            "prod_scoped_shadow_pilot_reviewed": True,
+            "prod_scoped_shadow_pilot_accepted": accepted,
+            "pilot_review_decision": pilot_decision,
+        }
+    )
+    updated["review"] = review
+
+    posture = deepcopy(dict(updated.get("posture") or {}))
+    posture.update(
+        {
+            "prod_scoped_shadow_pilot_reviewed": True,
+            "prod_scoped_shadow_pilot_accepted": accepted,
+            "prod_scoped_shadow_pilot_executed": True,
+            "prod_scoped_shadow_pilot_passed": True,
+            "prod_scoped_shadow_pilot_execution_authorized": True,
+            "online_shadow_execution_enabled": False,
+            "production_default_allowed": False,
+            "api_web_changes_allowed": False,
+            "user_visible_ranking_changed": False,
+            "writes_performed": False,
+            "runtime_writes_performed": False,
+            "live_prod_source_reads_performed": False,
+        }
+    )
+    updated["posture"] = posture
+
+    blockers = deepcopy(dict(updated.get("shadow_and_production_blockers") or {}))
+    blockers.update(
+        {
+            "prod_scoped_shadow_pilot_reviewed": True,
+            "prod_scoped_shadow_pilot_accepted": accepted,
+            "prod_scoped_shadow_pilot_executed": True,
+            "prod_scoped_shadow_pilot_passed": True,
+            "blockers_cleared_by_pilot_review": [],
+            "blockers_introduced_by_pilot_review": [],
+            "blockers_unchanged_by_pilot_review": True,
+            "online_shadow_execution_enabled": False,
+            "production_default_allowed": False,
+            "api_web_changes_allowed": False,
+            "user_visible_ranking_changed": False,
+        }
+    )
+    updated["shadow_and_production_blockers"] = blockers
+    updated["writes_performed"] = False
+    updated["runtime_writes_performed"] = False
+    updated["recommended_next_stage"] = (
+        POST_PILOT_REVIEW_ACCEPTED_NEXT_STAGE
+        if accepted
+        else POST_PILOT_REVIEW_REJECTED_NEXT_STAGE
+    )
+    updated["caveats"] = _caveats(mode="post_pilot_review")
+
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot review must preserve plan section")
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot review must preserve proof section")
+    if updated.get("execution") != execution_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot review must preserve execution section")
+    if _get(updated, "review.review_decision") != harness_review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot review must preserve harness review decision")
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("pilot review must preserve legacy_artifacts_index")
+    return updated
+
+
 def _infer_plan_mode(
     bundle: Mapping[str, Any],
     *,
@@ -1917,6 +2130,7 @@ def _infer_plan_mode(
     expect_pilot_harness_filed: bool | None,
     expect_pilot_harness_review_filed: bool | None,
     expect_pilot_run_filed: bool | None,
+    expect_pilot_review_filed: bool | None,
 ) -> str:
     explicit = [
         expectation is not None
@@ -1928,10 +2142,29 @@ def _infer_plan_mode(
             expect_pilot_harness_filed,
             expect_pilot_harness_review_filed,
             expect_pilot_run_filed,
+            expect_pilot_review_filed,
         )
     ]
     if sum(explicit) > 1:
         raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot expectations conflict")
+    if expect_pilot_review_filed is True:
+        return "post_pilot_review"
+    if expect_pilot_review_filed is False:
+        if _get(bundle, "review.prod_scoped_shadow_pilot_reviewed") is True:
+            raise MLShadowScorerProductionScopedShadowBundleError("pilot review must not be filed")
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_executed") is True:
+            return "post_pilot_run"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_harness_reviewed") is True:
+            return "post_pilot_harness_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_harness_executed") is True:
+            return "post_pilot_harness"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized") is True:
+            return "post_pilot_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested") is True:
+            return "post_pilot_request"
+        revision = _get(bundle, "metadata.bundle_revision")
+        proof_passed = _get(bundle, "posture.prod_scoped_shadow_proof_passed")
+        return "post_proof" if revision == POST_PROOF_BUNDLE_REVISION and proof_passed is True else "post_plan"
     if expect_pilot_run_filed is True:
         return "post_pilot_run"
     if expect_pilot_run_filed is False:
@@ -2011,9 +2244,25 @@ def _infer_plan_mode(
     pilot_harness_passed = _get(bundle, "execution.prod_scoped_shadow_pilot_harness_passed")
     pilot_harness_reviewed = _get(bundle, "review.prod_scoped_shadow_pilot_harness_reviewed")
     pilot_harness_accepted = _get(bundle, "review.prod_scoped_shadow_pilot_harness_accepted")
+    pilot_reviewed = _get(bundle, "review.prod_scoped_shadow_pilot_reviewed")
+    pilot_accepted = _get(bundle, "review.prod_scoped_shadow_pilot_accepted")
     pilot_request = _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested")
     pilot_grant = _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_granted")
     pilot_authorized = _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized")
+    if (
+        revision == POST_PILOT_REVIEW_BUNDLE_REVISION
+        and pilot_request is True
+        and pilot_grant is True
+        and pilot_authorized is True
+        and pilot_harness_executed is True
+        and pilot_harness_passed is True
+        and pilot_harness_reviewed is True
+        and pilot_harness_accepted is True
+        and pilot_executed is True
+        and pilot_reviewed is True
+        and isinstance(pilot_accepted, bool)
+    ):
+        return "post_pilot_review"
     if (
         revision == POST_PILOT_RUN_BUNDLE_REVISION
         and pilot_request is True
@@ -2525,6 +2774,61 @@ def _verify_pilot_harness_review_section(review: Any) -> None:
             )
 
 
+def _verify_pilot_review_section(review: Any) -> None:
+    if not isinstance(review, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("review must be an object")
+    _require_true("review.prod_scoped_shadow_pilot_reviewed", review.get("prod_scoped_shadow_pilot_reviewed"))
+    accepted = review.get("prod_scoped_shadow_pilot_accepted")
+    if not isinstance(accepted, bool):
+        raise MLShadowScorerProductionScopedShadowBundleError("review.prod_scoped_shadow_pilot_accepted must be a boolean")
+    decision = review.get("pilot_review_decision")
+    if not isinstance(decision, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("review.pilot_review_decision must be an object")
+    expected_decision = "accepted" if accepted else "not_accepted"
+    _require_equal("review.pilot_review_decision.decision", decision.get("decision"), expected_decision)
+    for field in ("reviewer", "reviewed_at"):
+        if not isinstance(decision.get(field), str) or not decision.get(field):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.pilot_review_decision.{field} must be populated"
+            )
+    checks = decision.get("checks")
+    if not isinstance(checks, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("review.pilot_review_decision.checks must be an object")
+    failed = decision.get("failed_review_checks")
+    if not isinstance(failed, list) or not all(isinstance(item, str) for item in failed):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review.pilot_review_decision.failed_review_checks must be a string list"
+        )
+    for check_name in PILOT_RUN_REVIEW_CHECKS:
+        if check_name not in checks or not isinstance(checks.get(check_name), bool):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.pilot_review_decision.checks.{check_name} must be a boolean"
+            )
+    expected_failed = sorted(name for name in PILOT_RUN_REVIEW_CHECKS if checks.get(name) is False)
+    _require_equal("review.pilot_review_decision.failed_review_checks", sorted(failed), expected_failed)
+    if accepted and failed:
+        raise MLShadowScorerProductionScopedShadowBundleError("accepted pilot review must have no failed checks")
+    if not accepted and not failed:
+        raise MLShadowScorerProductionScopedShadowBundleError("not_accepted pilot review must list failed checks")
+    for field in ("accepted_evidence", "limitations"):
+        value = decision.get(field)
+        if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.pilot_review_decision.{field} must be a non-empty string list"
+            )
+    accepted_evidence = "bounded 528-work audit-artifact pilot passed all review checks"
+    if accepted and accepted_evidence not in decision.get("accepted_evidence", []):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            f"review.pilot_review_decision.accepted_evidence must include {accepted_evidence!r}"
+        )
+    limitations_text = " ".join(str(item).lower() for item in decision.get("limitations", []))
+    for phrase in ("not live production traffic", "no live read-only production source access was reviewed"):
+        if phrase not in limitations_text:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.pilot_review_decision.limitations must include {phrase!r}"
+            )
+
+
 def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     bundle: Mapping[str, Any],
     *,
@@ -2536,6 +2840,8 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     expect_pilot_harness_filed: bool | None = None,
     expect_pilot_harness_review_filed: bool | None = None,
     expect_pilot_run_filed: bool | None = None,
+    expect_pilot_review_filed: bool | None = None,
+    verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     metadata = _metadata(bundle, label="production-scoped-shadow bundle")
@@ -2550,6 +2856,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         expect_pilot_harness_filed=expect_pilot_harness_filed,
         expect_pilot_harness_review_filed=expect_pilot_harness_review_filed,
         expect_pilot_run_filed=expect_pilot_run_filed,
+        expect_pilot_review_filed=expect_pilot_review_filed,
     )
     expected_revision = {
         "pre_plan": PRE_PLAN_BUNDLE_REVISION,
@@ -2560,6 +2867,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness": POST_PILOT_HARNESS_BUNDLE_REVISION,
         "post_pilot_harness_review": POST_PILOT_HARNESS_REVIEW_BUNDLE_REVISION,
         "post_pilot_run": POST_PILOT_RUN_BUNDLE_REVISION,
+        "post_pilot_review": POST_PILOT_REVIEW_BUNDLE_REVISION,
     }[mode]
     _require_equal("metadata.bundle_revision", metadata.get("bundle_revision"), expected_revision)
     _validate_identity(metadata.get("pinned_identity"), label="metadata.pinned_identity")
@@ -2617,7 +2925,14 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     else:
         _require_true("plan.prod_scoped_shadow_plan_defined", plan.get("prod_scoped_shadow_plan_defined"))
         _verify_plan_subsections(plan)
-        if mode == "post_pilot_run":
+        if mode == "post_pilot_review":
+            review_accepted = _get(bundle, "review.prod_scoped_shadow_pilot_accepted")
+            expected_next = (
+                POST_PILOT_REVIEW_ACCEPTED_NEXT_STAGE
+                if review_accepted is True
+                else POST_PILOT_REVIEW_REJECTED_NEXT_STAGE
+            )
+        elif mode == "post_pilot_run":
             expected_next = POST_PILOT_RUN_NEXT_STAGE
         elif mode == "post_pilot_harness_review":
             review_accepted = _get(bundle, "review.prod_scoped_shadow_pilot_harness_accepted")
@@ -2657,6 +2972,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     } or authorization.get(
         "prod_scoped_shadow_live_execution_authorized"
     ) is not None:
@@ -2673,6 +2989,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     }
     _require_equal(
         "authorization.prod_scoped_shadow_pilot_authorized",
@@ -2685,6 +3002,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     }
     if (
         mode in {
@@ -2693,6 +3011,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_harness",
             "post_pilot_harness_review",
             "post_pilot_run",
+            "post_pilot_review",
         }
         or authorization.get("prod_scoped_shadow_pilot_authorization_requested") is not None
     ):
@@ -2713,6 +3032,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     }:
         request_decision = authorization.get("request_decision")
         if not isinstance(request_decision, Mapping):
@@ -2735,7 +3055,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"authorization.requested_scope.explicitly_not_included missing {item!r}"
                 )
-    if mode in {"post_pilot_grant", "post_pilot_harness", "post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_grant", "post_pilot_harness", "post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         grant_decision = authorization.get("grant_decision")
         if not isinstance(grant_decision, Mapping):
             raise MLShadowScorerProductionScopedShadowBundleError("authorization.grant_decision must be an object")
@@ -2768,11 +3088,11 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"authorization.granted_scope.grant_time_pilot_boundaries missing {item!r}"
                 )
-    if mode == "post_pilot_run" or authorization.get("prod_scoped_shadow_pilot_execution_authorized") is not None:
+    if mode in {"post_pilot_run", "post_pilot_review"} or authorization.get("prod_scoped_shadow_pilot_execution_authorized") is not None:
         _require_equal(
             "authorization.prod_scoped_shadow_pilot_execution_authorized",
             authorization.get("prod_scoped_shadow_pilot_execution_authorized"),
-            mode == "post_pilot_run",
+            mode in {"post_pilot_run", "post_pilot_review"},
         )
     for item in EXPLICITLY_NOT_INCLUDED:
         if item not in authorization.get("explicitly_not_included", []):
@@ -2797,12 +3117,13 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_harness",
             "post_pilot_harness_review",
             "post_pilot_run",
+            "post_pilot_review",
         },
     )
     _require_equal(
         "execution.prod_scoped_shadow_pilot_executed",
         execution.get("prod_scoped_shadow_pilot_executed"),
-        mode == "post_pilot_run",
+        mode in {"post_pilot_run", "post_pilot_review"},
     )
 
     posture = bundle.get("posture")
@@ -2817,6 +3138,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_harness",
             "post_pilot_harness_review",
             "post_pilot_run",
+            "post_pilot_review",
         },
         "prod_scoped_shadow_proof_passed": mode in {
             "post_proof",
@@ -2825,8 +3147,9 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_harness",
             "post_pilot_harness_review",
             "post_pilot_run",
+            "post_pilot_review",
         },
-        "prod_scoped_shadow_pilot_executed": mode == "post_pilot_run",
+        "prod_scoped_shadow_pilot_executed": mode in {"post_pilot_run", "post_pilot_review"},
         "missing_prod_scoped_shadow_proof": mode not in {
             "post_proof",
             "post_pilot_request",
@@ -2834,6 +3157,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_harness",
             "post_pilot_harness_review",
             "post_pilot_run",
+            "post_pilot_review",
         },
         "prod_scoped_shadow_proof_authorized": False,
         "production_readiness_authorization_granted": True,
@@ -2854,6 +3178,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     } or posture.get(
         "prod_scoped_shadow_pilot_authorized"
     ) is not None:
@@ -2869,6 +3194,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_harness",
             "post_pilot_harness_review",
             "post_pilot_run",
+            "post_pilot_review",
         }
         or posture.get("prod_scoped_shadow_pilot_authorization_requested") is not None
     ):
@@ -2888,12 +3214,12 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "posture.missing_prod_scoped_shadow_pilot_authorization",
             posture.get("missing_prod_scoped_shadow_pilot_authorization"),
         )
-    if mode in {"post_pilot_grant", "post_pilot_harness", "post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_grant", "post_pilot_harness", "post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         _require_false(
             "posture.missing_prod_scoped_shadow_pilot_authorization",
             posture.get("missing_prod_scoped_shadow_pilot_authorization"),
         )
-    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         _require_true(
             "posture.prod_scoped_shadow_pilot_harness_executed",
             posture.get("prod_scoped_shadow_pilot_harness_executed"),
@@ -2903,7 +3229,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             posture.get("prod_scoped_shadow_pilot_harness_passed"),
         )
         _require_false("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
-    if mode in {"post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         _require_true(
             "posture.prod_scoped_shadow_pilot_harness_reviewed",
             posture.get("prod_scoped_shadow_pilot_harness_reviewed"),
@@ -2913,11 +3239,18 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             posture.get("prod_scoped_shadow_pilot_harness_accepted"),
             _get(bundle, "review.prod_scoped_shadow_pilot_harness_accepted"),
         )
-    if mode == "post_pilot_run":
+    if mode in {"post_pilot_run", "post_pilot_review"}:
         _require_true("posture.prod_scoped_shadow_pilot_passed", posture.get("prod_scoped_shadow_pilot_passed"))
         _require_true(
             "posture.prod_scoped_shadow_pilot_execution_authorized",
             posture.get("prod_scoped_shadow_pilot_execution_authorized"),
+        )
+    if mode == "post_pilot_review":
+        _require_true("posture.prod_scoped_shadow_pilot_reviewed", posture.get("prod_scoped_shadow_pilot_reviewed"))
+        _require_equal(
+            "posture.prod_scoped_shadow_pilot_accepted",
+            posture.get("prod_scoped_shadow_pilot_accepted"),
+            _get(bundle, "review.prod_scoped_shadow_pilot_accepted"),
         )
 
     blockers = bundle.get("shadow_and_production_blockers")
@@ -2933,6 +3266,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_harness",
             "post_pilot_harness_review",
             "post_pilot_run",
+            "post_pilot_review",
         },
     )
     _require_false(
@@ -2948,6 +3282,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     }:
         changed_by_proof = blockers.get("blockers_changed_by_proof")
         if "missing_prod_scoped_shadow_proof" not in (changed_by_proof or []):
@@ -2983,6 +3318,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     }:
         introduced = blockers.get("blockers_introduced_by_pilot_request")
         if "missing_prod_scoped_shadow_pilot_authorization" not in (introduced or []):
@@ -3008,7 +3344,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "shadow_and_production_blockers.missing_prod_scoped_shadow_pilot_authorization",
             blockers.get("missing_prod_scoped_shadow_pilot_authorization"),
         )
-    if mode in {"post_pilot_grant", "post_pilot_harness", "post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_grant", "post_pilot_harness", "post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         _require_false(
             "shadow_and_production_blockers.missing_prod_scoped_shadow_pilot_authorization",
             blockers.get("missing_prod_scoped_shadow_pilot_authorization"),
@@ -3031,11 +3367,11 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "shadow_and_production_blockers.blockers_unchanged_by_pilot_grant",
             blockers.get("blockers_unchanged_by_pilot_grant"),
         )
-    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         _require_equal(
             "shadow_and_production_blockers.prod_scoped_shadow_pilot_executed",
             blockers.get("prod_scoped_shadow_pilot_executed"),
-            mode == "post_pilot_run",
+            mode in {"post_pilot_run", "post_pilot_review"},
         )
         _require_equal(
             "shadow_and_production_blockers.blockers_cleared_by_pilot_harness",
@@ -3051,11 +3387,21 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "shadow_and_production_blockers.blockers_unchanged_by_pilot_harness",
             blockers.get("blockers_unchanged_by_pilot_harness"),
         )
-    if mode == "post_pilot_run":
+    if mode in {"post_pilot_run", "post_pilot_review"}:
         _require_true("shadow_and_production_blockers.prod_scoped_shadow_pilot_passed", blockers.get("prod_scoped_shadow_pilot_passed"))
         _require_equal("shadow_and_production_blockers.blockers_cleared_by_pilot_run", blockers.get("blockers_cleared_by_pilot_run"), [])
         _require_equal("shadow_and_production_blockers.blockers_introduced_by_pilot_run", blockers.get("blockers_introduced_by_pilot_run"), [])
         _require_true("shadow_and_production_blockers.blockers_unchanged_by_pilot_run", blockers.get("blockers_unchanged_by_pilot_run"))
+    if mode == "post_pilot_review":
+        _require_true("shadow_and_production_blockers.prod_scoped_shadow_pilot_reviewed", blockers.get("prod_scoped_shadow_pilot_reviewed"))
+        _require_equal(
+            "shadow_and_production_blockers.prod_scoped_shadow_pilot_accepted",
+            blockers.get("prod_scoped_shadow_pilot_accepted"),
+            _get(bundle, "review.prod_scoped_shadow_pilot_accepted"),
+        )
+        _require_equal("shadow_and_production_blockers.blockers_cleared_by_pilot_review", blockers.get("blockers_cleared_by_pilot_review"), [])
+        _require_equal("shadow_and_production_blockers.blockers_introduced_by_pilot_review", blockers.get("blockers_introduced_by_pilot_review"), [])
+        _require_true("shadow_and_production_blockers.blockers_unchanged_by_pilot_review", blockers.get("blockers_unchanged_by_pilot_review"))
     if mode in {
         "post_proof",
         "post_pilot_request",
@@ -3063,6 +3409,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     }:
         _verify_proof_section(bundle.get("proof"))
         _require_true(
@@ -3097,7 +3444,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"post-plan caveats imply forbidden enablement: {phrase}"
                 )
-    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         _require_true(
             "authorization.prod_scoped_shadow_pilot_harness_allowed_by_grant",
             authorization.get("prod_scoped_shadow_pilot_harness_allowed_by_grant"),
@@ -3107,8 +3454,12 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             repo_root=root,
             verify_local_files=(mode == "post_pilot_harness"),
         )
-    if mode == "post_pilot_run":
-        _verify_pilot_run_section(_get(bundle, "execution.pilot_run"), repo_root=root, verify_local_files=True)
+    if mode in {"post_pilot_run", "post_pilot_review"}:
+        _verify_pilot_run_section(
+            _get(bundle, "execution.pilot_run"),
+            repo_root=root,
+            verify_local_files=verify_local_pilot_files,
+        )
     if mode in {
         "post_proof",
         "post_pilot_request",
@@ -3116,6 +3467,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_harness",
         "post_pilot_harness_review",
         "post_pilot_run",
+        "post_pilot_review",
     }:
         for caveat in PLAN_CAVEATS:
             if caveat in caveats:
@@ -3139,7 +3491,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"post_pilot_grant caveats must not include request-only {caveat!r}"
                 )
-    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run"}:
+    if mode in {"post_pilot_harness", "post_pilot_harness_review", "post_pilot_run", "post_pilot_review"}:
         for caveat in HARNESS_CAVEATS:
             if caveat not in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
@@ -3163,18 +3515,25 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                     f"post_pilot_harness_review caveats missing review caveat {caveat!r}"
                 )
         _verify_pilot_harness_review_section(bundle.get("review"))
-    if mode == "post_pilot_run":
+    if mode in {"post_pilot_run", "post_pilot_review"}:
         for caveat in HARNESS_REVIEW_CAVEATS:
             if caveat not in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
-                    f"post_pilot_run caveats missing harness review caveat {caveat!r}"
+                    f"{mode} caveats missing harness review caveat {caveat!r}"
                 )
         for caveat in PILOT_RUN_CAVEATS:
             if caveat not in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
-                    f"post_pilot_run caveats missing pilot run caveat {caveat!r}"
+                    f"{mode} caveats missing pilot run caveat {caveat!r}"
                 )
         _verify_pilot_harness_review_section(bundle.get("review"))
+    if mode == "post_pilot_review":
+        for caveat in PILOT_REVIEW_CAVEATS:
+            if caveat not in caveats:
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"post_pilot_review caveats missing pilot review caveat {caveat!r}"
+                )
+        _verify_pilot_review_section(bundle.get("review"))
 
     return {
         "verification_status": "passed",
@@ -3197,6 +3556,8 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
     expect_pilot_harness_filed: bool | None = None,
     expect_pilot_harness_review_filed: bool | None = None,
     expect_pilot_run_filed: bool | None = None,
+    expect_pilot_review_filed: bool | None = None,
+    verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
     return verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
@@ -3209,6 +3570,8 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         expect_pilot_harness_filed=expect_pilot_harness_filed,
         expect_pilot_harness_review_filed=expect_pilot_harness_review_filed,
         expect_pilot_run_filed=expect_pilot_run_filed,
+        expect_pilot_review_filed=expect_pilot_review_filed,
+        verify_local_pilot_files=verify_local_pilot_files,
     )
 
 
@@ -3226,7 +3589,13 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
     review = payload.get("review") if isinstance(payload.get("review"), Mapping) else None
     pilot_request = authorization.get("request_decision") if isinstance(authorization.get("request_decision"), Mapping) else None
     pilot_grant = authorization.get("grant_decision") if isinstance(authorization.get("grant_decision"), Mapping) else None
-    if pilot_run:
+    pilot_review = review.get("pilot_review_decision") if isinstance(review, Mapping) and isinstance(review.get("pilot_review_decision"), Mapping) else None
+    if pilot_review:
+        accepted = review.get("prod_scoped_shadow_pilot_accepted") if isinstance(review, Mapping) else None
+        summary = (
+            f"This bundle records the bounded 528-work audit-artifact production-scoped shadow pilot review ({'accepted' if accepted else 'not accepted'}) while keeping live production source reads, global shadow enablement, production default, API/web, and user-visible behavior disabled."
+        )
+    elif pilot_run:
         summary = (
             "This bundle records the bounded 528-work audit-artifact production-scoped shadow pilot while keeping live production source reads, global shadow enablement, production default, API/web, and user-visible behavior disabled."
         )
@@ -3274,6 +3643,8 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         f"- Pilot harness accepted: {posture.get('prod_scoped_shadow_pilot_harness_accepted')}",
         f"- Production-scoped pilot executed: {posture.get('prod_scoped_shadow_pilot_executed')}",
         f"- Production-scoped pilot passed: {posture.get('prod_scoped_shadow_pilot_passed')}",
+        f"- Production-scoped pilot reviewed: {posture.get('prod_scoped_shadow_pilot_reviewed')}",
+        f"- Production-scoped pilot accepted: {posture.get('prod_scoped_shadow_pilot_accepted')}",
         f"- Online shadow execution enabled: {posture['online_shadow_execution_enabled']}",
         f"- Recommended next stage: `{payload['recommended_next_stage']}`",
         "",
@@ -3488,6 +3859,28 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
             lines.append(
                 f"| `{file_record['relative_path']}` | {file_record['byte_count']} | {file_record.get('row_count')} | `{file_record['sha256']}` |"
             )
+        lines.append("")
+    if pilot_review:
+        lines.extend(
+            [
+                "## Production-Scoped Pilot Review",
+                "",
+                f"- Decision: `{pilot_review['decision']}`",
+                f"- Reviewer: {pilot_review['reviewer']}",
+                f"- Reviewed at: {pilot_review['reviewed_at']}",
+                f"- Review notes: {pilot_review.get('review_notes')}",
+                f"- Pilot accepted: {review['prod_scoped_shadow_pilot_accepted']}",
+                f"- Failed review checks: {', '.join(pilot_review['failed_review_checks']) if pilot_review['failed_review_checks'] else 'None'}",
+                f"- Next stage: `{payload['recommended_next_stage']}`",
+                "",
+                "## Production-Scoped Pilot Review Checks",
+                "",
+            ]
+        )
+        for check_name in PILOT_RUN_REVIEW_CHECKS:
+            lines.append(f"- `{check_name}`: {pilot_review['checks'][check_name]}")
+        lines.extend(["", "## Production-Scoped Pilot Review Limitations", ""])
+        lines.extend(f"- {item}" for item in pilot_review["limitations"])
         lines.append("")
     lines.extend(
         [
