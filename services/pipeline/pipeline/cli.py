@@ -6180,6 +6180,11 @@ def main() -> None:
         action="store_true",
         help="Require post-live-read-only-grant production-scoped shadow bundle state",
     )
+    plan_bundle_verify_group.add_argument(
+        "--expect-live-read-only-pilot-run-filed",
+        action="store_true",
+        help="Require post-live-read-only-pilot-run production-scoped shadow bundle state",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
         default=None,
@@ -6239,6 +6244,57 @@ def main() -> None:
         default=None,
         help="Optional repository root for portable provenance paths",
     )
+    for command_name, help_text in (
+        (
+            "ml-shadow-scorer-production-scoped-shadow-live-read-only-pilot-run",
+            "Run the bounded production-scoped live read-only online shadow pilot",
+        ),
+        (
+            "ml-shadow-scorer-production-scoped-shadow-bundle-run-live-read-only-pilot",
+            "Run the bounded live read-only pilot and update the bundle",
+        ),
+    ):
+        live_read_only_pilot_parser = subparsers.add_parser(command_name, help=help_text)
+        live_read_only_pilot_parser.add_argument(
+            "--bundle",
+            required=True,
+            help="Path to production-scoped shadow bundle JSON",
+        )
+        live_read_only_pilot_parser.add_argument(
+            "--confirm-live-read-only-prod-source-reads",
+            action="store_true",
+            required=True,
+            help="Required confirmation before any live read-only production source reads",
+        )
+        live_read_only_pilot_parser.add_argument(
+            "--database-url",
+            default=None,
+            help="Local Postgres URL for live read-only source reads (default: DATABASE_URL or PG* env)",
+        )
+        live_read_only_pilot_parser.add_argument(
+            "--pilot-run-id",
+            default=None,
+            help="Optional safe pilot run id; defaults to live-read-only ranking_run_id plus UTC timestamp",
+        )
+        live_read_only_pilot_parser.add_argument(
+            "--repo-root",
+            default=None,
+            help="Optional repository root for resolving references and prod-scoped artifact paths",
+        )
+        live_read_only_pilot_update_group = live_read_only_pilot_parser.add_mutually_exclusive_group()
+        live_read_only_pilot_update_group.add_argument(
+            "--update-bundle",
+            dest="update_bundle",
+            action="store_true",
+            default=True,
+            help="Update the bundle JSON and Markdown after the pilot passes (default)",
+        )
+        live_read_only_pilot_update_group.add_argument(
+            "--no-update-bundle",
+            dest="update_bundle",
+            action="store_false",
+            help="Run the live read-only pilot and write local artifacts without updating the bundle",
+        )
     ml_fresh_product_candidate_source_build_parser = subparsers.add_parser(
         "ml-fresh-product-candidate-source-build",
         help="Build a frozen artifact-only fresh product-candidate source for hybrid validation",
@@ -9358,6 +9414,33 @@ def main() -> None:
         print(result["recommended_next_stage"])
         return
 
+    if args.command in {
+        "ml-shadow-scorer-production-scoped-shadow-live-read-only-pilot-run",
+        "ml-shadow-scorer-production-scoped-shadow-bundle-run-live-read-only-pilot",
+    }:
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot import (
+            MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError,
+            run_ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = run_ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot(
+                bundle_path=Path(args.bundle),
+                database_url=args.database_url,
+                pilot_run_id=args.pilot_run_id,
+                repo_root=repo_root,
+                update_bundle=bool(args.update_bundle),
+                confirm_live_read_only_prod_source_reads=bool(args.confirm_live_read_only_prod_source_reads),
+            )
+        except MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError as e:
+            print(f"{args.command}: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["pilot_run_id"])
+        print(result["prod_scoped_shadow_live_read_only_pilot_passed"])
+        print(result["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-verify":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -9375,6 +9458,7 @@ def main() -> None:
         expect_pilot_review_filed = None
         expect_live_read_only_request_filed = None
         expect_live_read_only_grant_filed = None
+        expect_live_read_only_pilot_run_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -9397,6 +9481,8 @@ def main() -> None:
             expect_live_read_only_request_filed = True
         elif args.expect_live_read_only_grant_filed:
             expect_live_read_only_grant_filed = True
+        elif args.expect_live_read_only_pilot_run_filed:
+            expect_live_read_only_pilot_run_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -9411,6 +9497,7 @@ def main() -> None:
                 expect_pilot_review_filed=expect_pilot_review_filed,
                 expect_live_read_only_request_filed=expect_live_read_only_request_filed,
                 expect_live_read_only_grant_filed=expect_live_read_only_grant_filed,
+                expect_live_read_only_pilot_run_filed=expect_live_read_only_pilot_run_filed,
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
             print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)

@@ -7,8 +7,9 @@ fixture proof, revision 3 records a pilot authorization request, revision 4
 records a pilot authorization grant, revision 5 records a bounded pilot harness,
 revision 6 records a harness review, revision 7 records the bounded 528-work
 audit-artifact pilot run, revision 8 records pilot review, revision 9 records a
-live read-only authorization request, and revision 10 records a live read-only
-authorization grant. It does not access databases, enable feature flags
+live read-only authorization request, revision 10 records a live read-only
+authorization grant, and revision 11 records the bounded live read-only pilot
+run. It does not access databases, enable feature flags
 globally, or authorize production/default/API/user-visible behavior.
 """
 
@@ -57,6 +58,7 @@ POST_PILOT_RUN_BUNDLE_REVISION = 7
 POST_PILOT_REVIEW_BUNDLE_REVISION = 8
 POST_LIVE_READ_ONLY_REQUEST_BUNDLE_REVISION = 9
 POST_LIVE_READ_ONLY_GRANT_BUNDLE_REVISION = 10
+POST_LIVE_READ_ONLY_PILOT_RUN_BUNDLE_REVISION = 11
 PRE_PLAN_NEXT_STAGE = "begin_production_scoped_online_shadow_plan_v1"
 POST_PLAN_NEXT_STAGE = "implement_production_scoped_online_shadow_proof_v1"
 POST_PROOF_NEXT_STAGE = "request_production_scoped_online_shadow_pilot_authorization_v1"
@@ -73,6 +75,7 @@ POST_LIVE_READ_ONLY_REQUEST_NEXT_STAGE = (
     "record_production_scoped_online_shadow_live_read_only_authorization_grant_v1"
 )
 POST_LIVE_READ_ONLY_GRANT_NEXT_STAGE = "run_production_scoped_online_shadow_live_read_only_pilot_v1"
+POST_LIVE_READ_ONLY_PILOT_RUN_NEXT_STAGE = "review_production_scoped_online_shadow_live_read_only_pilot_v1"
 FEATURE_FLAG = "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
 FUTURE_ARTIFACT_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/"
 PILOT_REQUEST_SCOPE = "production_scoped_shadow_pilot_paperwork_only"
@@ -81,8 +84,10 @@ LIVE_READ_ONLY_REQUEST_SCOPE = "production_scoped_shadow_live_read_only_paperwor
 LIVE_READ_ONLY_GRANT_SCOPE = "production_scoped_shadow_live_read_only_authorization_only"
 PILOT_HARNESS_SURFACE = "bounded_fixture_pilot_harness"
 PILOT_RUN_SURFACE = "bounded_read_only_audit_artifact_pilot"
+LIVE_READ_ONLY_PILOT_RUN_SURFACE = "bounded_live_read_only_prod_scoped_pilot"
 PILOT_HARNESS_EXPECTED_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
 PILOT_RUN_EXPECTED_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
+LIVE_READ_ONLY_PILOT_RUN_EXPECTED_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
 PILOT_HARNESS_REVIEW_CHECKS = (
     "runtime_drill_pilot_status_succeeded_test_only",
     "fixture_row_count_3",
@@ -114,6 +119,25 @@ PILOT_RUN_REVIEW_CHECKS = (
     "runtime_writes_false",
     "live_prod_source_reads_false",
     "pilot_surface_bounded_read_only_audit_artifact",
+    "production_api_user_visible_unchanged",
+    "global_live_execution_authorization_false",
+)
+
+LIVE_READ_ONLY_PILOT_RUN_PASS_FAIL_CHECKS = (
+    "joined_candidate_count_528",
+    "runtime_row_count_528",
+    "runtime_drill_call_order",
+    "preflight_postflight_disabled",
+    "environment_restored",
+    "forbidden_write_counts_zero",
+    "isolated_artifact_count_4",
+    "expected_files_recorded",
+    "live_prod_source_reads_true",
+    "live_source_reads_documented",
+    "pilot_surface_bounded_live_read_only_prod_scoped",
+    "no_labels_used_for_scoring",
+    "no_refit_training_embedding_generation_or_label_ingest",
+    "read_only_sql_and_allowlist_enforced",
     "production_api_user_visible_unchanged",
     "global_live_execution_authorization_false",
 )
@@ -238,6 +262,16 @@ LIVE_READ_ONLY_GRANT_CAVEATS = (
     "Live read-only pilot run still required before any live prod source reads are recorded.",
     "Does not enable global/live/fleet online shadow execution.",
     "Production default/API/user-visible behavior remains unchanged.",
+)
+
+LIVE_READ_ONLY_PILOT_RUN_CAVEATS = (
+    "Live read-only pilot uses approved read-only production sources under grant boundaries.",
+    "First milestone where live prod source reads are recorded.",
+    "Input-only scoring; labels are not scoring features.",
+    "No model refit/training, embedding generation, or label ingest.",
+    "Does not enable global/live/fleet online shadow execution.",
+    "Production default/API/user-visible behavior remains unchanged.",
+    "Does not perform production writes, committed artifact writes, or runtime writes.",
 )
 
 EXPLICITLY_NOT_INCLUDED = (
@@ -639,6 +673,15 @@ def _caveats(*, mode: str) -> list[str]:
         caveats.extend(PILOT_RUN_CAVEATS)
         caveats.extend(PILOT_REVIEW_CAVEATS)
         caveats.extend(LIVE_READ_ONLY_GRANT_CAVEATS)
+        return caveats
+    if mode == "post_live_read_only_pilot_run":
+        caveats.extend(PROOF_CAVEATS)
+        caveats.extend(HARNESS_CAVEATS)
+        caveats.extend(HARNESS_REVIEW_CAVEATS)
+        caveats.extend(PILOT_RUN_CAVEATS)
+        caveats.extend(PILOT_REVIEW_CAVEATS)
+        caveats.extend(LIVE_READ_ONLY_GRANT_CAVEATS)
+        caveats.extend(LIVE_READ_ONLY_PILOT_RUN_CAVEATS)
         return caveats
     raise MLShadowScorerProductionScopedShadowBundleError(f"unknown caveat mode {mode!r}")
     return caveats
@@ -2542,6 +2585,7 @@ def apply_production_scoped_shadow_live_read_only_authorization_grant(
             "prod_scoped_shadow_live_read_only_authorization_requested": True,
             "prod_scoped_shadow_live_read_only_authorization_granted": True,
             "prod_scoped_shadow_live_read_only_authorized": True,
+            "prod_scoped_shadow_live_read_only_execution_authorized": False,
             "prod_scoped_shadow_pilot_execution_authorized": True,
             "prod_scoped_shadow_live_execution_authorized": False,
             "prod_scoped_shadow_execution_authorized": False,
@@ -2645,6 +2689,420 @@ def apply_production_scoped_shadow_live_read_only_authorization_grant(
     return updated
 
 
+def _validate_live_read_only_pilot_run_slice(live_read_only_pilot_slice: Mapping[str, Any]) -> None:
+    _require_equal(
+        "live_read_only_pilot_slice.pilot_surface",
+        live_read_only_pilot_slice.get("pilot_surface"),
+        LIVE_READ_ONLY_PILOT_RUN_SURFACE,
+    )
+    _require_true(
+        "live_read_only_pilot_slice.live_prod_source_reads_performed",
+        live_read_only_pilot_slice.get("live_prod_source_reads_performed"),
+    )
+    _require_true(
+        "live_read_only_pilot_slice.pass_fail_evaluation.overall_passed",
+        _get(live_read_only_pilot_slice, "pass_fail_evaluation.overall_passed"),
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.pass_fail_evaluation.failed_checks",
+        _get(live_read_only_pilot_slice, "pass_fail_evaluation.failed_checks"),
+        [],
+    )
+    pass_fail = live_read_only_pilot_slice.get("pass_fail_evaluation")
+    if not isinstance(pass_fail, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.pass_fail_evaluation must be an object"
+        )
+    checks = pass_fail.get("checks")
+    if not isinstance(checks, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.pass_fail_evaluation.checks must be an object"
+        )
+    for check_name in LIVE_READ_ONLY_PILOT_RUN_PASS_FAIL_CHECKS:
+        _require_true(
+            f"live_read_only_pilot_slice.pass_fail_evaluation.checks.{check_name}",
+            checks.get(check_name),
+        )
+    _require_equal(
+        "live_read_only_pilot_slice.input_join_summary.joined_candidate_count",
+        _get(live_read_only_pilot_slice, "input_join_summary.joined_candidate_count"),
+        528,
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.input_join_summary.runtime_row_count",
+        _get(live_read_only_pilot_slice, "input_join_summary.runtime_row_count"),
+        528,
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.runtime_drill.call_order",
+        _get(live_read_only_pilot_slice, "runtime_drill.call_order"),
+        ["preflight_disabled", "pilot_enabled", "postflight_disabled"],
+    )
+    _require_true(
+        "live_read_only_pilot_slice.runtime_drill.environment_restored",
+        _get(live_read_only_pilot_slice, "runtime_drill.environment_restored"),
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.runtime_drill.pilot.status",
+        _get(live_read_only_pilot_slice, "runtime_drill.pilot.status"),
+        "succeeded_test_only",
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.runtime_drill.pilot.shadow_row_count",
+        _get(live_read_only_pilot_slice, "runtime_drill.pilot.shadow_row_count"),
+        528,
+    )
+    _require_false(
+        "live_read_only_pilot_slice.runtime_drill.pilot.writes_performed",
+        _get(live_read_only_pilot_slice, "runtime_drill.pilot.writes_performed"),
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.runtime_drill.preflight.status",
+        _get(live_read_only_pilot_slice, "runtime_drill.preflight.status"),
+        "skipped_runtime_disabled",
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.runtime_drill.postflight.status",
+        _get(live_read_only_pilot_slice, "runtime_drill.postflight.status"),
+        "skipped_runtime_disabled",
+    )
+
+    live_source_reads = live_read_only_pilot_slice.get("live_source_reads")
+    if not isinstance(live_source_reads, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads must be an object"
+        )
+    _require_equal(
+        "live_read_only_pilot_slice.live_source_reads.approved_tables",
+        sorted(live_source_reads.get("approved_tables") or []),
+        ["embeddings", "paper_scores", "ranking_runs", "works"],
+    )
+    if not isinstance(live_source_reads.get("database_url_scope"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads.database_url_scope must be an object"
+        )
+    row_counts = live_source_reads.get("row_counts")
+    if not isinstance(row_counts, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads.row_counts must be an object"
+        )
+    for field, expected in {
+        "ranking_runs": 1,
+        "paper_scores": 528,
+        "works": 528,
+        "embeddings": 528,
+        "joined_candidate_count": 528,
+    }.items():
+        _require_equal(f"live_read_only_pilot_slice.live_source_reads.row_counts.{field}", row_counts.get(field), expected)
+    identity = live_source_reads.get("input_identity_verification")
+    if not isinstance(identity, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads.input_identity_verification must be an object"
+        )
+    for field, expected in PINNED_IDENTITY.items():
+        _require_equal(
+            f"live_read_only_pilot_slice.live_source_reads.input_identity_verification.{field}",
+            identity.get(field),
+            expected,
+        )
+    _require_true(
+        "live_read_only_pilot_slice.live_source_reads.input_identity_verification.matches_pinned_identity",
+        identity.get("matches_pinned_identity"),
+    )
+    read_only = live_source_reads.get("read_only_assertions")
+    if not isinstance(read_only, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads.read_only_assertions must be an object"
+        )
+    for field in (
+        "select_only_sql_enforced",
+        "approved_source_allowlist_enforced",
+        "default_transaction_read_only",
+        "no_write_sql_detected",
+    ):
+        _require_true(f"live_read_only_pilot_slice.live_source_reads.read_only_assertions.{field}", read_only.get(field))
+    _require_true(
+        "live_read_only_pilot_slice.live_source_reads.labels_not_used_for_scoring",
+        live_source_reads.get("labels_not_used_for_scoring"),
+    )
+    _require_false(
+        "live_read_only_pilot_slice.live_source_reads.refit_training_performed",
+        live_source_reads.get("refit_training_performed"),
+    )
+    _require_false(
+        "live_read_only_pilot_slice.live_source_reads.embedding_generation_performed",
+        live_source_reads.get("embedding_generation_performed"),
+    )
+    _require_false(
+        "live_read_only_pilot_slice.live_source_reads.label_ingest_performed",
+        live_source_reads.get("label_ingest_performed"),
+    )
+
+    write_counts = live_read_only_pilot_slice.get("write_count_verification")
+    if not isinstance(write_counts, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.write_count_verification must be an object"
+        )
+    _require_true(
+        "live_read_only_pilot_slice.write_count_verification.local_artifact_tree_writes_performed",
+        write_counts.get("local_artifact_tree_writes_performed"),
+    )
+    _require_false(
+        "live_read_only_pilot_slice.write_count_verification.production_writes_performed",
+        write_counts.get("production_writes_performed"),
+    )
+    _require_false(
+        "live_read_only_pilot_slice.write_count_verification.committed_artifact_writes_performed",
+        write_counts.get("committed_artifact_writes_performed"),
+    )
+    _require_false(
+        "live_read_only_pilot_slice.write_count_verification.runtime_writes_performed",
+        write_counts.get("runtime_writes_performed"),
+    )
+    _require_true(
+        "live_read_only_pilot_slice.write_count_verification.forbidden_write_counts_zero",
+        write_counts.get("forbidden_write_counts_zero"),
+    )
+    _require_equal("live_read_only_pilot_slice.write_count_verification.file_count", write_counts.get("file_count"), 4)
+    _require_equal("live_read_only_pilot_slice.write_count_verification.write_count", write_counts.get("write_count"), 4)
+    counts = write_counts.get("write_counts_by_isolated_target")
+    if not isinstance(counts, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.write_count_verification.write_counts_by_isolated_target must be an object"
+        )
+    _require_equal(
+        f"live_read_only_pilot_slice.write_count_verification.write_counts_by_isolated_target.{ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS}",
+        counts.get(ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS),
+        4,
+    )
+    for target in FORBIDDEN_PROD_SCOPED_WRITE_TARGETS:
+        _require_equal(
+            f"live_read_only_pilot_slice.write_count_verification.write_counts_by_isolated_target.{target}",
+            counts.get(target),
+            0,
+        )
+
+    files = live_read_only_pilot_slice.get("files_written")
+    if not isinstance(files, list) or len(files) != 4:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.files_written must contain four files"
+        )
+    observed_files = {record.get("relative_path") for record in files if isinstance(record, Mapping)}
+    _require_equal(
+        "live_read_only_pilot_slice.files_written names",
+        observed_files,
+        set(LIVE_READ_ONLY_PILOT_RUN_EXPECTED_FILES),
+    )
+    for index, record in enumerate(files):
+        if not isinstance(record, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"live_read_only_pilot_slice.files_written[{index}] must be an object"
+            )
+        for field in ("relative_path", "byte_count", "sha256", "write_target"):
+            if field not in record:
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"live_read_only_pilot_slice.files_written[{index}].{field} missing"
+                )
+        _require_equal(
+            f"live_read_only_pilot_slice.files_written[{index}].write_target",
+            record.get("write_target"),
+            ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS,
+        )
+
+
+def apply_production_scoped_shadow_live_read_only_pilot_run(
+    bundle: Mapping[str, Any],
+    live_read_only_pilot_slice: Mapping[str, Any],
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("bundle must be an object")
+    if not isinstance(live_read_only_pilot_slice, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("live_read_only_pilot_slice must be an object")
+    _require_equal(
+        "metadata.bundle_revision",
+        _get(bundle, "metadata.bundle_revision"),
+        POST_LIVE_READ_ONLY_GRANT_BUNDLE_REVISION,
+    )
+    _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), POST_LIVE_READ_ONLY_GRANT_NEXT_STAGE)
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorized"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_authorization_granted",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted"),
+    )
+    _require_true(
+        "review.prod_scoped_shadow_pilot_reviewed",
+        _get(bundle, "review.prod_scoped_shadow_pilot_reviewed"),
+    )
+    _require_true(
+        "review.prod_scoped_shadow_pilot_accepted",
+        _get(bundle, "review.prod_scoped_shadow_pilot_accepted"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_pilot_executed",
+        _get(bundle, "execution.prod_scoped_shadow_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_pilot_passed",
+        _get(bundle, "execution.prod_scoped_shadow_pilot_passed"),
+    )
+    if _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_executed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run has already been filed"
+        )
+    _require_named_flags_not_true(bundle, ("live_prod_source_reads_performed",))
+    _require_false(
+        "authorization.prod_scoped_shadow_live_execution_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_execution_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_execution_authorized"),
+    )
+    _validate_live_read_only_pilot_run_slice(live_read_only_pilot_slice)
+
+    executed_at = str(live_read_only_pilot_slice.get("executed_at") or generated_at or _now_iso_z())
+    updated = deepcopy(dict(bundle))
+    plan_before = deepcopy(updated.get("plan"))
+    proof_before = deepcopy(updated.get("proof"))
+    harness_before = deepcopy(_get(updated, "execution.pilot_harness"))
+    pilot_run_before = deepcopy(_get(updated, "execution.pilot_run"))
+    review_before = deepcopy(updated.get("review"))
+    legacy_index_before = deepcopy(_get(updated, "metadata.legacy_artifacts_index"))
+    pilot_grant_decision_before = deepcopy(_get(updated, "authorization.grant_decision"))
+    pilot_granted_scope_before = deepcopy(_get(updated, "authorization.granted_scope"))
+    live_request_decision_before = deepcopy(_get(updated, "authorization.request_decision"))
+    live_requested_scope_before = deepcopy(_get(updated, "authorization.requested_scope"))
+    live_grant_decision_before = deepcopy(_get(updated, "authorization.live_read_only_grant_decision"))
+    live_granted_scope_before = deepcopy(_get(updated, "authorization.live_read_only_granted_scope"))
+
+    metadata = deepcopy(dict(_metadata(updated, label="production-scoped-shadow bundle")))
+    metadata["bundle_revision"] = POST_LIVE_READ_ONLY_PILOT_RUN_BUNDLE_REVISION
+    metadata["generated_at"] = executed_at
+    updated["metadata"] = metadata
+
+    authorization = deepcopy(dict(updated.get("authorization") or {}))
+    authorization.update(
+        {
+            "prod_scoped_shadow_live_read_only_execution_authorized": True,
+            "prod_scoped_shadow_live_execution_authorized": False,
+            "prod_scoped_shadow_execution_authorized": False,
+        }
+    )
+    updated["authorization"] = authorization
+
+    execution = deepcopy(dict(updated.get("execution") or {}))
+    execution.update(
+        {
+            "prod_scoped_shadow_live_read_only_pilot_executed": True,
+            "prod_scoped_shadow_live_read_only_pilot_passed": True,
+            "live_read_only_pilot_run": deepcopy(dict(live_read_only_pilot_slice)),
+        }
+    )
+    updated["execution"] = execution
+
+    posture = deepcopy(dict(updated.get("posture") or {}))
+    posture.update(
+        {
+            "prod_scoped_shadow_live_read_only_execution_authorized": True,
+            "prod_scoped_shadow_live_read_only_pilot_executed": True,
+            "prod_scoped_shadow_live_read_only_pilot_passed": True,
+            "live_prod_source_reads_performed": True,
+            "online_shadow_execution_enabled": False,
+            "production_default_allowed": False,
+            "api_web_changes_allowed": False,
+            "user_visible_ranking_changed": False,
+            "writes_performed": False,
+            "runtime_writes_performed": False,
+        }
+    )
+    updated["posture"] = posture
+
+    blockers = deepcopy(dict(updated.get("shadow_and_production_blockers") or {}))
+    blockers.update(
+        {
+            "prod_scoped_shadow_live_read_only_execution_authorized": True,
+            "prod_scoped_shadow_live_read_only_pilot_executed": True,
+            "prod_scoped_shadow_live_read_only_pilot_passed": True,
+            "blockers_cleared_by_live_read_only_pilot_run": [],
+            "blockers_introduced_by_live_read_only_pilot_run": [],
+            "blockers_unchanged_by_live_read_only_pilot_run": True,
+            "online_shadow_execution_enabled": False,
+            "production_default_allowed": False,
+            "api_web_changes_allowed": False,
+            "user_visible_ranking_changed": False,
+        }
+    )
+    blockers.pop("blockers_changed_by_live_read_only_pilot_run", None)
+    updated["shadow_and_production_blockers"] = blockers
+    updated["writes_performed"] = False
+    updated["runtime_writes_performed"] = False
+    updated["recommended_next_stage"] = POST_LIVE_READ_ONLY_PILOT_RUN_NEXT_STAGE
+    updated["caveats"] = _caveats(mode="post_live_read_only_pilot_run")
+
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve plan section"
+        )
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve proof section"
+        )
+    if _get(updated, "execution.pilot_harness") != harness_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve pilot_harness section"
+        )
+    if _get(updated, "execution.pilot_run") != pilot_run_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve pilot_run section"
+        )
+    if updated.get("review") != review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve review section"
+        )
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve legacy_artifacts_index"
+        )
+    if _get(updated, "authorization.grant_decision") != pilot_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve pilot grant decision"
+        )
+    if _get(updated, "authorization.granted_scope") != pilot_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve pilot granted scope"
+        )
+    if _get(updated, "authorization.request_decision") != live_request_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve live request decision"
+        )
+    if _get(updated, "authorization.requested_scope") != live_requested_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve live requested scope"
+        )
+    if _get(updated, "authorization.live_read_only_grant_decision") != live_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve live grant decision"
+        )
+    if _get(updated, "authorization.live_read_only_granted_scope") != live_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live read-only pilot run must preserve live granted scope"
+        )
+    _require_false(
+        "execution.pilot_harness.live_prod_source_reads_performed",
+        _get(updated, "execution.pilot_harness.live_prod_source_reads_performed"),
+    )
+    _require_false(
+        "execution.pilot_run.live_prod_source_reads_performed",
+        _get(updated, "execution.pilot_run.live_prod_source_reads_performed"),
+    )
+    return updated
+
+
 def _infer_plan_mode(
     bundle: Mapping[str, Any],
     *,
@@ -2658,6 +3116,7 @@ def _infer_plan_mode(
     expect_pilot_review_filed: bool | None,
     expect_live_read_only_request_filed: bool | None,
     expect_live_read_only_grant_filed: bool | None,
+    expect_live_read_only_pilot_run_filed: bool | None,
 ) -> str:
     explicit = [
         expectation is not None
@@ -2672,10 +3131,35 @@ def _infer_plan_mode(
             expect_pilot_review_filed,
             expect_live_read_only_request_filed,
             expect_live_read_only_grant_filed,
+            expect_live_read_only_pilot_run_filed,
         )
     ]
     if sum(explicit) > 1:
         raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot/live read-only expectations conflict")
+    if expect_live_read_only_pilot_run_filed is True:
+        return "post_live_read_only_pilot_run"
+    if expect_live_read_only_pilot_run_filed is False:
+        if _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_executed") is True:
+            raise MLShadowScorerProductionScopedShadowBundleError("live read-only pilot run must not be filed")
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted") is True:
+            return "post_live_read_only_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_requested") is True:
+            return "post_live_read_only_request"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_reviewed") is True:
+            return "post_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_executed") is True:
+            return "post_pilot_run"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_harness_reviewed") is True:
+            return "post_pilot_harness_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_harness_executed") is True:
+            return "post_pilot_harness"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized") is True:
+            return "post_pilot_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested") is True:
+            return "post_pilot_request"
+        revision = _get(bundle, "metadata.bundle_revision")
+        proof_passed = _get(bundle, "posture.prod_scoped_shadow_proof_passed")
+        return "post_proof" if revision == POST_PROOF_BUNDLE_REVISION and proof_passed is True else "post_plan"
     if expect_live_read_only_grant_filed is True:
         return "post_live_read_only_grant"
     if expect_live_read_only_grant_filed is False:
@@ -2823,6 +3307,27 @@ def _infer_plan_mode(
     live_read_only_request = _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_requested")
     live_read_only_grant = _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted")
     live_read_only_authorized = _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorized")
+    live_read_only_pilot_executed = _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_executed")
+    live_read_only_pilot_passed = _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_passed")
+    if (
+        revision == POST_LIVE_READ_ONLY_PILOT_RUN_BUNDLE_REVISION
+        and pilot_request is True
+        and pilot_grant is True
+        and pilot_authorized is True
+        and pilot_harness_executed is True
+        and pilot_harness_passed is True
+        and pilot_harness_reviewed is True
+        and pilot_harness_accepted is True
+        and pilot_executed is True
+        and pilot_reviewed is True
+        and pilot_accepted is True
+        and live_read_only_request is True
+        and live_read_only_grant is True
+        and live_read_only_authorized is True
+        and live_read_only_pilot_executed is True
+        and live_read_only_pilot_passed is True
+    ):
+        return "post_live_read_only_pilot_run"
     if (
         revision == POST_LIVE_READ_ONLY_GRANT_BUNDLE_REVISION
         and pilot_request is True
@@ -3364,6 +3869,104 @@ def _verify_pilot_run_section(pilot_run: Any, *, repo_root: Path, verify_local_f
     _require_equal("execution.pilot_run.pass_fail_evaluation.failed_checks", pass_fail.get("failed_checks"), [])
 
 
+def _verify_live_read_only_pilot_run_section(
+    live_read_only_pilot_run: Any,
+    *,
+    repo_root: Path,
+    verify_local_files: bool = True,
+) -> None:
+    if not isinstance(live_read_only_pilot_run, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.live_read_only_pilot_run must be an object"
+        )
+    _validate_live_read_only_pilot_run_slice(live_read_only_pilot_run)
+    pilot_run_id = live_read_only_pilot_run.get("pilot_run_id")
+    if not isinstance(pilot_run_id, str) or not pilot_run_id:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.live_read_only_pilot_run.pilot_run_id must be populated"
+        )
+    validate_pilot_run_id(pilot_run_id)
+    if "harness" in pilot_run_id:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.live_read_only_pilot_run.pilot_run_id must not contain harness"
+        )
+    pilot_dir_ref = live_read_only_pilot_run.get("pilot_run_directory")
+    if not isinstance(pilot_dir_ref, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.live_read_only_pilot_run.pilot_run_directory must be an object"
+        )
+    _require_equal(
+        "execution.live_read_only_pilot_run.pilot_run_directory.root_path",
+        pilot_dir_ref.get("root_path"),
+        PROD_SCOPED_SHADOW_ROOT,
+    )
+    _require_equal(
+        "execution.live_read_only_pilot_run.pilot_run_directory.relative_path",
+        pilot_dir_ref.get("relative_path"),
+        f"{PROD_SCOPED_SHADOW_ROOT}{pilot_run_id}/",
+    )
+    pilot_dir = resolve_prod_scoped_pilot_directory(repo_root, pilot_run_id)
+    for index, record in enumerate(live_read_only_pilot_run["files_written"]):
+        local_file = pilot_dir / str(record["relative_path"])
+        if verify_local_files and local_file.exists():
+            _require_equal(
+                f"execution.live_read_only_pilot_run.files_written[{index}].sha256",
+                _sha256_file(local_file),
+                record.get("sha256"),
+            )
+            _require_equal(
+                f"execution.live_read_only_pilot_run.files_written[{index}].byte_count",
+                local_file.stat().st_size,
+                record.get("byte_count"),
+            )
+    observability = live_read_only_pilot_run.get("observability_summary")
+    if not isinstance(observability, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.live_read_only_pilot_run.observability_summary must be an object"
+        )
+    _require_true(
+        "execution.live_read_only_pilot_run.observability_summary.observability_complete",
+        observability.get("observability_complete"),
+    )
+    _require_true(
+        "execution.live_read_only_pilot_run.observability_summary.live_prod_source_reads_performed",
+        observability.get("live_prod_source_reads_performed"),
+    )
+    _require_equal(
+        "execution.live_read_only_pilot_run.observability_summary.row_counts.shadow_rows",
+        _get(observability, "row_counts.shadow_rows"),
+        528,
+    )
+
+
+def _verify_live_prod_source_read_flags(bundle: Mapping[str, Any]) -> None:
+    allowed_true_paths = {
+        "posture.live_prod_source_reads_performed",
+        "execution.live_read_only_pilot_run.live_prod_source_reads_performed",
+        "execution.live_read_only_pilot_run.observability_summary.live_prod_source_reads_performed",
+    }
+    observed_true_paths: set[str] = set()
+    for path, value in _iter_named_field_values(bundle, "live_prod_source_reads_performed"):
+        if path in allowed_true_paths:
+            _require_true(path, value)
+            observed_true_paths.add(path)
+        else:
+            _require_false(path, value)
+    missing_true = sorted(allowed_true_paths - observed_true_paths)
+    if missing_true:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_prod_source_reads_performed missing true paths: " + ", ".join(missing_true)
+        )
+    _require_false(
+        "execution.pilot_harness.live_prod_source_reads_performed",
+        _get(bundle, "execution.pilot_harness.live_prod_source_reads_performed"),
+    )
+    _require_false(
+        "execution.pilot_run.live_prod_source_reads_performed",
+        _get(bundle, "execution.pilot_run.live_prod_source_reads_performed"),
+    )
+
+
 def _verify_pilot_harness_review_section(review: Any) -> None:
     if not isinstance(review, Mapping):
         raise MLShadowScorerProductionScopedShadowBundleError("review must be an object")
@@ -3560,6 +4163,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     expect_pilot_review_filed: bool | None = None,
     expect_live_read_only_request_filed: bool | None = None,
     expect_live_read_only_grant_filed: bool | None = None,
+    expect_live_read_only_pilot_run_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
@@ -3578,6 +4182,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         expect_pilot_review_filed=expect_pilot_review_filed,
         expect_live_read_only_request_filed=expect_live_read_only_request_filed,
         expect_live_read_only_grant_filed=expect_live_read_only_grant_filed,
+        expect_live_read_only_pilot_run_filed=expect_live_read_only_pilot_run_filed,
     )
     expected_revision = {
         "pre_plan": PRE_PLAN_BUNDLE_REVISION,
@@ -3591,6 +4196,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review": POST_PILOT_REVIEW_BUNDLE_REVISION,
         "post_live_read_only_request": POST_LIVE_READ_ONLY_REQUEST_BUNDLE_REVISION,
         "post_live_read_only_grant": POST_LIVE_READ_ONLY_GRANT_BUNDLE_REVISION,
+        "post_live_read_only_pilot_run": POST_LIVE_READ_ONLY_PILOT_RUN_BUNDLE_REVISION,
     }[mode]
     _require_equal("metadata.bundle_revision", metadata.get("bundle_revision"), expected_revision)
     _validate_identity(metadata.get("pinned_identity"), label="metadata.pinned_identity")
@@ -3648,7 +4254,9 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     else:
         _require_true("plan.prod_scoped_shadow_plan_defined", plan.get("prod_scoped_shadow_plan_defined"))
         _verify_plan_subsections(plan)
-        if mode == "post_live_read_only_grant":
+        if mode == "post_live_read_only_pilot_run":
+            expected_next = POST_LIVE_READ_ONLY_PILOT_RUN_NEXT_STAGE
+        elif mode == "post_live_read_only_grant":
             expected_next = POST_LIVE_READ_ONLY_GRANT_NEXT_STAGE
         elif mode == "post_live_read_only_request":
             expected_next = POST_LIVE_READ_ONLY_REQUEST_NEXT_STAGE
@@ -3702,6 +4310,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     } or authorization.get(
         "prod_scoped_shadow_live_execution_authorized"
     ) is not None:
@@ -3721,6 +4330,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }
     _require_equal(
         "authorization.prod_scoped_shadow_pilot_authorized",
@@ -3736,6 +4346,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }
     if (
         mode in {
@@ -3747,6 +4358,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         }
         or authorization.get("prod_scoped_shadow_pilot_authorization_requested") is not None
     ):
@@ -3798,6 +4410,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         grant_decision = authorization.get("grant_decision")
         if not isinstance(grant_decision, Mapping):
@@ -3836,11 +4449,19 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     } or authorization.get("prod_scoped_shadow_pilot_execution_authorized") is not None:
         _require_equal(
             "authorization.prod_scoped_shadow_pilot_execution_authorized",
             authorization.get("prod_scoped_shadow_pilot_execution_authorized"),
-            mode in {"post_pilot_run", "post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"},
+            mode
+            in {
+                "post_pilot_run",
+                "post_pilot_review",
+                "post_live_read_only_request",
+                "post_live_read_only_grant",
+                "post_live_read_only_pilot_run",
+            },
         )
     if mode == "post_live_read_only_request":
         _require_true(
@@ -3861,7 +4482,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"authorization.explicitly_not_included missing {item!r}"
                 )
-    if mode == "post_live_read_only_grant":
+    if mode in {"post_live_read_only_grant", "post_live_read_only_pilot_run"}:
         _require_true(
             "authorization.prod_scoped_shadow_live_read_only_authorization_requested",
             authorization.get("prod_scoped_shadow_live_read_only_authorization_requested"),
@@ -3881,6 +4502,16 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 raise MLShadowScorerProductionScopedShadowBundleError(
                     f"authorization.explicitly_not_included missing {item!r}"
                 )
+        if mode == "post_live_read_only_pilot_run":
+            _require_true(
+                "authorization.prod_scoped_shadow_live_read_only_execution_authorized",
+                authorization.get("prod_scoped_shadow_live_read_only_execution_authorized"),
+            )
+        elif "prod_scoped_shadow_live_read_only_execution_authorized" in authorization:
+            _require_false(
+                "authorization.prod_scoped_shadow_live_read_only_execution_authorized",
+                authorization.get("prod_scoped_shadow_live_read_only_execution_authorized"),
+            )
     for item in EXPLICITLY_NOT_INCLUDED:
         if item not in authorization.get("explicitly_not_included", []):
             raise MLShadowScorerProductionScopedShadowBundleError(
@@ -3907,13 +4538,30 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         },
     )
     _require_equal(
         "execution.prod_scoped_shadow_pilot_executed",
         execution.get("prod_scoped_shadow_pilot_executed"),
-        mode in {"post_pilot_run", "post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"},
+        mode
+        in {
+            "post_pilot_run",
+            "post_pilot_review",
+            "post_live_read_only_request",
+            "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
+        },
     )
+    if mode == "post_live_read_only_pilot_run":
+        _require_true(
+            "execution.prod_scoped_shadow_live_read_only_pilot_executed",
+            execution.get("prod_scoped_shadow_live_read_only_pilot_executed"),
+        )
+        _require_true(
+            "execution.prod_scoped_shadow_live_read_only_pilot_passed",
+            execution.get("prod_scoped_shadow_live_read_only_pilot_passed"),
+        )
 
     posture = bundle.get("posture")
     if not isinstance(posture, Mapping):
@@ -3930,6 +4578,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         },
         "prod_scoped_shadow_proof_passed": mode in {
             "post_proof",
@@ -3941,12 +4590,14 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         },
         "prod_scoped_shadow_pilot_executed": mode in {
             "post_pilot_run",
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         },
         "missing_prod_scoped_shadow_proof": mode not in {
             "post_proof",
@@ -3958,6 +4609,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         },
         "prod_scoped_shadow_proof_authorized": False,
         "production_readiness_authorization_granted": True,
@@ -3981,6 +4633,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     } or posture.get(
         "prod_scoped_shadow_pilot_authorized"
     ) is not None:
@@ -3999,6 +4652,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         }
         or posture.get("prod_scoped_shadow_pilot_authorization_requested") is not None
     ):
@@ -4026,6 +4680,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         _require_false(
             "posture.missing_prod_scoped_shadow_pilot_authorization",
@@ -4038,6 +4693,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         _require_true(
             "posture.prod_scoped_shadow_pilot_harness_executed",
@@ -4047,13 +4703,17 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "posture.prod_scoped_shadow_pilot_harness_passed",
             posture.get("prod_scoped_shadow_pilot_harness_passed"),
         )
-        _require_false("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
+        if mode == "post_live_read_only_pilot_run":
+            _require_true("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
+        else:
+            _require_false("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
     if mode in {
         "post_pilot_harness_review",
         "post_pilot_run",
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         _require_true(
             "posture.prod_scoped_shadow_pilot_harness_reviewed",
@@ -4064,13 +4724,24 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             posture.get("prod_scoped_shadow_pilot_harness_accepted"),
             _get(bundle, "review.prod_scoped_shadow_pilot_harness_accepted"),
         )
-    if mode in {"post_pilot_run", "post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"}:
+    if mode in {
+        "post_pilot_run",
+        "post_pilot_review",
+        "post_live_read_only_request",
+        "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
+    }:
         _require_true("posture.prod_scoped_shadow_pilot_passed", posture.get("prod_scoped_shadow_pilot_passed"))
         _require_true(
             "posture.prod_scoped_shadow_pilot_execution_authorized",
             posture.get("prod_scoped_shadow_pilot_execution_authorized"),
         )
-    if mode in {"post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"}:
+    if mode in {
+        "post_pilot_review",
+        "post_live_read_only_request",
+        "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
+    }:
         _require_true("posture.prod_scoped_shadow_pilot_reviewed", posture.get("prod_scoped_shadow_pilot_reviewed"))
         _require_equal(
             "posture.prod_scoped_shadow_pilot_accepted",
@@ -4095,7 +4766,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             posture.get("missing_prod_scoped_shadow_live_read_only_authorization"),
         )
         _require_false("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
-    if mode == "post_live_read_only_grant":
+    if mode in {"post_live_read_only_grant", "post_live_read_only_pilot_run"}:
         _require_true(
             "posture.prod_scoped_shadow_live_read_only_authorization_requested",
             posture.get("prod_scoped_shadow_live_read_only_authorization_requested"),
@@ -4112,7 +4783,22 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "posture.missing_prod_scoped_shadow_live_read_only_authorization",
             posture.get("missing_prod_scoped_shadow_live_read_only_authorization"),
         )
-        _require_false("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
+        if mode == "post_live_read_only_pilot_run":
+            _require_true("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
+            _require_true(
+                "posture.prod_scoped_shadow_live_read_only_execution_authorized",
+                posture.get("prod_scoped_shadow_live_read_only_execution_authorized"),
+            )
+            _require_true(
+                "posture.prod_scoped_shadow_live_read_only_pilot_executed",
+                posture.get("prod_scoped_shadow_live_read_only_pilot_executed"),
+            )
+            _require_true(
+                "posture.prod_scoped_shadow_live_read_only_pilot_passed",
+                posture.get("prod_scoped_shadow_live_read_only_pilot_passed"),
+            )
+        else:
+            _require_false("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
 
     blockers = bundle.get("shadow_and_production_blockers")
     if not isinstance(blockers, Mapping):
@@ -4130,6 +4816,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "post_pilot_review",
             "post_live_read_only_request",
             "post_live_read_only_grant",
+            "post_live_read_only_pilot_run",
         },
     )
     _require_false(
@@ -4148,6 +4835,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         changed_by_proof = blockers.get("blockers_changed_by_proof")
         if "missing_prod_scoped_shadow_proof" not in (changed_by_proof or []):
@@ -4186,6 +4874,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         introduced = blockers.get("blockers_introduced_by_pilot_request")
         if "missing_prod_scoped_shadow_pilot_authorization" not in (introduced or []):
@@ -4219,6 +4908,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         _require_false(
             "shadow_and_production_blockers.missing_prod_scoped_shadow_pilot_authorization",
@@ -4249,11 +4939,19 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         _require_equal(
             "shadow_and_production_blockers.prod_scoped_shadow_pilot_executed",
             blockers.get("prod_scoped_shadow_pilot_executed"),
-            mode in {"post_pilot_run", "post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"},
+            mode
+            in {
+                "post_pilot_run",
+                "post_pilot_review",
+                "post_live_read_only_request",
+                "post_live_read_only_grant",
+                "post_live_read_only_pilot_run",
+            },
         )
         _require_equal(
             "shadow_and_production_blockers.blockers_cleared_by_pilot_harness",
@@ -4269,12 +4967,23 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             "shadow_and_production_blockers.blockers_unchanged_by_pilot_harness",
             blockers.get("blockers_unchanged_by_pilot_harness"),
         )
-    if mode in {"post_pilot_run", "post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"}:
+    if mode in {
+        "post_pilot_run",
+        "post_pilot_review",
+        "post_live_read_only_request",
+        "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
+    }:
         _require_true("shadow_and_production_blockers.prod_scoped_shadow_pilot_passed", blockers.get("prod_scoped_shadow_pilot_passed"))
         _require_equal("shadow_and_production_blockers.blockers_cleared_by_pilot_run", blockers.get("blockers_cleared_by_pilot_run"), [])
         _require_equal("shadow_and_production_blockers.blockers_introduced_by_pilot_run", blockers.get("blockers_introduced_by_pilot_run"), [])
         _require_true("shadow_and_production_blockers.blockers_unchanged_by_pilot_run", blockers.get("blockers_unchanged_by_pilot_run"))
-    if mode in {"post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"}:
+    if mode in {
+        "post_pilot_review",
+        "post_live_read_only_request",
+        "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
+    }:
         _require_true("shadow_and_production_blockers.prod_scoped_shadow_pilot_reviewed", blockers.get("prod_scoped_shadow_pilot_reviewed"))
         _require_equal(
             "shadow_and_production_blockers.prod_scoped_shadow_pilot_accepted",
@@ -4315,7 +5024,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             raise MLShadowScorerProductionScopedShadowBundleError(
                 "shadow_and_production_blockers.blockers_changed_by_live_read_only_request must not be used"
             )
-    if mode == "post_live_read_only_grant":
+    if mode in {"post_live_read_only_grant", "post_live_read_only_pilot_run"}:
         _require_true(
             "shadow_and_production_blockers.prod_scoped_shadow_live_read_only_authorization_requested",
             blockers.get("prod_scoped_shadow_live_read_only_authorization_requested"),
@@ -4368,6 +5077,42 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             raise MLShadowScorerProductionScopedShadowBundleError(
                 "shadow_and_production_blockers.blockers_changed_by_live_read_only_grant must not be used"
             )
+        if mode == "post_live_read_only_pilot_run":
+            _require_true(
+                "shadow_and_production_blockers.prod_scoped_shadow_live_read_only_execution_authorized",
+                blockers.get("prod_scoped_shadow_live_read_only_execution_authorized"),
+            )
+            _require_true(
+                "shadow_and_production_blockers.prod_scoped_shadow_live_read_only_pilot_executed",
+                blockers.get("prod_scoped_shadow_live_read_only_pilot_executed"),
+            )
+            _require_true(
+                "shadow_and_production_blockers.prod_scoped_shadow_live_read_only_pilot_passed",
+                blockers.get("prod_scoped_shadow_live_read_only_pilot_passed"),
+            )
+            if "live_prod_source_reads_performed" in blockers:
+                _require_false(
+                    "shadow_and_production_blockers.live_prod_source_reads_performed",
+                    blockers.get("live_prod_source_reads_performed"),
+                )
+            _require_equal(
+                "shadow_and_production_blockers.blockers_cleared_by_live_read_only_pilot_run",
+                blockers.get("blockers_cleared_by_live_read_only_pilot_run"),
+                [],
+            )
+            _require_equal(
+                "shadow_and_production_blockers.blockers_introduced_by_live_read_only_pilot_run",
+                blockers.get("blockers_introduced_by_live_read_only_pilot_run"),
+                [],
+            )
+            _require_true(
+                "shadow_and_production_blockers.blockers_unchanged_by_live_read_only_pilot_run",
+                blockers.get("blockers_unchanged_by_live_read_only_pilot_run"),
+            )
+            if "blockers_changed_by_live_read_only_pilot_run" in blockers:
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    "shadow_and_production_blockers.blockers_changed_by_live_read_only_pilot_run must not be used"
+                )
     if mode in {
         "post_proof",
         "post_pilot_request",
@@ -4378,6 +5123,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         _verify_proof_section(bundle.get("proof"))
         _require_true(
@@ -4419,6 +5165,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         _require_true(
             "authorization.prod_scoped_shadow_pilot_harness_allowed_by_grant",
@@ -4429,12 +5176,25 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             repo_root=root,
             verify_local_files=(mode == "post_pilot_harness"),
         )
-    if mode in {"post_pilot_run", "post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"}:
+    if mode in {
+        "post_pilot_run",
+        "post_pilot_review",
+        "post_live_read_only_request",
+        "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
+    }:
         _verify_pilot_run_section(
             _get(bundle, "execution.pilot_run"),
             repo_root=root,
             verify_local_files=verify_local_pilot_files,
         )
+    if mode == "post_live_read_only_pilot_run":
+        _verify_live_read_only_pilot_run_section(
+            _get(bundle, "execution.live_read_only_pilot_run"),
+            repo_root=root,
+            verify_local_files=verify_local_pilot_files,
+        )
+        _verify_live_prod_source_read_flags(bundle)
     if mode in {
         "post_proof",
         "post_pilot_request",
@@ -4445,6 +5205,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         for caveat in PLAN_CAVEATS:
             if caveat in caveats:
@@ -4475,6 +5236,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         "post_pilot_review",
         "post_live_read_only_request",
         "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
     }:
         for caveat in HARNESS_CAVEATS:
             if caveat not in caveats:
@@ -4499,7 +5261,13 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                     f"post_pilot_harness_review caveats missing review caveat {caveat!r}"
                 )
         _verify_pilot_harness_review_section(bundle.get("review"))
-    if mode in {"post_pilot_run", "post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"}:
+    if mode in {
+        "post_pilot_run",
+        "post_pilot_review",
+        "post_live_read_only_request",
+        "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
+    }:
         for caveat in HARNESS_REVIEW_CAVEATS:
             if caveat not in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
@@ -4511,7 +5279,12 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                     f"{mode} caveats missing pilot run caveat {caveat!r}"
                 )
         _verify_pilot_harness_review_section(bundle.get("review"))
-    if mode in {"post_pilot_review", "post_live_read_only_request", "post_live_read_only_grant"}:
+    if mode in {
+        "post_pilot_review",
+        "post_live_read_only_request",
+        "post_live_read_only_grant",
+        "post_live_read_only_pilot_run",
+    }:
         for caveat in PILOT_REVIEW_CAVEATS:
             if caveat not in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
@@ -4538,21 +5311,39 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
                 "prod_scoped_shadow_live_read_only_authorized",
             ),
         )
-    if mode == "post_live_read_only_grant":
+    if mode in {"post_live_read_only_grant", "post_live_read_only_pilot_run"}:
         for caveat in LIVE_READ_ONLY_GRANT_CAVEATS:
             if caveat not in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
-                    f"post_live_read_only_grant caveats missing live read-only grant caveat {caveat!r}"
+                    f"{mode} caveats missing live read-only grant caveat {caveat!r}"
                 )
         for caveat in LIVE_READ_ONLY_REQUEST_CAVEATS:
             if caveat in caveats:
                 raise MLShadowScorerProductionScopedShadowBundleError(
-                    f"post_live_read_only_grant caveats must not include request-only {caveat!r}"
+                    f"{mode} caveats must not include request-only {caveat!r}"
+                )
+        if mode == "post_live_read_only_grant":
+            _require_named_flags_not_true(
+                bundle,
+                (
+                    "live_prod_source_reads_performed",
+                    "online_shadow_execution_enabled",
+                    "production_default_allowed",
+                    "api_web_changes_allowed",
+                    "user_visible_ranking_changed",
+                    "prod_scoped_shadow_live_execution_authorized",
+                    "prod_scoped_shadow_execution_authorized",
+                ),
+            )
+    if mode == "post_live_read_only_pilot_run":
+        for caveat in LIVE_READ_ONLY_PILOT_RUN_CAVEATS:
+            if caveat not in caveats:
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"post_live_read_only_pilot_run caveats missing live read-only pilot run caveat {caveat!r}"
                 )
         _require_named_flags_not_true(
             bundle,
             (
-                "live_prod_source_reads_performed",
                 "online_shadow_execution_enabled",
                 "production_default_allowed",
                 "api_web_changes_allowed",
@@ -4586,6 +5377,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
     expect_pilot_review_filed: bool | None = None,
     expect_live_read_only_request_filed: bool | None = None,
     expect_live_read_only_grant_filed: bool | None = None,
+    expect_live_read_only_pilot_run_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
@@ -4602,6 +5394,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         expect_pilot_review_filed=expect_pilot_review_filed,
         expect_live_read_only_request_filed=expect_live_read_only_request_filed,
         expect_live_read_only_grant_filed=expect_live_read_only_grant_filed,
+        expect_live_read_only_pilot_run_filed=expect_live_read_only_pilot_run_filed,
         verify_local_pilot_files=verify_local_pilot_files,
     )
 
@@ -4617,6 +5410,11 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
     proof = payload.get("proof") if isinstance(payload.get("proof"), Mapping) else None
     pilot_harness = execution.get("pilot_harness") if isinstance(execution.get("pilot_harness"), Mapping) else None
     pilot_run = execution.get("pilot_run") if isinstance(execution.get("pilot_run"), Mapping) else None
+    live_read_only_pilot_run = (
+        execution.get("live_read_only_pilot_run")
+        if isinstance(execution.get("live_read_only_pilot_run"), Mapping)
+        else None
+    )
     review = payload.get("review") if isinstance(payload.get("review"), Mapping) else None
     requested_scope = authorization.get("requested_scope") if isinstance(authorization.get("requested_scope"), Mapping) else None
     request_decision = (
@@ -4640,7 +5438,11 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
     )
     pilot_grant = authorization.get("grant_decision") if isinstance(authorization.get("grant_decision"), Mapping) else None
     pilot_review = review.get("pilot_review_decision") if isinstance(review, Mapping) and isinstance(review.get("pilot_review_decision"), Mapping) else None
-    if live_read_only_grant:
+    if live_read_only_pilot_run:
+        summary = (
+            "This bundle records the bounded production-scoped online shadow live read-only pilot run while keeping global shadow enablement, production default, API/web, and user-visible behavior disabled."
+        )
+    elif live_read_only_grant:
         summary = (
             "This bundle records the production-scoped online shadow live read-only authorization grant while keeping live reads at grant time, global shadow enablement, production default, API/web, and user-visible behavior disabled."
         )
@@ -4706,6 +5508,8 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         f"- Live read-only authorization requested: {authorization.get('prod_scoped_shadow_live_read_only_authorization_requested')}",
         f"- Live read-only authorization granted: {authorization.get('prod_scoped_shadow_live_read_only_authorization_granted')}",
         f"- Live read-only authorized: {authorization.get('prod_scoped_shadow_live_read_only_authorized')}",
+        f"- Live read-only pilot executed: {posture.get('prod_scoped_shadow_live_read_only_pilot_executed')}",
+        f"- Live read-only pilot passed: {posture.get('prod_scoped_shadow_live_read_only_pilot_passed')}",
         f"- Live production source reads performed: {posture.get('live_prod_source_reads_performed')}",
         f"- Online shadow execution enabled: {posture['online_shadow_execution_enabled']}",
         f"- Recommended next stage: `{payload['recommended_next_stage']}`",
@@ -4874,6 +5678,44 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         lines.extend(f"- {item}" for item in granted_scope["grant_time_live_read_boundaries"])
         lines.extend(["", "## Live Read-Only Grant Explicitly Not Included", ""])
         lines.extend(f"- {item}" for item in granted_scope["explicitly_still_not_included"])
+        lines.append("")
+    if live_read_only_pilot_run:
+        live_source_reads = live_read_only_pilot_run["live_source_reads"]
+        row_counts = live_source_reads["row_counts"]
+        lines.extend(
+            [
+                "## Live Read-Only Pilot Run",
+                "",
+                f"- Pilot surface: `{live_read_only_pilot_run['pilot_surface']}`",
+                f"- Pilot run id: `{live_read_only_pilot_run['pilot_run_id']}`",
+                f"- Joined candidate count: {live_read_only_pilot_run['input_join_summary']['joined_candidate_count']}",
+                f"- Live prod source reads performed: {live_read_only_pilot_run['live_prod_source_reads_performed']}",
+                f"- Pilot passed: {live_read_only_pilot_run['pass_fail_evaluation']['overall_passed']}",
+                f"- Pilot run directory: `{live_read_only_pilot_run['pilot_run_directory']['relative_path']}`",
+                f"- Labels used for scoring: {not live_source_reads['labels_not_used_for_scoring']}",
+                f"- Refit/training performed: {live_source_reads['refit_training_performed']}",
+                f"- Embedding generation performed: {live_source_reads['embedding_generation_performed']}",
+                f"- Label ingest performed: {live_source_reads['label_ingest_performed']}",
+                "",
+                "## Live Read-Only Source Reads",
+                "",
+                f"- Approved tables: {', '.join(live_source_reads['approved_tables'])}",
+                f"- Ranking runs: {row_counts['ranking_runs']}",
+                f"- Paper scores: {row_counts['paper_scores']}",
+                f"- Works: {row_counts['works']}",
+                f"- Embeddings: {row_counts['embeddings']}",
+                f"- Candidate SHA: `{live_source_reads['input_identity_verification']['candidate_pool_work_set_sha256']}`",
+                "",
+                "## Live Read-Only Pilot Files",
+                "",
+                "| Path | Bytes | Rows | SHA-256 |",
+                "| --- | ---: | ---: | --- |",
+            ]
+        )
+        for file_record in live_read_only_pilot_run["files_written"]:
+            lines.append(
+                f"| `{file_record['relative_path']}` | {file_record['byte_count']} | {file_record.get('row_count')} | `{file_record['sha256']}` |"
+            )
         lines.append("")
     if authorization.get("grant_decision"):
         grant_decision = authorization["grant_decision"]

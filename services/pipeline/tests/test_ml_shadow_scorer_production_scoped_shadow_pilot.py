@@ -363,7 +363,10 @@ def test_runtime_import_call_is_limited_to_pilot_runner_module() -> None:
     production_scoped_modules = list((PACKAGE_ROOT / "pipeline").glob("ml_shadow_scorer_production_scoped*.py"))
     for module_path in production_scoped_modules:
         source = module_path.read_text(encoding="utf-8")
-        if module_path.name == "ml_shadow_scorer_production_scoped_shadow_pilot.py":
+        if module_path.name in {
+            "ml_shadow_scorer_production_scoped_shadow_pilot.py",
+            "ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot.py",
+        }:
             assert "run_ml_shadow_scorer_v1_online_shadow_runtime" in source
         else:
             assert "run_ml_shadow_scorer_v1_online_shadow_runtime" not in source
