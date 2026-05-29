@@ -33,8 +33,10 @@ from pipeline.repo_paths import default_repo_root, portable_repo_path
 ARTIFACT_TYPE = "ml_shadow_scorer_production_readiness_bundle"
 BUNDLE_VERSION = "online-shadow-production-readiness-v1"
 BUNDLE_REVISION = 1
+GRANT_BUNDLE_REVISION = 2
 PRE_REQUEST_NEXT_STAGE = "request_production_readiness_authorization_v1"
 POST_REQUEST_NEXT_STAGE = "record_production_readiness_authorization_grant_v1"
+POST_GRANT_NEXT_STAGE = "begin_production_scoped_online_shadow_plan_v1"
 AUTHORIZATION_SCOPE = "production_readiness_for_bounded_online_shadow_only"
 
 REQUIRED_ROLES = ("production_readiness_criteria", "phase2_bundle")
@@ -48,8 +50,15 @@ LEGACY_ARTIFACT_ROLES = REQUIRED_ROLES + OPTIONAL_ROLES
 
 ALLOWED_GATE_STATUSES = {
     "satisfied_by_upstream",
+    "satisfied_by_grant",
     "partial",
     "open_for_grant",
+    "blocked_separate_chain",
+}
+
+POST_GRANT_GATE_STATUSES = {
+    "satisfied_by_grant",
+    "satisfied_by_upstream",
     "blocked_separate_chain",
 }
 
@@ -74,6 +83,18 @@ EXPLICITLY_NOT_INCLUDED = (
 WOULD_ENABLE_AFTER_FUTURE_GRANT = (
     "future grant may authorize production-readiness review chain only",
     "future prod-scoped shadow plan/proof/pilot/enablement chain paperwork",
+)
+
+AUTHORIZES_FOR_CHAIN_ONLY = (
+    "production-readiness authorization paperwork complete",
+    "prod-scoped online shadow plan/proof/pilot/enablement chain may begin",
+)
+
+GRANT_CAVEATS = (
+    "Bundle grant milestone only; does not run prod shadow or enable global shadow.",
+    "Clears production-readiness authorization blocker for paperwork chain only.",
+    "Prod-scoped shadow plan/proof/pilot still required before any enablement.",
+    "Production default/API/user-visible ranking remain separate authorization chains.",
 )
 
 
@@ -404,12 +425,12 @@ def _requested_scope() -> dict[str, Any]:
     }
 
 
-def _posture(*, requested: bool) -> dict[str, Any]:
+def _posture(*, requested: bool, granted: bool = False) -> dict[str, Any]:
     return {
         "online_shadow_execution_enabled": False,
-        "missing_production_readiness_authorization": True,
+        "missing_production_readiness_authorization": not granted,
         "production_readiness_authorization_requested": requested,
-        "production_readiness_authorization_granted": False,
+        "production_readiness_authorization_granted": granted,
         "production_default_allowed": False,
         "api_web_changes_allowed": False,
         "user_visible_ranking_changed": False,
@@ -419,18 +440,31 @@ def _posture(*, requested: bool) -> dict[str, Any]:
     }
 
 
-def _blockers(*, requested: bool) -> dict[str, Any]:
-    return {
-        "missing_production_readiness_authorization": True,
+def _blockers(*, requested: bool, granted: bool = False) -> dict[str, Any]:
+    blockers = {
+        "missing_production_readiness_authorization": not granted,
         "production_readiness_authorization_requested": requested,
-        "production_readiness_authorization_granted": False,
+        "production_readiness_authorization_granted": granted,
         "production_default_allowed": False,
         "api_web_changes_allowed": False,
         "user_visible_ranking_changed": False,
         "online_shadow_execution_enabled": False,
-        "blockers_changed_by_request": [],
-        "blockers_unchanged_by_request": True,
     }
+    if granted:
+        blockers.update(
+            {
+                "blockers_changed_by_grant": ["missing_production_readiness_authorization"],
+                "blockers_unchanged_by_grant": True,
+            }
+        )
+    else:
+        blockers.update(
+            {
+                "blockers_changed_by_request": [],
+                "blockers_unchanged_by_request": True,
+            }
+        )
+    return blockers
 
 
 def assemble_ml_shadow_scorer_production_readiness_bundle_payload(
@@ -565,15 +599,289 @@ def apply_production_readiness_authorization_request(
     return updated
 
 
+def _grant_authority_is_sufficient(
+    *,
+    owner: str,
+    second_reviewer: str | None,
+    owner_documents_equivalent_review: str | None,
+) -> bool:
+    owner_value = str(owner).strip()
+    second_value = str(second_reviewer).strip() if second_reviewer is not None else ""
+    equivalent_value = (
+        str(owner_documents_equivalent_review).strip()
+        if owner_documents_equivalent_review is not None
+        else ""
+    )
+    return bool((second_value and second_value != owner_value) or equivalent_value)
+
+
+def _require_grant_authority(
+    *,
+    owner: str,
+    second_reviewer: str | None,
+    owner_documents_equivalent_review: str | None,
+) -> None:
+    if not _grant_authority_is_sufficient(
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+    ):
+        raise MLShadowScorerProductionReadinessBundleError(
+            "grant requires second_reviewer different from owner or non-empty owner_documents_equivalent_review"
+        )
+
+
+def _grant_resolution_details(
+    *,
+    owner: str,
+    second_reviewer: str | None,
+    owner_documents_equivalent_review: str | None,
+) -> dict[str, Any]:
+    return {
+        "multi_reviewer_adjudication": {
+            "owner": owner,
+            "second_reviewer": second_reviewer,
+            "owner_documents_equivalent_review": owner_documents_equivalent_review,
+            "resolution": "satisfied by second reviewer or owner-documented equivalent review",
+        },
+        "label_balance_accounting": (
+            "Grant accepts the bounded 528-row second-surface coverage as sufficient to begin the "
+            "prod-scoped shadow chain, while carrying known label balance gaps forward as pilot-chain evidence."
+        ),
+        "bounded_calibration_review": (
+            "Production calibration remains bounded to the same approved identity and must be rechecked during "
+            "prod-scoped shadow planning before any enablement."
+        ),
+        "slice_regression_scope": (
+            "Grant scope is emerging-family only; broader subgroup and slice regression evidence is deferred to "
+            "the prod-scoped shadow pilot chain."
+        ),
+        "production_observability_slo_targets": [
+            "run-level status, row count, and error counters",
+            "component-level policy contract coverage",
+            "latency and write-target summaries before any enablement",
+            "forbidden write target counts remain zero outside approved chains",
+        ],
+        "incident_response_and_revocation_plan": [
+            "flag-off first response",
+            "stop prod-scoped pilot jobs before cleanup",
+            "revoke by superseding bundle grant or denied follow-up review",
+            "production default/API/user-visible paths remain unchanged",
+        ],
+        "data_retention_and_auditability_policy": [
+            "bundle references remain path+SHA only",
+            "pilot evidence must retain durable file hashes",
+            "legacy artifacts remain frozen evidence",
+        ],
+    }
+
+
+def _grant_scope(
+    *,
+    owner: str,
+    second_reviewer: str | None,
+    owner_documents_equivalent_review: str | None,
+) -> dict[str, Any]:
+    return {
+        "authorization_scope": AUTHORIZATION_SCOPE,
+        "authorizes_for_chain_only": list(AUTHORIZES_FOR_CHAIN_ONLY),
+        "explicitly_still_not_included": list(EXPLICITLY_NOT_INCLUDED),
+        "grant_time_resolution_details": _grant_resolution_details(
+            owner=owner,
+            second_reviewer=second_reviewer,
+            owner_documents_equivalent_review=owner_documents_equivalent_review,
+        ),
+    }
+
+
+def _set_grant_gate(
+    assessments: dict[str, Any],
+    gate: str,
+    *,
+    rationale: str,
+) -> None:
+    entry = deepcopy(dict(assessments[gate]))
+    entry["status"] = "satisfied_by_grant"
+    entry["rationale"] = rationale
+    entry["satisfies_criteria_detail"] = True
+    assessments[gate] = entry
+
+
+def _resolve_gate_assessments_for_grant(
+    assessments: Mapping[str, Any],
+    *,
+    owner: str,
+    second_reviewer: str | None,
+    owner_documents_equivalent_review: str | None,
+) -> dict[str, Any]:
+    resolved = deepcopy(dict(assessments))
+    review_basis = (
+        f"second reviewer {second_reviewer!r}"
+        if second_reviewer
+        else "owner-documented equivalent review"
+    )
+    _set_grant_gate(
+        resolved,
+        "multi_reviewer_adjudication_required",
+        rationale=(
+            "Production-readiness grant satisfies adjudication using "
+            f"{review_basis}; owner {owner!r} remains grant authority."
+        ),
+    )
+    _set_grant_gate(
+        resolved,
+        "label_volume_and_balance_gate_required",
+        rationale=(
+            "Grant documents 528-row second-surface coverage and carries known label-balance gaps "
+            "as explicit prod-scoped shadow-chain evidence requirements."
+        ),
+    )
+    _set_grant_gate(
+        resolved,
+        "calibration_and_threshold_review_required",
+        rationale=(
+            "Grant defines bounded production-calibration review criteria for the prod-scoped shadow chain; "
+            "no threshold, default, API, or user-visible behavior is enabled here."
+        ),
+    )
+    _set_grant_gate(
+        resolved,
+        "subgroup_or_slice_regression_review_required",
+        rationale=(
+            "Grant scope remains emerging-family only and explicitly defers broader slices to the "
+            "prod-scoped shadow pilot chain."
+        ),
+    )
+    _set_grant_gate(
+        resolved,
+        "production_observability_slo_required",
+        rationale=(
+            "Grant records production-readiness observability SLO targets for run, component, error, "
+            "latency, and write-target monitoring before any enablement."
+        ),
+    )
+    _set_grant_gate(
+        resolved,
+        "incident_response_and_revocation_plan_required",
+        rationale=(
+            "Grant records incident and revocation summary derived from the execution grant and online "
+            "shadow policy: flag-off first, stop jobs, supersede or deny to revoke."
+        ),
+    )
+    _set_grant_gate(
+        resolved,
+        "data_retention_and_auditability_review_required",
+        rationale=(
+            "Grant records retention and auditability expectations: bundle path+SHA references, durable "
+            "pilot hashes, and frozen legacy evidence."
+        ),
+    )
+    return resolved
+
+
+def apply_production_readiness_authorization_grant(
+    bundle: Mapping[str, Any],
+    *,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    grant_notes: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionReadinessBundleError("bundle must be an object")
+    _require_grant_authority(
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+    )
+    granted_at = generated_at or _now_iso_z()
+    review_by_value = review_by or expiry_date
+    updated = deepcopy(dict(bundle))
+    metadata = deepcopy(dict(_metadata(updated, label="production-readiness bundle")))
+    metadata["bundle_revision"] = GRANT_BUNDLE_REVISION
+    metadata["generated_at"] = granted_at
+    updated["metadata"] = metadata
+    evidence = deepcopy(dict(updated.get("evidence") or {}))
+    evidence["gate_assessments"] = _resolve_gate_assessments_for_grant(
+        evidence.get("gate_assessments") or {},
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+    )
+    evidence["grant_resolution_summary"] = [
+        "Production-readiness authorization blocker cleared for the paperwork chain only.",
+        "Grant-time partial/open gates resolved into satisfied_by_grant with documented bounded scope.",
+        "Leakage, offline metric, and rollback/disable evidence remain satisfied_by_upstream.",
+        "Production default/API and user-visible ranking changes remain blocked separate chains.",
+        "Prod-scoped shadow plan/proof/pilot still required before any enablement.",
+    ]
+    updated["evidence"] = evidence
+    authorization = deepcopy(dict(updated.get("authorization") or {}))
+    authorization["production_readiness_authorization_requested"] = True
+    authorization["production_readiness_authorization_granted"] = True
+    authorization["grant_decision"] = {
+        "decision": "granted",
+        "owner": owner,
+        "granted_at": granted_at,
+        "expiry_date": expiry_date,
+        "review_by": review_by_value,
+        "grant_notes": grant_notes,
+        "second_reviewer": second_reviewer,
+        "owner_documents_equivalent_review": owner_documents_equivalent_review,
+    }
+    authorization["granted_scope"] = _grant_scope(
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+    )
+    updated["authorization"] = authorization
+    updated["execution"] = {
+        "production_readiness_execution_performed": False,
+        "production_shadow_pilot_executed": False,
+    }
+    updated["review"] = {
+        "production_readiness_grant_reviewed": False,
+        "production_readiness_grant_accepted": None,
+    }
+    updated["posture"] = _posture(requested=True, granted=True)
+    updated["shadow_and_production_blockers"] = _blockers(requested=True, granted=True)
+    updated["writes_performed"] = False
+    updated["runtime_writes_performed"] = False
+    updated["recommended_next_stage"] = POST_GRANT_NEXT_STAGE
+    caveats = list(updated.get("caveats") or [])
+    for caveat in GRANT_CAVEATS:
+        if caveat not in caveats:
+            caveats.append(caveat)
+    updated["caveats"] = caveats
+    return updated
+
+
 def _infer_request_mode(
     bundle: Mapping[str, Any],
     *,
     expect_request_filed: bool | None,
+    expect_grant_filed: bool | None,
 ) -> str:
+    if expect_request_filed is not None and expect_grant_filed is not None:
+        raise MLShadowScorerProductionReadinessBundleError("request/grant expectations conflict")
+    if expect_grant_filed is True:
+        return "post_grant"
+    if expect_grant_filed is False:
+        requested = _get(bundle, "authorization.production_readiness_authorization_requested")
+        return "post_request" if requested is True else "pre_request"
     if expect_request_filed is True:
         return "post_request"
     if expect_request_filed is False:
         return "pre_request"
+    if (
+        _get(bundle, "metadata.bundle_revision") == GRANT_BUNDLE_REVISION
+        and _get(bundle, "authorization.production_readiness_authorization_requested") is True
+        and _get(bundle, "authorization.production_readiness_authorization_granted") is True
+    ):
+        return "post_grant"
     return (
         "post_request"
         if _get(bundle, "authorization.production_readiness_authorization_requested") is True
@@ -585,6 +893,7 @@ def _verify_gate_assessments(
     assessments: Any,
     *,
     records: Mapping[str, Mapping[str, Any]],
+    mode: str,
 ) -> None:
     if not isinstance(assessments, Mapping):
         raise MLShadowScorerProductionReadinessBundleError("evidence.gate_assessments must be an object")
@@ -603,12 +912,16 @@ def _verify_gate_assessments(
             raise MLShadowScorerProductionReadinessBundleError(
                 f"evidence.gate_assessments.{gate}.status unsupported: {status!r}"
             )
+        if mode == "post_grant" and status not in POST_GRANT_GATE_STATUSES:
+            raise MLShadowScorerProductionReadinessBundleError(
+                f"evidence.gate_assessments.{gate}.status must be post-grant resolved, got {status!r}"
+            )
         rationale = entry.get("rationale")
         if not isinstance(rationale, str) or not rationale.strip():
             raise MLShadowScorerProductionReadinessBundleError(
                 f"evidence.gate_assessments.{gate}.rationale must be non-empty"
             )
-        expected_satisfies = status in {"satisfied_by_upstream", "blocked_separate_chain"}
+        expected_satisfies = status in {"satisfied_by_upstream", "satisfied_by_grant", "blocked_separate_chain"}
         _require_equal(
             f"evidence.gate_assessments.{gate}.satisfies_criteria_detail",
             entry.get("satisfies_criteria_detail"),
@@ -640,6 +953,17 @@ def _verify_gate_assessments(
                     ref.get("sha256"),
                     records[str(role)].get("sha256"),
                 )
+    if mode == "post_grant":
+        _require_equal(
+            "evidence.gate_assessments.incident_response_and_revocation_plan_required.status",
+            assessments["incident_response_and_revocation_plan_required"].get("status"),
+            "satisfied_by_grant",
+        )
+        _require_equal(
+            "evidence.gate_assessments.multi_reviewer_adjudication_required.status",
+            assessments["multi_reviewer_adjudication_required"].get("status"),
+            "satisfied_by_grant",
+        )
 
 
 def verify_ml_shadow_scorer_production_readiness_bundle_payload(
@@ -647,12 +971,19 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
     *,
     repo_root: Path | None = None,
     expect_request_filed: bool | None = None,
+    expect_grant_filed: bool | None = None,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
     metadata = _metadata(bundle, label="production-readiness bundle")
     _require_equal("metadata.artifact_type", metadata.get("artifact_type"), ARTIFACT_TYPE)
     _require_equal("metadata.bundle_version", metadata.get("bundle_version"), BUNDLE_VERSION)
-    _require_equal("metadata.bundle_revision", metadata.get("bundle_revision"), BUNDLE_REVISION)
+    mode = _infer_request_mode(
+        bundle,
+        expect_request_filed=expect_request_filed,
+        expect_grant_filed=expect_grant_filed,
+    )
+    expected_revision = GRANT_BUNDLE_REVISION if mode == "post_grant" else BUNDLE_REVISION
+    _require_equal("metadata.bundle_revision", metadata.get("bundle_revision"), expected_revision)
     _validate_identity(metadata.get("pinned_identity"), label="metadata.pinned_identity")
     records, resolved_paths = _verify_legacy_index(bundle, repo_root=root)
 
@@ -695,15 +1026,15 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
         raise MLShadowScorerProductionReadinessBundleError(
             "evidence.superseded_plan_reconciliation must be an object"
         )
-    _verify_gate_assessments(evidence.get("gate_assessments"), records=records)
+    _verify_gate_assessments(evidence.get("gate_assessments"), records=records, mode=mode)
+    if mode == "post_grant":
+        summary = evidence.get("grant_resolution_summary")
+        if not isinstance(summary, list) or not summary:
+            raise MLShadowScorerProductionReadinessBundleError("evidence.grant_resolution_summary must be populated")
 
     authorization = bundle.get("authorization")
     if not isinstance(authorization, Mapping):
         raise MLShadowScorerProductionReadinessBundleError("authorization must be an object")
-    _require_false(
-        "authorization.production_readiness_authorization_granted",
-        authorization.get("production_readiness_authorization_granted"),
-    )
     requested_scope = authorization.get("requested_scope")
     if not isinstance(requested_scope, Mapping):
         raise MLShadowScorerProductionReadinessBundleError("authorization.requested_scope must be an object")
@@ -713,14 +1044,41 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
             raise MLShadowScorerProductionReadinessBundleError(
                 f"authorization.requested_scope.explicitly_not_included missing {item!r}"
             )
+    if mode == "post_grant":
+        _require_true(
+            "authorization.production_readiness_authorization_granted",
+            authorization.get("production_readiness_authorization_granted"),
+        )
+        grant_decision = authorization.get("grant_decision")
+        if not isinstance(grant_decision, Mapping):
+            raise MLShadowScorerProductionReadinessBundleError("authorization.grant_decision must be an object")
+        _require_equal("authorization.grant_decision.decision", grant_decision.get("decision"), "granted")
+        if not isinstance(grant_decision.get("owner"), str) or not grant_decision.get("owner"):
+            raise MLShadowScorerProductionReadinessBundleError("authorization.grant_decision.owner must be populated")
+        if not isinstance(grant_decision.get("granted_at"), str) or not grant_decision.get("granted_at"):
+            raise MLShadowScorerProductionReadinessBundleError("authorization.grant_decision.granted_at must be populated")
+        granted_scope = authorization.get("granted_scope")
+        if not isinstance(granted_scope, Mapping):
+            raise MLShadowScorerProductionReadinessBundleError("authorization.granted_scope must be an object")
+        _require_equal("authorization.granted_scope.authorization_scope", granted_scope.get("authorization_scope"), AUTHORIZATION_SCOPE)
+        for item in EXPLICITLY_NOT_INCLUDED:
+            if item not in granted_scope.get("explicitly_still_not_included", []):
+                raise MLShadowScorerProductionReadinessBundleError(
+                    f"authorization.granted_scope.explicitly_still_not_included missing {item!r}"
+                )
+    else:
+        _require_false(
+            "authorization.production_readiness_authorization_granted",
+            authorization.get("production_readiness_authorization_granted"),
+        )
 
     posture = bundle.get("posture")
     if not isinstance(posture, Mapping):
         raise MLShadowScorerProductionReadinessBundleError("posture must be an object")
     posture_required = {
         "online_shadow_execution_enabled": False,
-        "missing_production_readiness_authorization": True,
-        "production_readiness_authorization_granted": False,
+        "missing_production_readiness_authorization": mode != "post_grant",
+        "production_readiness_authorization_granted": mode == "post_grant",
         "production_default_allowed": False,
         "api_web_changes_allowed": False,
         "user_visible_ranking_changed": False,
@@ -744,13 +1102,31 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
     blockers = bundle.get("shadow_and_production_blockers")
     if not isinstance(blockers, Mapping):
         raise MLShadowScorerProductionReadinessBundleError("shadow_and_production_blockers must be an object")
-    _require_true("shadow_and_production_blockers.missing_production_readiness_authorization", blockers.get("missing_production_readiness_authorization"))
-    _require_equal("shadow_and_production_blockers.blockers_changed_by_request", blockers.get("blockers_changed_by_request"), [])
-    _require_true("shadow_and_production_blockers.blockers_unchanged_by_request", blockers.get("blockers_unchanged_by_request"))
+    _require_equal(
+        "shadow_and_production_blockers.missing_production_readiness_authorization",
+        blockers.get("missing_production_readiness_authorization"),
+        mode != "post_grant",
+    )
+    if mode == "post_grant":
+        _require_true(
+            "shadow_and_production_blockers.production_readiness_authorization_granted",
+            blockers.get("production_readiness_authorization_granted"),
+        )
+        changed = blockers.get("blockers_changed_by_grant")
+        if "missing_production_readiness_authorization" not in (changed or []):
+            raise MLShadowScorerProductionReadinessBundleError(
+                "shadow_and_production_blockers.blockers_changed_by_grant must include missing_production_readiness_authorization"
+            )
+        _require_true(
+            "shadow_and_production_blockers.blockers_unchanged_by_grant",
+            blockers.get("blockers_unchanged_by_grant"),
+        )
+    else:
+        _require_equal("shadow_and_production_blockers.blockers_changed_by_request", blockers.get("blockers_changed_by_request"), [])
+        _require_true("shadow_and_production_blockers.blockers_unchanged_by_request", blockers.get("blockers_unchanged_by_request"))
     _require_false("writes_performed", bundle.get("writes_performed"))
     _require_false("runtime_writes_performed", bundle.get("runtime_writes_performed"))
 
-    mode = _infer_request_mode(bundle, expect_request_filed=expect_request_filed)
     if mode == "pre_request":
         _require_false(
             "authorization.production_readiness_authorization_requested",
@@ -762,7 +1138,7 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
             posture.get("production_readiness_authorization_requested"),
         )
         _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), PRE_REQUEST_NEXT_STAGE)
-    else:
+    elif mode == "post_request":
         _require_true(
             "authorization.production_readiness_authorization_requested",
             authorization.get("production_readiness_authorization_requested"),
@@ -780,6 +1156,22 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
             posture.get("production_readiness_authorization_requested"),
         )
         _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), POST_REQUEST_NEXT_STAGE)
+    elif mode == "post_grant":
+        _require_true(
+            "authorization.production_readiness_authorization_requested",
+            authorization.get("production_readiness_authorization_requested"),
+        )
+        request_decision = authorization.get("request_decision")
+        if not isinstance(request_decision, Mapping):
+            raise MLShadowScorerProductionReadinessBundleError("authorization.request_decision must remain an object")
+        _require_equal("authorization.request_decision.decision", request_decision.get("decision"), "requested")
+        _require_true(
+            "posture.production_readiness_authorization_requested",
+            posture.get("production_readiness_authorization_requested"),
+        )
+        _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), POST_GRANT_NEXT_STAGE)
+    else:  # pragma: no cover - closed set guard
+        raise MLShadowScorerProductionReadinessBundleError(f"unknown verification mode {mode!r}")
 
     caveats = bundle.get("caveats")
     if not isinstance(caveats, list):
@@ -787,6 +1179,10 @@ def verify_ml_shadow_scorer_production_readiness_bundle_payload(
     for caveat in CAVEATS:
         if caveat not in caveats:
             raise MLShadowScorerProductionReadinessBundleError(f"caveats missing {caveat!r}")
+    if mode == "post_grant":
+        for caveat in GRANT_CAVEATS:
+            if caveat not in caveats:
+                raise MLShadowScorerProductionReadinessBundleError(f"grant caveats missing {caveat!r}")
     return {
         "verification_status": "passed",
         "verification_mode": mode,
@@ -802,12 +1198,14 @@ def verify_ml_shadow_scorer_production_readiness_bundle(
     bundle_path: Path,
     repo_root: Path | None = None,
     expect_request_filed: bool | None = None,
+    expect_grant_filed: bool | None = None,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
     return verify_ml_shadow_scorer_production_readiness_bundle_payload(
         payload,
         repo_root=repo_root,
         expect_request_filed=expect_request_filed,
+        expect_grant_filed=expect_grant_filed,
     )
 
 
@@ -885,11 +1283,40 @@ def markdown_from_ml_shadow_scorer_production_readiness_bundle(payload: Mapping[
             f"- Request notes: {request_decision.get('request_notes')}",
             f"- Requested scope: `{authorization['requested_scope']['authorization_scope']}`",
             "",
+        ]
+    )
+    if authorization.get("grant_decision"):
+        grant_decision = authorization["grant_decision"]
+        lines.extend(
+            [
+                "## Authorization Grant",
+                "",
+                f"- Decision: `{grant_decision.get('decision')}`",
+                f"- Owner: {grant_decision.get('owner')}",
+                f"- Granted at: {grant_decision.get('granted_at')}",
+                f"- Review by: {grant_decision.get('review_by')}",
+                f"- Expiry date: {grant_decision.get('expiry_date')}",
+                f"- Second reviewer: {grant_decision.get('second_reviewer')}",
+                f"- Owner equivalent review: {grant_decision.get('owner_documents_equivalent_review')}",
+                f"- Grant notes: {grant_decision.get('grant_notes')}",
+                f"- Granted scope: `{authorization['granted_scope']['authorization_scope']}`",
+                "",
+                "## Grant Resolution Summary",
+                "",
+            ]
+        )
+        for item in evidence.get("grant_resolution_summary", []):
+            lines.append(f"- {item}")
+        lines.append("")
+    lines.extend(
+        [
             "## Explicitly Not Included",
             "",
         ]
     )
-    for item in authorization["requested_scope"]["explicitly_not_included"]:
+    scope_for_exclusions = authorization.get("granted_scope") or authorization["requested_scope"]
+    exclusion_key = "explicitly_still_not_included" if authorization.get("granted_scope") else "explicitly_not_included"
+    for item in scope_for_exclusions[exclusion_key]:
         lines.append(f"- {item}")
     lines.extend(
         [
@@ -972,6 +1399,47 @@ def request_ml_shadow_scorer_production_readiness_bundle(
         updated,
         repo_root=root,
         expect_request_filed=True,
+    )
+    bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    bundle_path.with_name("bundle.md").write_text(
+        markdown_from_ml_shadow_scorer_production_readiness_bundle(updated),
+        encoding="utf-8",
+    )
+    return updated
+
+
+def grant_ml_shadow_scorer_production_readiness_bundle(
+    *,
+    bundle_path: Path,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    grant_notes: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
+    bundle_path = Path(bundle_path).resolve()
+    payload = _load_json_object(bundle_path)
+    verify_ml_shadow_scorer_production_readiness_bundle_payload(
+        payload,
+        repo_root=root,
+        expect_request_filed=True,
+    )
+    updated = apply_production_readiness_authorization_grant(
+        payload,
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+        grant_notes=grant_notes,
+        expiry_date=expiry_date,
+        review_by=review_by,
+    )
+    verify_ml_shadow_scorer_production_readiness_bundle_payload(
+        updated,
+        repo_root=root,
+        expect_grant_filed=True,
     )
     bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     bundle_path.with_name("bundle.md").write_text(

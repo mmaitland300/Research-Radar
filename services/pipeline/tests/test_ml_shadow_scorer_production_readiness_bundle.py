@@ -19,8 +19,10 @@ from pipeline.ml_shadow_scorer_production_readiness_authorization_criteria impor
 )
 from pipeline.ml_shadow_scorer_production_readiness_bundle import (
     MLShadowScorerProductionReadinessBundleError,
+    apply_production_readiness_authorization_grant,
     apply_production_readiness_authorization_request,
     assemble_ml_shadow_scorer_production_readiness_bundle_payload,
+    grant_ml_shadow_scorer_production_readiness_bundle,
     request_ml_shadow_scorer_production_readiness_bundle,
     verify_ml_shadow_scorer_production_readiness_bundle,
     verify_ml_shadow_scorer_production_readiness_bundle_payload,
@@ -111,6 +113,12 @@ def _write_pre_request_bundle(root: Path) -> Path:
     return out_json
 
 
+def _write_request_bundle(root: Path) -> Path:
+    bundle_path = _write_pre_request_bundle(root)
+    request_ml_shadow_scorer_production_readiness_bundle(bundle_path=bundle_path, repo_root=root)
+    return bundle_path
+
+
 def test_assemble_pre_request_bundle_and_verify_not_filed(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     bundle_path = _write_pre_request_bundle(root)
@@ -154,20 +162,189 @@ def test_apply_request_and_verify_post_request_same_bundle_path(tmp_path: Path) 
     assert result["verification_mode"] == "post_request"
 
 
-def test_committed_fixture_matches_revision_1_post_request_state(tmp_path: Path) -> None:
+def test_grant_from_revision_1_request_and_verify_post_grant(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_request_bundle(root)
+
+    granted = grant_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=bundle_path,
+        second_reviewer="Second Reviewer",
+        grant_notes="grant notes",
+        repo_root=root,
+    )
+    result = verify_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=bundle_path,
+        repo_root=root,
+        expect_grant_filed=True,
+    )
+
+    assert granted["metadata"]["bundle_revision"] == 2
+    assert granted["authorization"]["production_readiness_authorization_requested"] is True
+    assert granted["authorization"]["production_readiness_authorization_granted"] is True
+    assert granted["authorization"]["grant_decision"]["decision"] == "granted"
+    assert granted["authorization"]["grant_decision"]["second_reviewer"] == "Second Reviewer"
+    assert granted["posture"]["missing_production_readiness_authorization"] is False
+    assert granted["recommended_next_stage"] == "begin_production_scoped_online_shadow_plan_v1"
+    assert result["verification_mode"] == "post_grant"
+
+
+def test_rejects_grant_on_pre_request_bundle(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_pre_request_bundle(root)
+
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="production_readiness_authorization_requested"):
+        grant_ml_shadow_scorer_production_readiness_bundle(
+            bundle_path=bundle_path,
+            second_reviewer="Second Reviewer",
+            repo_root=root,
+        )
+
+
+def test_rejects_grant_on_already_granted_bundle(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_request_bundle(root)
+    grant_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=bundle_path,
+        second_reviewer="Second Reviewer",
+        repo_root=root,
+    )
+
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="bundle_revision"):
+        grant_ml_shadow_scorer_production_readiness_bundle(
+            bundle_path=bundle_path,
+            second_reviewer="Another Reviewer",
+            repo_root=root,
+        )
+
+
+def test_rejects_grant_if_missing_authorization_already_false_on_input(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_request_bundle(root)
+    payload = _load(bundle_path)
+    payload["posture"]["missing_production_readiness_authorization"] = False
+    _write_json(bundle_path, payload)
+
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="missing_production_readiness_authorization"):
+        grant_ml_shadow_scorer_production_readiness_bundle(
+            bundle_path=bundle_path,
+            second_reviewer="Second Reviewer",
+            repo_root=root,
+        )
+
+
+def test_rejects_grant_without_review_basis_or_with_same_second_reviewer(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_request_bundle(root)
+
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="second_reviewer"):
+        grant_ml_shadow_scorer_production_readiness_bundle(bundle_path=bundle_path, repo_root=root)
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="second_reviewer"):
+        grant_ml_shadow_scorer_production_readiness_bundle(
+            bundle_path=bundle_path,
+            owner="Matt Maitland",
+            second_reviewer="Matt Maitland",
+            repo_root=root,
+        )
+
+
+def test_accepts_grant_with_owner_documented_equivalent_review(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_request_bundle(root)
+
+    granted = grant_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=bundle_path,
+        owner_documents_equivalent_review="Owner reviewed criteria, Phase 2 evidence, and grant-time gate resolutions.",
+        repo_root=root,
+    )
+
+    assert granted["authorization"]["production_readiness_authorization_granted"] is True
+    assert granted["authorization"]["grant_decision"]["owner_documents_equivalent_review"].startswith("Owner reviewed")
+
+
+def test_post_grant_rejects_unresolved_gates_and_required_grant_statuses(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    bundle_path = _write_request_bundle(root)
+    granted = grant_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=bundle_path,
+        second_reviewer="Second Reviewer",
+        repo_root=root,
+    )
+
+    missing_gate = copy.deepcopy(granted)
+    missing_gate["evidence"]["gate_assessments"].pop("offline_metric_gate_required")
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="missing keys"):
+        verify_ml_shadow_scorer_production_readiness_bundle_payload(
+            missing_gate,
+            repo_root=root,
+            expect_grant_filed=True,
+        )
+
+    partial_gate = copy.deepcopy(granted)
+    partial_gate["evidence"]["gate_assessments"]["label_volume_and_balance_gate_required"]["status"] = "partial"
+    partial_gate["evidence"]["gate_assessments"]["label_volume_and_balance_gate_required"]["satisfies_criteria_detail"] = False
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="post-grant resolved"):
+        verify_ml_shadow_scorer_production_readiness_bundle_payload(
+            partial_gate,
+            repo_root=root,
+            expect_grant_filed=True,
+        )
+
+    incident_wrong = copy.deepcopy(granted)
+    incident_wrong["evidence"]["gate_assessments"]["incident_response_and_revocation_plan_required"]["status"] = "satisfied_by_upstream"
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="incident_response"):
+        verify_ml_shadow_scorer_production_readiness_bundle_payload(
+            incident_wrong,
+            repo_root=root,
+            expect_grant_filed=True,
+        )
+
+    multi_wrong = copy.deepcopy(granted)
+    multi_wrong["evidence"]["gate_assessments"]["multi_reviewer_adjudication_required"]["status"] = "satisfied_by_upstream"
+    with pytest.raises(MLShadowScorerProductionReadinessBundleError, match="multi_reviewer"):
+        verify_ml_shadow_scorer_production_readiness_bundle_payload(
+            multi_wrong,
+            repo_root=root,
+            expect_grant_filed=True,
+        )
+
+
+def test_posture_clears_only_missing_production_readiness_authorization(tmp_path: Path) -> None:
+    root = _copy_fixture_repo(tmp_path)
+    granted = grant_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=_write_request_bundle(root),
+        second_reviewer="Second Reviewer",
+        repo_root=root,
+    )
+    posture = granted["posture"]
+    blockers = granted["shadow_and_production_blockers"]
+
+    assert posture["missing_production_readiness_authorization"] is False
+    assert blockers["missing_production_readiness_authorization"] is False
+    assert blockers["blockers_changed_by_grant"] == ["missing_production_readiness_authorization"]
+    assert posture["online_shadow_execution_enabled"] is False
+    assert posture["production_default_allowed"] is False
+    assert posture["api_web_changes_allowed"] is False
+    assert posture["user_visible_ranking_changed"] is False
+    assert granted["execution"]["production_readiness_execution_performed"] is False
+    assert granted["execution"]["production_shadow_pilot_executed"] is False
+    assert granted["writes_performed"] is False
+    assert granted["runtime_writes_performed"] is False
+
+
+def test_committed_fixture_matches_revision_2_post_grant_state(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path, include_production_bundle=True)
     result = verify_ml_shadow_scorer_production_readiness_bundle(
         bundle_path=_fixture(root, "production_bundle"),
         repo_root=root,
-        expect_request_filed=True,
+        expect_grant_filed=True,
     )
     payload = _load(_fixture(root, "production_bundle"))
 
-    assert payload["metadata"]["bundle_revision"] == 1
+    assert payload["metadata"]["bundle_revision"] == 2
     assert payload["authorization"]["production_readiness_authorization_requested"] is True
-    assert payload["authorization"]["production_readiness_authorization_granted"] is False
-    assert payload["posture"]["missing_production_readiness_authorization"] is True
-    assert result["recommended_next_stage"] == "record_production_readiness_authorization_grant_v1"
+    assert payload["authorization"]["production_readiness_authorization_granted"] is True
+    assert payload["posture"]["missing_production_readiness_authorization"] is False
+    assert result["recommended_next_stage"] == "begin_production_scoped_online_shadow_plan_v1"
 
 
 def test_rejects_criteria_not_defined(tmp_path: Path) -> None:
@@ -299,11 +476,20 @@ def test_gate_status_partial_and_open_are_allowed(tmp_path: Path) -> None:
 def test_no_shadow_runs_files_created(tmp_path: Path) -> None:
     root = _copy_fixture_repo(tmp_path)
     before = _shadow_runs_files(root)
+    criteria_before = _fixture(root, "criteria").read_text(encoding="utf-8")
+    phase2_before = _fixture(root, "phase2_bundle").read_text(encoding="utf-8")
 
     bundle_path = _write_pre_request_bundle(root)
     request_ml_shadow_scorer_production_readiness_bundle(bundle_path=bundle_path, repo_root=root)
+    grant_ml_shadow_scorer_production_readiness_bundle(
+        bundle_path=bundle_path,
+        second_reviewer="Second Reviewer",
+        repo_root=root,
+    )
 
     assert _shadow_runs_files(root) == before
+    assert _fixture(root, "criteria").read_text(encoding="utf-8") == criteria_before
+    assert _fixture(root, "phase2_bundle").read_text(encoding="utf-8") == phase2_before
 
 
 def test_cli_smoke_assemble_request_verify(tmp_path: Path) -> None:
@@ -379,6 +565,52 @@ def test_cli_smoke_assemble_request_verify(tmp_path: Path) -> None:
         "post_request",
         "online-shadow-production-readiness-v1",
         "record_production_readiness_authorization_grant_v1",
+    ]
+
+    grant_cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-production-readiness-bundle-grant",
+        "--bundle",
+        str(out_json),
+        "--second-reviewer",
+        "CLI Second Reviewer",
+        "--grant-notes",
+        "cli grant notes",
+        "--repo-root",
+        str(root),
+    ]
+    grant = subprocess.run(grant_cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True, check=True)
+    assert grant.stdout.splitlines() == [
+        "granted",
+        "True",
+        "begin_production_scoped_online_shadow_plan_v1",
+    ]
+
+    verify_grant_cmd = [
+        sys.executable,
+        "-m",
+        "pipeline.cli",
+        "ml-shadow-scorer-production-readiness-bundle-verify",
+        "--bundle",
+        str(out_json),
+        "--expect-grant-filed",
+        "--repo-root",
+        str(root),
+    ]
+    verify_grant = subprocess.run(
+        verify_grant_cmd,
+        cwd=PACKAGE_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert verify_grant.stdout.splitlines() == [
+        "passed",
+        "post_grant",
+        "online-shadow-production-readiness-v1",
+        "begin_production_scoped_online_shadow_plan_v1",
     ]
 
 

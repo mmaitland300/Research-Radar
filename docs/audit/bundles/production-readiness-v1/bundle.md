@@ -4,12 +4,12 @@
 
 This bundle is the canonical production-readiness ladder view. It records a request for production-readiness authorization while granting nothing and preserving all production/API/default/user-visible blockers.
 
-- Bundle revision: 1
+- Bundle revision: 2
 - Production readiness authorization requested: True
-- Production readiness authorization granted: False
-- Missing production readiness authorization: True
+- Production readiness authorization granted: True
+- Missing production readiness authorization: False
 - Online shadow execution enabled: False
-- Recommended next stage: `record_production_readiness_authorization_grant_v1`
+- Recommended next stage: `begin_production_scoped_online_shadow_plan_v1`
 
 ## Pinned Identity
 
@@ -49,16 +49,16 @@ This bundle is the canonical production-readiness ladder view. It records a requ
 | Gate | Status | Satisfies Detail | Rationale |
 | --- | --- | --- | --- |
 | `api_web_default_change_review_required` | `blocked_separate_chain` | True | This request explicitly excludes production default and API/web changes; any such change requires a separate authorization chain. |
-| `calibration_and_threshold_review_required` | `partial` | False | Phase 2 observability includes score and write-path evidence; production calibration thresholds and SLOs remain grant-time criteria. |
-| `data_retention_and_auditability_review_required` | `partial` | False | Phase 2 file hashes and bundle provenance provide auditability; production retention and audit policy remain grant-time criteria. |
-| `incident_response_and_revocation_plan_required` | `open_for_grant` | False | Incident response and revocation details must be defined by the future production-readiness grant from existing rollback/revocation templates. |
-| `label_volume_and_balance_gate_required` | `partial` | False | Phase 2 covered 528 second-surface rows, while the superseded production-readiness plan still documents label balance gaps that must be accounted for before grant. |
+| `calibration_and_threshold_review_required` | `satisfied_by_grant` | True | Grant defines bounded production-calibration review criteria for the prod-scoped shadow chain; no threshold, default, API, or user-visible behavior is enabled here. |
+| `data_retention_and_auditability_review_required` | `satisfied_by_grant` | True | Grant records retention and auditability expectations: bundle path+SHA references, durable pilot hashes, and frozen legacy evidence. |
+| `incident_response_and_revocation_plan_required` | `satisfied_by_grant` | True | Grant records incident and revocation summary derived from the execution grant and online shadow policy: flag-off first, stop jobs, supersede or deny to revoke. |
+| `label_volume_and_balance_gate_required` | `satisfied_by_grant` | True | Grant documents 528-row second-surface coverage and carries known label-balance gaps as explicit prod-scoped shadow-chain evidence requirements. |
 | `leakage_control_review_required` | `satisfied_by_upstream` | True | Phase 2 execution records labels_used_for_scoring=false, and upstream generalization gates document the second-surface gate context. |
-| `multi_reviewer_adjudication_required` | `partial` | False | Phase 2 write pilot review is accepted, but the bundle records one reviewer; owner grant review may require a second named reviewer or approved equivalent. |
+| `multi_reviewer_adjudication_required` | `satisfied_by_grant` | True | Production-readiness grant satisfies adjudication using owner-documented equivalent review; owner 'Matt Maitland' remains grant authority. |
 | `offline_metric_gate_required` | `satisfied_by_upstream` | True | Generalization audit gates passed for the second surface with 528 candidate rows and material lift evidence before this request. |
-| `production_observability_slo_required` | `partial` | False | Phase 2 policy contract and observability fields are present, but production SLOs remain explicit grant-time requirements. |
+| `production_observability_slo_required` | `satisfied_by_grant` | True | Grant records production-readiness observability SLO targets for run, component, error, latency, and write-target monitoring before any enablement. |
 | `production_scope_rollback_disable_drill_required` | `satisfied_by_upstream` | True | Phase 2 disable drill passed with environment restoration; prior execution grant and policy provide rollback/disable templates for grant review. |
-| `subgroup_or_slice_regression_review_required` | `partial` | False | The accepted evidence is bounded to the emerging-family second surface; broader production slices remain to be reviewed before grant. |
+| `subgroup_or_slice_regression_review_required` | `satisfied_by_grant` | True | Grant scope remains emerging-family only and explicitly defers broader slices to the prod-scoped shadow pilot chain. |
 | `user_visible_ranking_change_review_required` | `blocked_separate_chain` | True | This request explicitly excludes user-visible ranking changes; production-facing ranking requires separate authorization. |
 
 ## Authorization Request
@@ -68,6 +68,26 @@ This bundle is the canonical production-readiness ladder view. It records a requ
 - Requested at: 2026-05-29T03:42:02Z
 - Request notes: None
 - Requested scope: `production_readiness_for_bounded_online_shadow_only`
+
+## Authorization Grant
+
+- Decision: `granted`
+- Owner: Matt Maitland
+- Granted at: 2026-05-29T04:04:47Z
+- Review by: 2026-08-27
+- Expiry date: 2026-08-27
+- Second reviewer: None
+- Owner equivalent review: Owner reviewed the accepted Phase 2 bundle, criteria artifact, indexed policy and execution grant references, and grant-time gate resolutions as an equivalent production-readiness authorization review.
+- Grant notes: None
+- Granted scope: `production_readiness_for_bounded_online_shadow_only`
+
+## Grant Resolution Summary
+
+- Production-readiness authorization blocker cleared for the paperwork chain only.
+- Grant-time partial/open gates resolved into satisfied_by_grant with documented bounded scope.
+- Leakage, offline metric, and rollback/disable evidence remain satisfied_by_upstream.
+- Production default/API and user-visible ranking changes remain blocked separate chains.
+- Prod-scoped shadow plan/proof/pilot still required before any enablement.
 
 ## Explicitly Not Included
 
@@ -89,7 +109,7 @@ This bundle is the canonical production-readiness ladder view. It records a requ
 
 ## Recommended Next Stage
 
-`record_production_readiness_authorization_grant_v1`
+`begin_production_scoped_online_shadow_plan_v1`
 
 ## Caveats
 
@@ -98,3 +118,7 @@ This bundle is the canonical production-readiness ladder view. It records a requ
 - Gate partial/open statuses are inputs to owner grant review, not failures of this commit.
 - This bundle does not enable online shadow execution.
 - This bundle does not authorize production default/API/user-visible ranking behavior.
+- Bundle grant milestone only; does not run prod shadow or enable global shadow.
+- Clears production-readiness authorization blocker for paperwork chain only.
+- Prod-scoped shadow plan/proof/pilot still required before any enablement.
+- Production default/API/user-visible ranking remain separate authorization chains.

@@ -5636,6 +5636,50 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-readiness-bundle-grant",
+        help="File the production-readiness authorization grant in the production-readiness bundle",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-readiness bundle JSON",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--owner",
+        default="Matt Maitland",
+        help="Grant owner name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--second-reviewer",
+        default=None,
+        help="Optional second reviewer name; must differ from owner when provided",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--owner-documents-equivalent-review",
+        default=None,
+        help="Optional non-empty owner rationale documenting equivalent review",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--grant-notes",
+        default=None,
+        help="Optional free-text grant notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--expiry-date",
+        default="2026-08-27",
+        help="Grant expiry date string (default: 2026-08-27)",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--review-by",
+        default=None,
+        help="Grant review-by date string (default: same as expiry-date)",
+    )
+    ml_shadow_scorer_production_readiness_bundle_grant_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_production_readiness_bundle_verify_parser = subparsers.add_parser(
         "ml-shadow-scorer-production-readiness-bundle-verify",
         help="Verify the production-readiness bundle and referenced artifact hashes",
@@ -5655,6 +5699,11 @@ def main() -> None:
         "--expect-request-filed",
         action="store_true",
         help="Require post-request production-readiness bundle state",
+    )
+    request_bundle_verify_group.add_argument(
+        "--expect-grant-filed",
+        action="store_true",
+        help="Require post-grant production-readiness bundle state",
     )
     ml_shadow_scorer_production_readiness_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -8493,6 +8542,32 @@ def main() -> None:
         print(payload["recommended_next_stage"])
         return
 
+    if args.command == "ml-shadow-scorer-production-readiness-bundle-grant":
+        from pipeline.ml_shadow_scorer_production_readiness_bundle import (
+            MLShadowScorerProductionReadinessBundleError,
+            grant_ml_shadow_scorer_production_readiness_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = grant_ml_shadow_scorer_production_readiness_bundle(
+                bundle_path=Path(args.bundle),
+                owner=str(args.owner),
+                second_reviewer=args.second_reviewer,
+                owner_documents_equivalent_review=args.owner_documents_equivalent_review,
+                grant_notes=args.grant_notes,
+                expiry_date=str(args.expiry_date),
+                review_by=args.review_by,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionReadinessBundleError as e:
+            print(f"ml-shadow-scorer-production-readiness-bundle-grant: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(payload["authorization"]["grant_decision"]["decision"])
+        print(payload["authorization"]["production_readiness_authorization_granted"])
+        print(payload["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-readiness-bundle-verify":
         from pipeline.ml_shadow_scorer_production_readiness_bundle import (
             MLShadowScorerProductionReadinessBundleError,
@@ -8501,15 +8576,19 @@ def main() -> None:
 
         repo_root = Path(args.repo_root) if args.repo_root else None
         expect_request_filed = None
+        expect_grant_filed = None
         if args.expect_request_filed:
             expect_request_filed = True
         elif args.expect_request_not_filed:
             expect_request_filed = False
+        elif args.expect_grant_filed:
+            expect_grant_filed = True
         try:
             result = verify_ml_shadow_scorer_production_readiness_bundle(
                 bundle_path=Path(args.bundle),
                 repo_root=repo_root,
                 expect_request_filed=expect_request_filed,
+                expect_grant_filed=expect_grant_filed,
             )
         except MLShadowScorerProductionReadinessBundleError as e:
             print(f"ml-shadow-scorer-production-readiness-bundle-verify: {e}", file=sys.stderr)

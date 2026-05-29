@@ -1,6 +1,60 @@
 {
   "authorization": {
-    "production_readiness_authorization_granted": false,
+    "grant_decision": {
+      "decision": "granted",
+      "expiry_date": "2026-08-27",
+      "grant_notes": null,
+      "granted_at": "2026-05-29T04:04:47Z",
+      "owner": "Matt Maitland",
+      "owner_documents_equivalent_review": "Owner reviewed the accepted Phase 2 bundle, criteria artifact, indexed policy and execution grant references, and grant-time gate resolutions as an equivalent production-readiness authorization review.",
+      "review_by": "2026-08-27",
+      "second_reviewer": null
+    },
+    "granted_scope": {
+      "authorization_scope": "production_readiness_for_bounded_online_shadow_only",
+      "authorizes_for_chain_only": [
+        "production-readiness authorization paperwork complete",
+        "prod-scoped online shadow plan/proof/pilot/enablement chain may begin"
+      ],
+      "explicitly_still_not_included": [
+        "online_shadow_execution_enabled globally",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed",
+        "DB writes/DDL",
+        "model refit, embedding generation, label ingest",
+        "production default / API / fleet-wide flag enablement"
+      ],
+      "grant_time_resolution_details": {
+        "bounded_calibration_review": "Production calibration remains bounded to the same approved identity and must be rechecked during prod-scoped shadow planning before any enablement.",
+        "data_retention_and_auditability_policy": [
+          "bundle references remain path+SHA only",
+          "pilot evidence must retain durable file hashes",
+          "legacy artifacts remain frozen evidence"
+        ],
+        "incident_response_and_revocation_plan": [
+          "flag-off first response",
+          "stop prod-scoped pilot jobs before cleanup",
+          "revoke by superseding bundle grant or denied follow-up review",
+          "production default/API/user-visible paths remain unchanged"
+        ],
+        "label_balance_accounting": "Grant accepts the bounded 528-row second-surface coverage as sufficient to begin the prod-scoped shadow chain, while carrying known label balance gaps forward as pilot-chain evidence.",
+        "multi_reviewer_adjudication": {
+          "owner": "Matt Maitland",
+          "owner_documents_equivalent_review": "Owner reviewed the accepted Phase 2 bundle, criteria artifact, indexed policy and execution grant references, and grant-time gate resolutions as an equivalent production-readiness authorization review.",
+          "resolution": "satisfied by second reviewer or owner-documented equivalent review",
+          "second_reviewer": null
+        },
+        "production_observability_slo_targets": [
+          "run-level status, row count, and error counters",
+          "component-level policy contract coverage",
+          "latency and write-target summaries before any enablement",
+          "forbidden write target counts remain zero outside approved chains"
+        ],
+        "slice_regression_scope": "Grant scope is emerging-family only; broader subgroup and slice regression evidence is deferred to the prod-scoped shadow pilot chain."
+      }
+    },
+    "production_readiness_authorization_granted": true,
     "production_readiness_authorization_requested": true,
     "request_decision": {
       "decision": "requested",
@@ -30,7 +84,11 @@
     "Phase 2 accepted evidence is necessary but not sufficient.",
     "Gate partial/open statuses are inputs to owner grant review, not failures of this commit.",
     "This bundle does not enable online shadow execution.",
-    "This bundle does not authorize production default/API/user-visible ranking behavior."
+    "This bundle does not authorize production default/API/user-visible ranking behavior.",
+    "Bundle grant milestone only; does not run prod shadow or enable global shadow.",
+    "Clears production-readiness authorization blocker for paperwork chain only.",
+    "Prod-scoped shadow plan/proof/pilot still required before any enablement.",
+    "Production default/API/user-visible ranking remain separate authorization chains."
   ],
   "criteria_ref": {
     "path": "docs/audit/ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1.json",
@@ -67,9 +125,9 @@
           }
         ],
         "gate_id": "calibration_and_threshold_review_required",
-        "rationale": "Phase 2 observability includes score and write-path evidence; production calibration thresholds and SLOs remain grant-time criteria.",
-        "satisfies_criteria_detail": false,
-        "status": "partial"
+        "rationale": "Grant defines bounded production-calibration review criteria for the prod-scoped shadow chain; no threshold, default, API, or user-visible behavior is enabled here.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_grant"
       },
       "data_retention_and_auditability_review_required": {
         "evidence_refs": [
@@ -90,9 +148,9 @@
           }
         ],
         "gate_id": "data_retention_and_auditability_review_required",
-        "rationale": "Phase 2 file hashes and bundle provenance provide auditability; production retention and audit policy remain grant-time criteria.",
-        "satisfies_criteria_detail": false,
-        "status": "partial"
+        "rationale": "Grant records retention and auditability expectations: bundle path+SHA references, durable pilot hashes, and frozen legacy evidence.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_grant"
       },
       "incident_response_and_revocation_plan_required": {
         "evidence_refs": [
@@ -108,9 +166,9 @@
           }
         ],
         "gate_id": "incident_response_and_revocation_plan_required",
-        "rationale": "Incident response and revocation details must be defined by the future production-readiness grant from existing rollback/revocation templates.",
-        "satisfies_criteria_detail": false,
-        "status": "open_for_grant"
+        "rationale": "Grant records incident and revocation summary derived from the execution grant and online shadow policy: flag-off first, stop jobs, supersede or deny to revoke.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_grant"
       },
       "label_volume_and_balance_gate_required": {
         "evidence_refs": [
@@ -126,9 +184,9 @@
           }
         ],
         "gate_id": "label_volume_and_balance_gate_required",
-        "rationale": "Phase 2 covered 528 second-surface rows, while the superseded production-readiness plan still documents label balance gaps that must be accounted for before grant.",
-        "satisfies_criteria_detail": false,
-        "status": "partial"
+        "rationale": "Grant documents 528-row second-surface coverage and carries known label-balance gaps as explicit prod-scoped shadow-chain evidence requirements.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_grant"
       },
       "leakage_control_review_required": {
         "evidence_refs": [
@@ -157,9 +215,9 @@
           }
         ],
         "gate_id": "multi_reviewer_adjudication_required",
-        "rationale": "Phase 2 write pilot review is accepted, but the bundle records one reviewer; owner grant review may require a second named reviewer or approved equivalent.",
-        "satisfies_criteria_detail": false,
-        "status": "partial"
+        "rationale": "Production-readiness grant satisfies adjudication using owner-documented equivalent review; owner 'Matt Maitland' remains grant authority.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_grant"
       },
       "offline_metric_gate_required": {
         "evidence_refs": [
@@ -193,9 +251,9 @@
           }
         ],
         "gate_id": "production_observability_slo_required",
-        "rationale": "Phase 2 policy contract and observability fields are present, but production SLOs remain explicit grant-time requirements.",
-        "satisfies_criteria_detail": false,
-        "status": "partial"
+        "rationale": "Grant records production-readiness observability SLO targets for run, component, error, latency, and write-target monitoring before any enablement.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_grant"
       },
       "production_scope_rollback_disable_drill_required": {
         "evidence_refs": [
@@ -234,9 +292,9 @@
           }
         ],
         "gate_id": "subgroup_or_slice_regression_review_required",
-        "rationale": "The accepted evidence is bounded to the emerging-family second surface; broader production slices remain to be reviewed before grant.",
-        "satisfies_criteria_detail": false,
-        "status": "partial"
+        "rationale": "Grant scope remains emerging-family only and explicitly defers broader slices to the prod-scoped shadow pilot chain.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_grant"
       },
       "user_visible_ranking_change_review_required": {
         "evidence_refs": [
@@ -257,6 +315,13 @@
         "status": "blocked_separate_chain"
       }
     },
+    "grant_resolution_summary": [
+      "Production-readiness authorization blocker cleared for the paperwork chain only.",
+      "Grant-time partial/open gates resolved into satisfied_by_grant with documented bounded scope.",
+      "Leakage, offline metric, and rollback/disable evidence remain satisfied_by_upstream.",
+      "Production default/API and user-visible ranking changes remain blocked separate chains.",
+      "Prod-scoped shadow plan/proof/pilot still required before any enablement."
+    ],
     "phase2_upstream_summary": {
       "phase2_bundle": {
         "path": "docs/audit/bundles/phase2-v1/bundle.json",
@@ -321,9 +386,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_readiness_bundle",
-    "bundle_revision": 1,
+    "bundle_revision": 2,
     "bundle_version": "online-shadow-production-readiness-v1",
-    "generated_at": "2026-05-29T03:42:02Z",
+    "generated_at": "2026-05-29T04:04:47Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1.json",
@@ -368,17 +433,17 @@
   },
   "posture": {
     "api_web_changes_allowed": false,
-    "missing_production_readiness_authorization": true,
+    "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
     "phase2_write_pilot_accepted": true,
     "production_default_allowed": false,
-    "production_readiness_authorization_granted": false,
+    "production_readiness_authorization_granted": true,
     "production_readiness_authorization_requested": true,
     "runtime_writes_performed": false,
     "user_visible_ranking_changed": false,
     "writes_performed": false
   },
-  "recommended_next_stage": "record_production_readiness_authorization_grant_v1",
+  "recommended_next_stage": "begin_production_scoped_online_shadow_plan_v1",
   "review": {
     "production_readiness_grant_accepted": null,
     "production_readiness_grant_reviewed": false
@@ -386,12 +451,14 @@
   "runtime_writes_performed": false,
   "shadow_and_production_blockers": {
     "api_web_changes_allowed": false,
-    "blockers_changed_by_request": [],
-    "blockers_unchanged_by_request": true,
-    "missing_production_readiness_authorization": true,
+    "blockers_changed_by_grant": [
+      "missing_production_readiness_authorization"
+    ],
+    "blockers_unchanged_by_grant": true,
+    "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
     "production_default_allowed": false,
-    "production_readiness_authorization_granted": false,
+    "production_readiness_authorization_granted": true,
     "production_readiness_authorization_requested": true,
     "user_visible_ranking_changed": false
   },
