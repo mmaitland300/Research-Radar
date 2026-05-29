@@ -5524,6 +5524,40 @@ def main() -> None:
         help="Compute review without mutating the bundle",
     )
     ml_shadow_scorer_phase2_write_pilot_review_parser.set_defaults(update_bundle=True)
+    ml_shadow_scorer_production_readiness_criteria_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-readiness-authorization-criteria",
+        help="Write production-readiness authorization criteria from the reviewed Phase 2 bundle without granting anything",
+    )
+    ml_shadow_scorer_production_readiness_criteria_parser.add_argument(
+        "--phase-bundle",
+        required=True,
+        help="Path to reviewed canonical Phase 2 bundle JSON",
+    )
+    ml_shadow_scorer_production_readiness_criteria_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write production-readiness criteria JSON",
+    )
+    ml_shadow_scorer_production_readiness_criteria_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_production_readiness_criteria_parser.add_argument(
+        "--criteria-version",
+        default="ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1",
+        help="Criteria version string to write (default: ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1)",
+    )
+    ml_shadow_scorer_production_readiness_criteria_parser.add_argument(
+        "--superseded-production-readiness-plan",
+        default=None,
+        help="Optional stale production-readiness plan Markdown path to reconcile",
+    )
+    ml_shadow_scorer_production_readiness_criteria_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references and portable provenance paths",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -8261,6 +8295,39 @@ def main() -> None:
         print(result["review"]["review_decision"]["decision"])
         print(result["phase2_write_pilot_accepted"])
         print(result["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-production-readiness-authorization-criteria":
+        from pipeline.ml_shadow_scorer_production_readiness_authorization_criteria import (
+            MLShadowScorerProductionReadinessAuthorizationCriteriaError,
+            write_ml_shadow_scorer_production_readiness_authorization_criteria,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        superseded_plan = (
+            Path(args.superseded_production_readiness_plan)
+            if args.superseded_production_readiness_plan
+            else None
+        )
+        try:
+            payload = write_ml_shadow_scorer_production_readiness_authorization_criteria(
+                phase_bundle_path=Path(args.phase_bundle),
+                superseded_production_readiness_plan_path=superseded_plan,
+                output_path=out_json,
+                markdown_output_path=out_md,
+                criteria_version=str(args.criteria_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionReadinessAuthorizationCriteriaError as e:
+            print(f"ml-shadow-scorer-production-readiness-authorization-criteria: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["production_readiness_criteria_defined"])
+        print(payload["criteria_artifact_grants_nothing"])
+        print(payload["recommended_next_stage"])
         return
 
     if args.command == "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-pilot":
