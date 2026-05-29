@@ -1,0 +1,399 @@
+{
+  "authorization": {
+    "production_readiness_authorization_granted": false,
+    "production_readiness_authorization_requested": true,
+    "request_decision": {
+      "decision": "requested",
+      "request_notes": null,
+      "requested_at": "2026-05-29T03:42:02Z",
+      "requester": "Matt Maitland"
+    },
+    "requested_scope": {
+      "authorization_scope": "production_readiness_for_bounded_online_shadow_only",
+      "explicitly_not_included": [
+        "online_shadow_execution_enabled globally",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed",
+        "DB writes/DDL",
+        "model refit, embedding generation, label ingest",
+        "production default / API / fleet-wide flag enablement"
+      ],
+      "would_enable_after_future_grant": [
+        "future grant may authorize production-readiness review chain only",
+        "future prod-scoped shadow plan/proof/pilot/enablement chain paperwork"
+      ]
+    }
+  },
+  "caveats": [
+    "Bundle request milestone only; grants nothing.",
+    "Phase 2 accepted evidence is necessary but not sufficient.",
+    "Gate partial/open statuses are inputs to owner grant review, not failures of this commit.",
+    "This bundle does not enable online shadow execution.",
+    "This bundle does not authorize production default/API/user-visible ranking behavior."
+  ],
+  "criteria_ref": {
+    "path": "docs/audit/ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1.json",
+    "production_readiness_criteria_defined": true,
+    "sha256": "3dfc2e2d9cac7693c39383c5238fa9feb536bed8678220f44e5b88c0795e3c00",
+    "upstream_recommended_next_stage": "request_production_readiness_authorization_v1"
+  },
+  "evidence": {
+    "gate_assessments": {
+      "api_web_default_change_review_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1.json",
+            "role": "production_readiness_criteria",
+            "sha256": "3dfc2e2d9cac7693c39383c5238fa9feb536bed8678220f44e5b88c0795e3c00"
+          },
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          }
+        ],
+        "gate_id": "api_web_default_change_review_required",
+        "rationale": "This request explicitly excludes production default and API/web changes; any such change requires a separate authorization chain.",
+        "satisfies_criteria_detail": true,
+        "status": "blocked_separate_chain"
+      },
+      "calibration_and_threshold_review_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          }
+        ],
+        "gate_id": "calibration_and_threshold_review_required",
+        "rationale": "Phase 2 observability includes score and write-path evidence; production calibration thresholds and SLOs remain grant-time criteria.",
+        "satisfies_criteria_detail": false,
+        "status": "partial"
+      },
+      "data_retention_and_auditability_review_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1.json",
+            "role": "production_readiness_criteria",
+            "sha256": "3dfc2e2d9cac7693c39383c5238fa9feb536bed8678220f44e5b88c0795e3c00"
+          },
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          },
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+            "role": "online_shadow_policy",
+            "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+          }
+        ],
+        "gate_id": "data_retention_and_auditability_review_required",
+        "rationale": "Phase 2 file hashes and bundle provenance provide auditability; production retention and audit policy remain grant-time criteria.",
+        "satisfies_criteria_detail": false,
+        "status": "partial"
+      },
+      "incident_response_and_revocation_plan_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1.json",
+            "role": "execution_authorization_grant",
+            "sha256": "e9505ebad2033598c6b8f923a2cfc58f362154a1076a2e3014ebafa7d23525f8"
+          },
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+            "role": "online_shadow_policy",
+            "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+          }
+        ],
+        "gate_id": "incident_response_and_revocation_plan_required",
+        "rationale": "Incident response and revocation details must be defined by the future production-readiness grant from existing rollback/revocation templates.",
+        "satisfies_criteria_detail": false,
+        "status": "open_for_grant"
+      },
+      "label_volume_and_balance_gate_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          },
+          {
+            "path": "docs/audit/ml-production-readiness-plan-v1.json",
+            "role": "production_readiness_plan",
+            "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+          }
+        ],
+        "gate_id": "label_volume_and_balance_gate_required",
+        "rationale": "Phase 2 covered 528 second-surface rows, while the superseded production-readiness plan still documents label balance gaps that must be accounted for before grant.",
+        "satisfies_criteria_detail": false,
+        "status": "partial"
+      },
+      "leakage_control_review_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          },
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+            "role": "generalization_audit_gates",
+            "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84"
+          }
+        ],
+        "gate_id": "leakage_control_review_required",
+        "rationale": "Phase 2 execution records labels_used_for_scoring=false, and upstream generalization gates document the second-surface gate context.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_upstream"
+      },
+      "multi_reviewer_adjudication_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          }
+        ],
+        "gate_id": "multi_reviewer_adjudication_required",
+        "rationale": "Phase 2 write pilot review is accepted, but the bundle records one reviewer; owner grant review may require a second named reviewer or approved equivalent.",
+        "satisfies_criteria_detail": false,
+        "status": "partial"
+      },
+      "offline_metric_gate_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+            "role": "generalization_audit_gates",
+            "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84"
+          },
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          }
+        ],
+        "gate_id": "offline_metric_gate_required",
+        "rationale": "Generalization audit gates passed for the second surface with 528 candidate rows and material lift evidence before this request.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_upstream"
+      },
+      "production_observability_slo_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          },
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+            "role": "online_shadow_policy",
+            "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+          }
+        ],
+        "gate_id": "production_observability_slo_required",
+        "rationale": "Phase 2 policy contract and observability fields are present, but production SLOs remain explicit grant-time requirements.",
+        "satisfies_criteria_detail": false,
+        "status": "partial"
+      },
+      "production_scope_rollback_disable_drill_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          },
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1.json",
+            "role": "execution_authorization_grant",
+            "sha256": "e9505ebad2033598c6b8f923a2cfc58f362154a1076a2e3014ebafa7d23525f8"
+          },
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+            "role": "online_shadow_policy",
+            "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+          }
+        ],
+        "gate_id": "production_scope_rollback_disable_drill_required",
+        "rationale": "Phase 2 disable drill passed with environment restoration; prior execution grant and policy provide rollback/disable templates for grant review.",
+        "satisfies_criteria_detail": true,
+        "status": "satisfied_by_upstream"
+      },
+      "subgroup_or_slice_regression_review_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          },
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+            "role": "generalization_audit_gates",
+            "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84"
+          }
+        ],
+        "gate_id": "subgroup_or_slice_regression_review_required",
+        "rationale": "The accepted evidence is bounded to the emerging-family second surface; broader production slices remain to be reviewed before grant.",
+        "satisfies_criteria_detail": false,
+        "status": "partial"
+      },
+      "user_visible_ranking_change_review_required": {
+        "evidence_refs": [
+          {
+            "path": "docs/audit/ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1.json",
+            "role": "production_readiness_criteria",
+            "sha256": "3dfc2e2d9cac7693c39383c5238fa9feb536bed8678220f44e5b88c0795e3c00"
+          },
+          {
+            "path": "docs/audit/bundles/phase2-v1/bundle.json",
+            "role": "phase2_bundle",
+            "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+          }
+        ],
+        "gate_id": "user_visible_ranking_change_review_required",
+        "rationale": "This request explicitly excludes user-visible ranking changes; production-facing ranking requires separate authorization.",
+        "satisfies_criteria_detail": true,
+        "status": "blocked_separate_chain"
+      }
+    },
+    "phase2_upstream_summary": {
+      "phase2_bundle": {
+        "path": "docs/audit/bundles/phase2-v1/bundle.json",
+        "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+      },
+      "phase2_bundle_revision": 3,
+      "phase2_recommended_next_stage_satisfied_by_criteria": "begin_production_readiness_authorization_v1",
+      "phase2_write_pilot_accepted": true,
+      "phase2_write_pilot_hash_evidence": {
+        "bytes_written": 360507,
+        "file_count": 4,
+        "files_written": [
+          {
+            "byte_count": 1759,
+            "relative_path": "manifest.json",
+            "row_count": null,
+            "sha256": "92d15c6f09224c6a6b3ecaf24c3517f8e6c6d9de6a00fb603d2588f8def4735b",
+            "write_target": "isolated_audit_shadow_artifacts"
+          },
+          {
+            "byte_count": 355191,
+            "relative_path": "shadow_rows.jsonl",
+            "row_count": 528,
+            "sha256": "2e7846c7520038f5f4f8847cba0cc512e57dad16b263caca559359061fb26256",
+            "write_target": "isolated_audit_shadow_artifacts"
+          },
+          {
+            "byte_count": 2992,
+            "relative_path": "observability.json",
+            "row_count": null,
+            "sha256": "dce84142bd4e8c5a02a50d5b3e2050c492ecb07da57bcf6995b698ed60e6e7cb",
+            "write_target": "isolated_audit_shadow_artifacts"
+          },
+          {
+            "byte_count": 565,
+            "relative_path": "write_counts.json",
+            "row_count": null,
+            "sha256": "4484153b6a6645ad8aa4944743940e3e392ab3c4bcaed2d1ee404b4338a16b18",
+            "write_target": "isolated_audit_shadow_artifacts"
+          }
+        ],
+        "pilot_directory_retained_for_inspection": true,
+        "write_target": "isolated_audit_shadow_artifacts"
+      },
+      "phase2_write_pilot_run_id": "rank-83787b91ef-20260528T212715Z"
+    },
+    "superseded_plan_reconciliation": {
+      "reconciliation_summary": [
+        "The older production-readiness plan predates the accepted Phase 2 shadow ladder.",
+        "Its claims that shadow scoring cannot start or shadow gates are not started are superseded by the accepted Phase 2 isolated-audit write pilot review.",
+        "Production readiness remains blocked despite Phase 2 acceptance.",
+        "This artifact defines criteria only and grants no production behavior."
+      ],
+      "superseded_by": "ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1",
+      "superseded_plan_path": "docs/audit/ml-production-readiness-plan-v1.md",
+      "superseded_plan_sha256": "1fba868797ee84d301bdc20f9facad1602bb3192894956861d5a8214b4680561"
+    }
+  },
+  "execution": {
+    "production_readiness_execution_performed": false,
+    "production_shadow_pilot_executed": false
+  },
+  "metadata": {
+    "artifact_type": "ml_shadow_scorer_production_readiness_bundle",
+    "bundle_revision": 1,
+    "bundle_version": "online-shadow-production-readiness-v1",
+    "generated_at": "2026-05-29T03:42:02Z",
+    "legacy_artifacts_index": [
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1.json",
+        "role": "production_readiness_criteria",
+        "sha256": "3dfc2e2d9cac7693c39383c5238fa9feb536bed8678220f44e5b88c0795e3c00"
+      },
+      {
+        "path": "docs/audit/bundles/phase2-v1/bundle.json",
+        "role": "phase2_bundle",
+        "sha256": "9b077aae115a161580110373a4df722ba4570657cd89d01f994174cc96fdce8d"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json",
+        "role": "generalization_audit_gates",
+        "sha256": "f76345f49d2077008e09fbc921b3c51e4483778422539e0936aead74691e2c84"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json",
+        "role": "online_shadow_policy",
+        "sha256": "726b790d1539a7ea158c484c7c374ae3f002f3e0f8fffa4238d3c73fca30e378"
+      },
+      {
+        "path": "docs/audit/ml-shadow-scorer-v1-online-shadow-execution-authorization-grant-v1.json",
+        "role": "execution_authorization_grant",
+        "sha256": "e9505ebad2033598c6b8f923a2cfc58f362154a1076a2e3014ebafa7d23525f8"
+      },
+      {
+        "path": "docs/audit/ml-production-readiness-plan-v1.json",
+        "role": "production_readiness_plan",
+        "sha256": "9fa5eabd0c4fbe120cc7797d944d8545668ee37f2de876263d114c3ef57227fc"
+      }
+    ],
+    "pinned_identity": {
+      "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
+      "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+      "embedding_version": "shadow-generalization-text-embedding-v1",
+      "family": "emerging",
+      "formula_id": "hybrid_rank_mean_50_50",
+      "ranking_run_id": "rank-83787b91ef",
+      "scorer_id": "ml-shadow-scorer-v1"
+    }
+  },
+  "posture": {
+    "api_web_changes_allowed": false,
+    "missing_production_readiness_authorization": true,
+    "online_shadow_execution_enabled": false,
+    "phase2_write_pilot_accepted": true,
+    "production_default_allowed": false,
+    "production_readiness_authorization_granted": false,
+    "production_readiness_authorization_requested": true,
+    "runtime_writes_performed": false,
+    "user_visible_ranking_changed": false,
+    "writes_performed": false
+  },
+  "recommended_next_stage": "record_production_readiness_authorization_grant_v1",
+  "review": {
+    "production_readiness_grant_accepted": null,
+    "production_readiness_grant_reviewed": false
+  },
+  "runtime_writes_performed": false,
+  "shadow_and_production_blockers": {
+    "api_web_changes_allowed": false,
+    "blockers_changed_by_request": [],
+    "blockers_unchanged_by_request": true,
+    "missing_production_readiness_authorization": true,
+    "online_shadow_execution_enabled": false,
+    "production_default_allowed": false,
+    "production_readiness_authorization_granted": false,
+    "production_readiness_authorization_requested": true,
+    "user_visible_ranking_changed": false
+  },
+  "writes_performed": false
+}

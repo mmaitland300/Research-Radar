@@ -5558,6 +5558,109 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references and portable provenance paths",
     )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-readiness-bundle-assemble",
+        help="Assemble the production-readiness bundle pre-request skeleton from frozen evidence",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--production-readiness-criteria",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-production-readiness-authorization-criteria-v1 JSON",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--phase-bundle",
+        required=True,
+        help="Path to reviewed canonical Phase 2 bundle JSON",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write production-readiness bundle JSON",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown summary",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--generalization-audit-gates",
+        default=None,
+        help="Optional generalization audit gates JSON path to index as evidence",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--online-shadow-policy",
+        default=None,
+        help="Optional online shadow policy JSON path to index as evidence",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--execution-authorization-grant",
+        default=None,
+        help="Optional online shadow execution authorization grant JSON path to index as evidence",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--production-readiness-plan",
+        default=None,
+        help="Optional superseded production-readiness plan JSON path to index as narrative evidence",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--bundle-version",
+        default="online-shadow-production-readiness-v1",
+        help="Bundle version string to write (default: online-shadow-production-readiness-v1)",
+    )
+    ml_shadow_scorer_production_readiness_bundle_assemble_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references and portable provenance paths",
+    )
+    ml_shadow_scorer_production_readiness_bundle_request_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-readiness-bundle-request",
+        help="File the production-readiness authorization request in an assembled production-readiness bundle",
+    )
+    ml_shadow_scorer_production_readiness_bundle_request_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-readiness bundle JSON",
+    )
+    ml_shadow_scorer_production_readiness_bundle_request_parser.add_argument(
+        "--requester",
+        default="Matt Maitland",
+        help="Requester name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_production_readiness_bundle_request_parser.add_argument(
+        "--request-notes",
+        default=None,
+        help="Optional free-text request notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_readiness_bundle_request_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
+    ml_shadow_scorer_production_readiness_bundle_verify_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-readiness-bundle-verify",
+        help="Verify the production-readiness bundle and referenced artifact hashes",
+    )
+    ml_shadow_scorer_production_readiness_bundle_verify_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-readiness bundle JSON",
+    )
+    request_bundle_verify_group = ml_shadow_scorer_production_readiness_bundle_verify_parser.add_mutually_exclusive_group()
+    request_bundle_verify_group.add_argument(
+        "--expect-request-not-filed",
+        action="store_true",
+        help="Require pre-request production-readiness bundle state",
+    )
+    request_bundle_verify_group.add_argument(
+        "--expect-request-filed",
+        action="store_true",
+        help="Require post-request production-readiness bundle state",
+    )
+    ml_shadow_scorer_production_readiness_bundle_verify_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_second_candidate_plan_ingest_parser = subparsers.add_parser(
         "ml-shadow-scorer-second-candidate-plan-ingest",
         help="Ingest committed second hybrid candidate plan into a local eval-only source snapshot",
@@ -8328,6 +8431,93 @@ def main() -> None:
         print(payload["production_readiness_criteria_defined"])
         print(payload["criteria_artifact_grants_nothing"])
         print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-production-readiness-bundle-assemble":
+        from pipeline.ml_shadow_scorer_production_readiness_bundle import (
+            MLShadowScorerProductionReadinessBundleError,
+            write_ml_shadow_scorer_production_readiness_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        try:
+            payload = write_ml_shadow_scorer_production_readiness_bundle(
+                production_readiness_criteria_path=Path(args.production_readiness_criteria),
+                phase_bundle_path=Path(args.phase_bundle),
+                generalization_audit_gates_path=(
+                    Path(args.generalization_audit_gates) if args.generalization_audit_gates else None
+                ),
+                online_shadow_policy_path=Path(args.online_shadow_policy) if args.online_shadow_policy else None,
+                execution_authorization_grant_path=(
+                    Path(args.execution_authorization_grant) if args.execution_authorization_grant else None
+                ),
+                production_readiness_plan_path=(
+                    Path(args.production_readiness_plan) if args.production_readiness_plan else None
+                ),
+                output_path=out_json,
+                markdown_output_path=out_md,
+                bundle_version=str(args.bundle_version),
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionReadinessBundleError as e:
+            print(f"ml-shadow-scorer-production-readiness-bundle-assemble: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(payload["metadata"]["bundle_version"])
+        print(payload["authorization"]["production_readiness_authorization_requested"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-production-readiness-bundle-request":
+        from pipeline.ml_shadow_scorer_production_readiness_bundle import (
+            MLShadowScorerProductionReadinessBundleError,
+            request_ml_shadow_scorer_production_readiness_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = request_ml_shadow_scorer_production_readiness_bundle(
+                bundle_path=Path(args.bundle),
+                requester=str(args.requester),
+                request_notes=args.request_notes,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionReadinessBundleError as e:
+            print(f"ml-shadow-scorer-production-readiness-bundle-request: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(payload["authorization"]["request_decision"]["decision"])
+        print(payload["authorization"]["production_readiness_authorization_requested"])
+        print(payload["recommended_next_stage"])
+        return
+
+    if args.command == "ml-shadow-scorer-production-readiness-bundle-verify":
+        from pipeline.ml_shadow_scorer_production_readiness_bundle import (
+            MLShadowScorerProductionReadinessBundleError,
+            verify_ml_shadow_scorer_production_readiness_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        expect_request_filed = None
+        if args.expect_request_filed:
+            expect_request_filed = True
+        elif args.expect_request_not_filed:
+            expect_request_filed = False
+        try:
+            result = verify_ml_shadow_scorer_production_readiness_bundle(
+                bundle_path=Path(args.bundle),
+                repo_root=repo_root,
+                expect_request_filed=expect_request_filed,
+            )
+        except MLShadowScorerProductionReadinessBundleError as e:
+            print(f"ml-shadow-scorer-production-readiness-bundle-verify: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["verification_status"])
+        print(result["verification_mode"])
+        print(result["bundle_version"])
+        print(result["recommended_next_stage"])
         return
 
     if args.command == "ml-shadow-scorer-online-shadow-phase2-isolated-audit-write-pilot":
