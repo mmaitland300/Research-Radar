@@ -1,18 +1,51 @@
 {
   "authorization": {
     "explicitly_not_included": [
-      "global flag enablement",
-      "prod default",
       "API/web",
+      "DB writes/DDL",
+      "api_web_changes_allowed",
+      "fleet-wide flag enablement",
+      "global flag enablement",
+      "live prod execution beyond an explicitly granted bounded pilot",
+      "model refit, embedding generation, label ingest",
+      "online_shadow_execution_enabled globally",
+      "prod default",
+      "production_default_allowed",
       "user-visible ranking",
-      "DB writes/DDL"
+      "user-visible ranking changes",
+      "user_visible_ranking_changed"
     ],
     "prod_scoped_shadow_execution_authorized": false,
     "prod_scoped_shadow_live_execution_authorized": false,
+    "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": false,
     "prod_scoped_shadow_plan_authorization_scope": "production_scoped_shadow_plan_paperwork_only",
     "prod_scoped_shadow_proof_allowed_by_plan": true,
-    "prod_scoped_shadow_proof_authorized": false
+    "prod_scoped_shadow_proof_authorized": false,
+    "request_decision": {
+      "decision": "requested",
+      "request_notes": null,
+      "requested_at": "2026-05-29T15:08:18Z",
+      "requester": "Matt Maitland"
+    },
+    "requested_scope": {
+      "authorization_scope": "production_scoped_shadow_pilot_paperwork_only",
+      "explicitly_not_included": [
+        "online_shadow_execution_enabled globally",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed",
+        "DB writes/DDL",
+        "model refit, embedding generation, label ingest",
+        "fleet-wide flag enablement",
+        "user-visible ranking changes",
+        "live prod execution beyond an explicitly granted bounded pilot"
+      ],
+      "would_enable_after_future_grant": [
+        "future grant may authorize bounded prod-scoped pilot execution chain only",
+        "future pilot may use plan/proof contract under manual_or_scheduled_jobs_only"
+      ]
+    }
   },
   "caveats": [
     "Bundle plan surface only; does not run runtime or shadow scoring.",
@@ -22,7 +55,10 @@
     "Frozen upstream bundles and legacy artifacts remain referenced by path and SHA only.",
     "Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.",
     "Proof clears the prod-scoped shadow proof blocker only.",
-    "Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates."
+    "Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates.",
+    "Bundle pilot-request milestone only; grants no pilot authorization.",
+    "Accepted proof evidence is necessary but not sufficient for pilot execution.",
+    "Pilot grant remains a separate gate; does not enable global shadow or prod default/API/user-visible."
   ],
   "execution": {
     "prod_scoped_shadow_pilot_executed": false,
@@ -31,9 +67,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 2,
+    "bundle_revision": 3,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-29T05:10:00Z",
+    "generated_at": "2026-05-29T15:08:18Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -229,9 +265,11 @@
   },
   "posture": {
     "api_web_changes_allowed": false,
+    "missing_prod_scoped_shadow_pilot_authorization": true,
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": false,
     "prod_scoped_shadow_pilot_executed": false,
     "prod_scoped_shadow_plan_defined": true,
@@ -396,7 +434,7 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "request_production_scoped_online_shadow_pilot_authorization_v1",
+  "recommended_next_stage": "record_production_scoped_online_shadow_pilot_authorization_grant_v1",
   "runtime_writes_performed": false,
   "shadow_and_production_blockers": {
     "api_web_changes_allowed": false,
@@ -407,12 +445,20 @@
     "blockers_changed_by_proof": [
       "missing_prod_scoped_shadow_proof"
     ],
+    "blockers_cleared_by_pilot_request": [],
+    "blockers_introduced_by_pilot_request": [
+      "missing_prod_scoped_shadow_pilot_authorization"
+    ],
     "blockers_unchanged_by_grant": true,
+    "blockers_unchanged_by_pilot_request": true,
     "blockers_unchanged_by_plan": true,
     "blockers_unchanged_by_proof": true,
+    "missing_prod_scoped_shadow_pilot_authorization": true,
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_authorization_requested": true,
+    "prod_scoped_shadow_pilot_authorized": false,
     "prod_scoped_shadow_proof_authorized": false,
     "production_default_allowed": false,
     "production_readiness_authorization_granted": true,

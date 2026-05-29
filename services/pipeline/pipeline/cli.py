@@ -5841,6 +5841,30 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references and proof artifact paths",
     )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_pilot_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-bundle-request-pilot",
+        help="File the production-scoped online shadow pilot authorization request in the bundle",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_pilot_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_pilot_parser.add_argument(
+        "--requester",
+        default="Matt Maitland",
+        help="Requester name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_pilot_parser.add_argument(
+        "--request-notes",
+        default=None,
+        help="Optional free-text pilot authorization request notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_pilot_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser = subparsers.add_parser(
         "ml-shadow-scorer-production-scoped-shadow-bundle-verify",
         help="Verify the production-scoped shadow bundle and referenced artifact hashes",
@@ -5865,6 +5889,11 @@ def main() -> None:
         "--expect-proof-filed",
         action="store_true",
         help="Require post-proof production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-pilot-request-filed",
+        action="store_true",
+        help="Require post-pilot-request production-scoped shadow bundle state",
     )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -8846,6 +8875,28 @@ def main() -> None:
         print(payload["recommended_next_stage"])
         return
 
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-request-pilot":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+            MLShadowScorerProductionScopedShadowBundleError,
+            request_pilot_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = request_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+                bundle_path=Path(args.bundle),
+                requester=str(args.requester),
+                request_notes=args.request_notes,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowBundleError as e:
+            print(f"ml-shadow-scorer-production-scoped-shadow-bundle-request-pilot: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(payload["authorization"]["request_decision"]["decision"])
+        print(payload["authorization"]["prod_scoped_shadow_pilot_authorization_requested"])
+        print(payload["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-verify":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -8855,18 +8906,22 @@ def main() -> None:
         repo_root = Path(args.repo_root) if args.repo_root else None
         expect_plan_filed = None
         expect_proof_filed = None
+        expect_pilot_request_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
             expect_plan_filed = False
         elif args.expect_proof_filed:
             expect_proof_filed = True
+        elif args.expect_pilot_request_filed:
+            expect_pilot_request_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
                 repo_root=repo_root,
                 expect_plan_filed=expect_plan_filed,
                 expect_proof_filed=expect_proof_filed,
+                expect_pilot_request_filed=expect_pilot_request_filed,
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
             print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)

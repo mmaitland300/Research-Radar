@@ -2,14 +2,16 @@
 
 ## Executive Summary
 
-This bundle records the bounded fixture/dry-run production-scoped shadow proof while keeping pilot, runtime, production default, API/web, and user-visible behavior disabled.
+This bundle records the production-scoped shadow pilot authorization request while keeping pilot authorization, runtime, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 2
+- Bundle revision: 3
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
+- Pilot authorization requested: True
+- Pilot authorized: False
 - Online shadow execution enabled: False
-- Recommended next stage: `request_production_scoped_online_shadow_pilot_authorization_v1`
+- Recommended next stage: `record_production_scoped_online_shadow_pilot_authorization_grant_v1`
 
 ## Pinned Identity
 
@@ -91,18 +93,36 @@ This bundle records the bounded fixture/dry-run production-scoped shadow proof w
 
 - Plan authorization scope: `production_scoped_shadow_plan_paperwork_only`
 - Proof allowed by plan: True
+- Pilot authorization requested: True
 - Live execution authorized: False
 - Execution authorized: False
 - Proof authorized: False
 - Pilot authorized: False
 
+## Pilot Authorization Request
+
+- Decision: `requested`
+- Requester: Matt Maitland
+- Requested at: 2026-05-29T15:08:18Z
+- Request notes: None
+- Requested scope: `production_scoped_shadow_pilot_paperwork_only`
+- Missing pilot authorization: True
+
 ## Explicitly Not Included
 
-- global flag enablement
-- prod default
 - API/web
-- user-visible ranking
 - DB writes/DDL
+- api_web_changes_allowed
+- fleet-wide flag enablement
+- global flag enablement
+- live prod execution beyond an explicitly granted bounded pilot
+- model refit, embedding generation, label ingest
+- online_shadow_execution_enabled globally
+- prod default
+- production_default_allowed
+- user-visible ranking
+- user-visible ranking changes
+- user_visible_ranking_changed
 
 ## Production/API/Default Separation
 
@@ -114,7 +134,7 @@ This bundle records the bounded fixture/dry-run production-scoped shadow proof w
 
 ## Recommended Next Stage
 
-`request_production_scoped_online_shadow_pilot_authorization_v1`
+`record_production_scoped_online_shadow_pilot_authorization_grant_v1`
 
 ## Caveats
 
@@ -126,3 +146,6 @@ This bundle records the bounded fixture/dry-run production-scoped shadow proof w
 - Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.
 - Proof clears the prod-scoped shadow proof blocker only.
 - Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates.
+- Bundle pilot-request milestone only; grants no pilot authorization.
+- Accepted proof evidence is necessary but not sufficient for pilot execution.
+- Pilot grant remains a separate gate; does not enable global shadow or prod default/API/user-visible.
