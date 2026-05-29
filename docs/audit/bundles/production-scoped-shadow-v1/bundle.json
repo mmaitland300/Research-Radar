@@ -101,7 +101,10 @@
     "No production-scoped pilot execution is recorded.",
     "Global shadow remains disabled.",
     "Production default/API/user-visible behavior remains unchanged.",
-    "Actual production-scoped pilot remains a separate milestone."
+    "Actual production-scoped pilot remains a separate milestone.",
+    "Review covers bounded fixture pilot harness plumbing evidence only, not live production traffic.",
+    "No runtime rerun or shadow-runs artifact read was performed by the review.",
+    "The actual production-scoped pilot remains unexecuted and separately gated."
   ],
   "execution": {
     "pilot_harness": {
@@ -322,9 +325,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 5,
+    "bundle_revision": 6,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-29T16:25:06Z",
+    "generated_at": "2026-05-29T18:43:57Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -529,8 +532,10 @@
     "prod_scoped_shadow_pilot_authorization_requested": true,
     "prod_scoped_shadow_pilot_authorized": true,
     "prod_scoped_shadow_pilot_executed": false,
+    "prod_scoped_shadow_pilot_harness_accepted": true,
     "prod_scoped_shadow_pilot_harness_executed": true,
     "prod_scoped_shadow_pilot_harness_passed": true,
+    "prod_scoped_shadow_pilot_harness_reviewed": true,
     "prod_scoped_shadow_plan_defined": true,
     "prod_scoped_shadow_proof_authorized": false,
     "prod_scoped_shadow_proof_passed": true,
@@ -694,6 +699,48 @@
     }
   },
   "recommended_next_stage": "run_production_scoped_online_shadow_pilot_v1",
+  "review": {
+    "prod_scoped_shadow_pilot_harness_accepted": true,
+    "prod_scoped_shadow_pilot_harness_reviewed": true,
+    "review_decision": {
+      "accepted_evidence": [
+        "runtime drill succeeded in test-only harness context",
+        "preflight and postflight remained disabled",
+        "isolated prod-scoped artifact target count was four",
+        "forbidden production write counts were zero",
+        "observability and flag restoration evidence were recorded"
+      ],
+      "checks": {
+        "actual_pilot_executed_false": true,
+        "environment_restored": true,
+        "expected_files_recorded": true,
+        "fixture_row_count_3": true,
+        "forbidden_write_counts_zero": true,
+        "isolated_artifact_count_4": true,
+        "labels_not_used": true,
+        "live_prod_source_reads_false": true,
+        "pass_fail_failed_checks_empty": true,
+        "pass_fail_overall_passed": true,
+        "pilot_surface_bounded_fixture": true,
+        "production_api_user_visible_unchanged": true,
+        "runtime_drill_call_order": true,
+        "runtime_drill_pilot_status_succeeded_test_only": true,
+        "runtime_writes_false": true
+      },
+      "decision": "accepted",
+      "failed_review_checks": [],
+      "limitations": [
+        "not live production traffic",
+        "no live prod source reads were reviewed",
+        "no runtime rerun was performed",
+        "no shadow-runs artifact reads or writes were performed",
+        "actual production-scoped pilot remains unexecuted"
+      ],
+      "review_notes": null,
+      "reviewed_at": "2026-05-29T18:43:57Z",
+      "reviewer": "Matt Maitland"
+    }
+  },
   "runtime_writes_performed": false,
   "shadow_and_production_blockers": {
     "api_web_changes_allowed": false,

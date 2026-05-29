@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the bounded fixture production-scoped shadow pilot harness while keeping live pilot execution, production default, API/web, and user-visible behavior disabled.
+This bundle records the bounded fixture production-scoped shadow pilot harness review (accepted) while keeping live pilot execution, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 5
+- Bundle revision: 6
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -12,6 +12,8 @@ This bundle records the bounded fixture production-scoped shadow pilot harness w
 - Pilot authorization granted: True
 - Pilot authorized: True
 - Pilot harness executed: True
+- Pilot harness reviewed: True
+- Pilot harness accepted: True
 - Production-scoped pilot executed: False
 - Online shadow execution enabled: False
 - Recommended next stage: `run_production_scoped_online_shadow_pilot_v1`
@@ -143,6 +145,42 @@ This bundle records the bounded fixture production-scoped shadow pilot harness w
 | `observability.json` | 1774 | None | `2da9ab90eaba117b912b2bce972ef9329a33d6bd7c783c7e6b6605d054a69c44` |
 | `write_counts.json` | 741 | None | `7c8697e6c06b9300f4cd4ab6b81deabae834da500457484483f3a8796af0d457` |
 
+## Pilot Harness Review
+
+- Decision: `accepted`
+- Reviewer: Matt Maitland
+- Reviewed at: 2026-05-29T18:43:57Z
+- Review notes: None
+- Harness accepted: True
+- Failed review checks: None
+- Pilot executed: False
+
+## Pilot Harness Review Checks
+
+- `runtime_drill_pilot_status_succeeded_test_only`: True
+- `fixture_row_count_3`: True
+- `runtime_drill_call_order`: True
+- `environment_restored`: True
+- `forbidden_write_counts_zero`: True
+- `isolated_artifact_count_4`: True
+- `expected_files_recorded`: True
+- `runtime_writes_false`: True
+- `live_prod_source_reads_false`: True
+- `pilot_surface_bounded_fixture`: True
+- `actual_pilot_executed_false`: True
+- `production_api_user_visible_unchanged`: True
+- `labels_not_used`: True
+- `pass_fail_overall_passed`: True
+- `pass_fail_failed_checks_empty`: True
+
+## Pilot Harness Review Limitations
+
+- not live production traffic
+- no live prod source reads were reviewed
+- no runtime rerun was performed
+- no shadow-runs artifact reads or writes were performed
+- actual production-scoped pilot remains unexecuted
+
 ## Explicitly Not Included
 
 - API/web
@@ -192,3 +230,6 @@ This bundle records the bounded fixture production-scoped shadow pilot harness w
 - Global shadow remains disabled.
 - Production default/API/user-visible behavior remains unchanged.
 - Actual production-scoped pilot remains a separate milestone.
+- Review covers bounded fixture pilot harness plumbing evidence only, not live production traffic.
+- No runtime rerun or shadow-runs artifact read was performed by the review.
+- The actual production-scoped pilot remains unexecuted and separately gated.
