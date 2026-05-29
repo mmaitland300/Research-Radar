@@ -7,7 +7,9 @@ import re
 from typing import Mapping
 
 PHASE2_PROOF_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/phase2-proof/"
+PROD_SCOPED_SHADOW_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/"
 ISOLATED_AUDIT_SHADOW_ARTIFACTS = "isolated_audit_shadow_artifacts"
+ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS = "isolated_prod_scoped_audit_artifacts"
 ISOLATED_AUDIT_SHADOW_TABLES = "isolated_audit_shadow_tables"
 PILOT_RUN_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
@@ -46,6 +48,14 @@ def phase2_proof_root(repo_root: Path) -> Path:
     return proof_root
 
 
+def prod_scoped_shadow_root(repo_root: Path) -> Path:
+    root = Path(repo_root).resolve()
+    scoped_root = (root / PROD_SCOPED_SHADOW_ROOT).resolve()
+    if not _is_relative_to(scoped_root, root):
+        raise ShadowWritePathGuardError("prod-scoped shadow root must remain under repo_root")
+    return scoped_root
+
+
 def resolve_pilot_directory(repo_root: Path, pilot_run_id: str) -> Path:
     run_id = validate_pilot_run_id(pilot_run_id)
     proof_root = phase2_proof_root(repo_root)
@@ -61,6 +71,21 @@ def resolve_pilot_directory(repo_root: Path, pilot_run_id: str) -> Path:
     return pilot_dir
 
 
+def resolve_prod_scoped_pilot_directory(repo_root: Path, pilot_run_id: str) -> Path:
+    run_id = validate_pilot_run_id(pilot_run_id)
+    scoped_root = prod_scoped_shadow_root(repo_root)
+    pilot_dir = (scoped_root / run_id).resolve()
+    if pilot_dir == scoped_root or pilot_dir.parent != scoped_root:
+        raise ShadowWritePathGuardError(
+            "pilot output directory must be a direct child of the prod-scoped shadow root"
+        )
+    if not _is_relative_to(pilot_dir, scoped_root):
+        raise ShadowWritePathGuardError(
+            "pilot output directory must remain under the repository prod-scoped shadow root"
+        )
+    return pilot_dir
+
+
 def assert_write_path_allowed(resolved_path: Path, repo_root: Path) -> Path:
     candidate = Path(resolved_path).resolve()
     proof_root = phase2_proof_root(repo_root)
@@ -69,6 +94,17 @@ def assert_write_path_allowed(resolved_path: Path, repo_root: Path) -> Path:
     relative = candidate.relative_to(proof_root)
     if not relative.parts:
         raise ShadowWritePathGuardError("write path must be a strict child of the phase2-proof root")
+    return candidate
+
+
+def assert_prod_scoped_write_path_allowed(resolved_path: Path, repo_root: Path) -> Path:
+    candidate = Path(resolved_path).resolve()
+    scoped_root = prod_scoped_shadow_root(repo_root)
+    if candidate == scoped_root or not _is_relative_to(candidate, scoped_root):
+        raise ShadowWritePathGuardError("write path must be under the prod-scoped shadow root")
+    relative = candidate.relative_to(scoped_root)
+    if not relative.parts:
+        raise ShadowWritePathGuardError("write path must be a strict child of the prod-scoped shadow root")
     return candidate
 
 
@@ -81,4 +117,16 @@ def assert_forbidden_write_target_counts(write_counts: Mapping[str, int]) -> Non
     if forbidden_nonzero:
         raise ShadowWritePathGuardError(
             f"forbidden write targets must remain zero: {forbidden_nonzero}"
+        )
+
+
+def assert_prod_scoped_forbidden_write_target_counts(write_counts: Mapping[str, int]) -> None:
+    forbidden_nonzero = {
+        str(target): count
+        for target, count in write_counts.items()
+        if target != ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS and count != 0
+    }
+    if forbidden_nonzero:
+        raise ShadowWritePathGuardError(
+            f"forbidden prod-scoped write targets must remain zero: {forbidden_nonzero}"
         )

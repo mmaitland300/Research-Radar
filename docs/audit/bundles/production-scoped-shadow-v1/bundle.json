@@ -8,8 +8,10 @@
       "DB writes/DDL"
     ],
     "prod_scoped_shadow_execution_authorized": false,
+    "prod_scoped_shadow_live_execution_authorized": false,
     "prod_scoped_shadow_pilot_authorized": false,
     "prod_scoped_shadow_plan_authorization_scope": "production_scoped_shadow_plan_paperwork_only",
+    "prod_scoped_shadow_proof_allowed_by_plan": true,
     "prod_scoped_shadow_proof_authorized": false
   },
   "caveats": [
@@ -18,20 +20,20 @@
     "Bundle does not authorize production default/API/user-visible ranking behavior.",
     "Bundle does not write shadow-runs files, databases, embeddings, labels, or scorer artifacts.",
     "Frozen upstream bundles and legacy artifacts remain referenced by path and SHA only.",
-    "Plan milestone only; does not authorize production-scoped proof execution or pilot execution.",
-    "Future proof must clear missing_prod_scoped_shadow_proof before any prod-scoped pilot can be considered.",
-    "Production default/API/user-visible behavior remain separate authorization chains."
+    "Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.",
+    "Proof clears the prod-scoped shadow proof blocker only.",
+    "Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates."
   ],
   "execution": {
     "prod_scoped_shadow_pilot_executed": false,
     "prod_scoped_shadow_plan_execution_performed": false,
-    "prod_scoped_shadow_proof_executed": false
+    "prod_scoped_shadow_proof_executed": true
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 1,
+    "bundle_revision": 2,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-29T04:45:03Z",
+    "generated_at": "2026-05-29T05:10:00Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -227,20 +229,174 @@
   },
   "posture": {
     "api_web_changes_allowed": false,
-    "missing_prod_scoped_shadow_proof": true,
+    "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_pilot_authorized": false,
     "prod_scoped_shadow_pilot_executed": false,
     "prod_scoped_shadow_plan_defined": true,
     "prod_scoped_shadow_proof_authorized": false,
-    "prod_scoped_shadow_proof_passed": false,
+    "prod_scoped_shadow_proof_passed": true,
     "production_default_allowed": false,
     "production_readiness_authorization_granted": true,
     "runtime_writes_performed": false,
     "user_visible_ranking_changed": false,
     "writes_performed": false
   },
-  "recommended_next_stage": "implement_production_scoped_online_shadow_proof_v1",
+  "proof": {
+    "input_contract_evidence": {
+      "fixture_row_count": 3,
+      "incomplete_coverage_skip_honored": "n/a_fixture_complete",
+      "input_hashes_traceable": true,
+      "inputs_read_only": true,
+      "labels_used_for_scoring": false
+    },
+    "observability_evidence": {
+      "observability_complete": true,
+      "observability_summary": {
+        "component_coverage": {
+          "complete": true,
+          "rows_with_required_components": 3
+        },
+        "error_counters": {
+          "runtime_errors": 0,
+          "write_guard_errors": 0
+        },
+        "forbidden_write_target_counts": {
+          "api_visible_tables": 0,
+          "embeddings": 0,
+          "labels": 0,
+          "paper_scores": 0,
+          "prod_scoped_shadow_tables": 0,
+          "production_config": 0,
+          "production_default_pins": 0,
+          "ranking_runs": 0,
+          "scorer_artifacts": 0
+        },
+        "generated_at": "2026-05-29T05:10:00Z",
+        "latency": {
+          "dry_run_elapsed_ms": 0
+        },
+        "observability_complete": true,
+        "pilot_run_id": "rank-83787b91ef-20260529T051000Z",
+        "rank_displacement_audit_only": [
+          0,
+          1,
+          -1
+        ],
+        "row_counts": {
+          "fixture_rows": 3,
+          "scored_rows": 3,
+          "skipped_rows": 0
+        },
+        "run_status": "succeeded_fixture_dry_run",
+        "score_distributions": {
+          "audit_embedding_probability_rank_pct_max": 0.91,
+          "audit_embedding_probability_rank_pct_min": 0.44,
+          "final_score_rank_pct_max": 0.93,
+          "final_score_rank_pct_min": 0.41
+        },
+        "signals_emitted": [
+          "run status",
+          "row counts",
+          "error counters",
+          "latency",
+          "component coverage",
+          "score distributions",
+          "skipped runs/reasons",
+          "forbidden write target counts (all zero)",
+          "rank displacement audit-only"
+        ],
+        "skipped_runs": []
+      },
+      "signals_emitted": [
+        "run status",
+        "row counts",
+        "error counters",
+        "latency",
+        "component coverage",
+        "score distributions",
+        "skipped runs/reasons",
+        "forbidden write target counts (all zero)",
+        "rank displacement audit-only"
+      ]
+    },
+    "pilot_run_id": "rank-83787b91ef-20260529T051000Z",
+    "prod_scoped_shadow_proof_filed": true,
+    "proof_decision": {
+      "decision": "proven",
+      "proof_notes": null,
+      "proven_at": "2026-05-29T05:10:00Z",
+      "prover": "Matt Maitland"
+    },
+    "proof_pass_fail": {
+      "forbidden_targets_zero": true,
+      "observability_complete": true,
+      "overall_passed": true,
+      "read_only_contract_honored": true,
+      "rollback_drill_executable": true
+    },
+    "proof_surface": "bounded_fixture_dry_run",
+    "rollback_drill_evidence": {
+      "flag_enablement_attempted": false,
+      "flag_off_verified": true,
+      "no_further_writes_after_flag_off": true,
+      "pilot_dir_cleanup": "retained_for_inspection",
+      "production_ranking_api_default_mutation_attempted": false,
+      "production_ranking_api_default_unchanged_by_construction": true
+    },
+    "write_evidence": {
+      "committed_artifact_writes_performed": false,
+      "files_written": [
+        {
+          "byte_count": 880,
+          "relative_path": "manifest.json",
+          "row_count": null,
+          "sha256": "c37cb86db8f3aae7bcada51e8ca28aeb9da22a3389650a830deff6f1e3504f09",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        },
+        {
+          "byte_count": 1723,
+          "relative_path": "fixture_rows.jsonl",
+          "row_count": 3,
+          "sha256": "2699a8f42f1425bfd1a5ebf0f49cfbaed0f6a6df89543c871091e49ebdea7579",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        },
+        {
+          "byte_count": 1387,
+          "relative_path": "observability.json",
+          "row_count": null,
+          "sha256": "7431a9db63a363d9c3583f970eb4e19fee85fb9232c7e0542ae3b82d8ddc9fcb",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        },
+        {
+          "byte_count": 557,
+          "relative_path": "write_counts.json",
+          "row_count": null,
+          "sha256": "792edebcb0dc9e51c35ecb1fc4461e63da285e4ee96154282ea1385b70952095",
+          "write_target": "isolated_prod_scoped_audit_artifacts"
+        }
+      ],
+      "forbidden_write_counts_zero": true,
+      "forbidden_write_target_counts": {
+        "api_visible_tables": 0,
+        "embeddings": 0,
+        "labels": 0,
+        "paper_scores": 0,
+        "prod_scoped_shadow_tables": 0,
+        "production_config": 0,
+        "production_default_pins": 0,
+        "ranking_runs": 0,
+        "scorer_artifacts": 0
+      },
+      "local_artifact_tree_writes_performed": true,
+      "prod_scoped_artifact_root": "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/rank-83787b91ef-20260529T051000Z/",
+      "production_writes_performed": false,
+      "runtime_writes_performed": false,
+      "write_target": "isolated_prod_scoped_audit_artifacts"
+    }
+  },
+  "recommended_next_stage": "request_production_scoped_online_shadow_pilot_authorization_v1",
   "runtime_writes_performed": false,
   "shadow_and_production_blockers": {
     "api_web_changes_allowed": false,
@@ -248,9 +404,13 @@
       "missing_production_readiness_authorization"
     ],
     "blockers_changed_by_plan": [],
+    "blockers_changed_by_proof": [
+      "missing_prod_scoped_shadow_proof"
+    ],
     "blockers_unchanged_by_grant": true,
     "blockers_unchanged_by_plan": true,
-    "missing_prod_scoped_shadow_proof": true,
+    "blockers_unchanged_by_proof": true,
+    "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
     "prod_scoped_shadow_proof_authorized": false,

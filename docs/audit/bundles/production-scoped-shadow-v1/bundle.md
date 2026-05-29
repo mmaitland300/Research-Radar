@@ -2,13 +2,14 @@
 
 ## Executive Summary
 
-This bundle defines the production-scoped online shadow plan contract while keeping proof, pilot, runtime, production default, API/web, and user-visible behavior disabled.
+This bundle records the bounded fixture/dry-run production-scoped shadow proof while keeping pilot, runtime, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 1
+- Bundle revision: 2
 - Production-scoped plan defined: True
-- Missing production-scoped shadow proof: True
+- Production-scoped proof passed: True
+- Missing production-scoped shadow proof: False
 - Online shadow execution enabled: False
-- Recommended next stage: `implement_production_scoped_online_shadow_proof_v1`
+- Recommended next stage: `request_production_scoped_online_shadow_pilot_authorization_v1`
 
 ## Pinned Identity
 
@@ -62,9 +63,35 @@ This bundle defines the production-scoped online shadow plan contract while keep
 - `proof_and_pilot_prerequisites`
 - `ci_and_live_gate_requirements`
 
+## Proof Evidence
+
+- Decision: `proven`
+- Prover: Matt Maitland
+- Proven at: 2026-05-29T05:10:00Z
+- Proof surface: `bounded_fixture_dry_run`
+- Pilot run id: `rank-83787b91ef-20260529T051000Z`
+- Local artifact root: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/rank-83787b91ef-20260529T051000Z/`
+- Local artifact writes performed: True
+- Production writes performed: False
+- Forbidden write counts zero: True
+- Observability complete: True
+- Rollback flag-off verified: True
+- Overall passed: True
+
+## Proof Files
+
+| Path | Bytes | Rows | SHA-256 |
+| --- | ---: | ---: | --- |
+| `manifest.json` | 880 | None | `c37cb86db8f3aae7bcada51e8ca28aeb9da22a3389650a830deff6f1e3504f09` |
+| `fixture_rows.jsonl` | 1723 | 3 | `2699a8f42f1425bfd1a5ebf0f49cfbaed0f6a6df89543c871091e49ebdea7579` |
+| `observability.json` | 1387 | None | `7431a9db63a363d9c3583f970eb4e19fee85fb9232c7e0542ae3b82d8ddc9fcb` |
+| `write_counts.json` | 557 | None | `792edebcb0dc9e51c35ecb1fc4461e63da285e4ee96154282ea1385b70952095` |
+
 ## Authorization Boundaries
 
 - Plan authorization scope: `production_scoped_shadow_plan_paperwork_only`
+- Proof allowed by plan: True
+- Live execution authorized: False
 - Execution authorized: False
 - Proof authorized: False
 - Pilot authorized: False
@@ -87,7 +114,7 @@ This bundle defines the production-scoped online shadow plan contract while keep
 
 ## Recommended Next Stage
 
-`implement_production_scoped_online_shadow_proof_v1`
+`request_production_scoped_online_shadow_pilot_authorization_v1`
 
 ## Caveats
 
@@ -96,6 +123,6 @@ This bundle defines the production-scoped online shadow plan contract while keep
 - Bundle does not authorize production default/API/user-visible ranking behavior.
 - Bundle does not write shadow-runs files, databases, embeddings, labels, or scorer artifacts.
 - Frozen upstream bundles and legacy artifacts remain referenced by path and SHA only.
-- Plan milestone only; does not authorize production-scoped proof execution or pilot execution.
-- Future proof must clear missing_prod_scoped_shadow_proof before any prod-scoped pilot can be considered.
-- Production default/API/user-visible behavior remain separate authorization chains.
+- Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.
+- Proof clears the prod-scoped shadow proof blocker only.
+- Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates.

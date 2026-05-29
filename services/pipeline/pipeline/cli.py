@@ -5793,6 +5793,54 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-bundle-prove",
+        help="File the production-scoped online shadow bounded fixture/dry-run proof in the bundle",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.add_argument(
+        "--pilot-run-id",
+        default=None,
+        help="Optional safe pilot run id; defaults to ranking_run_id plus UTC timestamp",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.add_argument(
+        "--fixture-input",
+        default=None,
+        help="Optional JSON/JSONL synthetic fixture rows conforming to the read-only input contract",
+    )
+    proof_cleanup_group = ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.add_mutually_exclusive_group()
+    proof_cleanup_group.add_argument(
+        "--cleanup-after-proof",
+        dest="cleanup_after_proof",
+        action="store_true",
+        help="Remove the local prod-scoped proof pilot directory after recording hashes",
+    )
+    proof_cleanup_group.add_argument(
+        "--retain-pilot-dir",
+        dest="cleanup_after_proof",
+        action="store_false",
+        help="Retain the local prod-scoped proof pilot directory for inspection (default)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.set_defaults(cleanup_after_proof=False)
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.add_argument(
+        "--prover",
+        default="Matt Maitland",
+        help="Prover name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.add_argument(
+        "--proof-notes",
+        default=None,
+        help="Optional free-text proof notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_prove_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references and proof artifact paths",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser = subparsers.add_parser(
         "ml-shadow-scorer-production-scoped-shadow-bundle-verify",
         help="Verify the production-scoped shadow bundle and referenced artifact hashes",
@@ -5812,6 +5860,11 @@ def main() -> None:
         "--expect-plan-filed",
         action="store_true",
         help="Require post-plan production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-proof-filed",
+        action="store_true",
+        help="Require post-proof production-scoped shadow bundle state",
     )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -8768,6 +8821,31 @@ def main() -> None:
         print(payload["recommended_next_stage"])
         return
 
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-prove":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+            MLShadowScorerProductionScopedShadowBundleError,
+            prove_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = prove_ml_shadow_scorer_production_scoped_shadow_bundle(
+                bundle_path=Path(args.bundle),
+                pilot_run_id=args.pilot_run_id,
+                fixture_input_path=Path(args.fixture_input) if args.fixture_input else None,
+                cleanup_after_proof=bool(args.cleanup_after_proof),
+                prover=str(args.prover),
+                proof_notes=args.proof_notes,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowBundleError as e:
+            print(f"ml-shadow-scorer-production-scoped-shadow-bundle-prove: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(payload["proof"]["proof_decision"]["decision"])
+        print(payload["proof"]["proof_pass_fail"]["overall_passed"])
+        print(payload["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-verify":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -8776,15 +8854,19 @@ def main() -> None:
 
         repo_root = Path(args.repo_root) if args.repo_root else None
         expect_plan_filed = None
+        expect_proof_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
             expect_plan_filed = False
+        elif args.expect_proof_filed:
+            expect_proof_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
                 repo_root=repo_root,
                 expect_plan_filed=expect_plan_filed,
+                expect_proof_filed=expect_proof_filed,
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
             print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)
