@@ -346,6 +346,7 @@ def test_runtime_import_call_is_limited_to_pilot_runner_module() -> None:
             "ml_shadow_scorer_production_scoped_shadow_pilot.py",
             "ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot.py",
             "ml_shadow_scorer_production_scoped_shadow_live_execution_pilot.py",
+            "ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot.py",
         }:
             assert "run_ml_shadow_scorer_v1_online_shadow_runtime" in source
         else:
