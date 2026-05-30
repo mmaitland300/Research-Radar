@@ -63,6 +63,7 @@ POST_LIVE_READ_ONLY_PILOT_REVIEW_BUNDLE_REVISION = 12
 POST_LIVE_EXECUTION_REQUEST_BUNDLE_REVISION = 13
 POST_LIVE_EXECUTION_GRANT_BUNDLE_REVISION = 14
 POST_LIVE_EXECUTION_PILOT_RUN_BUNDLE_REVISION = 15
+POST_LIVE_EXECUTION_PILOT_REVIEW_BUNDLE_REVISION = 16
 PRE_PLAN_NEXT_STAGE = "begin_production_scoped_online_shadow_plan_v1"
 POST_PLAN_NEXT_STAGE = "implement_production_scoped_online_shadow_proof_v1"
 POST_PROOF_NEXT_STAGE = "request_production_scoped_online_shadow_pilot_authorization_v1"
@@ -91,6 +92,12 @@ POST_LIVE_EXECUTION_REQUEST_NEXT_STAGE = (
 )
 POST_LIVE_EXECUTION_GRANT_NEXT_STAGE = "run_production_scoped_online_shadow_live_execution_pilot_v1"
 POST_LIVE_EXECUTION_PILOT_RUN_NEXT_STAGE = "review_production_scoped_online_shadow_live_execution_pilot_v1"
+POST_LIVE_EXECUTION_PILOT_REVIEW_ACCEPTED_NEXT_STAGE = (
+    "request_production_scoped_online_shadow_flag_enablement_authorization_v1"
+)
+POST_LIVE_EXECUTION_PILOT_REVIEW_REJECTED_NEXT_STAGE = (
+    "remediate_production_scoped_online_shadow_live_execution_pilot_v1"
+)
 FEATURE_FLAG = "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
 FUTURE_ARTIFACT_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/"
 PILOT_REQUEST_SCOPE = "production_scoped_shadow_pilot_paperwork_only"
@@ -205,6 +212,27 @@ LIVE_EXECUTION_PILOT_RUN_PASS_FAIL_CHECKS = (
     "production_api_user_visible_unchanged",
     "no_labels_refit_embedding_generation_or_label_ingest",
     "global_execution_authorization_false",
+)
+
+LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS = (
+    "live_execution_pilot_run_pass_fail_overall_passed",
+    "joined_candidate_count_528",
+    "runtime_row_count_528",
+    "runtime_drill_call_order",
+    "preflight_postflight_disabled",
+    "pilot_status_succeeded_test_only",
+    "process_scoped_runtime_flag_only",
+    "environment_restored",
+    "incomplete_coverage_skip_verified",
+    "forbidden_write_counts_zero",
+    "isolated_artifact_count_4",
+    "expected_files_recorded",
+    "live_execution_grant_slices_present",
+    "live_read_only_chain_still_valid",
+    "production_api_user_visible_unchanged",
+    "global_execution_authorization_false",
+    "no_labels_refit_embedding_generation_or_label_ingest",
+    "ranking_version_not_test_fixture",
 )
 
 FORBIDDEN_PROD_SCOPED_WRITE_TARGETS = (
@@ -404,6 +432,14 @@ LIVE_EXECUTION_PILOT_RUN_CAVEATS = (
     "Runtime flag is enabled only inside the bounded pilot drill and restored afterward.",
     "Forbidden production write targets remain zero.",
     "Review is required before any further enablement chain.",
+)
+
+LIVE_EXECUTION_PILOT_REVIEW_CAVEATS = (
+    "Review milestone only; does not rerun bounded live execution pilot.",
+    "Does not call runtime, connect to DB, read shadow-runs files, or perform new live reads.",
+    "Accepted review is necessary but not sufficient for flag enablement.",
+    "Does not enable global online shadow execution.",
+    "Does not change production default, API/web, or user-visible ranking.",
 )
 
 EXPLICITLY_NOT_INCLUDED = (
@@ -869,6 +905,14 @@ def _caveats(*, mode: str) -> list[str]:
         caveats.extend(LIVE_EXECUTION_REQUEST_CAVEATS)
         caveats.extend(LIVE_EXECUTION_GRANT_CAVEATS)
         caveats.extend(LIVE_EXECUTION_PILOT_RUN_CAVEATS)
+        return caveats
+    if mode == "post_live_execution_pilot_review":
+        caveats.extend(PROOF_CAVEATS)
+        caveats.extend(LIVE_READ_ONLY_PILOT_REVIEW_HISTORICAL_CAVEATS)
+        caveats.extend(LIVE_READ_ONLY_PILOT_REVIEW_CAVEATS)
+        caveats.extend(LIVE_EXECUTION_REQUEST_CAVEATS)
+        caveats.extend(LIVE_EXECUTION_GRANT_CAVEATS)
+        caveats.extend(LIVE_EXECUTION_PILOT_REVIEW_CAVEATS)
         return caveats
     raise MLShadowScorerProductionScopedShadowBundleError(f"unknown caveat mode {mode!r}")
     return caveats
@@ -4798,6 +4842,318 @@ def apply_production_scoped_shadow_live_execution_pilot_run(
     return updated
 
 
+def _validate_live_execution_pilot_review_slice(review_slice: Mapping[str, Any]) -> bool:
+    _require_true(
+        "review_slice.prod_scoped_shadow_live_execution_pilot_reviewed",
+        review_slice.get("prod_scoped_shadow_live_execution_pilot_reviewed"),
+    )
+    accepted = review_slice.get("prod_scoped_shadow_live_execution_pilot_accepted")
+    if not isinstance(accepted, bool):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.prod_scoped_shadow_live_execution_pilot_accepted must be a boolean"
+        )
+    decision = review_slice.get("live_execution_pilot_review_decision")
+    if not isinstance(decision, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.live_execution_pilot_review_decision must be an object"
+        )
+    expected_decision = "accepted" if accepted else "not_accepted"
+    _require_equal(
+        "review_slice.live_execution_pilot_review_decision.decision",
+        decision.get("decision"),
+        expected_decision,
+    )
+    for field in ("reviewer", "reviewed_at"):
+        if not isinstance(decision.get(field), str) or not decision.get(field):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review_slice.live_execution_pilot_review_decision.{field} must be populated"
+            )
+    checks = decision.get("checks")
+    if not isinstance(checks, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.live_execution_pilot_review_decision.checks must be an object"
+        )
+    observed_check_names = set(checks)
+    expected_check_names = set(LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS)
+    if observed_check_names != expected_check_names:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.live_execution_pilot_review_decision.checks must match "
+            "LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS"
+        )
+    failed = decision.get("failed_review_checks")
+    if not isinstance(failed, list) or not all(isinstance(item, str) for item in failed):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review_slice.live_execution_pilot_review_decision.failed_review_checks must be a string list"
+        )
+    for check_name in LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS:
+        if not isinstance(checks.get(check_name), bool):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review_slice.live_execution_pilot_review_decision.checks.{check_name} must be a boolean"
+            )
+    expected_failed = sorted(name for name in LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS if checks.get(name) is False)
+    _require_equal(
+        "review_slice.live_execution_pilot_review_decision.failed_review_checks",
+        sorted(failed),
+        expected_failed,
+    )
+    if accepted and failed:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "accepted live execution pilot review must have no failed checks"
+        )
+    if not accepted and not failed:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "not_accepted live execution pilot review must list failed checks"
+        )
+    for field in ("accepted_evidence", "limitations"):
+        value = decision.get(field)
+        if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review_slice.live_execution_pilot_review_decision.{field} must be a non-empty string list"
+            )
+    return accepted
+
+
+def apply_production_scoped_shadow_live_execution_pilot_review(
+    bundle: Mapping[str, Any],
+    review_slice: Mapping[str, Any],
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("bundle must be an object")
+    if not isinstance(review_slice, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("review_slice must be an object")
+    _require_equal(
+        "metadata.bundle_revision",
+        _get(bundle, "metadata.bundle_revision"),
+        POST_LIVE_EXECUTION_PILOT_RUN_BUNDLE_REVISION,
+    )
+    _require_equal(
+        "recommended_next_stage",
+        bundle.get("recommended_next_stage"),
+        POST_LIVE_EXECUTION_PILOT_RUN_NEXT_STAGE,
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_live_execution_pilot_executed",
+        _get(bundle, "execution.prod_scoped_shadow_live_execution_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_live_execution_pilot_passed",
+        _get(bundle, "execution.prod_scoped_shadow_live_execution_pilot_passed"),
+    )
+    live_execution_pilot_run = _get(bundle, "execution.live_execution_pilot_run")
+    if not isinstance(live_execution_pilot_run, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.live_execution_pilot_run must be an object"
+        )
+    _validate_live_execution_pilot_run_slice(live_execution_pilot_run)
+    if _get(bundle, "review.prod_scoped_shadow_live_execution_pilot_reviewed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review has already been filed"
+        )
+    authorization = bundle.get("authorization")
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    _verify_live_execution_request_section(authorization)
+    _verify_live_execution_grant_section(authorization)
+    _verify_live_read_only_request_section(authorization)
+    _verify_live_read_only_grant_section(authorization)
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorization_requested",
+        authorization.get("prod_scoped_shadow_live_execution_authorization_requested"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorization_granted",
+        authorization.get("prod_scoped_shadow_live_execution_authorization_granted"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorized",
+        authorization.get("prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_execution_authorized",
+        authorization.get("prod_scoped_shadow_execution_authorized"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_pilot_executed",
+        _get(bundle, "posture.prod_scoped_shadow_live_execution_pilot_executed"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_pilot_passed",
+        _get(bundle, "posture.prod_scoped_shadow_live_execution_pilot_passed"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_authorized",
+        _get(bundle, "posture.prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "posture.prod_scoped_shadow_execution_authorized",
+        _get(bundle, "posture.prod_scoped_shadow_execution_authorized"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_read_only_execution_authorized",
+        _get(bundle, "posture.prod_scoped_shadow_live_read_only_execution_authorized"),
+    )
+    _require_true("posture.live_prod_source_reads_performed", _get(bundle, "posture.live_prod_source_reads_performed"))
+    _require_false(
+        "posture.missing_prod_scoped_shadow_live_execution_authorization",
+        _get(bundle, "posture.missing_prod_scoped_shadow_live_execution_authorization"),
+    )
+    _require_false("posture.online_shadow_execution_enabled", _get(bundle, "posture.online_shadow_execution_enabled"))
+    _require_false("posture.production_default_allowed", _get(bundle, "posture.production_default_allowed"))
+    _require_false("posture.api_web_changes_allowed", _get(bundle, "posture.api_web_changes_allowed"))
+    _require_false("posture.user_visible_ranking_changed", _get(bundle, "posture.user_visible_ranking_changed"))
+    _require_false("posture.writes_performed", _get(bundle, "posture.writes_performed"))
+    _require_false("posture.runtime_writes_performed", _get(bundle, "posture.runtime_writes_performed"))
+
+    accepted = _validate_live_execution_pilot_review_slice(review_slice)
+    decision = review_slice["live_execution_pilot_review_decision"]
+    reviewed_at = str(decision.get("reviewed_at") or generated_at or _now_iso_z())
+
+    updated = deepcopy(dict(bundle))
+    plan_before = deepcopy(updated.get("plan"))
+    proof_before = deepcopy(updated.get("proof"))
+    execution_before = deepcopy(updated.get("execution"))
+    authorization_before = deepcopy(updated.get("authorization"))
+    legacy_index_before = deepcopy(_get(updated, "metadata.legacy_artifacts_index"))
+    pilot_grant_decision_before = deepcopy(_get(updated, "authorization.grant_decision"))
+    pilot_granted_scope_before = deepcopy(_get(updated, "authorization.granted_scope"))
+    live_request_decision_before = deepcopy(_get(updated, "authorization.request_decision"))
+    live_requested_scope_before = deepcopy(_get(updated, "authorization.requested_scope"))
+    live_read_only_grant_decision_before = deepcopy(_get(updated, "authorization.live_read_only_grant_decision"))
+    live_read_only_granted_scope_before = deepcopy(_get(updated, "authorization.live_read_only_granted_scope"))
+    live_execution_request_decision_before = deepcopy(_get(updated, "authorization.live_execution_request_decision"))
+    live_execution_requested_scope_before = deepcopy(_get(updated, "authorization.live_execution_requested_scope"))
+    live_execution_grant_decision_before = deepcopy(_get(updated, "authorization.live_execution_grant_decision"))
+    live_execution_granted_scope_before = deepcopy(_get(updated, "authorization.live_execution_granted_scope"))
+    harness_review_before = deepcopy(_get(updated, "review.review_decision"))
+    pilot_review_before = deepcopy(_get(updated, "review.pilot_review_decision"))
+    live_read_only_pilot_review_before = deepcopy(_get(updated, "review.live_read_only_pilot_review_decision"))
+
+    metadata = deepcopy(dict(_metadata(updated, label="production-scoped-shadow bundle")))
+    metadata["bundle_revision"] = POST_LIVE_EXECUTION_PILOT_REVIEW_BUNDLE_REVISION
+    metadata["generated_at"] = reviewed_at
+    updated["metadata"] = metadata
+
+    review = deepcopy(dict(updated.get("review") or {}))
+    review_decision = deepcopy(dict(decision))
+    review_decision["reviewed_at"] = reviewed_at
+    review.update(
+        {
+            "prod_scoped_shadow_live_execution_pilot_reviewed": True,
+            "prod_scoped_shadow_live_execution_pilot_accepted": accepted,
+            "live_execution_pilot_review_decision": review_decision,
+        }
+    )
+    updated["review"] = review
+
+    posture = deepcopy(dict(updated.get("posture") or {}))
+    posture.update(
+        {
+            "prod_scoped_shadow_live_execution_pilot_reviewed": True,
+            "prod_scoped_shadow_live_execution_pilot_accepted": accepted,
+        }
+    )
+    updated["posture"] = posture
+
+    blockers = deepcopy(dict(updated.get("shadow_and_production_blockers") or {}))
+    blockers.update(
+        {
+            "prod_scoped_shadow_live_execution_pilot_reviewed": True,
+            "prod_scoped_shadow_live_execution_pilot_accepted": accepted,
+            "prod_scoped_shadow_live_execution_pilot_executed": True,
+            "prod_scoped_shadow_live_execution_pilot_passed": True,
+            "prod_scoped_shadow_live_execution_authorized": True,
+            "prod_scoped_shadow_execution_authorized": False,
+            "blockers_cleared_by_live_execution_pilot_review": [],
+            "blockers_introduced_by_live_execution_pilot_review": [],
+            "blockers_unchanged_by_live_execution_pilot_review": True,
+        }
+    )
+    blockers.pop("blockers_changed_by_live_execution_pilot_review", None)
+    updated["shadow_and_production_blockers"] = blockers
+    updated["recommended_next_stage"] = (
+        POST_LIVE_EXECUTION_PILOT_REVIEW_ACCEPTED_NEXT_STAGE
+        if accepted
+        else POST_LIVE_EXECUTION_PILOT_REVIEW_REJECTED_NEXT_STAGE
+    )
+    updated["caveats"] = _caveats(mode="post_live_execution_pilot_review")
+
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve plan section"
+        )
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve proof section"
+        )
+    if updated.get("execution") != execution_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve execution section"
+        )
+    if updated.get("authorization") != authorization_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve authorization section"
+        )
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve legacy_artifacts_index"
+        )
+    if _get(updated, "authorization.grant_decision") != pilot_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve pilot grant decision"
+        )
+    if _get(updated, "authorization.granted_scope") != pilot_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve pilot granted scope"
+        )
+    if _get(updated, "authorization.request_decision") != live_request_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live request decision"
+        )
+    if _get(updated, "authorization.requested_scope") != live_requested_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live requested scope"
+        )
+    if _get(updated, "authorization.live_read_only_grant_decision") != live_read_only_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live read-only grant decision"
+        )
+    if _get(updated, "authorization.live_read_only_granted_scope") != live_read_only_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live read-only granted scope"
+        )
+    if _get(updated, "authorization.live_execution_request_decision") != live_execution_request_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live execution request decision"
+        )
+    if _get(updated, "authorization.live_execution_requested_scope") != live_execution_requested_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live execution requested scope"
+        )
+    if _get(updated, "authorization.live_execution_grant_decision") != live_execution_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live execution grant decision"
+        )
+    if _get(updated, "authorization.live_execution_granted_scope") != live_execution_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live execution granted scope"
+        )
+    if _get(updated, "review.review_decision") != harness_review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve harness review decision"
+        )
+    if _get(updated, "review.pilot_review_decision") != pilot_review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve pilot review decision"
+        )
+    if _get(updated, "review.live_read_only_pilot_review_decision") != live_read_only_pilot_review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution pilot review must preserve live read-only pilot review decision"
+        )
+    return updated
+
+
 def _infer_plan_mode(
     bundle: Mapping[str, Any],
     *,
@@ -4816,6 +5172,7 @@ def _infer_plan_mode(
     expect_live_execution_request_filed: bool | None,
     expect_live_execution_grant_filed: bool | None,
     expect_live_execution_pilot_run_filed: bool | None,
+    expect_live_execution_pilot_review_filed: bool | None,
 ) -> str:
     explicit = [
         expectation is not None
@@ -4835,10 +5192,47 @@ def _infer_plan_mode(
             expect_live_execution_request_filed,
             expect_live_execution_grant_filed,
             expect_live_execution_pilot_run_filed,
+            expect_live_execution_pilot_review_filed,
         )
     ]
     if sum(explicit) > 1:
         raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot/live read-only expectations conflict")
+    if expect_live_execution_pilot_review_filed is True:
+        return "post_live_execution_pilot_review"
+    if expect_live_execution_pilot_review_filed is False:
+        if _get(bundle, "review.prod_scoped_shadow_live_execution_pilot_reviewed") is True:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                "live execution pilot review must not be filed"
+            )
+        if _get(bundle, "execution.prod_scoped_shadow_live_execution_pilot_executed") is True:
+            return "post_live_execution_pilot_run"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_granted") is True:
+            return "post_live_execution_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_requested") is True:
+            return "post_live_execution_request"
+        if _get(bundle, "review.prod_scoped_shadow_live_read_only_pilot_reviewed") is True:
+            return "post_live_read_only_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_executed") is True:
+            return "post_live_read_only_pilot_run"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted") is True:
+            return "post_live_read_only_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_requested") is True:
+            return "post_live_read_only_request"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_reviewed") is True:
+            return "post_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_executed") is True:
+            return "post_pilot_run"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_harness_reviewed") is True:
+            return "post_pilot_harness_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_harness_executed") is True:
+            return "post_pilot_harness"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized") is True:
+            return "post_pilot_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested") is True:
+            return "post_pilot_request"
+        revision = _get(bundle, "metadata.bundle_revision")
+        proof_passed = _get(bundle, "posture.prod_scoped_shadow_proof_passed")
+        return "post_proof" if revision == POST_PROOF_BUNDLE_REVISION and proof_passed is True else "post_plan"
     if expect_live_execution_pilot_run_filed is True:
         return "post_live_execution_pilot_run"
     if expect_live_execution_pilot_run_filed is False:
@@ -5135,6 +5529,36 @@ def _infer_plan_mode(
     live_execution_authorized = _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorized")
     live_execution_pilot_executed = _get(bundle, "execution.prod_scoped_shadow_live_execution_pilot_executed")
     live_execution_pilot_passed = _get(bundle, "execution.prod_scoped_shadow_live_execution_pilot_passed")
+    live_execution_pilot_reviewed = _get(bundle, "review.prod_scoped_shadow_live_execution_pilot_reviewed")
+    live_execution_pilot_accepted = _get(bundle, "review.prod_scoped_shadow_live_execution_pilot_accepted")
+    if (
+        revision == POST_LIVE_EXECUTION_PILOT_REVIEW_BUNDLE_REVISION
+        and pilot_request is True
+        and pilot_grant is True
+        and pilot_authorized is True
+        and pilot_harness_executed is True
+        and pilot_harness_passed is True
+        and pilot_harness_reviewed is True
+        and pilot_harness_accepted is True
+        and pilot_executed is True
+        and pilot_reviewed is True
+        and pilot_accepted is True
+        and live_read_only_request is True
+        and live_read_only_grant is True
+        and live_read_only_authorized is True
+        and live_read_only_pilot_executed is True
+        and live_read_only_pilot_passed is True
+        and live_read_only_pilot_reviewed is True
+        and live_read_only_pilot_accepted is True
+        and live_execution_request is True
+        and live_execution_grant is True
+        and live_execution_authorized is True
+        and live_execution_pilot_executed is True
+        and live_execution_pilot_passed is True
+        and live_execution_pilot_reviewed is True
+        and isinstance(live_execution_pilot_accepted, bool)
+    ):
+        return "post_live_execution_pilot_review"
     if (
         revision == POST_LIVE_EXECUTION_PILOT_RUN_BUNDLE_REVISION
         and pilot_request is True
@@ -6982,6 +7406,268 @@ def _verify_live_execution_pilot_run_payload(
     }
 
 
+def _verify_live_execution_pilot_review_section(review: Any) -> None:
+    if not isinstance(review, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("review must be an object")
+    _require_true(
+        "review.prod_scoped_shadow_live_execution_pilot_reviewed",
+        review.get("prod_scoped_shadow_live_execution_pilot_reviewed"),
+    )
+    accepted = review.get("prod_scoped_shadow_live_execution_pilot_accepted")
+    if not isinstance(accepted, bool):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review.prod_scoped_shadow_live_execution_pilot_accepted must be a boolean"
+        )
+    decision = review.get("live_execution_pilot_review_decision")
+    if not isinstance(decision, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review.live_execution_pilot_review_decision must be an object"
+        )
+    expected_decision = "accepted" if accepted else "not_accepted"
+    _require_equal(
+        "review.live_execution_pilot_review_decision.decision",
+        decision.get("decision"),
+        expected_decision,
+    )
+    for field in ("reviewer", "reviewed_at"):
+        if not isinstance(decision.get(field), str) or not decision.get(field):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.live_execution_pilot_review_decision.{field} must be populated"
+            )
+    checks = decision.get("checks")
+    if not isinstance(checks, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review.live_execution_pilot_review_decision.checks must be an object"
+        )
+    if set(checks) != set(LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review.live_execution_pilot_review_decision.checks must align with "
+            "LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS"
+        )
+    failed = decision.get("failed_review_checks")
+    if not isinstance(failed, list) or not all(isinstance(item, str) for item in failed):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "review.live_execution_pilot_review_decision.failed_review_checks must be a string list"
+        )
+    for check_name in LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS:
+        if not isinstance(checks.get(check_name), bool):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.live_execution_pilot_review_decision.checks.{check_name} must be a boolean"
+            )
+    expected_failed = sorted(name for name in LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS if checks.get(name) is False)
+    _require_equal(
+        "review.live_execution_pilot_review_decision.failed_review_checks",
+        sorted(failed),
+        expected_failed,
+    )
+    if accepted and failed:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "accepted live execution pilot review must have no failed checks"
+        )
+    if not accepted and not failed:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "not_accepted live execution pilot review must list failed checks"
+        )
+    for field in ("accepted_evidence", "limitations"):
+        value = decision.get(field)
+        if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.live_execution_pilot_review_decision.{field} must be a non-empty string list"
+            )
+    limitations_text = " ".join(str(item).lower() for item in decision.get("limitations", []))
+    for phrase in ("no runtime rerun", "no shadow-runs", "no database connection", "global online shadow execution"):
+        if phrase not in limitations_text:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"review.live_execution_pilot_review_decision.limitations must include {phrase!r}"
+            )
+
+
+def _without_live_execution_pilot_review_payload(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    payload = deepcopy(dict(bundle))
+    metadata = deepcopy(dict(payload.get("metadata") or {}))
+    metadata["bundle_revision"] = POST_LIVE_EXECUTION_PILOT_RUN_BUNDLE_REVISION
+    payload["metadata"] = metadata
+    review = deepcopy(dict(payload.get("review") or {}))
+    review.pop("prod_scoped_shadow_live_execution_pilot_reviewed", None)
+    review.pop("prod_scoped_shadow_live_execution_pilot_accepted", None)
+    review.pop("live_execution_pilot_review_decision", None)
+    payload["review"] = review
+    posture = deepcopy(dict(payload.get("posture") or {}))
+    posture.pop("prod_scoped_shadow_live_execution_pilot_reviewed", None)
+    posture.pop("prod_scoped_shadow_live_execution_pilot_accepted", None)
+    payload["posture"] = posture
+    blockers = deepcopy(dict(payload.get("shadow_and_production_blockers") or {}))
+    blockers.pop("prod_scoped_shadow_live_execution_pilot_reviewed", None)
+    blockers.pop("prod_scoped_shadow_live_execution_pilot_accepted", None)
+    blockers.pop("blockers_cleared_by_live_execution_pilot_review", None)
+    blockers.pop("blockers_introduced_by_live_execution_pilot_review", None)
+    blockers.pop("blockers_unchanged_by_live_execution_pilot_review", None)
+    blockers.pop("blockers_changed_by_live_execution_pilot_review", None)
+    payload["shadow_and_production_blockers"] = blockers
+    payload["recommended_next_stage"] = POST_LIVE_EXECUTION_PILOT_RUN_NEXT_STAGE
+    payload["caveats"] = _caveats(mode="post_live_execution_pilot_run")
+    return payload
+
+
+def _verify_live_execution_pilot_review_payload(
+    bundle: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    verify_local_pilot_files: bool,
+) -> dict[str, Any]:
+    metadata = _metadata(bundle, label="production-scoped-shadow bundle")
+    _require_equal(
+        "metadata.bundle_revision",
+        metadata.get("bundle_revision"),
+        POST_LIVE_EXECUTION_PILOT_REVIEW_BUNDLE_REVISION,
+    )
+    base_result = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        _without_live_execution_pilot_review_payload(bundle),
+        repo_root=repo_root,
+        expect_live_execution_pilot_run_filed=True,
+        verify_local_pilot_files=verify_local_pilot_files,
+    )
+    review = bundle.get("review")
+    _verify_live_execution_pilot_review_section(review)
+    accepted = _get(bundle, "review.prod_scoped_shadow_live_execution_pilot_accepted")
+    expected_next = (
+        POST_LIVE_EXECUTION_PILOT_REVIEW_ACCEPTED_NEXT_STAGE
+        if accepted is True
+        else POST_LIVE_EXECUTION_PILOT_REVIEW_REJECTED_NEXT_STAGE
+    )
+    _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), expected_next)
+    posture = bundle.get("posture")
+    if not isinstance(posture, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("posture must be an object")
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_pilot_reviewed",
+        posture.get("prod_scoped_shadow_live_execution_pilot_reviewed"),
+    )
+    _require_equal(
+        "posture.prod_scoped_shadow_live_execution_pilot_accepted",
+        posture.get("prod_scoped_shadow_live_execution_pilot_accepted"),
+        accepted,
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_pilot_executed",
+        posture.get("prod_scoped_shadow_live_execution_pilot_executed"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_pilot_passed",
+        posture.get("prod_scoped_shadow_live_execution_pilot_passed"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_authorized",
+        posture.get("prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "posture.prod_scoped_shadow_execution_authorized",
+        posture.get("prod_scoped_shadow_execution_authorized"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_read_only_execution_authorized",
+        posture.get("prod_scoped_shadow_live_read_only_execution_authorized"),
+    )
+    _require_true("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
+    _require_false(
+        "posture.missing_prod_scoped_shadow_live_execution_authorization",
+        posture.get("missing_prod_scoped_shadow_live_execution_authorization"),
+    )
+    _require_false("posture.online_shadow_execution_enabled", posture.get("online_shadow_execution_enabled"))
+    _require_false("posture.production_default_allowed", posture.get("production_default_allowed"))
+    _require_false("posture.api_web_changes_allowed", posture.get("api_web_changes_allowed"))
+    _require_false("posture.user_visible_ranking_changed", posture.get("user_visible_ranking_changed"))
+    _require_false("posture.writes_performed", posture.get("writes_performed"))
+    _require_false("posture.runtime_writes_performed", posture.get("runtime_writes_performed"))
+    authorization = bundle.get("authorization")
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorization_requested",
+        authorization.get("prod_scoped_shadow_live_execution_authorization_requested"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorization_granted",
+        authorization.get("prod_scoped_shadow_live_execution_authorization_granted"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorized",
+        authorization.get("prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_execution_authorized",
+        authorization.get("prod_scoped_shadow_execution_authorized"),
+    )
+    blockers = bundle.get("shadow_and_production_blockers")
+    if not isinstance(blockers, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("shadow_and_production_blockers must be an object")
+    _require_true(
+        "shadow_and_production_blockers.prod_scoped_shadow_live_execution_pilot_reviewed",
+        blockers.get("prod_scoped_shadow_live_execution_pilot_reviewed"),
+    )
+    _require_equal(
+        "shadow_and_production_blockers.prod_scoped_shadow_live_execution_pilot_accepted",
+        blockers.get("prod_scoped_shadow_live_execution_pilot_accepted"),
+        accepted,
+    )
+    _require_true(
+        "shadow_and_production_blockers.prod_scoped_shadow_live_execution_pilot_executed",
+        blockers.get("prod_scoped_shadow_live_execution_pilot_executed"),
+    )
+    _require_true(
+        "shadow_and_production_blockers.prod_scoped_shadow_live_execution_pilot_passed",
+        blockers.get("prod_scoped_shadow_live_execution_pilot_passed"),
+    )
+    _require_true(
+        "shadow_and_production_blockers.prod_scoped_shadow_live_execution_authorized",
+        blockers.get("prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "shadow_and_production_blockers.prod_scoped_shadow_execution_authorized",
+        blockers.get("prod_scoped_shadow_execution_authorized"),
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_cleared_by_live_execution_pilot_review",
+        blockers.get("blockers_cleared_by_live_execution_pilot_review"),
+        [],
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_introduced_by_live_execution_pilot_review",
+        blockers.get("blockers_introduced_by_live_execution_pilot_review"),
+        [],
+    )
+    _require_true(
+        "shadow_and_production_blockers.blockers_unchanged_by_live_execution_pilot_review",
+        blockers.get("blockers_unchanged_by_live_execution_pilot_review"),
+    )
+    if "blockers_changed_by_live_execution_pilot_review" in blockers:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "shadow_and_production_blockers.blockers_changed_by_live_execution_pilot_review must not be used"
+        )
+    caveats = bundle.get("caveats")
+    if not isinstance(caveats, list):
+        raise MLShadowScorerProductionScopedShadowBundleError("caveats must be a list")
+    for caveat in _caveats(mode="post_live_execution_pilot_review"):
+        if caveat not in caveats:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"post_live_execution_pilot_review caveats missing {caveat!r}"
+            )
+    stale_caveats = (
+        "Review is required before any further enablement chain.",
+    )
+    for caveat in stale_caveats:
+        if caveat in caveats:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"post_live_execution_pilot_review caveats must not include stale caveat {caveat!r}"
+            )
+    return {
+        **base_result,
+        "verification_mode": "post_live_execution_pilot_review",
+        "bundle_revision": metadata.get("bundle_revision"),
+        "recommended_next_stage": bundle.get("recommended_next_stage"),
+    }
+
+
 def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     bundle: Mapping[str, Any],
     *,
@@ -7001,6 +7687,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     expect_live_execution_request_filed: bool | None = None,
     expect_live_execution_grant_filed: bool | None = None,
     expect_live_execution_pilot_run_filed: bool | None = None,
+    expect_live_execution_pilot_review_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
@@ -7024,7 +7711,14 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         expect_live_execution_request_filed=expect_live_execution_request_filed,
         expect_live_execution_grant_filed=expect_live_execution_grant_filed,
         expect_live_execution_pilot_run_filed=expect_live_execution_pilot_run_filed,
+        expect_live_execution_pilot_review_filed=expect_live_execution_pilot_review_filed,
     )
+    if mode == "post_live_execution_pilot_review":
+        return _verify_live_execution_pilot_review_payload(
+            bundle,
+            repo_root=root,
+            verify_local_pilot_files=verify_local_pilot_files,
+        )
     if mode == "post_live_execution_pilot_run":
         return _verify_live_execution_pilot_run_payload(
             bundle,
@@ -8247,6 +8941,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
     expect_live_execution_request_filed: bool | None = None,
     expect_live_execution_grant_filed: bool | None = None,
     expect_live_execution_pilot_run_filed: bool | None = None,
+    expect_live_execution_pilot_review_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
@@ -8268,6 +8963,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         expect_live_execution_request_filed=expect_live_execution_request_filed,
         expect_live_execution_grant_filed=expect_live_execution_grant_filed,
         expect_live_execution_pilot_run_filed=expect_live_execution_pilot_run_filed,
+        expect_live_execution_pilot_review_filed=expect_live_execution_pilot_review_filed,
         verify_local_pilot_files=verify_local_pilot_files,
     )
 
@@ -8331,7 +9027,17 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         if isinstance(review, Mapping) and isinstance(review.get("live_read_only_pilot_review_decision"), Mapping)
         else None
     )
-    if live_execution_pilot_run:
+    live_execution_pilot_review = (
+        review.get("live_execution_pilot_review_decision")
+        if isinstance(review, Mapping) and isinstance(review.get("live_execution_pilot_review_decision"), Mapping)
+        else None
+    )
+    if live_execution_pilot_review:
+        accepted = review.get("prod_scoped_shadow_live_execution_pilot_accepted") if isinstance(review, Mapping) else None
+        summary = (
+            f"This bundle records the production-scoped online shadow live execution pilot review ({'accepted' if accepted else 'not accepted'}) while keeping global shadow enablement, production default, API/web, and user-visible behavior disabled."
+        )
+    elif live_execution_pilot_run:
         summary = (
             "This bundle records the bounded production-scoped online shadow live execution pilot run while keeping global shadow enablement, production default, API/web, and user-visible behavior disabled."
         )
@@ -8668,6 +9374,30 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
             lines.append(
                 f"| `{file_record['relative_path']}` | {file_record['byte_count']} | {file_record.get('row_count')} | `{file_record['sha256']}` |"
             )
+        lines.append("")
+    if live_execution_pilot_review:
+        lines.extend(
+            [
+                "## Live Execution Pilot Review",
+                "",
+                f"- Decision: `{live_execution_pilot_review['decision']}`",
+                f"- Reviewer: {live_execution_pilot_review['reviewer']}",
+                f"- Reviewed at: {live_execution_pilot_review['reviewed_at']}",
+                f"- Review notes: {live_execution_pilot_review.get('review_notes')}",
+                f"- Live execution pilot accepted: {review['prod_scoped_shadow_live_execution_pilot_accepted']}",
+                f"- Failed review checks: {', '.join(live_execution_pilot_review['failed_review_checks']) if live_execution_pilot_review['failed_review_checks'] else 'None'}",
+                f"- Next stage: `{payload['recommended_next_stage']}`",
+                "",
+                "## Live Execution Pilot Review Checks",
+                "",
+            ]
+        )
+        for check_name in LIVE_EXECUTION_PILOT_RUN_REVIEW_CHECKS:
+            lines.append(f"- `{check_name}`: {live_execution_pilot_review['checks'][check_name]}")
+        lines.extend(["", "## Live Execution Pilot Review Accepted Evidence", ""])
+        lines.extend(f"- {item}" for item in live_execution_pilot_review["accepted_evidence"])
+        lines.extend(["", "## Live Execution Pilot Review Limitations", ""])
+        lines.extend(f"- {item}" for item in live_execution_pilot_review["limitations"])
         lines.append("")
     if live_read_only_grant:
         grant_decision = live_read_only_grant

@@ -6021,6 +6021,30 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_review_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-live-execution-pilot-review",
+        help="Review the recorded bounded live execution production-scoped pilot evidence",
+    )
+    ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_review_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_review_parser.add_argument(
+        "--reviewer",
+        required=True,
+        help="Reviewer name to record",
+    )
+    ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_review_parser.add_argument(
+        "--review-notes",
+        default=None,
+        help="Optional free-text live execution pilot review notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_review_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_request_live_read_only_parser = subparsers.add_parser(
         "ml-shadow-scorer-production-scoped-shadow-bundle-request-live-read-only",
         help="File the production-scoped online shadow live read-only authorization request in the bundle",
@@ -6296,6 +6320,11 @@ def main() -> None:
         "--expect-live-execution-pilot-run-filed",
         action="store_true",
         help="Require post-live-execution-pilot-run production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-live-execution-pilot-review-filed",
+        action="store_true",
+        help="Require post-live-execution-pilot-review production-scoped shadow bundle state",
     )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -9522,6 +9551,32 @@ def main() -> None:
         print(result["recommended_next_stage"])
         return
 
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-live-execution-pilot-review":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_review import (
+            MLShadowScorerProductionScopedShadowLiveExecutionPilotReviewError,
+            review_ml_shadow_scorer_production_scoped_shadow_live_execution_pilot,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = review_ml_shadow_scorer_production_scoped_shadow_live_execution_pilot(
+                bundle_path=Path(args.bundle),
+                reviewer=str(args.reviewer),
+                review_notes=args.review_notes,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowLiveExecutionPilotReviewError as e:
+            print(
+                "ml-shadow-scorer-production-scoped-shadow-live-execution-pilot-review: "
+                f"{e}",
+                file=sys.stderr,
+            )
+            raise SystemExit(e.code) from e
+        print(result["review"]["live_execution_pilot_review_decision"]["decision"])
+        print(result["live_execution_pilot_accepted"])
+        print(result["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-request-live-read-only":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -9738,6 +9793,7 @@ def main() -> None:
         expect_live_execution_request_filed = None
         expect_live_execution_grant_filed = None
         expect_live_execution_pilot_run_filed = None
+        expect_live_execution_pilot_review_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -9770,6 +9826,8 @@ def main() -> None:
             expect_live_execution_grant_filed = True
         elif args.expect_live_execution_pilot_run_filed:
             expect_live_execution_pilot_run_filed = True
+        elif args.expect_live_execution_pilot_review_filed:
+            expect_live_execution_pilot_review_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -9789,6 +9847,7 @@ def main() -> None:
                 expect_live_execution_request_filed=expect_live_execution_request_filed,
                 expect_live_execution_grant_filed=expect_live_execution_grant_filed,
                 expect_live_execution_pilot_run_filed=expect_live_execution_pilot_run_filed,
+                expect_live_execution_pilot_review_filed=expect_live_execution_pilot_review_filed,
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
             print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)

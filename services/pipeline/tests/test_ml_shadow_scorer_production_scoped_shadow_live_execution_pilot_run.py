@@ -143,13 +143,33 @@ def _set_path(payload: dict[str, Any], dotted_path: str, value: Any) -> None:
 
 def _prepare_rev14_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 16:
+        payload = bundle_module._without_live_execution_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 15:
         payload = bundle_module._without_live_execution_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] != 14:
         raise AssertionError(
-            f"expected committed production-scoped bundle revision 14 or 15, got {payload['metadata']['bundle_revision']}"
+            f"expected committed production-scoped bundle revision 14, 15, or 16, got {payload['metadata']['bundle_revision']}"
         )
     _write_json(bundle_path, payload)
+
+
+def _prepare_rev15_template_bundle(bundle_path: Path) -> None:
+    payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 16:
+        payload = bundle_module._without_live_execution_pilot_review_payload(payload)
+    if payload["metadata"]["bundle_revision"] != 15:
+        raise AssertionError(
+            f"expected committed production-scoped bundle revision 15 or 16, got {payload['metadata']['bundle_revision']}"
+        )
+    _write_json(bundle_path, payload)
+
+
+@pytest.fixture(scope="module")
+def rev15_template_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    root = _copy_fixture_repo(tmp_path_factory.mktemp("live-execution-pilot-review-template"))
+    _prepare_rev15_template_bundle(root / FIXTURE_RELS["production_scoped_bundle"])
+    return root
 
 
 @pytest.fixture(scope="module")
@@ -669,6 +689,8 @@ def test_committed_bundle_matches_post_live_execution_pilot_run_if_present() -> 
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] >= 16:
+        pytest.skip("committed production-scoped-shadow bundle advanced to rev16 review")
     if payload["metadata"]["bundle_revision"] < 15:
         pytest.skip("committed production-scoped-shadow bundle not advanced to rev15 yet")
     result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
