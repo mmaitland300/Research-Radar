@@ -49,6 +49,8 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 def _prepare_rev18_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 20:
+        payload = bundle_module._without_flag_enablement_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 19:
         payload = bundle_module._without_flag_enablement_pilot_run_payload(payload)
     execution = payload.get("execution") or {}
@@ -582,8 +584,10 @@ def test_committed_bundle_matches_post_flag_enablement_pilot_run_if_present() ->
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     payload = _load(committed)
-    if payload["metadata"]["bundle_revision"] != 19:
-        pytest.skip("committed production-scoped-shadow bundle not advanced to rev19 yet")
+    if payload["metadata"]["bundle_revision"] not in (19, 20):
+        pytest.skip("committed production-scoped-shadow bundle not at rev19/20 yet")
+    if payload["metadata"]["bundle_revision"] == 20:
+        pytest.skip("committed bundle already advanced to rev20")
     result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         bundle_path=committed,
         repo_root=REPO_ROOT,

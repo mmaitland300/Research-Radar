@@ -6045,6 +6045,30 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot_review_parser = subparsers.add_parser(
+        "ml-shadow-scorer-production-scoped-shadow-flag-enablement-pilot-review",
+        help="Review the recorded bounded flag enablement production-scoped pilot evidence",
+    )
+    ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot_review_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot_review_parser.add_argument(
+        "--reviewer",
+        required=True,
+        help="Reviewer name to record",
+    )
+    ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot_review_parser.add_argument(
+        "--review-notes",
+        default=None,
+        help="Optional free-text flag enablement pilot review notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot_review_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_request_flag_enablement_parser = subparsers.add_parser(
         "ml-shadow-scorer-production-scoped-shadow-bundle-request-flag-enablement",
         help="File the production-scoped online shadow flag enablement authorization request in the bundle",
@@ -6408,6 +6432,11 @@ def main() -> None:
         "--expect-flag-enablement-pilot-run-filed",
         action="store_true",
         help="Require post-flag-enablement-pilot-run production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-flag-enablement-pilot-review-filed",
+        action="store_true",
+        help="Require post-flag-enablement-pilot-review production-scoped shadow bundle state",
     )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -9717,6 +9746,32 @@ def main() -> None:
         print(result["recommended_next_stage"])
         return
 
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-flag-enablement-pilot-review":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot_review import (
+            MLShadowScorerProductionScopedShadowFlagEnablementPilotReviewError,
+            review_ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = review_ml_shadow_scorer_production_scoped_shadow_flag_enablement_pilot(
+                bundle_path=Path(args.bundle),
+                reviewer=str(args.reviewer),
+                review_notes=args.review_notes,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowFlagEnablementPilotReviewError as e:
+            print(
+                "ml-shadow-scorer-production-scoped-shadow-flag-enablement-pilot-review: "
+                f"{e}",
+                file=sys.stderr,
+            )
+            raise SystemExit(e.code) from e
+        print(result["review"]["flag_enablement_pilot_review_decision"]["decision"])
+        print(result["flag_enablement_pilot_accepted"])
+        print(result["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-request-flag-enablement":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -10021,6 +10076,7 @@ def main() -> None:
         expect_flag_enablement_request_filed = None
         expect_flag_enablement_grant_filed = None
         expect_flag_enablement_pilot_run_filed = None
+        expect_flag_enablement_pilot_review_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -10061,6 +10117,8 @@ def main() -> None:
             expect_flag_enablement_grant_filed = True
         elif args.expect_flag_enablement_pilot_run_filed:
             expect_flag_enablement_pilot_run_filed = True
+        elif args.expect_flag_enablement_pilot_review_filed:
+            expect_flag_enablement_pilot_review_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -10084,6 +10142,7 @@ def main() -> None:
                 expect_flag_enablement_request_filed=expect_flag_enablement_request_filed,
                 expect_flag_enablement_grant_filed=expect_flag_enablement_grant_filed,
                 expect_flag_enablement_pilot_run_filed=expect_flag_enablement_pilot_run_filed,
+                expect_flag_enablement_pilot_review_filed=expect_flag_enablement_pilot_review_filed,
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
             print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)

@@ -1103,6 +1103,25 @@ def test_upstream_verifiers_still_pass(tmp_path: Path) -> None:
     assert production_readiness_result["verification_mode"] == "post_grant"
 
 
+def test_committed_bundle_fixture_matches_post_flag_enablement_pilot_review_if_present() -> None:
+    committed = REPO_ROOT / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
+    if not committed.exists():
+        pytest.skip("production-scoped-shadow bundle not generated yet")
+    payload = json.loads(committed.read_text(encoding="utf-8"))
+    if payload["metadata"]["bundle_revision"] != 20:
+        pytest.skip("committed production-scoped bundle is not revision 20 yet")
+    result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+        bundle_path=committed,
+        repo_root=REPO_ROOT,
+        expect_flag_enablement_pilot_review_filed=True,
+        verify_local_pilot_files=False,
+    )
+    assert result["bundle_revision"] == 20
+    assert result["recommended_next_stage"] == (
+        "request_production_scoped_online_shadow_production_default_api_user_visible_authorization_v1"
+    )
+
+
 def test_committed_bundle_fixture_matches_post_flag_enablement_pilot_run_if_present() -> None:
     committed = REPO_ROOT / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
     if not committed.exists():
@@ -1181,6 +1200,10 @@ def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
     assert '"ml-shadow-scorer-production-scoped-shadow-live-execution-pilot-review"' in cli_source[
         assemble_start:next_command
     ]
+    assert '"ml-shadow-scorer-production-scoped-shadow-flag-enablement-pilot-review"' in cli_source[
+        assemble_start:next_command
+    ]
+    assert '"--expect-flag-enablement-pilot-review-filed"' in cli_source[assemble_start:next_command]
     live_command = cli_source.index('"ml-shadow-scorer-production-scoped-shadow-live-read-only-pilot-run"', next_command)
     live_command_end = cli_source.index('"ml-fresh-product-candidate-source-build"', live_command)
     live_command_block = cli_source[live_command:live_command_end]
