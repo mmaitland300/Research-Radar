@@ -134,13 +134,16 @@ def _downgrade_to_rev12(payload: dict[str, Any]) -> dict[str, Any]:
 def _prepare_rev12_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
     revision = payload["metadata"]["bundle_revision"]
+    if revision == 15:
+        payload = bundle_module._without_live_execution_pilot_run_payload(payload)
+        revision = payload["metadata"]["bundle_revision"]
     if revision == 14:
         payload = bundle_module._without_live_execution_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 13:
         payload = _downgrade_to_rev12(payload)
     elif payload["metadata"]["bundle_revision"] != 12:
         raise AssertionError(
-            f"expected committed production-scoped bundle revision 12, 13, or 14, got {revision}"
+            f"expected committed production-scoped bundle revision 12, 13, 14, or 15, got {revision}"
         )
     _write_json(bundle_path, payload)
 
@@ -268,8 +271,11 @@ def test_committed_bundle_matches_post_live_execution_grant() -> None:
     committed = REPO_ROOT / FIXTURE_RELS["production_scoped_bundle"]
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
-    result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
-        bundle_path=committed,
+    payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] == 15:
+        payload = bundle_module._without_live_execution_pilot_run_payload(payload)
+    result = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        payload,
         repo_root=REPO_ROOT,
         expect_live_execution_grant_filed=True,
         verify_local_pilot_files=False,

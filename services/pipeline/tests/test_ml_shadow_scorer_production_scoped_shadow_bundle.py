@@ -1103,18 +1103,18 @@ def test_upstream_verifiers_still_pass(tmp_path: Path) -> None:
     assert production_readiness_result["verification_mode"] == "post_grant"
 
 
-def test_committed_bundle_fixture_matches_post_live_execution_grant_if_present() -> None:
+def test_committed_bundle_fixture_matches_post_live_execution_pilot_run_if_present() -> None:
     committed = REPO_ROOT / "docs/audit/bundles/production-scoped-shadow-v1/bundle.json"
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         bundle_path=committed,
         repo_root=REPO_ROOT,
-        expect_live_execution_grant_filed=True,
+        expect_live_execution_pilot_run_filed=True,
         verify_local_pilot_files=False,
     )
-    assert result["bundle_revision"] == 14
-    assert result["recommended_next_stage"] == "run_production_scoped_online_shadow_live_execution_pilot_v1"
+    assert result["bundle_revision"] == 15
+    assert result["recommended_next_stage"] == "review_production_scoped_online_shadow_live_execution_pilot_v1"
 
 
 def test_payload_verifier_infers_plan_mode(tmp_path: Path) -> None:
@@ -1171,9 +1171,11 @@ def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
     assert '"--expect-live-read-only-pilot-review-filed"' in cli_source[assemble_start:next_command]
     assert '"--expect-live-execution-request-filed"' in cli_source[assemble_start:next_command]
     assert '"--expect-live-execution-grant-filed"' in cli_source[assemble_start:next_command]
+    assert '"--expect-live-execution-pilot-run-filed"' in cli_source[assemble_start:next_command]
     live_command = cli_source.index('"ml-shadow-scorer-production-scoped-shadow-live-read-only-pilot-run"', next_command)
     live_command_end = cli_source.index('"ml-fresh-product-candidate-source-build"', live_command)
     live_command_block = cli_source[live_command:live_command_end]
     assert "--database-url" in live_command_block
     assert '"ml-shadow-scorer-production-scoped-shadow-bundle-run-live-read-only-pilot"' in live_command_block
+    assert '"ml-shadow-scorer-production-scoped-shadow-bundle-run-live-execution-pilot"' in live_command_block
     assert "run_ml_shadow_scorer_v1_online_shadow_runtime" not in module_source

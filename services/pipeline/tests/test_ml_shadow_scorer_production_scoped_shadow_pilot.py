@@ -366,6 +366,7 @@ def test_runtime_import_call_is_limited_to_pilot_runner_module() -> None:
         if module_path.name in {
             "ml_shadow_scorer_production_scoped_shadow_pilot.py",
             "ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot.py",
+            "ml_shadow_scorer_production_scoped_shadow_live_execution_pilot.py",
         }:
             assert "run_ml_shadow_scorer_v1_online_shadow_runtime" in source
         else:

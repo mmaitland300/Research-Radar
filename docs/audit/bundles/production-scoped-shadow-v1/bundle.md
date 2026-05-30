@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped online shadow live execution authorization grant while keeping bounded live execution pilot runs separate, global shadow enablement, production default, API/web, and user-visible behavior disabled.
+This bundle records the bounded production-scoped online shadow live execution pilot run while keeping global shadow enablement, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 14
+- Bundle revision: 15
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -28,10 +28,12 @@ This bundle records the production-scoped online shadow live execution authoriza
 - Live execution authorization requested: True
 - Live execution authorization granted: True
 - Live execution authorized: True
+- Live execution pilot executed: True
+- Live execution pilot passed: True
 - Missing live execution authorization: False
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `run_production_scoped_online_shadow_live_execution_pilot_v1`
+- Recommended next stage: `review_production_scoped_online_shadow_live_execution_pilot_v1`
 
 ## Pinned Identity
 
@@ -233,6 +235,53 @@ This bundle records the production-scoped online shadow live execution authoriza
 - refit/training
 - fleet-wide enablement
 
+## Live Execution Pilot Run
+
+- Pilot surface: `bounded_live_execution_prod_scoped_pilot`
+- Pilot run id: `prod-live-exec-rank-83787b91ef-20260530T175759Z`
+- Joined candidate count: 528
+- Live prod source reads performed: True
+- Pilot passed: True
+- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/prod-live-exec-rank-83787b91ef-20260530T175759Z/`
+- Incomplete coverage status: `skipped_incomplete_coverage`
+- Incomplete coverage shadow rows: 0
+
+## Live Execution Source Reads
+
+- Approved tables: ranking_runs, paper_scores, works, embeddings
+- Ranking runs: 1
+- Paper scores: 528
+- Works: 528
+- Embeddings: 528
+- Candidate SHA: `f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc`
+
+## Live Execution Pilot Checks
+
+- `live_execution_grant_present`: True
+- `joined_candidate_count_528`: True
+- `runtime_row_count_528`: True
+- `runtime_drill_call_order`: True
+- `preflight_postflight_disabled`: True
+- `pilot_status_succeeded_test_only`: True
+- `process_scoped_runtime_flag_only`: True
+- `environment_restored`: True
+- `incomplete_coverage_skip_verified`: True
+- `forbidden_write_counts_zero`: True
+- `isolated_artifact_count_4`: True
+- `expected_files_recorded`: True
+- `production_api_user_visible_unchanged`: True
+- `no_labels_refit_embedding_generation_or_label_ingest`: True
+- `global_execution_authorization_false`: True
+
+## Live Execution Pilot Files
+
+| Path | Bytes | Rows | SHA-256 |
+| --- | ---: | ---: | --- |
+| `manifest.json` | 8430 | None | `0692a504f14bc8e625a0d9c901ecf37200c2483e55faead168ca88ab3081e149` |
+| `shadow_rows.jsonl` | 407463 | 528 | `6d4464ae9be5dc46f330c69f867666dc664d62464562aa4b056bbfb597733e84` |
+| `observability.json` | 15996 | None | `1988cd856a29ab39085531e7c3517e1e52c105cbbac2db1431bdcdf5327dc01d` |
+| `write_counts.json` | 714 | None | `b7605a31930d226a8371422e0a7034cc3f9341082dddde20a9da5211331d6750` |
+
 ## Live Read-Only Authorization Grant
 
 - Decision: `granted`
@@ -307,7 +356,7 @@ This bundle records the production-scoped online shadow live execution authoriza
 - Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
 - Live read-only pilot accepted: True
 - Failed review checks: None
-- Next stage: `run_production_scoped_online_shadow_live_execution_pilot_v1`
+- Next stage: `review_production_scoped_online_shadow_live_execution_pilot_v1`
 
 ## Live Read-Only Pilot Review Checks
 
@@ -440,7 +489,7 @@ This bundle records the production-scoped online shadow live execution authoriza
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `run_production_scoped_online_shadow_live_execution_pilot_v1`
+- Next stage: `review_production_scoped_online_shadow_live_execution_pilot_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -504,7 +553,7 @@ This bundle records the production-scoped online shadow live execution authoriza
 
 ## Recommended Next Stage
 
-`run_production_scoped_online_shadow_live_execution_pilot_v1`
+`review_production_scoped_online_shadow_live_execution_pilot_v1`
 
 ## Caveats
 
@@ -537,3 +586,8 @@ This bundle records the production-scoped online shadow live execution authoriza
 - Does not change production default, API/web, or user-visible ranking.
 - Does not perform new live reads at grant time.
 - Bounded live execution pilot run remains a separate rev 15 milestone.
+- Bounded live execution pilot run only; does not enable global/fleet online shadow execution.
+- Does not change production default, API/web, or user-visible ranking.
+- Runtime flag is enabled only inside the bounded pilot drill and restored afterward.
+- Forbidden production write targets remain zero.
+- Review is required before any further enablement chain.

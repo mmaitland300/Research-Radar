@@ -129,6 +129,9 @@ def _write_rev12_bundle(root: Path) -> Path:
     bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
     payload = _load(bundle_path)
     revision = payload["metadata"]["bundle_revision"]
+    if revision == 15:
+        payload = bundle_module._without_live_execution_pilot_run_payload(payload)
+        revision = payload["metadata"]["bundle_revision"]
     if revision == 14:
         payload = bundle_module._without_live_execution_grant_payload(payload)
         revision = payload["metadata"]["bundle_revision"]
@@ -137,7 +140,7 @@ def _write_rev12_bundle(root: Path) -> Path:
         _write_json(bundle_path, payload)
     elif revision != 12:
         raise AssertionError(
-            f"expected committed production-scoped bundle revision 12, 13, or 14, got {revision}"
+            f"expected committed production-scoped bundle revision 12, 13, 14, or 15, got {revision}"
         )
     return bundle_path
 
