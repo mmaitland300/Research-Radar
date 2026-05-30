@@ -100,8 +100,11 @@ def _downgrade_to_rev12(payload: dict[str, Any]) -> dict[str, Any]:
     authorization = downgraded["authorization"]
     authorization.pop("prod_scoped_shadow_live_execution_authorization_requested", None)
     authorization.pop("prod_scoped_shadow_live_execution_authorization_granted", None)
+    authorization["prod_scoped_shadow_live_execution_authorized"] = False
     authorization.pop("live_execution_request_decision", None)
     authorization.pop("live_execution_requested_scope", None)
+    authorization.pop("live_execution_grant_decision", None)
+    authorization.pop("live_execution_granted_scope", None)
     posture = downgraded["posture"]
     posture.pop("prod_scoped_shadow_live_execution_authorization_requested", None)
     posture.pop("prod_scoped_shadow_live_execution_authorization_granted", None)
@@ -115,6 +118,10 @@ def _downgrade_to_rev12(payload: dict[str, Any]) -> dict[str, Any]:
     blockers.pop("blockers_introduced_by_live_execution_request", None)
     blockers.pop("blockers_unchanged_by_live_execution_request", None)
     blockers.pop("blockers_changed_by_live_execution_request", None)
+    blockers.pop("blockers_cleared_by_live_execution_grant", None)
+    blockers.pop("blockers_introduced_by_live_execution_grant", None)
+    blockers.pop("blockers_unchanged_by_live_execution_grant", None)
+    blockers.pop("blockers_changed_by_live_execution_grant", None)
     return downgraded
 
 
@@ -122,11 +129,16 @@ def _write_rev12_bundle(root: Path) -> Path:
     bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
     payload = _load(bundle_path)
     revision = payload["metadata"]["bundle_revision"]
+    if revision == 14:
+        payload = bundle_module._without_live_execution_grant_payload(payload)
+        revision = payload["metadata"]["bundle_revision"]
     if revision == 13:
         payload = _downgrade_to_rev12(payload)
         _write_json(bundle_path, payload)
     elif revision != 12:
-        raise AssertionError(f"expected committed production-scoped bundle revision 12 or 13, got {revision}")
+        raise AssertionError(
+            f"expected committed production-scoped bundle revision 12, 13, or 14, got {revision}"
+        )
     return bundle_path
 
 

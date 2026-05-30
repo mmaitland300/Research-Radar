@@ -8,6 +8,7 @@
       "fleet-wide flag enablement",
       "global enablement",
       "global flag enablement",
+      "global/fleet online shadow execution",
       "live execution at request time",
       "live prod execution beyond an explicitly granted bounded pilot",
       "live reads at grant time",
@@ -17,6 +18,7 @@
       "prod default",
       "production default",
       "production default / API / fleet-wide enablement",
+      "production default/API/user-visible recommendation output",
       "production_default_allowed",
       "refit/training",
       "user-visible ranking",
@@ -54,6 +56,41 @@
         "emerging-family / rank-83787b91ef identity only unless explicitly superseded",
         "prod-scoped artifact root under docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/",
         "read-only prod input contract from plan unless future run milestone explicitly expands"
+      ]
+    },
+    "live_execution_grant_decision": {
+      "decision": "granted",
+      "expiry_date": "2026-08-27",
+      "grant_notes": null,
+      "granted_at": "2026-05-30T17:10:33Z",
+      "owner": "Matt Maitland",
+      "owner_documents_equivalent_review": "owner equivalent live execution grant review",
+      "review_by": "2026-08-27"
+    },
+    "live_execution_granted_scope": {
+      "authorization_scope": "production_scoped_shadow_live_execution_authorization_only",
+      "authorizes_for_chain_only": [
+        "bounded prod-scoped live execution pilot authorization paperwork complete",
+        "bounded live execution pilot run may be executed in a separate run milestone under request/grant contract",
+        "bounded live execution pilot review may be recorded after the separate run milestone"
+      ],
+      "explicitly_still_not_included": [
+        "global enablement",
+        "global/fleet online shadow execution",
+        "production default",
+        "API/web",
+        "user-visible ranking changes",
+        "production default/API/user-visible recommendation output",
+        "DB writes/DDL",
+        "refit/training",
+        "fleet-wide enablement"
+      ],
+      "grant_time_live_execution_boundaries": [
+        "no bounded live execution pilot run performed at grant time",
+        "no new live reads performed at grant time",
+        "no writes performed at grant time",
+        "no execution.live_execution_pilot_run slice recorded at grant time",
+        "rev 15 run must prove bounded scope, flag-off behavior, and no forbidden writes"
       ]
     },
     "live_execution_request_decision": {
@@ -128,9 +165,9 @@
       ]
     },
     "prod_scoped_shadow_execution_authorized": false,
-    "prod_scoped_shadow_live_execution_authorization_granted": false,
+    "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
-    "prod_scoped_shadow_live_execution_authorized": false,
+    "prod_scoped_shadow_live_execution_authorized": true,
     "prod_scoped_shadow_live_read_only_authorization_granted": true,
     "prod_scoped_shadow_live_read_only_authorization_requested": true,
     "prod_scoped_shadow_live_read_only_authorized": true,
@@ -200,7 +237,12 @@
     "Live execution remains unauthorized until a separate grant milestone.",
     "Does not enable global/live/fleet online shadow execution.",
     "Production default/API/user-visible behavior remains unchanged.",
-    "Live prod source reads already recorded by rev 11 remain unchanged; this request does not perform new reads."
+    "Live prod source reads already recorded by rev 11 remain unchanged; this request does not perform new reads.",
+    "Grant milestone only; does not run bounded live execution pilot.",
+    "Does not enable global/live/fleet online shadow execution.",
+    "Does not change production default, API/web, or user-visible ranking.",
+    "Does not perform new live reads at grant time.",
+    "Bounded live execution pilot run remains a separate rev 15 milestone."
   ],
   "execution": {
     "live_read_only_pilot_run": {
@@ -2038,9 +2080,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 13,
+    "bundle_revision": 14,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-30T16:17:22Z",
+    "generated_at": "2026-05-30T17:10:33Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -2237,15 +2279,15 @@
   "posture": {
     "api_web_changes_allowed": false,
     "live_prod_source_reads_performed": true,
-    "missing_prod_scoped_shadow_live_execution_authorization": true,
+    "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
     "missing_prod_scoped_shadow_pilot_authorization": false,
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
-    "prod_scoped_shadow_live_execution_authorization_granted": false,
+    "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
-    "prod_scoped_shadow_live_execution_authorized": false,
+    "prod_scoped_shadow_live_execution_authorized": true,
     "prod_scoped_shadow_live_read_only_authorization_granted": true,
     "prod_scoped_shadow_live_read_only_authorization_requested": true,
     "prod_scoped_shadow_live_read_only_authorized": true,
@@ -2428,7 +2470,7 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "record_production_scoped_online_shadow_live_execution_authorization_grant_v1",
+  "recommended_next_stage": "run_production_scoped_online_shadow_live_execution_pilot_v1",
   "review": {
     "live_read_only_pilot_review_decision": {
       "accepted_evidence": [
@@ -2566,6 +2608,9 @@
     "blockers_changed_by_proof": [
       "missing_prod_scoped_shadow_proof"
     ],
+    "blockers_cleared_by_live_execution_grant": [
+      "missing_prod_scoped_shadow_live_execution_authorization"
+    ],
     "blockers_cleared_by_live_execution_request": [],
     "blockers_cleared_by_live_read_only_grant": [
       "missing_prod_scoped_shadow_live_read_only_authorization"
@@ -2580,6 +2625,7 @@
     "blockers_cleared_by_pilot_request": [],
     "blockers_cleared_by_pilot_review": [],
     "blockers_cleared_by_pilot_run": [],
+    "blockers_introduced_by_live_execution_grant": [],
     "blockers_introduced_by_live_execution_request": [
       "missing_prod_scoped_shadow_live_execution_authorization"
     ],
@@ -2597,6 +2643,7 @@
     "blockers_introduced_by_pilot_review": [],
     "blockers_introduced_by_pilot_run": [],
     "blockers_unchanged_by_grant": true,
+    "blockers_unchanged_by_live_execution_grant": true,
     "blockers_unchanged_by_live_execution_request": true,
     "blockers_unchanged_by_live_read_only_grant": true,
     "blockers_unchanged_by_live_read_only_pilot_review": true,
@@ -2609,14 +2656,15 @@
     "blockers_unchanged_by_pilot_run": true,
     "blockers_unchanged_by_plan": true,
     "blockers_unchanged_by_proof": true,
-    "missing_prod_scoped_shadow_live_execution_authorization": true,
+    "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
     "missing_prod_scoped_shadow_pilot_authorization": false,
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
-    "prod_scoped_shadow_live_execution_authorized": false,
+    "prod_scoped_shadow_live_execution_authorized": true,
     "prod_scoped_shadow_live_read_only_authorization_granted": true,
     "prod_scoped_shadow_live_read_only_authorization_requested": true,
     "prod_scoped_shadow_live_read_only_authorized": true,

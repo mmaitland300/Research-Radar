@@ -61,6 +61,7 @@ POST_LIVE_READ_ONLY_GRANT_BUNDLE_REVISION = 10
 POST_LIVE_READ_ONLY_PILOT_RUN_BUNDLE_REVISION = 11
 POST_LIVE_READ_ONLY_PILOT_REVIEW_BUNDLE_REVISION = 12
 POST_LIVE_EXECUTION_REQUEST_BUNDLE_REVISION = 13
+POST_LIVE_EXECUTION_GRANT_BUNDLE_REVISION = 14
 PRE_PLAN_NEXT_STAGE = "begin_production_scoped_online_shadow_plan_v1"
 POST_PLAN_NEXT_STAGE = "implement_production_scoped_online_shadow_proof_v1"
 POST_PROOF_NEXT_STAGE = "request_production_scoped_online_shadow_pilot_authorization_v1"
@@ -87,6 +88,7 @@ POST_LIVE_READ_ONLY_PILOT_REVIEW_REJECTED_NEXT_STAGE = (
 POST_LIVE_EXECUTION_REQUEST_NEXT_STAGE = (
     "record_production_scoped_online_shadow_live_execution_authorization_grant_v1"
 )
+POST_LIVE_EXECUTION_GRANT_NEXT_STAGE = "run_production_scoped_online_shadow_live_execution_pilot_v1"
 FEATURE_FLAG = "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
 FUTURE_ARTIFACT_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/"
 PILOT_REQUEST_SCOPE = "production_scoped_shadow_pilot_paperwork_only"
@@ -94,6 +96,7 @@ PILOT_GRANT_SCOPE = "production_scoped_shadow_pilot_authorization_only"
 LIVE_READ_ONLY_REQUEST_SCOPE = "production_scoped_shadow_live_read_only_paperwork_only"
 LIVE_READ_ONLY_GRANT_SCOPE = "production_scoped_shadow_live_read_only_authorization_only"
 LIVE_EXECUTION_REQUEST_SCOPE = "production_scoped_shadow_live_execution_paperwork_only"
+LIVE_EXECUTION_GRANT_SCOPE = "production_scoped_shadow_live_execution_authorization_only"
 PILOT_HARNESS_SURFACE = "bounded_fixture_pilot_harness"
 PILOT_RUN_SURFACE = "bounded_read_only_audit_artifact_pilot"
 LIVE_READ_ONLY_PILOT_RUN_SURFACE = "bounded_live_read_only_prod_scoped_pilot"
@@ -335,6 +338,40 @@ LIVE_EXECUTION_REQUEST_CAVEATS = (
     "Does not enable global/live/fleet online shadow execution.",
     "Production default/API/user-visible behavior remains unchanged.",
     "Live prod source reads already recorded by rev 11 remain unchanged; this request does not perform new reads.",
+)
+
+LIVE_EXECUTION_GRANT_AUTHORIZES_FOR_CHAIN_ONLY = (
+    "bounded prod-scoped live execution pilot authorization paperwork complete",
+    "bounded live execution pilot run may be executed in a separate run milestone under request/grant contract",
+    "bounded live execution pilot review may be recorded after the separate run milestone",
+)
+
+LIVE_EXECUTION_GRANT_STILL_NOT_INCLUDED = (
+    "global enablement",
+    "global/fleet online shadow execution",
+    "production default",
+    "API/web",
+    "user-visible ranking changes",
+    "production default/API/user-visible recommendation output",
+    "DB writes/DDL",
+    "refit/training",
+    "fleet-wide enablement",
+)
+
+LIVE_EXECUTION_GRANT_TIME_BOUNDARIES = (
+    "no bounded live execution pilot run performed at grant time",
+    "no new live reads performed at grant time",
+    "no writes performed at grant time",
+    "no execution.live_execution_pilot_run slice recorded at grant time",
+    "rev 15 run must prove bounded scope, flag-off behavior, and no forbidden writes",
+)
+
+LIVE_EXECUTION_GRANT_CAVEATS = (
+    "Grant milestone only; does not run bounded live execution pilot.",
+    "Does not enable global/live/fleet online shadow execution.",
+    "Does not change production default, API/web, or user-visible ranking.",
+    "Does not perform new live reads at grant time.",
+    "Bounded live execution pilot run remains a separate rev 15 milestone.",
 )
 
 EXPLICITLY_NOT_INCLUDED = (
@@ -785,6 +822,13 @@ def _caveats(*, mode: str) -> list[str]:
         caveats.extend(LIVE_READ_ONLY_PILOT_REVIEW_HISTORICAL_CAVEATS)
         caveats.extend(LIVE_READ_ONLY_PILOT_REVIEW_CAVEATS)
         caveats.extend(LIVE_EXECUTION_REQUEST_CAVEATS)
+        return caveats
+    if mode == "post_live_execution_grant":
+        caveats.extend(PROOF_CAVEATS)
+        caveats.extend(LIVE_READ_ONLY_PILOT_REVIEW_HISTORICAL_CAVEATS)
+        caveats.extend(LIVE_READ_ONLY_PILOT_REVIEW_CAVEATS)
+        caveats.extend(LIVE_EXECUTION_REQUEST_CAVEATS)
+        caveats.extend(LIVE_EXECUTION_GRANT_CAVEATS)
         return caveats
     raise MLShadowScorerProductionScopedShadowBundleError(f"unknown caveat mode {mode!r}")
     return caveats
@@ -3790,6 +3834,301 @@ def apply_production_scoped_shadow_live_execution_authorization_request(
     return updated
 
 
+def apply_production_scoped_shadow_live_execution_authorization_grant(
+    bundle: Mapping[str, Any],
+    *,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    grant_notes: str | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("bundle must be an object")
+    _validate_pilot_grant_review(
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+    )
+    if _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_granted") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution authorization grant has already been filed"
+        )
+    _require_equal(
+        "metadata.bundle_revision",
+        _get(bundle, "metadata.bundle_revision"),
+        POST_LIVE_EXECUTION_REQUEST_BUNDLE_REVISION,
+    )
+    _require_equal(
+        "recommended_next_stage",
+        bundle.get("recommended_next_stage"),
+        POST_LIVE_EXECUTION_REQUEST_NEXT_STAGE,
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_live_read_only_pilot_executed",
+        _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_live_read_only_pilot_passed",
+        _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_passed"),
+    )
+    _require_true(
+        "review.prod_scoped_shadow_live_read_only_pilot_reviewed",
+        _get(bundle, "review.prod_scoped_shadow_live_read_only_pilot_reviewed"),
+    )
+    _require_true(
+        "review.prod_scoped_shadow_live_read_only_pilot_accepted",
+        _get(bundle, "review.prod_scoped_shadow_live_read_only_pilot_accepted"),
+    )
+    _require_equal(
+        "review.live_read_only_pilot_review_decision.decision",
+        _get(bundle, "review.live_read_only_pilot_review_decision.decision"),
+        "accepted",
+    )
+    _require_equal(
+        "review.live_read_only_pilot_review_decision.failed_review_checks",
+        _get(bundle, "review.live_read_only_pilot_review_decision.failed_review_checks"),
+        [],
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorization_requested",
+        _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_requested"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_live_execution_authorization_granted",
+        _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_granted"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_live_execution_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_execution_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_execution_authorized"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_authorization_requested",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_requested"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_authorization_granted",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorized"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_execution_authorized",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_execution_authorized"),
+    )
+    if not isinstance(_get(bundle, "authorization.request_decision"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization.request_decision must be an object")
+    if not isinstance(_get(bundle, "authorization.requested_scope"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization.requested_scope must be an object")
+    if not isinstance(_get(bundle, "authorization.live_read_only_grant_decision"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_read_only_grant_decision must be an object"
+        )
+    if not isinstance(_get(bundle, "authorization.live_read_only_granted_scope"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_read_only_granted_scope must be an object"
+        )
+    if not isinstance(_get(bundle, "authorization.live_execution_request_decision"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_execution_request_decision must be an object"
+        )
+    if not isinstance(_get(bundle, "authorization.live_execution_requested_scope"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_execution_requested_scope must be an object"
+        )
+    authorization = bundle.get("authorization")
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    _verify_live_execution_request_section(authorization)
+    _verify_live_read_only_request_section(authorization)
+    _verify_live_read_only_grant_section(authorization)
+    _require_true(
+        "posture.prod_scoped_shadow_live_read_only_execution_authorized",
+        _get(bundle, "posture.prod_scoped_shadow_live_read_only_execution_authorized"),
+    )
+    _require_true(
+        "posture.live_prod_source_reads_performed",
+        _get(bundle, "posture.live_prod_source_reads_performed"),
+    )
+    _require_true(
+        "posture.missing_prod_scoped_shadow_live_execution_authorization",
+        _get(bundle, "posture.missing_prod_scoped_shadow_live_execution_authorization"),
+    )
+    _require_named_flags_not_true(
+        bundle,
+        (
+            "online_shadow_execution_enabled",
+            "production_default_allowed",
+            "api_web_changes_allowed",
+            "user_visible_ranking_changed",
+            "writes_performed",
+            "runtime_writes_performed",
+        ),
+    )
+
+    granted_at = generated_at or _now_iso_z()
+    resolved_review_by = review_by or expiry_date
+    updated = deepcopy(dict(bundle))
+    plan_before = deepcopy(updated.get("plan"))
+    proof_before = deepcopy(updated.get("proof"))
+    execution_before = deepcopy(updated.get("execution"))
+    review_before = deepcopy(updated.get("review"))
+    legacy_index_before = deepcopy(_get(updated, "metadata.legacy_artifacts_index"))
+    pilot_grant_decision_before = deepcopy(_get(updated, "authorization.grant_decision"))
+    pilot_granted_scope_before = deepcopy(_get(updated, "authorization.granted_scope"))
+    live_request_decision_before = deepcopy(_get(updated, "authorization.request_decision"))
+    live_requested_scope_before = deepcopy(_get(updated, "authorization.requested_scope"))
+    live_read_only_grant_decision_before = deepcopy(_get(updated, "authorization.live_read_only_grant_decision"))
+    live_read_only_granted_scope_before = deepcopy(_get(updated, "authorization.live_read_only_granted_scope"))
+    live_execution_request_decision_before = deepcopy(_get(updated, "authorization.live_execution_request_decision"))
+    live_execution_requested_scope_before = deepcopy(_get(updated, "authorization.live_execution_requested_scope"))
+
+    metadata = deepcopy(dict(_metadata(updated, label="production-scoped-shadow bundle")))
+    metadata["bundle_revision"] = POST_LIVE_EXECUTION_GRANT_BUNDLE_REVISION
+    metadata["generated_at"] = granted_at
+    updated["metadata"] = metadata
+
+    authorization = deepcopy(dict(updated.get("authorization") or {}))
+    authorization.update(
+        {
+            "prod_scoped_shadow_live_execution_authorization_requested": True,
+            "prod_scoped_shadow_live_execution_authorization_granted": True,
+            "prod_scoped_shadow_live_execution_authorized": True,
+            "prod_scoped_shadow_execution_authorized": False,
+            "prod_scoped_shadow_live_read_only_authorization_requested": True,
+            "prod_scoped_shadow_live_read_only_authorization_granted": True,
+            "prod_scoped_shadow_live_read_only_authorized": True,
+            "prod_scoped_shadow_live_read_only_execution_authorized": True,
+            "live_execution_grant_decision": {
+                "decision": "granted",
+                "owner": owner,
+                "granted_at": granted_at,
+                "expiry_date": expiry_date,
+                "review_by": resolved_review_by,
+                "grant_notes": grant_notes,
+            },
+            "live_execution_granted_scope": {
+                "authorization_scope": LIVE_EXECUTION_GRANT_SCOPE,
+                "authorizes_for_chain_only": list(LIVE_EXECUTION_GRANT_AUTHORIZES_FOR_CHAIN_ONLY),
+                "explicitly_still_not_included": list(LIVE_EXECUTION_GRANT_STILL_NOT_INCLUDED),
+                "grant_time_live_execution_boundaries": list(LIVE_EXECUTION_GRANT_TIME_BOUNDARIES),
+            },
+        }
+    )
+    if second_reviewer is not None:
+        authorization["live_execution_grant_decision"]["second_reviewer"] = second_reviewer
+    if owner_documents_equivalent_review is not None:
+        authorization["live_execution_grant_decision"][
+            "owner_documents_equivalent_review"
+        ] = owner_documents_equivalent_review
+    authorization["explicitly_not_included"] = sorted(
+        set(authorization.get("explicitly_not_included") or []).union(LIVE_EXECUTION_GRANT_STILL_NOT_INCLUDED)
+    )
+    updated["authorization"] = authorization
+
+    posture = deepcopy(dict(updated.get("posture") or {}))
+    posture.update(
+        {
+            "prod_scoped_shadow_live_execution_authorization_requested": True,
+            "prod_scoped_shadow_live_execution_authorization_granted": True,
+            "prod_scoped_shadow_live_execution_authorized": True,
+            "missing_prod_scoped_shadow_live_execution_authorization": False,
+            "prod_scoped_shadow_live_read_only_execution_authorized": True,
+            "live_prod_source_reads_performed": True,
+            "online_shadow_execution_enabled": False,
+            "production_default_allowed": False,
+            "api_web_changes_allowed": False,
+            "user_visible_ranking_changed": False,
+            "writes_performed": False,
+            "runtime_writes_performed": False,
+        }
+    )
+    updated["posture"] = posture
+
+    blockers = deepcopy(dict(updated.get("shadow_and_production_blockers") or {}))
+    blockers.update(
+        {
+            "prod_scoped_shadow_live_execution_authorization_requested": True,
+            "prod_scoped_shadow_live_execution_authorization_granted": True,
+            "prod_scoped_shadow_live_execution_authorized": True,
+            "missing_prod_scoped_shadow_live_execution_authorization": False,
+            "blockers_cleared_by_live_execution_grant": [
+                "missing_prod_scoped_shadow_live_execution_authorization"
+            ],
+            "blockers_introduced_by_live_execution_grant": [],
+            "blockers_unchanged_by_live_execution_grant": True,
+            "online_shadow_execution_enabled": False,
+            "production_default_allowed": False,
+            "api_web_changes_allowed": False,
+            "user_visible_ranking_changed": False,
+        }
+    )
+    blockers.pop("blockers_changed_by_live_execution_grant", None)
+    updated["shadow_and_production_blockers"] = blockers
+    updated["writes_performed"] = False
+    updated["runtime_writes_performed"] = False
+    updated["recommended_next_stage"] = POST_LIVE_EXECUTION_GRANT_NEXT_STAGE
+    updated["caveats"] = _caveats(mode="post_live_execution_grant")
+
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve plan section")
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve proof section")
+    if updated.get("execution") != execution_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve execution section")
+    if "live_execution_pilot_run" in (updated.get("execution") or {}):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must not add execution.live_execution_pilot_run"
+        )
+    if updated.get("review") != review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve review section")
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve legacy_artifacts_index"
+        )
+    if _get(updated, "authorization.grant_decision") != pilot_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve pilot grant decision"
+        )
+    if _get(updated, "authorization.granted_scope") != pilot_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve pilot granted scope"
+        )
+    if _get(updated, "authorization.request_decision") != live_request_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only request decision"
+        )
+    if _get(updated, "authorization.requested_scope") != live_requested_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only requested scope"
+        )
+    if _get(updated, "authorization.live_read_only_grant_decision") != live_read_only_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only grant decision"
+        )
+    if _get(updated, "authorization.live_read_only_granted_scope") != live_read_only_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only granted scope"
+        )
+    if _get(updated, "authorization.live_execution_request_decision") != live_execution_request_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live execution request decision"
+        )
+    if _get(updated, "authorization.live_execution_requested_scope") != live_execution_requested_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live execution requested scope"
+        )
+    return updated
+
+
 def _infer_plan_mode(
     bundle: Mapping[str, Any],
     *,
@@ -3806,6 +4145,7 @@ def _infer_plan_mode(
     expect_live_read_only_pilot_run_filed: bool | None,
     expect_live_read_only_pilot_review_filed: bool | None,
     expect_live_execution_request_filed: bool | None,
+    expect_live_execution_grant_filed: bool | None,
 ) -> str:
     explicit = [
         expectation is not None
@@ -3823,10 +4163,41 @@ def _infer_plan_mode(
             expect_live_read_only_pilot_run_filed,
             expect_live_read_only_pilot_review_filed,
             expect_live_execution_request_filed,
+            expect_live_execution_grant_filed,
         )
     ]
     if sum(explicit) > 1:
         raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot/live read-only expectations conflict")
+    if expect_live_execution_grant_filed is True:
+        return "post_live_execution_grant"
+    if expect_live_execution_grant_filed is False:
+        if _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_granted") is True:
+            raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must not be filed")
+        if _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_requested") is True:
+            return "post_live_execution_request"
+        if _get(bundle, "review.prod_scoped_shadow_live_read_only_pilot_reviewed") is True:
+            return "post_live_read_only_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_executed") is True:
+            return "post_live_read_only_pilot_run"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted") is True:
+            return "post_live_read_only_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_requested") is True:
+            return "post_live_read_only_request"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_reviewed") is True:
+            return "post_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_executed") is True:
+            return "post_pilot_run"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_harness_reviewed") is True:
+            return "post_pilot_harness_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_harness_executed") is True:
+            return "post_pilot_harness"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized") is True:
+            return "post_pilot_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested") is True:
+            return "post_pilot_request"
+        revision = _get(bundle, "metadata.bundle_revision")
+        proof_passed = _get(bundle, "posture.prod_scoped_shadow_proof_passed")
+        return "post_proof" if revision == POST_PROOF_BUNDLE_REVISION and proof_passed is True else "post_plan"
     if expect_live_execution_request_filed is True:
         return "post_live_execution_request"
     if expect_live_execution_request_filed is False:
@@ -4057,6 +4428,32 @@ def _infer_plan_mode(
     live_read_only_pilot_reviewed = _get(bundle, "review.prod_scoped_shadow_live_read_only_pilot_reviewed")
     live_read_only_pilot_accepted = _get(bundle, "review.prod_scoped_shadow_live_read_only_pilot_accepted")
     live_execution_request = _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_requested")
+    live_execution_grant = _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_granted")
+    live_execution_authorized = _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorized")
+    if (
+        revision == POST_LIVE_EXECUTION_GRANT_BUNDLE_REVISION
+        and pilot_request is True
+        and pilot_grant is True
+        and pilot_authorized is True
+        and pilot_harness_executed is True
+        and pilot_harness_passed is True
+        and pilot_harness_reviewed is True
+        and pilot_harness_accepted is True
+        and pilot_executed is True
+        and pilot_reviewed is True
+        and pilot_accepted is True
+        and live_read_only_request is True
+        and live_read_only_grant is True
+        and live_read_only_authorized is True
+        and live_read_only_pilot_executed is True
+        and live_read_only_pilot_passed is True
+        and live_read_only_pilot_reviewed is True
+        and live_read_only_pilot_accepted is True
+        and live_execution_request is True
+        and live_execution_grant is True
+        and live_execution_authorized is True
+    ):
+        return "post_live_execution_grant"
     if (
         revision == POST_LIVE_EXECUTION_REQUEST_BUNDLE_REVISION
         and pilot_request is True
@@ -4919,6 +5316,75 @@ def _verify_live_execution_request_section(authorization: Mapping[str, Any]) -> 
             )
 
 
+def _verify_live_execution_grant_section(authorization: Mapping[str, Any]) -> None:
+    grant_decision = authorization.get("live_execution_grant_decision")
+    if not isinstance(grant_decision, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_execution_grant_decision must be an object"
+        )
+    _require_equal(
+        "authorization.live_execution_grant_decision.decision",
+        grant_decision.get("decision"),
+        "granted",
+    )
+    for field in ("owner", "granted_at", "expiry_date", "review_by"):
+        if not isinstance(grant_decision.get(field), str) or not grant_decision.get(field):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.live_execution_grant_decision.{field} must be populated"
+            )
+    _validate_pilot_grant_review(
+        owner=str(grant_decision["owner"]),
+        second_reviewer=(
+            str(grant_decision["second_reviewer"]) if grant_decision.get("second_reviewer") is not None else None
+        ),
+        owner_documents_equivalent_review=(
+            str(grant_decision["owner_documents_equivalent_review"])
+            if grant_decision.get("owner_documents_equivalent_review") is not None
+            else None
+        ),
+    )
+    granted_scope = authorization.get("live_execution_granted_scope")
+    if not isinstance(granted_scope, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_execution_granted_scope must be an object"
+        )
+    _require_equal(
+        "authorization.live_execution_granted_scope.authorization_scope",
+        granted_scope.get("authorization_scope"),
+        LIVE_EXECUTION_GRANT_SCOPE,
+    )
+    authorizes_for_chain_only = granted_scope.get("authorizes_for_chain_only")
+    if not isinstance(authorizes_for_chain_only, list):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_execution_granted_scope.authorizes_for_chain_only must be a list"
+        )
+    for item in LIVE_EXECUTION_GRANT_AUTHORIZES_FOR_CHAIN_ONLY:
+        if item not in authorizes_for_chain_only:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.live_execution_granted_scope.authorizes_for_chain_only missing {item!r}"
+            )
+    explicitly_still_not_included = granted_scope.get("explicitly_still_not_included")
+    if not isinstance(explicitly_still_not_included, list):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_execution_granted_scope.explicitly_still_not_included must be a list"
+        )
+    for item in LIVE_EXECUTION_GRANT_STILL_NOT_INCLUDED:
+        if item not in explicitly_still_not_included:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.live_execution_granted_scope.explicitly_still_not_included missing {item!r}"
+            )
+    grant_time_boundaries = granted_scope.get("grant_time_live_execution_boundaries")
+    if not isinstance(grant_time_boundaries, list):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_execution_granted_scope.grant_time_live_execution_boundaries must be a list"
+        )
+    for item in LIVE_EXECUTION_GRANT_TIME_BOUNDARIES:
+        if item not in grant_time_boundaries:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.live_execution_granted_scope.grant_time_live_execution_boundaries missing {item!r}"
+            )
+
+
 def _verify_live_read_only_grant_section(authorization: Mapping[str, Any]) -> None:
     grant_decision = authorization.get("live_read_only_grant_decision")
     if not isinstance(grant_decision, Mapping):
@@ -5382,6 +5848,170 @@ def _verify_live_execution_request_payload(
     }
 
 
+def _without_live_execution_grant_payload(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    payload = deepcopy(dict(bundle))
+    metadata = deepcopy(dict(payload.get("metadata") or {}))
+    metadata["bundle_revision"] = POST_LIVE_EXECUTION_REQUEST_BUNDLE_REVISION
+    payload["metadata"] = metadata
+    authorization = deepcopy(dict(payload.get("authorization") or {}))
+    authorization["prod_scoped_shadow_live_execution_authorization_granted"] = False
+    authorization["prod_scoped_shadow_live_execution_authorized"] = False
+    authorization.pop("live_execution_grant_decision", None)
+    authorization.pop("live_execution_granted_scope", None)
+    payload["authorization"] = authorization
+    posture = deepcopy(dict(payload.get("posture") or {}))
+    posture["prod_scoped_shadow_live_execution_authorization_granted"] = False
+    posture["prod_scoped_shadow_live_execution_authorized"] = False
+    posture["missing_prod_scoped_shadow_live_execution_authorization"] = True
+    payload["posture"] = posture
+    blockers = deepcopy(dict(payload.get("shadow_and_production_blockers") or {}))
+    blockers.pop("prod_scoped_shadow_live_execution_authorization_granted", None)
+    blockers["prod_scoped_shadow_live_execution_authorized"] = False
+    blockers["missing_prod_scoped_shadow_live_execution_authorization"] = True
+    blockers.pop("blockers_cleared_by_live_execution_grant", None)
+    blockers.pop("blockers_introduced_by_live_execution_grant", None)
+    blockers.pop("blockers_unchanged_by_live_execution_grant", None)
+    blockers.pop("blockers_changed_by_live_execution_grant", None)
+    payload["shadow_and_production_blockers"] = blockers
+    payload["recommended_next_stage"] = POST_LIVE_EXECUTION_REQUEST_NEXT_STAGE
+    payload["caveats"] = _caveats(mode="post_live_execution_request")
+    return payload
+
+
+def _verify_live_execution_grant_payload(
+    bundle: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    verify_local_pilot_files: bool,
+) -> dict[str, Any]:
+    metadata = _metadata(bundle, label="production-scoped-shadow bundle")
+    _require_equal(
+        "metadata.bundle_revision",
+        metadata.get("bundle_revision"),
+        POST_LIVE_EXECUTION_GRANT_BUNDLE_REVISION,
+    )
+    base_result = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        _without_live_execution_grant_payload(bundle),
+        repo_root=repo_root,
+        expect_live_execution_request_filed=True,
+        verify_local_pilot_files=verify_local_pilot_files,
+    )
+    authorization = bundle.get("authorization")
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorization_requested",
+        authorization.get("prod_scoped_shadow_live_execution_authorization_requested"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorization_granted",
+        authorization.get("prod_scoped_shadow_live_execution_authorization_granted"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_execution_authorized",
+        authorization.get("prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_execution_authorized",
+        authorization.get("prod_scoped_shadow_execution_authorized"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_execution_authorized",
+        authorization.get("prod_scoped_shadow_live_read_only_execution_authorized"),
+    )
+    _verify_live_execution_request_section(authorization)
+    _verify_live_execution_grant_section(authorization)
+    _verify_live_read_only_request_section(authorization)
+    _verify_live_read_only_grant_section(authorization)
+    execution = bundle.get("execution")
+    if not isinstance(execution, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("execution must be an object")
+    if "live_execution_pilot_run" in execution:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.live_execution_pilot_run must not be present at post_live_execution_grant"
+        )
+    posture = bundle.get("posture")
+    if not isinstance(posture, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("posture must be an object")
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_authorization_granted",
+        posture.get("prod_scoped_shadow_live_execution_authorization_granted"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_execution_authorized",
+        posture.get("prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "posture.missing_prod_scoped_shadow_live_execution_authorization",
+        posture.get("missing_prod_scoped_shadow_live_execution_authorization"),
+    )
+    _require_true(
+        "posture.prod_scoped_shadow_live_read_only_execution_authorized",
+        posture.get("prod_scoped_shadow_live_read_only_execution_authorized"),
+    )
+    _require_true("posture.live_prod_source_reads_performed", posture.get("live_prod_source_reads_performed"))
+    _require_false("posture.online_shadow_execution_enabled", posture.get("online_shadow_execution_enabled"))
+    _require_false("posture.production_default_allowed", posture.get("production_default_allowed"))
+    _require_false("posture.api_web_changes_allowed", posture.get("api_web_changes_allowed"))
+    _require_false("posture.user_visible_ranking_changed", posture.get("user_visible_ranking_changed"))
+    _require_false("posture.writes_performed", posture.get("writes_performed"))
+    _require_false("posture.runtime_writes_performed", posture.get("runtime_writes_performed"))
+    _verify_live_prod_source_read_flags(bundle)
+    blockers = bundle.get("shadow_and_production_blockers")
+    if not isinstance(blockers, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("shadow_and_production_blockers must be an object")
+    _require_true(
+        "shadow_and_production_blockers.prod_scoped_shadow_live_execution_authorization_granted",
+        blockers.get("prod_scoped_shadow_live_execution_authorization_granted"),
+    )
+    _require_true(
+        "shadow_and_production_blockers.prod_scoped_shadow_live_execution_authorized",
+        blockers.get("prod_scoped_shadow_live_execution_authorized"),
+    )
+    _require_false(
+        "shadow_and_production_blockers.missing_prod_scoped_shadow_live_execution_authorization",
+        blockers.get("missing_prod_scoped_shadow_live_execution_authorization"),
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_cleared_by_live_execution_grant",
+        blockers.get("blockers_cleared_by_live_execution_grant"),
+        ["missing_prod_scoped_shadow_live_execution_authorization"],
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_introduced_by_live_execution_grant",
+        blockers.get("blockers_introduced_by_live_execution_grant"),
+        [],
+    )
+    _require_true(
+        "shadow_and_production_blockers.blockers_unchanged_by_live_execution_grant",
+        blockers.get("blockers_unchanged_by_live_execution_grant"),
+    )
+    if "blockers_changed_by_live_execution_grant" in blockers:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "shadow_and_production_blockers.blockers_changed_by_live_execution_grant must not be used"
+        )
+    _require_equal("recommended_next_stage", bundle.get("recommended_next_stage"), POST_LIVE_EXECUTION_GRANT_NEXT_STAGE)
+    caveats = bundle.get("caveats")
+    if not isinstance(caveats, list):
+        raise MLShadowScorerProductionScopedShadowBundleError("caveats must be a list")
+    for caveat in _caveats(mode="post_live_execution_grant"):
+        if caveat not in caveats:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"post_live_execution_grant caveats missing {caveat!r}"
+            )
+    for item in LIVE_EXECUTION_GRANT_STILL_NOT_INCLUDED:
+        if item not in authorization.get("explicitly_not_included", []):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.explicitly_not_included missing {item!r}"
+            )
+    return {
+        **base_result,
+        "verification_mode": "post_live_execution_grant",
+        "bundle_revision": metadata.get("bundle_revision"),
+        "recommended_next_stage": bundle.get("recommended_next_stage"),
+    }
+
+
 def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     bundle: Mapping[str, Any],
     *,
@@ -5399,6 +6029,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     expect_live_read_only_pilot_run_filed: bool | None = None,
     expect_live_read_only_pilot_review_filed: bool | None = None,
     expect_live_execution_request_filed: bool | None = None,
+    expect_live_execution_grant_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
@@ -5420,7 +6051,14 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         expect_live_read_only_pilot_run_filed=expect_live_read_only_pilot_run_filed,
         expect_live_read_only_pilot_review_filed=expect_live_read_only_pilot_review_filed,
         expect_live_execution_request_filed=expect_live_execution_request_filed,
+        expect_live_execution_grant_filed=expect_live_execution_grant_filed,
     )
+    if mode == "post_live_execution_grant":
+        return _verify_live_execution_grant_payload(
+            bundle,
+            repo_root=root,
+            verify_local_pilot_files=verify_local_pilot_files,
+        )
     if mode == "post_live_execution_request":
         return _verify_live_execution_request_payload(
             bundle,
@@ -6629,6 +7267,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
     expect_live_read_only_pilot_run_filed: bool | None = None,
     expect_live_read_only_pilot_review_filed: bool | None = None,
     expect_live_execution_request_filed: bool | None = None,
+    expect_live_execution_grant_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
@@ -6648,6 +7287,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         expect_live_read_only_pilot_run_filed=expect_live_read_only_pilot_run_filed,
         expect_live_read_only_pilot_review_filed=expect_live_read_only_pilot_review_filed,
         expect_live_execution_request_filed=expect_live_execution_request_filed,
+        expect_live_execution_grant_filed=expect_live_execution_grant_filed,
         verify_local_pilot_files=verify_local_pilot_files,
     )
 
@@ -6694,6 +7334,11 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         if isinstance(authorization.get("live_execution_request_decision"), Mapping)
         else None
     )
+    live_execution_grant = (
+        authorization.get("live_execution_grant_decision")
+        if isinstance(authorization.get("live_execution_grant_decision"), Mapping)
+        else None
+    )
     pilot_grant = authorization.get("grant_decision") if isinstance(authorization.get("grant_decision"), Mapping) else None
     pilot_review = review.get("pilot_review_decision") if isinstance(review, Mapping) and isinstance(review.get("pilot_review_decision"), Mapping) else None
     live_read_only_pilot_review = (
@@ -6701,7 +7346,11 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         if isinstance(review, Mapping) and isinstance(review.get("live_read_only_pilot_review_decision"), Mapping)
         else None
     )
-    if live_execution_request:
+    if live_execution_grant:
+        summary = (
+            "This bundle records the production-scoped online shadow live execution authorization grant while keeping bounded live execution pilot runs separate, global shadow enablement, production default, API/web, and user-visible behavior disabled."
+        )
+    elif live_execution_request:
         summary = (
             "This bundle records the production-scoped online shadow live execution authorization request while keeping live execution unauthorized, global shadow enablement, production default, API/web, and user-visible behavior disabled."
         )
@@ -6955,6 +7604,33 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         )
         lines.extend(["", "## Live Execution Request Explicitly Not Included", ""])
         lines.extend(f"- {item}" for item in authorization["live_execution_requested_scope"]["explicitly_not_included"])
+        lines.append("")
+    if live_execution_grant:
+        grant_decision = live_execution_grant
+        granted_scope = authorization["live_execution_granted_scope"]
+        lines.extend(
+            [
+                "## Live Execution Authorization Grant",
+                "",
+                f"- Decision: `{grant_decision['decision']}`",
+                f"- Owner: {grant_decision['owner']}",
+                f"- Granted at: {grant_decision['granted_at']}",
+                f"- Expiry date: {grant_decision['expiry_date']}",
+                f"- Review by: {grant_decision['review_by']}",
+                f"- Grant notes: {grant_decision.get('grant_notes')}",
+                f"- Second reviewer: {grant_decision.get('second_reviewer')}",
+                f"- Owner equivalent review: {grant_decision.get('owner_documents_equivalent_review')}",
+                f"- Granted scope: `{granted_scope['authorization_scope']}`",
+                f"- Missing live execution authorization: {posture.get('missing_prod_scoped_shadow_live_execution_authorization')}",
+                f"- Live reads performed: {posture.get('live_prod_source_reads_performed')}",
+                "",
+                "## Live Execution Grant Boundaries",
+                "",
+            ]
+        )
+        lines.extend(f"- {item}" for item in granted_scope["grant_time_live_execution_boundaries"])
+        lines.extend(["", "## Live Execution Grant Explicitly Not Included", ""])
+        lines.extend(f"- {item}" for item in granted_scope["explicitly_still_not_included"])
         lines.append("")
     if live_read_only_grant:
         grant_decision = live_read_only_grant
@@ -7536,6 +8212,110 @@ def request_live_execution_ml_shadow_scorer_production_scoped_shadow_bundle(
         updated,
         repo_root=root,
         expect_live_execution_request_filed=True,
+        verify_local_pilot_files=False,
+    )
+    bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    bundle_path.with_name("bundle.md").write_text(
+        markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(updated),
+        encoding="utf-8",
+    )
+    return updated
+
+
+def grant_live_execution_ml_shadow_scorer_production_scoped_shadow_bundle(
+    *,
+    bundle_path: Path,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    grant_notes: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
+    bundle_path = Path(bundle_path).resolve()
+    payload = _load_json_object(bundle_path)
+    if _get(payload, "authorization.prod_scoped_shadow_live_execution_authorization_granted") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution authorization grant has already been filed"
+        )
+    verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        payload,
+        repo_root=root,
+        expect_live_execution_request_filed=True,
+        verify_local_pilot_files=False,
+    )
+    plan_before = deepcopy(payload.get("plan"))
+    proof_before = deepcopy(payload.get("proof"))
+    execution_before = deepcopy(payload.get("execution"))
+    review_before = deepcopy(payload.get("review"))
+    legacy_index_before = deepcopy(_get(payload, "metadata.legacy_artifacts_index"))
+    pilot_grant_decision_before = deepcopy(_get(payload, "authorization.grant_decision"))
+    pilot_granted_scope_before = deepcopy(_get(payload, "authorization.granted_scope"))
+    live_request_decision_before = deepcopy(_get(payload, "authorization.request_decision"))
+    live_requested_scope_before = deepcopy(_get(payload, "authorization.requested_scope"))
+    live_read_only_grant_decision_before = deepcopy(_get(payload, "authorization.live_read_only_grant_decision"))
+    live_read_only_granted_scope_before = deepcopy(_get(payload, "authorization.live_read_only_granted_scope"))
+    live_execution_request_decision_before = deepcopy(_get(payload, "authorization.live_execution_request_decision"))
+    live_execution_requested_scope_before = deepcopy(_get(payload, "authorization.live_execution_requested_scope"))
+    updated = apply_production_scoped_shadow_live_execution_authorization_grant(
+        payload,
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+        grant_notes=grant_notes,
+        expiry_date=expiry_date,
+        review_by=review_by,
+    )
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve plan section")
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve proof section")
+    if updated.get("execution") != execution_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve execution section")
+    if updated.get("review") != review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError("live execution grant must preserve review section")
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve legacy_artifacts_index"
+        )
+    if _get(updated, "authorization.grant_decision") != pilot_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve pilot grant decision"
+        )
+    if _get(updated, "authorization.granted_scope") != pilot_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve pilot granted scope"
+        )
+    if _get(updated, "authorization.request_decision") != live_request_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only request decision"
+        )
+    if _get(updated, "authorization.requested_scope") != live_requested_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only requested scope"
+        )
+    if _get(updated, "authorization.live_read_only_grant_decision") != live_read_only_grant_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only grant decision"
+        )
+    if _get(updated, "authorization.live_read_only_granted_scope") != live_read_only_granted_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live read-only granted scope"
+        )
+    if _get(updated, "authorization.live_execution_request_decision") != live_execution_request_decision_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live execution request decision"
+        )
+    if _get(updated, "authorization.live_execution_requested_scope") != live_execution_requested_scope_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live execution grant must preserve live execution requested scope"
+        )
+    verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        updated,
+        repo_root=root,
+        expect_live_execution_grant_filed=True,
         verify_local_pilot_files=False,
     )
     bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
