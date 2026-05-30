@@ -96,7 +96,7 @@ def _default_pilot_run_id(generated_at: str) -> str:
     compact = generated_at.replace("-", "").replace(":", "")
     if compact.endswith("Z"):
         compact = compact[:-1] + "Z"
-    return f"live-read-only-{RANKING_RUN_ID}-{compact}"
+    return f"prod-readonly-{RANKING_RUN_ID}-{compact}"
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:

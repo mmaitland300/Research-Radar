@@ -6303,7 +6303,7 @@ def main() -> None:
         live_read_only_pilot_parser.add_argument(
             "--pilot-run-id",
             default=None,
-            help="Optional safe pilot run id; defaults to live-read-only ranking_run_id plus UTC timestamp",
+            help="Optional safe pilot run id; defaults to prod-readonly ranking_run_id plus UTC timestamp",
         )
         live_read_only_pilot_parser.add_argument(
             "--repo-root",

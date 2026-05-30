@@ -272,6 +272,14 @@ def _run_live_pilot(
     )
 
 
+def test_default_pilot_run_id_uses_secret_scanner_safe_prefix() -> None:
+    run_id = live_pilot_module._default_pilot_run_id("2026-05-30T03:26:31Z")
+
+    assert run_id == f"prod-readonly-{live_pilot_module.RANKING_RUN_ID}-20260530T032631Z"
+    assert not run_id.startswith(("live-", "live_"))
+    assert "live-read-only" not in run_id
+
+
 def test_requires_confirmation_before_database_runtime_artifacts_or_bundle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

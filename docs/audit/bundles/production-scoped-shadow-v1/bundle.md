@@ -192,11 +192,11 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 ## Live Read-Only Pilot Run
 
 - Pilot surface: `bounded_live_read_only_prod_scoped_pilot`
-- Pilot run id: `live-read-only-rank-83787b91ef-20260530T032631Z`
+- Pilot run id: `prod-readonly-rank-83787b91ef-20260530T032631Z`
 - Joined candidate count: 528
 - Live prod source reads performed: True
 - Pilot passed: True
-- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/live-read-only-rank-83787b91ef-20260530T032631Z/`
+- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/prod-readonly-rank-83787b91ef-20260530T032631Z/`
 - Labels used for scoring: False
 - Refit/training performed: False
 - Embedding generation performed: False
