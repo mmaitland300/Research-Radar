@@ -608,7 +608,6 @@ def test_bundle_apply_verify_markdown_are_paperwork_only() -> None:
     )
     for forbidden in ("psycopg", "run_ml_shadow_scorer_v1_online_shadow_runtime", "_connect_readonly"):
         assert forbidden not in source
-    assert "LIVE_READ_ONLY_PILOT_RUN_REVIEW_CHECKS" not in source
 
 
 def test_cli_smoke_run_with_confirmation_then_verify(

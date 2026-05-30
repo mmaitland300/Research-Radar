@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the bounded production-scoped online shadow live read-only pilot run while keeping global shadow enablement, production default, API/web, and user-visible behavior disabled.
+This bundle records the production-scoped online shadow live read-only pilot review (accepted) while keeping global shadow enablement, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 11
+- Bundle revision: 12
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -23,9 +23,11 @@ This bundle records the bounded production-scoped online shadow live read-only p
 - Live read-only authorized: True
 - Live read-only pilot executed: True
 - Live read-only pilot passed: True
+- Live read-only pilot reviewed: True
+- Live read-only pilot accepted: True
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `review_production_scoped_online_shadow_live_read_only_pilot_v1`
+- Recommended next stage: `request_production_scoped_online_shadow_live_execution_authorization_v1`
 
 ## Pinned Identity
 
@@ -218,6 +220,45 @@ This bundle records the bounded production-scoped online shadow live read-only p
 | `observability.json` | 15663 | None | `385f5504983f45889239fce8967b69d4aa967c45f25ae0745134a0463438cef0` |
 | `write_counts.json` | 714 | None | `1901ab431a7426bbe2f458bf85262e5a5e5d50dcdf4a5e6ed452bc93ef4baf39` |
 
+## Live Read-Only Pilot Review
+
+- Decision: `accepted`
+- Reviewer: Matt Maitland
+- Reviewed at: 2026-05-30T04:17:01Z
+- Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
+- Live read-only pilot accepted: True
+- Failed review checks: None
+- Next stage: `request_production_scoped_online_shadow_live_execution_authorization_v1`
+
+## Live Read-Only Pilot Review Checks
+
+- `live_read_only_pilot_run_pass_fail_overall_passed`: True
+- `joined_candidate_count_528`: True
+- `runtime_row_count_528`: True
+- `runtime_drill_call_order`: True
+- `preflight_postflight_disabled`: True
+- `environment_restored`: True
+- `forbidden_write_counts_zero`: True
+- `isolated_artifact_count_4`: True
+- `expected_files_recorded`: True
+- `live_prod_source_reads_true`: True
+- `live_source_reads_documented`: True
+- `no_labels_refit_embedding_or_label_ingest`: True
+- `pilot_surface_bounded_live_read_only_prod_scoped`: True
+- `harness_and_audit_pilot_still_no_live_reads`: True
+- `production_api_user_visible_unchanged`: True
+- `global_live_execution_authorization_false`: True
+- `live_read_only_grant_slices_present`: True
+
+## Live Read-Only Pilot Review Limitations
+
+- live read-only pilot review evaluates recorded rev 11 evidence only
+- no runtime rerun was performed
+- no database connection was opened by the review
+- no shadow-runs artifact reads or writes were performed
+- global/live/fleet online shadow execution remains unauthorized
+- accepted review clears only the live read-only pilot evidence gate
+
 ## Pilot Authorization Grant
 
 - Decision: `granted`
@@ -320,7 +361,7 @@ This bundle records the bounded production-scoped online shadow live read-only p
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `review_production_scoped_online_shadow_live_read_only_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_live_execution_authorization_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -381,7 +422,7 @@ This bundle records the bounded production-scoped online shadow live read-only p
 
 ## Recommended Next Stage
 
-`review_production_scoped_online_shadow_live_read_only_pilot_v1`
+`request_production_scoped_online_shadow_live_execution_authorization_v1`
 
 ## Caveats
 
@@ -393,34 +434,13 @@ This bundle records the bounded production-scoped online shadow live read-only p
 - Proof is a bounded fixture/dry-run; not a live prod run and does not call runtime.
 - Proof clears the prod-scoped shadow proof blocker only.
 - Pilot authorization, live execution authorization, flag enablement, and prod default/API/user-visible remain separate gates.
-- This is a bounded fixture pilot harness, not live production traffic.
-- No live prod source reads were performed.
-- No production-scoped pilot execution is recorded.
-- Global shadow remains disabled.
-- Production default/API/user-visible behavior remains unchanged.
-- Actual production-scoped pilot remains a separate milestone.
-- Review covers bounded fixture pilot harness plumbing evidence only, not live production traffic.
-- No runtime rerun or shadow-runs artifact read was performed by the review.
-- The actual production-scoped pilot remains unexecuted and separately gated.
-- Pilot uses approved frozen second-surface audit artifacts, not live production traffic.
-- No live production DB/source reads were performed.
-- Live read-only production shadow access remains a separate future authorization chain.
-- Global online shadow enablement remains false.
-- Production default/API/user-visible behavior remains unchanged.
-- Pilot review accepts bounded audit-artifact pilot evidence only.
-- Pilot review does not grant live read-only production source access.
-- Pilot review does not grant global/live/fleet online shadow execution.
-- Production default/API/user-visible behavior remains unchanged after pilot review.
-- Bundle live-read-only grant milestone only; does not run the live read-only pilot.
-- Clears live read-only authorization blocker for the live read-only pilot chain only.
-- Grants read-only source access authorization only; does not perform live reads at grant time.
-- Live read-only pilot run still required before any live prod source reads are recorded.
-- Does not enable global/live/fleet online shadow execution.
-- Production default/API/user-visible behavior remains unchanged.
-- Live read-only pilot uses approved read-only production sources under grant boundaries.
-- First milestone where live prod source reads are recorded.
-- Input-only scoring; labels are not scoring features.
-- No model refit/training, embedding generation, or label ingest.
-- Does not enable global/live/fleet online shadow execution.
-- Production default/API/user-visible behavior remains unchanged.
-- Does not perform production writes, committed artifact writes, or runtime writes.
+- Harness evidence remains bounded fixture-only and records no live source reads.
+- Audit-artifact pilot evidence remains frozen-artifact-only and records no live production DB/source reads.
+- Pilot and harness reviews did not rerun runtime or read shadow-runs artifacts.
+- Live read-only pilot run evidence records live prod source reads under grant boundaries.
+- Live read-only pilot run evidence records no production writes, committed artifact writes, or runtime writes.
+- Live read-only pilot review evaluates recorded rev 11 evidence only.
+- Review does not rerun runtime, open DB connections, or read shadow-runs files.
+- Review does not grant global/live/fleet online shadow execution.
+- Review does not change production default, API/web, or user-visible ranking.
+- Accepted review clears the live read-only pilot evidence gate only.
