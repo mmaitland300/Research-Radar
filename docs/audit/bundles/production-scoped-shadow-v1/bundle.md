@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped online shadow flag enablement authorization request while keeping runtime flag enablement disabled, global shadow enablement, production default, API/web, and user-visible behavior disabled.
+This bundle records the production-scoped online shadow flag enablement authorization grant while keeping bounded flag-enablement pilot runs separate, runtime flag enablement disabled, global shadow enablement, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 17
+- Bundle revision: 18
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -33,13 +33,13 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - Live execution pilot reviewed: True
 - Live execution pilot accepted: True
 - Flag enablement authorization requested: True
-- Flag enablement authorization granted: False
-- Flag enablement authorized: False
-- Missing flag enablement authorization: True
+- Flag enablement authorization granted: True
+- Flag enablement authorized: True
+- Missing flag enablement authorization: False
 - Missing live execution authorization: False
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1`
+- Recommended next stage: `run_production_scoped_online_shadow_flag_enablement_pilot_v1`
 
 ## Pinned Identity
 
@@ -296,7 +296,7 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - Review notes: Accepted bounded live execution pilot evidence review.
 - Live execution pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_flag_enablement_pilot_v1`
 
 ## Live Execution Pilot Review Checks
 
@@ -345,10 +345,10 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - Request notes: None
 - Requested scope: `production_scoped_shadow_flag_enablement_paperwork_only`
 - Runtime feature flag: `ML_SHADOW_SCORER_V1_RUNTIME_ENABLED`
-- Missing flag enablement authorization: True
+- Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_flag_enablement_pilot_v1`
 
 ## Flag Enablement Future Grant Requirements
 
@@ -374,6 +374,55 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - refit/training
 - label ingest
 - live flag enablement at request time
+- online_shadow_execution_enabled globally
+- production_default_allowed
+- api_web_changes_allowed
+- user_visible_ranking_changed
+
+## Flag Enablement Authorization Grant
+
+- Decision: `granted`
+- Owner: Matt Maitland
+- Granted at: 2026-05-30T19:29:33Z
+- Expiry date: 2026-08-27
+- Review by: 2026-08-27
+- Grant notes: None
+- Second reviewer: None
+- Owner equivalent review: owner equivalent flag enablement review
+- Granted scope: `production_scoped_shadow_flag_enablement_authorization_only`
+- Runtime feature flag: `ML_SHADOW_SCORER_V1_RUNTIME_ENABLED`
+- Missing flag enablement authorization: False
+- Live execution authorized: True
+- Online shadow execution enabled: False
+- Next stage: `run_production_scoped_online_shadow_flag_enablement_pilot_v1`
+
+## Flag Enablement Grant Authorizes For Chain Only
+
+- bounded prod-scoped flag enablement authorization paperwork complete
+- bounded flag-enablement pilot run may be executed in a separate run milestone under request/grant contract
+- bounded flag-enablement pilot review may be recorded after the separate run milestone
+
+## Flag Enablement Grant Boundaries
+
+- no bounded flag-enablement pilot run performed at grant time
+- no runtime flag enablement performed at grant time
+- no new live reads performed at grant time
+- no writes performed at grant time
+- no execution.flag_enablement_pilot_run slice recorded at grant time
+- rev 19 run must prove bounded scope, flag-off restoration, and no forbidden writes
+
+## Flag Enablement Grant Explicitly Not Included
+
+- global/fleet online shadow execution
+- global/fleet flag enablement
+- production default
+- API/web
+- user-visible ranking changes
+- production default/API/user-visible recommendation output
+- DB writes/DDL
+- refit/training
+- label ingest
+- live runtime flag enablement at grant time
 - online_shadow_execution_enabled globally
 - production_default_allowed
 - api_web_changes_allowed
@@ -453,7 +502,7 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
 - Live read-only pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_flag_enablement_pilot_v1`
 
 ## Live Read-Only Pilot Review Checks
 
@@ -586,7 +635,7 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_flag_enablement_pilot_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -631,6 +680,7 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - live prod execution beyond an explicitly granted bounded pilot
 - live reads at grant time
 - live reads at request time
+- live runtime flag enablement at grant time
 - model refit, embedding generation, label ingest
 - online_shadow_execution_enabled globally
 - prod default
@@ -653,7 +703,7 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 
 ## Recommended Next Stage
 
-`record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1`
+`run_production_scoped_online_shadow_flag_enablement_pilot_v1`
 
 ## Caveats
 
@@ -697,3 +747,9 @@ This bundle records the production-scoped online shadow flag enablement authoriz
 - Does not enable global/fleet online shadow execution.
 - Does not change production default, API/web, or user-visible ranking.
 - Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest.
+- Grant milestone only; does not run bounded flag-enablement pilot.
+- Does not enable ML_SHADOW_SCORER_V1_RUNTIME_ENABLED globally or fleet-wide.
+- Does not set online_shadow_execution_enabled.
+- Does not change production default, API/web, or user-visible ranking.
+- Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest.
+- Bounded flag-enablement pilot run remains a separate rev 19 milestone.

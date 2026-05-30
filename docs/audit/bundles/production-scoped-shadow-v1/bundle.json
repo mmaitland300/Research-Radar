@@ -16,6 +16,7 @@
       "live prod execution beyond an explicitly granted bounded pilot",
       "live reads at grant time",
       "live reads at request time",
+      "live runtime flag enablement at grant time",
       "model refit, embedding generation, label ingest",
       "online_shadow_execution_enabled globally",
       "prod default",
@@ -28,6 +29,48 @@
       "user-visible ranking changes",
       "user_visible_ranking_changed"
     ],
+    "flag_enablement_grant_decision": {
+      "decision": "granted",
+      "expiry_date": "2026-08-27",
+      "grant_notes": null,
+      "granted_at": "2026-05-30T19:29:33Z",
+      "owner": "Matt Maitland",
+      "owner_documents_equivalent_review": "owner equivalent flag enablement review",
+      "review_by": "2026-08-27"
+    },
+    "flag_enablement_granted_scope": {
+      "authorization_scope": "production_scoped_shadow_flag_enablement_authorization_only",
+      "authorizes_for_chain_only": [
+        "bounded prod-scoped flag enablement authorization paperwork complete",
+        "bounded flag-enablement pilot run may be executed in a separate run milestone under request/grant contract",
+        "bounded flag-enablement pilot review may be recorded after the separate run milestone"
+      ],
+      "explicitly_still_not_included": [
+        "global/fleet online shadow execution",
+        "global/fleet flag enablement",
+        "production default",
+        "API/web",
+        "user-visible ranking changes",
+        "production default/API/user-visible recommendation output",
+        "DB writes/DDL",
+        "refit/training",
+        "label ingest",
+        "live runtime flag enablement at grant time",
+        "online_shadow_execution_enabled globally",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed"
+      ],
+      "grant_time_flag_enablement_boundaries": [
+        "no bounded flag-enablement pilot run performed at grant time",
+        "no runtime flag enablement performed at grant time",
+        "no new live reads performed at grant time",
+        "no writes performed at grant time",
+        "no execution.flag_enablement_pilot_run slice recorded at grant time",
+        "rev 19 run must prove bounded scope, flag-off restoration, and no forbidden writes"
+      ],
+      "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
+    },
     "flag_enablement_request_decision": {
       "decision": "requested",
       "request_notes": null,
@@ -205,9 +248,9 @@
       ]
     },
     "prod_scoped_shadow_execution_authorized": false,
-    "prod_scoped_shadow_flag_enablement_authorization_granted": false,
+    "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
-    "prod_scoped_shadow_flag_enablement_authorized": false,
+    "prod_scoped_shadow_flag_enablement_authorized": true,
     "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
     "prod_scoped_shadow_live_execution_authorized": true,
@@ -296,7 +339,13 @@
     "Runtime flag remains disabled globally and unchanged by this request.",
     "Does not enable global/fleet online shadow execution.",
     "Does not change production default, API/web, or user-visible ranking.",
-    "Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest."
+    "Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest.",
+    "Grant milestone only; does not run bounded flag-enablement pilot.",
+    "Does not enable ML_SHADOW_SCORER_V1_RUNTIME_ENABLED globally or fleet-wide.",
+    "Does not set online_shadow_execution_enabled.",
+    "Does not change production default, API/web, or user-visible ranking.",
+    "Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest.",
+    "Bounded flag-enablement pilot run remains a separate rev 19 milestone."
   ],
   "execution": {
     "live_execution_pilot_run": {
@@ -3058,9 +3107,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 17,
+    "bundle_revision": 18,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-30T19:07:26Z",
+    "generated_at": "2026-05-30T19:29:33Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -3257,7 +3306,7 @@
   "posture": {
     "api_web_changes_allowed": false,
     "live_prod_source_reads_performed": true,
-    "missing_prod_scoped_shadow_flag_enablement_authorization": true,
+    "missing_prod_scoped_shadow_flag_enablement_authorization": false,
     "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
     "missing_prod_scoped_shadow_pilot_authorization": false,
@@ -3265,9 +3314,9 @@
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
     "prod_scoped_shadow_execution_authorized": false,
-    "prod_scoped_shadow_flag_enablement_authorization_granted": false,
+    "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
-    "prod_scoped_shadow_flag_enablement_authorized": false,
+    "prod_scoped_shadow_flag_enablement_authorized": true,
     "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
     "prod_scoped_shadow_live_execution_authorized": true,
@@ -3457,7 +3506,7 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1",
+  "recommended_next_stage": "run_production_scoped_online_shadow_flag_enablement_pilot_v1",
   "review": {
     "live_execution_pilot_review_decision": {
       "accepted_evidence": [
@@ -3640,6 +3689,9 @@
     "blockers_changed_by_proof": [
       "missing_prod_scoped_shadow_proof"
     ],
+    "blockers_cleared_by_flag_enablement_grant": [
+      "missing_prod_scoped_shadow_flag_enablement_authorization"
+    ],
     "blockers_cleared_by_flag_enablement_request": [],
     "blockers_cleared_by_live_execution_grant": [
       "missing_prod_scoped_shadow_live_execution_authorization"
@@ -3660,6 +3712,7 @@
     "blockers_cleared_by_pilot_request": [],
     "blockers_cleared_by_pilot_review": [],
     "blockers_cleared_by_pilot_run": [],
+    "blockers_introduced_by_flag_enablement_grant": [],
     "blockers_introduced_by_flag_enablement_request": [
       "missing_prod_scoped_shadow_flag_enablement_authorization"
     ],
@@ -3682,6 +3735,7 @@
     ],
     "blockers_introduced_by_pilot_review": [],
     "blockers_introduced_by_pilot_run": [],
+    "blockers_unchanged_by_flag_enablement_grant": true,
     "blockers_unchanged_by_flag_enablement_request": true,
     "blockers_unchanged_by_grant": true,
     "blockers_unchanged_by_live_execution_grant": true,
@@ -3699,7 +3753,7 @@
     "blockers_unchanged_by_pilot_run": true,
     "blockers_unchanged_by_plan": true,
     "blockers_unchanged_by_proof": true,
-    "missing_prod_scoped_shadow_flag_enablement_authorization": true,
+    "missing_prod_scoped_shadow_flag_enablement_authorization": false,
     "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
     "missing_prod_scoped_shadow_pilot_authorization": false,
@@ -3707,9 +3761,9 @@
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
     "prod_scoped_shadow_execution_authorized": false,
-    "prod_scoped_shadow_flag_enablement_authorization_granted": false,
+    "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
-    "prod_scoped_shadow_flag_enablement_authorized": false,
+    "prod_scoped_shadow_flag_enablement_authorized": true,
     "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
     "prod_scoped_shadow_live_execution_authorized": true,

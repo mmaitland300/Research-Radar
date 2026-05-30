@@ -134,6 +134,12 @@ def _downgrade_to_rev12(payload: dict[str, Any]) -> dict[str, Any]:
 def _prepare_rev12_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
     revision = payload["metadata"]["bundle_revision"]
+    if revision == 18:
+        payload = bundle_module._without_flag_enablement_grant_payload(payload)
+        revision = payload["metadata"]["bundle_revision"]
+    if revision == 17:
+        payload = bundle_module._without_flag_enablement_request_payload(payload)
+        revision = payload["metadata"]["bundle_revision"]
     if revision == 16:
         payload = bundle_module._without_live_execution_pilot_review_payload(payload)
         revision = payload["metadata"]["bundle_revision"]
@@ -146,7 +152,7 @@ def _prepare_rev12_template_bundle(bundle_path: Path) -> None:
         payload = _downgrade_to_rev12(payload)
     elif payload["metadata"]["bundle_revision"] != 12:
         raise AssertionError(
-            f"expected committed production-scoped bundle revision 12, 13, 14, 15, or 16, got {revision}"
+            f"expected committed production-scoped bundle revision 12 through 18, got {revision}"
         )
     _write_json(bundle_path, payload)
 
@@ -155,6 +161,14 @@ def _ensure_rev13_bundle(root: Path) -> Path:
     bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
     payload = _load(bundle_path)
     revision = payload["metadata"]["bundle_revision"]
+    if revision == 18:
+        payload = bundle_module._without_flag_enablement_grant_payload(payload)
+        _write_json(bundle_path, payload)
+        revision = payload["metadata"]["bundle_revision"]
+    if revision == 17:
+        payload = bundle_module._without_flag_enablement_request_payload(payload)
+        _write_json(bundle_path, payload)
+        revision = payload["metadata"]["bundle_revision"]
     if revision == 16:
         payload = bundle_module._without_live_execution_pilot_review_payload(payload)
         _write_json(bundle_path, payload)
@@ -175,7 +189,7 @@ def _ensure_rev13_bundle(root: Path) -> Path:
             repo_root=root,
         )
         return bundle_path
-    raise AssertionError(f"expected production-scoped bundle revision 12 through 16, got {revision}")
+    raise AssertionError(f"expected production-scoped bundle revision 12 through 18, got {revision}")
 
 
 def _apply_grant(payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
@@ -287,6 +301,10 @@ def test_committed_bundle_matches_post_live_execution_grant() -> None:
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] == 18:
+        payload = bundle_module._without_flag_enablement_grant_payload(payload)
+    if payload["metadata"]["bundle_revision"] == 17:
+        payload = bundle_module._without_flag_enablement_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 16:
         payload = bundle_module._without_live_execution_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 15:
