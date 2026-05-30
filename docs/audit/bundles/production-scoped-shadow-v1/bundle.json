@@ -8,8 +8,11 @@
       "fleet-wide flag enablement",
       "global enablement",
       "global flag enablement",
+      "global/fleet flag enablement",
       "global/fleet online shadow execution",
+      "label ingest",
       "live execution at request time",
+      "live flag enablement at request time",
       "live prod execution beyond an explicitly granted bounded pilot",
       "live reads at grant time",
       "live reads at request time",
@@ -25,6 +28,43 @@
       "user-visible ranking changes",
       "user_visible_ranking_changed"
     ],
+    "flag_enablement_request_decision": {
+      "decision": "requested",
+      "request_notes": null,
+      "requested_at": "2026-05-30T19:07:26Z",
+      "requester": "Matt Maitland"
+    },
+    "flag_enablement_requested_scope": {
+      "authorization_scope": "production_scoped_shadow_flag_enablement_paperwork_only",
+      "explicitly_not_included": [
+        "global/fleet flag enablement",
+        "production default",
+        "API/web",
+        "user-visible ranking changes",
+        "production default/API/user-visible recommendation output",
+        "DB writes/DDL",
+        "refit/training",
+        "label ingest",
+        "live flag enablement at request time",
+        "online_shadow_execution_enabled globally",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed"
+      ],
+      "future_grant_would_require": [
+        "accepted live execution pilot review evidence",
+        "exact production-scoped flag target and environment boundary",
+        "rollout and rollback owner",
+        "flag-off drill and disable-switch evidence",
+        "observability for flag-enabled shadow execution",
+        "incomplete coverage skip behavior remains enforced",
+        "forbidden production writes remain zero",
+        "production default/API/user-visible behavior remains unchanged",
+        "no global/fleet enablement",
+        "time-bound grant/review requirements"
+      ],
+      "runtime_feature_flag": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
+    },
     "grant_decision": {
       "decision": "granted",
       "expiry_date": "2026-08-27",
@@ -165,6 +205,9 @@
       ]
     },
     "prod_scoped_shadow_execution_authorized": false,
+    "prod_scoped_shadow_flag_enablement_authorization_granted": false,
+    "prod_scoped_shadow_flag_enablement_authorization_requested": true,
+    "prod_scoped_shadow_flag_enablement_authorized": false,
     "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
     "prod_scoped_shadow_live_execution_authorized": true,
@@ -247,7 +290,13 @@
     "Does not call runtime, connect to DB, read shadow-runs files, or perform new live reads.",
     "Accepted review is necessary but not sufficient for flag enablement.",
     "Does not enable global online shadow execution.",
-    "Does not change production default, API/web, or user-visible ranking."
+    "Does not change production default, API/web, or user-visible ranking.",
+    "Bundle flag-enablement request milestone only; grants no flag enablement authorization.",
+    "Accepted live execution pilot review is necessary but not sufficient for flag enablement.",
+    "Runtime flag remains disabled globally and unchanged by this request.",
+    "Does not enable global/fleet online shadow execution.",
+    "Does not change production default, API/web, or user-visible ranking.",
+    "Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest."
   ],
   "execution": {
     "live_execution_pilot_run": {
@@ -3009,9 +3058,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 16,
+    "bundle_revision": 17,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-30T18:32:46Z",
+    "generated_at": "2026-05-30T19:07:26Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -3208,6 +3257,7 @@
   "posture": {
     "api_web_changes_allowed": false,
     "live_prod_source_reads_performed": true,
+    "missing_prod_scoped_shadow_flag_enablement_authorization": true,
     "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
     "missing_prod_scoped_shadow_pilot_authorization": false,
@@ -3215,6 +3265,9 @@
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
     "prod_scoped_shadow_execution_authorized": false,
+    "prod_scoped_shadow_flag_enablement_authorization_granted": false,
+    "prod_scoped_shadow_flag_enablement_authorization_requested": true,
+    "prod_scoped_shadow_flag_enablement_authorized": false,
     "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
     "prod_scoped_shadow_live_execution_authorized": true,
@@ -3404,7 +3457,7 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "request_production_scoped_online_shadow_flag_enablement_authorization_v1",
+  "recommended_next_stage": "record_production_scoped_online_shadow_flag_enablement_authorization_grant_v1",
   "review": {
     "live_execution_pilot_review_decision": {
       "accepted_evidence": [
@@ -3587,6 +3640,7 @@
     "blockers_changed_by_proof": [
       "missing_prod_scoped_shadow_proof"
     ],
+    "blockers_cleared_by_flag_enablement_request": [],
     "blockers_cleared_by_live_execution_grant": [
       "missing_prod_scoped_shadow_live_execution_authorization"
     ],
@@ -3606,6 +3660,9 @@
     "blockers_cleared_by_pilot_request": [],
     "blockers_cleared_by_pilot_review": [],
     "blockers_cleared_by_pilot_run": [],
+    "blockers_introduced_by_flag_enablement_request": [
+      "missing_prod_scoped_shadow_flag_enablement_authorization"
+    ],
     "blockers_introduced_by_live_execution_grant": [],
     "blockers_introduced_by_live_execution_pilot_review": [],
     "blockers_introduced_by_live_execution_pilot_run": [],
@@ -3625,6 +3682,7 @@
     ],
     "blockers_introduced_by_pilot_review": [],
     "blockers_introduced_by_pilot_run": [],
+    "blockers_unchanged_by_flag_enablement_request": true,
     "blockers_unchanged_by_grant": true,
     "blockers_unchanged_by_live_execution_grant": true,
     "blockers_unchanged_by_live_execution_pilot_review": true,
@@ -3641,6 +3699,7 @@
     "blockers_unchanged_by_pilot_run": true,
     "blockers_unchanged_by_plan": true,
     "blockers_unchanged_by_proof": true,
+    "missing_prod_scoped_shadow_flag_enablement_authorization": true,
     "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
     "missing_prod_scoped_shadow_pilot_authorization": false,
@@ -3648,6 +3707,9 @@
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
     "prod_scoped_shadow_execution_authorized": false,
+    "prod_scoped_shadow_flag_enablement_authorization_granted": false,
+    "prod_scoped_shadow_flag_enablement_authorization_requested": true,
+    "prod_scoped_shadow_flag_enablement_authorized": false,
     "prod_scoped_shadow_live_execution_authorization_granted": true,
     "prod_scoped_shadow_live_execution_authorization_requested": true,
     "prod_scoped_shadow_live_execution_authorized": true,

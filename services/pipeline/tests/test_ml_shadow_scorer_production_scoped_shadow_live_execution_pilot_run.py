@@ -143,26 +143,48 @@ def _set_path(payload: dict[str, Any], dotted_path: str, value: Any) -> None:
 
 def _prepare_rev14_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 17:
+        payload = bundle_module._without_flag_enablement_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 16:
         payload = bundle_module._without_live_execution_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 15:
         payload = bundle_module._without_live_execution_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] != 14:
         raise AssertionError(
-            f"expected committed production-scoped bundle revision 14, 15, or 16, got {payload['metadata']['bundle_revision']}"
+            f"expected committed production-scoped bundle revision 14, 15, 16, or 17, got {payload['metadata']['bundle_revision']}"
         )
     _write_json(bundle_path, payload)
 
 
 def _prepare_rev15_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 17:
+        payload = bundle_module._without_flag_enablement_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 16:
         payload = bundle_module._without_live_execution_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] != 15:
         raise AssertionError(
-            f"expected committed production-scoped bundle revision 15 or 16, got {payload['metadata']['bundle_revision']}"
+            f"expected committed production-scoped bundle revision 15, 16, or 17, got {payload['metadata']['bundle_revision']}"
         )
     _write_json(bundle_path, payload)
+
+
+def _prepare_rev16_template_bundle(bundle_path: Path) -> None:
+    payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 17:
+        payload = bundle_module._without_flag_enablement_request_payload(payload)
+    if payload["metadata"]["bundle_revision"] != 16:
+        raise AssertionError(
+            f"expected committed production-scoped bundle revision 16 or 17, got {payload['metadata']['bundle_revision']}"
+        )
+    _write_json(bundle_path, payload)
+
+
+@pytest.fixture(scope="module")
+def rev16_template_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    root = _copy_fixture_repo(tmp_path_factory.mktemp("flag-enablement-request-template"))
+    _prepare_rev16_template_bundle(root / FIXTURE_RELS["production_scoped_bundle"])
+    return root
 
 
 @pytest.fixture(scope="module")
