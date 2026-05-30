@@ -71,6 +71,7 @@ POST_FLAG_ENABLEMENT_PILOT_RUN_BUNDLE_REVISION = 19
 POST_FLAG_ENABLEMENT_PILOT_REVIEW_BUNDLE_REVISION = 20
 POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_REQUEST_BUNDLE_REVISION = 21
 POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_BUNDLE_REVISION = 22
+POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_BUNDLE_REVISION = 23
 PRE_PLAN_NEXT_STAGE = "begin_production_scoped_online_shadow_plan_v1"
 POST_PLAN_NEXT_STAGE = "implement_production_scoped_online_shadow_proof_v1"
 POST_PROOF_NEXT_STAGE = "request_production_scoped_online_shadow_pilot_authorization_v1"
@@ -122,6 +123,9 @@ POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_REQUEST_NEXT_STAGE = (
 POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_NEXT_STAGE = (
     "run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1"
 )
+POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_NEXT_STAGE = (
+    "review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1"
+)
 FEATURE_FLAG = "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
 FUTURE_ARTIFACT_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/"
 PILOT_REQUEST_SCOPE = "production_scoped_shadow_pilot_paperwork_only"
@@ -152,6 +156,19 @@ FLAG_ENABLEMENT_PILOT_RUN_SURFACE = "bounded_flag_enablement_prod_scoped_pilot"
 FLAG_ENABLEMENT_PILOT_RUN_RANKING_VERSION = LIVE_EXECUTION_PILOT_RUN_RANKING_VERSION
 FLAG_ENABLEMENT_PILOT_RUN_ID_PREFIX = "prod-flag-enable"
 FLAG_ENABLEMENT_PILOT_RUN_EXPECTED_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
+PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_SURFACE = (
+    "bounded_production_default_api_user_visible_prod_scoped_pilot"
+)
+PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_RANKING_VERSION = (
+    "shadow-generalization-product-candidate-ranking-v1"
+)
+PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_ID_PREFIX = "prod-output"
+PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_EXPECTED_FILES = (
+    "manifest.json",
+    "shadow_rows.jsonl",
+    "observability.json",
+    "write_counts.json",
+)
 PILOT_HARNESS_REVIEW_CHECKS = (
     "runtime_drill_pilot_status_succeeded_test_only",
     "fixture_row_count_3",
@@ -698,6 +715,45 @@ PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_CAVEATS = (
     "Does not change production default, API/web, or user-visible ranking.",
     "Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest.",
     "Bounded production default/API/user-visible pilot run remains a separate rev 23 milestone.",
+)
+
+PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_PASS_FAIL_CHECKS = (
+    "production_default_api_user_visible_grant_slices_present",
+    "joined_candidate_count_528",
+    "runtime_row_count_528",
+    "runtime_drill_call_order",
+    "preflight_postflight_disabled",
+    "pilot_status_succeeded_test_only",
+    "process_scoped_runtime_flag_only",
+    "runtime_flag_enabled_only_during_pilot",
+    "environment_restored",
+    "incomplete_coverage_skip_verified",
+    "approved_source_reread_verified",
+    "ranking_version_not_test_fixture",
+    "bounded_api_surface_probe_performed",
+    "would_be_shadow_scorer_output_built",
+    "no_public_user_traffic",
+    "production_default_api_user_visible_changed_false",
+    "paper_scores_and_ranking_runs_not_written",
+    "forbidden_write_counts_zero",
+    "isolated_artifact_count_expected",
+    "expected_files_recorded",
+    "live_flag_and_read_only_chain_still_valid",
+    "global_execution_authorization_false",
+    "plan_flag_authorized_now_false",
+    "bridge_surface_not_included",
+    "no_labels_refit_embedding_generation_or_label_ingest",
+)
+
+PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_CAVEATS = (
+    "Bounded production default/API/user-visible pilot run only; does not publish recommendations.",
+    "Probe is in-process, audit-only, and emits no response to real users or clients.",
+    "Does not bind an HTTP server or call outbound production API routes.",
+    "Would-be scorer output and current read-path comparison are recorded as evidence only.",
+    "Does not set online_shadow_execution_enabled, prod_scoped_shadow_execution_authorized, production_default_allowed, api_web_changes_allowed, or user_visible_ranking_changed.",
+    "Does not write paper_scores, ranking_runs, production config, labels, embeddings, or scorer artifacts.",
+    "Bridge recommendations remain out of scope for this emerging-family pilot.",
+    "Review is required before any further production default/API/user-visible chain.",
 )
 
 FLAG_ENABLEMENT_GRANT_ONLY_EXPLICITLY_NOT_INCLUDED = tuple(
@@ -1253,6 +1309,10 @@ def _caveats(*, mode: str) -> list[str]:
     if mode == "post_production_default_api_user_visible_grant":
         caveats = _caveats(mode="post_production_default_api_user_visible_request")
         caveats.extend(PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_CAVEATS)
+        return caveats
+    if mode == "post_production_default_api_user_visible_pilot_run":
+        caveats = _caveats(mode="post_production_default_api_user_visible_grant")
+        caveats.extend(PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_CAVEATS)
         return caveats
     raise MLShadowScorerProductionScopedShadowBundleError(f"unknown caveat mode {mode!r}")
     return caveats
@@ -8425,6 +8485,746 @@ def apply_production_scoped_shadow_production_default_api_user_visible_authoriza
     return updated
 
 
+def _validate_production_default_api_user_visible_probe(
+    probe: Mapping[str, Any],
+    *,
+    label: str,
+) -> None:
+    _require_equal(f"{label}.api_surface", probe.get("api_surface"), "/api/v1/recommendations/ranked")
+    _require_equal(f"{label}.family", probe.get("family"), "emerging")
+    _require_equal(f"{label}.ranking_run_id", probe.get("ranking_run_id"), "rank-83787b91ef")
+    _require_equal(f"{label}.limit", probe.get("limit"), 20)
+    for field in (
+        "in_process_audit_only_probe",
+        "current_output_read_only_probe_performed",
+        "would_be_shadow_scorer_output_built",
+    ):
+        _require_true(f"{label}.{field}", probe.get(field))
+    for field in (
+        "bridge_surface_included",
+        "user_visible_response_emitted_to_users",
+        "production_default_changed",
+        "api_web_changed",
+        "user_visible_ranking_changed",
+        "paper_scores_written",
+        "ranking_runs_written",
+        "production_config_written",
+        "http_server_bound",
+        "outbound_api_route_called",
+    ):
+        _require_false(f"{label}.{field}", probe.get(field))
+    if "current_output_top_20" in probe:
+        current_output = probe.get("current_output_top_20")
+        if not isinstance(current_output, list) or len(current_output) > 20:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"{label}.current_output_top_20 must be a list with at most 20 rows"
+            )
+    if "would_be_shadow_scorer_output_top_20" in probe:
+        would_be_output = probe.get("would_be_shadow_scorer_output_top_20")
+        if not isinstance(would_be_output, list) or len(would_be_output) > 20:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"{label}.would_be_shadow_scorer_output_top_20 must be a list with at most 20 rows"
+            )
+
+
+def _validate_production_default_api_user_visible_pilot_run_slice(
+    production_default_api_user_visible_pilot_slice: Mapping[str, Any],
+) -> None:
+    pilot_run_id = production_default_api_user_visible_pilot_slice.get("pilot_run_id")
+    if not isinstance(pilot_run_id, str) or not pilot_run_id:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.pilot_run_id must be populated"
+        )
+    validate_pilot_run_id(pilot_run_id)
+    if not pilot_run_id.startswith(f"{PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_ID_PREFIX}-"):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.pilot_run_id must use prod-output prefix"
+        )
+    if "harness" in pilot_run_id:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.pilot_run_id must not contain harness"
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.pilot_surface",
+        production_default_api_user_visible_pilot_slice.get("pilot_surface"),
+        PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_SURFACE,
+    )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.live_prod_source_reads_performed",
+        production_default_api_user_visible_pilot_slice.get("live_prod_source_reads_performed"),
+    )
+
+    pass_fail = production_default_api_user_visible_pilot_slice.get("pass_fail_evaluation")
+    if not isinstance(pass_fail, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.pass_fail_evaluation must be an object"
+        )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.pass_fail_evaluation.overall_passed",
+        pass_fail.get("overall_passed"),
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.pass_fail_evaluation.failed_checks",
+        pass_fail.get("failed_checks"),
+        [],
+    )
+    checks = pass_fail.get("checks")
+    if not isinstance(checks, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.pass_fail_evaluation.checks must be an object"
+        )
+    if set(checks) != set(PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_PASS_FAIL_CHECKS):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.pass_fail_evaluation.checks must match "
+            "PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_PASS_FAIL_CHECKS"
+        )
+    for check_name in PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_PASS_FAIL_CHECKS:
+        _require_true(
+            f"production_default_api_user_visible_pilot_slice.pass_fail_evaluation.checks.{check_name}",
+            checks.get(check_name),
+        )
+    pass_fail_checks = production_default_api_user_visible_pilot_slice.get("pass_fail_checks")
+    if isinstance(pass_fail_checks, Mapping):
+        for check_name in PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_PASS_FAIL_CHECKS:
+            _require_true(
+                f"production_default_api_user_visible_pilot_slice.pass_fail_checks.{check_name}",
+                pass_fail_checks.get(check_name),
+            )
+
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.input_join_summary.joined_candidate_count",
+        _get(production_default_api_user_visible_pilot_slice, "input_join_summary.joined_candidate_count"),
+        528,
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.input_join_summary.runtime_row_count",
+        _get(production_default_api_user_visible_pilot_slice, "input_join_summary.runtime_row_count"),
+        528,
+    )
+
+    runtime_drill = production_default_api_user_visible_pilot_slice.get("runtime_drill")
+    if not isinstance(runtime_drill, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.runtime_drill must be an object"
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.call_order",
+        runtime_drill.get("call_order"),
+        ["preflight_disabled", "pilot_enabled", "postflight_disabled"],
+    )
+    for field in ("environment_restored", "process_scoped_runtime_flag_only"):
+        _require_true(
+            f"production_default_api_user_visible_pilot_slice.runtime_drill.{field}",
+            runtime_drill.get(field),
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.preflight.status",
+        _get(runtime_drill, "preflight.status"),
+        "skipped_runtime_disabled",
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.preflight.shadow_row_count",
+        _get(runtime_drill, "preflight.shadow_row_count"),
+        0,
+    )
+    _require_false(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.preflight.runtime_enabled",
+        _get(runtime_drill, "preflight.runtime_enabled"),
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.pilot.status",
+        _get(runtime_drill, "pilot.status"),
+        "succeeded_test_only",
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.pilot.shadow_row_count",
+        _get(runtime_drill, "pilot.shadow_row_count"),
+        528,
+    )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.pilot.runtime_enabled",
+        _get(runtime_drill, "pilot.runtime_enabled"),
+    )
+    for field in (
+        "writes_performed",
+        "labels_used_for_scoring",
+        "production_default_changed",
+        "user_visible_ranking_changed",
+    ):
+        _require_false(
+            f"production_default_api_user_visible_pilot_slice.runtime_drill.pilot.{field}",
+            _get(runtime_drill, f"pilot.{field}"),
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.postflight.status",
+        _get(runtime_drill, "postflight.status"),
+        "skipped_runtime_disabled",
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.postflight.shadow_row_count",
+        _get(runtime_drill, "postflight.shadow_row_count"),
+        0,
+    )
+    _require_false(
+        "production_default_api_user_visible_pilot_slice.runtime_drill.postflight.runtime_enabled",
+        _get(runtime_drill, "postflight.runtime_enabled"),
+    )
+
+    incomplete = production_default_api_user_visible_pilot_slice.get("incomplete_coverage_drill")
+    if not isinstance(incomplete, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.incomplete_coverage_drill must be an object"
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.incomplete_coverage_drill.status",
+        incomplete.get("status"),
+        "skipped_incomplete_coverage",
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.incomplete_coverage_drill.shadow_row_count",
+        incomplete.get("shadow_row_count"),
+        0,
+    )
+    _require_false(
+        "production_default_api_user_visible_pilot_slice.incomplete_coverage_drill.writes_performed",
+        incomplete.get("writes_performed"),
+    )
+    _require_false(
+        "production_default_api_user_visible_pilot_slice.incomplete_coverage_drill.live_prod_source_reads_performed",
+        incomplete.get("live_prod_source_reads_performed"),
+    )
+
+    live_source_reads = production_default_api_user_visible_pilot_slice.get("live_source_reads")
+    if not isinstance(live_source_reads, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.live_source_reads must be an object"
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.live_source_reads.approved_tables",
+        sorted(live_source_reads.get("approved_tables") or []),
+        ["embeddings", "paper_scores", "ranking_runs", "works"],
+    )
+    row_counts = live_source_reads.get("row_counts")
+    if not isinstance(row_counts, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.live_source_reads.row_counts must be an object"
+        )
+    for field, expected in {
+        "ranking_runs": 1,
+        "paper_scores": 528,
+        "works": 528,
+        "embeddings": 528,
+        "joined_candidate_count": 528,
+    }.items():
+        _require_equal(
+            f"production_default_api_user_visible_pilot_slice.live_source_reads.row_counts.{field}",
+            row_counts.get(field),
+            expected,
+        )
+    ranking_run = live_source_reads.get("ranking_run")
+    if not isinstance(ranking_run, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.live_source_reads.ranking_run must be an object"
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.live_source_reads.ranking_run.ranking_run_id",
+        ranking_run.get("ranking_run_id"),
+        PINNED_IDENTITY["ranking_run_id"],
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.live_source_reads.ranking_run.ranking_version",
+        ranking_run.get("ranking_version"),
+        PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_RANKING_VERSION,
+    )
+    if "fixture" in str(ranking_run.get("ranking_version", "")).lower():
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.live_source_reads.ranking_run.ranking_version "
+            "must not be a test fixture"
+        )
+    identity = live_source_reads.get("input_identity_verification")
+    if not isinstance(identity, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.live_source_reads.input_identity_verification "
+            "must be an object"
+        )
+    for field, expected in PINNED_IDENTITY.items():
+        _require_equal(
+            f"production_default_api_user_visible_pilot_slice.live_source_reads.input_identity_verification.{field}",
+            identity.get(field),
+            expected,
+        )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.live_source_reads.input_identity_verification.matches_pinned_identity",
+        identity.get("matches_pinned_identity"),
+    )
+    read_only = live_source_reads.get("read_only_assertions")
+    if not isinstance(read_only, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.live_source_reads.read_only_assertions must be an object"
+        )
+    for field in (
+        "select_only_sql_enforced",
+        "approved_source_allowlist_enforced",
+        "default_transaction_read_only",
+        "no_write_sql_detected",
+    ):
+        _require_true(
+            f"production_default_api_user_visible_pilot_slice.live_source_reads.read_only_assertions.{field}",
+            read_only.get(field),
+        )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.live_source_reads.labels_not_used_for_scoring",
+        live_source_reads.get("labels_not_used_for_scoring"),
+    )
+    for field in ("refit_training_performed", "embedding_generation_performed", "label_ingest_performed"):
+        _require_false(
+            f"production_default_api_user_visible_pilot_slice.live_source_reads.{field}",
+            live_source_reads.get(field),
+        )
+
+    provenance = production_default_api_user_visible_pilot_slice.get("input_provenance")
+    if not isinstance(provenance, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.input_provenance must be an object"
+        )
+    for field in (
+        "previous_live_read_only_pilot_run_id",
+        "previous_live_execution_pilot_run_id",
+        "previous_flag_enablement_pilot_run_id",
+    ):
+        if not isinstance(provenance.get(field), str) or not provenance.get(field):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"production_default_api_user_visible_pilot_slice.input_provenance.{field} must be populated"
+            )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.input_provenance.reread_approved_production_sources",
+        provenance.get("reread_approved_production_sources"),
+    )
+    for field in ("fixture_ranking_version_used", "fixture_rows_used_for_main_join"):
+        _require_false(
+            f"production_default_api_user_visible_pilot_slice.input_provenance.{field}",
+            provenance.get(field),
+        )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.input_provenance.ranking_version",
+        provenance.get("ranking_version"),
+        PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_RANKING_VERSION,
+    )
+
+    scope = production_default_api_user_visible_pilot_slice.get("production_default_api_user_visible_scope")
+    if not isinstance(scope, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.production_default_api_user_visible_scope "
+            "must be an object"
+        )
+    if not isinstance(scope.get("production_default_api_user_visible_grant_decision"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.production_default_api_user_visible_scope."
+            "production_default_api_user_visible_grant_decision must be an object"
+        )
+    if not isinstance(scope.get("production_default_api_user_visible_granted_scope"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.production_default_api_user_visible_scope."
+            "production_default_api_user_visible_granted_scope must be an object"
+        )
+    for field in (
+        "bounded_production_default_api_user_visible_pilot_only",
+        "prod_scoped_shadow_production_default_api_user_visible_authorized",
+    ):
+        _require_true(
+            f"production_default_api_user_visible_pilot_slice.production_default_api_user_visible_scope.{field}",
+            scope.get(field),
+        )
+    for field in (
+        "prod_scoped_shadow_execution_authorized",
+        "production_default_allowed",
+        "api_web_changes_allowed",
+        "user_visible_ranking_changed",
+    ):
+        _require_false(
+            f"production_default_api_user_visible_pilot_slice.production_default_api_user_visible_scope.{field}",
+            scope.get(field),
+        )
+
+    probe = production_default_api_user_visible_pilot_slice.get("production_default_api_user_visible_probe")
+    if not isinstance(probe, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.production_default_api_user_visible_probe "
+            "must be an object"
+        )
+    _validate_production_default_api_user_visible_probe(
+        probe,
+        label="production_default_api_user_visible_pilot_slice.production_default_api_user_visible_probe",
+    )
+
+    write_counts = production_default_api_user_visible_pilot_slice.get("write_count_verification")
+    if not isinstance(write_counts, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.write_count_verification must be an object"
+        )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.write_count_verification.local_artifact_tree_writes_performed",
+        write_counts.get("local_artifact_tree_writes_performed"),
+    )
+    for field in ("production_writes_performed", "committed_artifact_writes_performed", "runtime_writes_performed"):
+        _require_false(
+            f"production_default_api_user_visible_pilot_slice.write_count_verification.{field}",
+            write_counts.get(field),
+        )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.write_count_verification.forbidden_write_counts_zero",
+        write_counts.get("forbidden_write_counts_zero"),
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.write_count_verification.file_count",
+        write_counts.get("file_count"),
+        4,
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.write_count_verification.write_count",
+        write_counts.get("write_count"),
+        4,
+    )
+    counts = write_counts.get("write_counts_by_isolated_target")
+    if not isinstance(counts, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.write_count_verification."
+            "write_counts_by_isolated_target must be an object"
+        )
+    _require_equal(
+        f"production_default_api_user_visible_pilot_slice.write_count_verification.write_counts_by_isolated_target.{ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS}",
+        counts.get(ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS),
+        4,
+    )
+    for target in FORBIDDEN_PROD_SCOPED_WRITE_TARGETS:
+        _require_equal(
+            f"production_default_api_user_visible_pilot_slice.write_count_verification.write_counts_by_isolated_target.{target}",
+            counts.get(target),
+            0,
+        )
+
+    files = production_default_api_user_visible_pilot_slice.get("files_written")
+    if not isinstance(files, list) or len(files) != 4:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.files_written must contain four files"
+        )
+    observed_files = {record.get("relative_path") for record in files if isinstance(record, Mapping)}
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.files_written names",
+        observed_files,
+        set(PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_EXPECTED_FILES),
+    )
+    for index, record in enumerate(files):
+        if not isinstance(record, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"production_default_api_user_visible_pilot_slice.files_written[{index}] must be an object"
+            )
+        for field in ("relative_path", "byte_count", "sha256", "write_target"):
+            if field not in record:
+                raise MLShadowScorerProductionScopedShadowBundleError(
+                    f"production_default_api_user_visible_pilot_slice.files_written[{index}].{field} missing"
+                )
+        _require_equal(
+            f"production_default_api_user_visible_pilot_slice.files_written[{index}].write_target",
+            record.get("write_target"),
+            ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS,
+        )
+
+    observability = production_default_api_user_visible_pilot_slice.get("observability_summary")
+    if not isinstance(observability, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice.observability_summary must be an object"
+        )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.observability_summary.observability_complete",
+        observability.get("observability_complete"),
+    )
+    _require_true(
+        "production_default_api_user_visible_pilot_slice.observability_summary.live_prod_source_reads_performed",
+        observability.get("live_prod_source_reads_performed"),
+    )
+    _require_equal(
+        "production_default_api_user_visible_pilot_slice.observability_summary.row_counts.shadow_rows",
+        _get(observability, "row_counts.shadow_rows"),
+        528,
+    )
+
+
+def apply_production_scoped_shadow_production_default_api_user_visible_pilot_run(
+    bundle: Mapping[str, Any],
+    production_default_api_user_visible_pilot_slice: Mapping[str, Any],
+    *,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("bundle must be an object")
+    if not isinstance(production_default_api_user_visible_pilot_slice, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production_default_api_user_visible_pilot_slice must be an object"
+        )
+    _require_equal(
+        "metadata.bundle_revision",
+        _get(bundle, "metadata.bundle_revision"),
+        POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_BUNDLE_REVISION,
+    )
+    _require_equal(
+        "recommended_next_stage",
+        bundle.get("recommended_next_stage"),
+        POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_NEXT_STAGE,
+    )
+    execution = bundle.get("execution")
+    if not isinstance(execution, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("execution must be an object")
+    if "production_default_api_user_visible_pilot_run" in execution:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production default/API/user-visible pilot run has already been filed"
+        )
+    if execution.get("prod_scoped_shadow_production_default_api_user_visible_pilot_executed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.prod_scoped_shadow_production_default_api_user_visible_pilot_executed is already true"
+        )
+    if execution.get("prod_scoped_shadow_production_default_api_user_visible_pilot_passed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.prod_scoped_shadow_production_default_api_user_visible_pilot_passed is already true"
+        )
+
+    authorization = bundle.get("authorization")
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    _verify_live_read_only_request_section(authorization)
+    _verify_live_read_only_grant_section(authorization)
+    _verify_live_execution_request_section(authorization)
+    _verify_live_execution_grant_section(authorization)
+    _verify_live_execution_pilot_review_section(bundle.get("review"))
+    _verify_flag_enablement_request_section(authorization)
+    _verify_flag_enablement_grant_section(authorization)
+    _verify_flag_enablement_pilot_review_section(bundle.get("review"))
+    _verify_production_default_api_user_visible_request_section(authorization)
+    _verify_production_default_api_user_visible_grant_section(authorization)
+    for field in (
+        "prod_scoped_shadow_production_default_api_user_visible_authorization_requested",
+        "prod_scoped_shadow_production_default_api_user_visible_authorization_granted",
+        "prod_scoped_shadow_production_default_api_user_visible_authorized",
+    ):
+        _require_true(f"authorization.{field}", authorization.get(field))
+    _require_equal(
+        "authorization.production_default_api_user_visible_request_decision.decision",
+        _get(authorization, "production_default_api_user_visible_request_decision.decision"),
+        "requested",
+    )
+    _require_equal(
+        "authorization.production_default_api_user_visible_requested_scope.authorization_scope",
+        _get(authorization, "production_default_api_user_visible_requested_scope.authorization_scope"),
+        PRODUCTION_DEFAULT_API_USER_VISIBLE_REQUEST_SCOPE,
+    )
+    _require_equal(
+        "authorization.production_default_api_user_visible_grant_decision.decision",
+        _get(authorization, "production_default_api_user_visible_grant_decision.decision"),
+        "granted",
+    )
+    _require_equal(
+        "authorization.production_default_api_user_visible_granted_scope.authorization_scope",
+        _get(authorization, "production_default_api_user_visible_granted_scope.authorization_scope"),
+        PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_SCOPE,
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_execution_authorized",
+        authorization.get("prod_scoped_shadow_execution_authorized"),
+    )
+
+    _require_true(
+        "execution.prod_scoped_shadow_live_read_only_pilot_executed",
+        execution.get("prod_scoped_shadow_live_read_only_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_live_read_only_pilot_passed",
+        execution.get("prod_scoped_shadow_live_read_only_pilot_passed"),
+    )
+    _validate_live_read_only_pilot_run_slice(execution.get("live_read_only_pilot_run"))
+    _require_true(
+        "execution.prod_scoped_shadow_live_execution_pilot_executed",
+        execution.get("prod_scoped_shadow_live_execution_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_live_execution_pilot_passed",
+        execution.get("prod_scoped_shadow_live_execution_pilot_passed"),
+    )
+    _validate_live_execution_pilot_run_slice(execution.get("live_execution_pilot_run"))
+    _require_true(
+        "execution.prod_scoped_shadow_flag_enablement_pilot_executed",
+        execution.get("prod_scoped_shadow_flag_enablement_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_flag_enablement_pilot_passed",
+        execution.get("prod_scoped_shadow_flag_enablement_pilot_passed"),
+    )
+    _validate_flag_enablement_pilot_run_slice(execution.get("flag_enablement_pilot_run"))
+
+    for prefix, section in (
+        ("posture", bundle.get("posture")),
+        ("shadow_and_production_blockers", bundle.get("shadow_and_production_blockers")),
+    ):
+        if not isinstance(section, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError(f"{prefix} must be an object")
+        for field in (
+            "prod_scoped_shadow_production_default_api_user_visible_authorization_granted",
+            "prod_scoped_shadow_production_default_api_user_visible_authorized",
+            "prod_scoped_shadow_flag_enablement_authorized",
+            "prod_scoped_shadow_live_execution_authorized",
+            "prod_scoped_shadow_live_read_only_execution_authorized",
+            "live_prod_source_reads_performed",
+        ):
+            _require_true(f"{prefix}.{field}", section.get(field))
+        for field in (
+            "missing_prod_scoped_shadow_production_default_api_user_visible_authorization",
+            "missing_prod_scoped_shadow_flag_enablement_authorization",
+            "missing_prod_scoped_shadow_live_execution_authorization",
+            "prod_scoped_shadow_execution_authorized",
+            "online_shadow_execution_enabled",
+            "production_default_allowed",
+            "api_web_changes_allowed",
+            "user_visible_ranking_changed",
+            "writes_performed",
+            "runtime_writes_performed",
+        ):
+            if field in section:
+                _require_false(f"{prefix}.{field}", section.get(field))
+        if section.get("prod_scoped_shadow_production_default_api_user_visible_pilot_executed") is True:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"{prefix}.prod_scoped_shadow_production_default_api_user_visible_pilot_executed "
+                "must not already be true"
+            )
+        if section.get("prod_scoped_shadow_production_default_api_user_visible_pilot_passed") is True:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"{prefix}.prod_scoped_shadow_production_default_api_user_visible_pilot_passed "
+                "must not already be true"
+            )
+
+    for path in (
+        "plan.feature_flag_iam_config_requirements.prod_scoped_flag_enablement_authorized_now",
+        "plan.production_default_api_user_visible_separation.production_default_allowed",
+        "plan.production_default_api_user_visible_separation.api_web_changes_allowed",
+        "plan.production_default_api_user_visible_separation.user_visible_ranking_changed",
+    ):
+        _require_false(path, _get(bundle, path))
+    _require_named_flags_not_true(
+        bundle,
+        (
+            "online_shadow_execution_enabled",
+            "production_default_allowed",
+            "api_web_changes_allowed",
+            "user_visible_ranking_changed",
+            "writes_performed",
+            "runtime_writes_performed",
+            "prod_scoped_shadow_execution_authorized",
+        ),
+    )
+    _validate_production_default_api_user_visible_pilot_run_slice(
+        production_default_api_user_visible_pilot_slice
+    )
+
+    executed_at = str(
+        production_default_api_user_visible_pilot_slice.get("executed_at") or generated_at or _now_iso_z()
+    )
+    updated = deepcopy(dict(bundle))
+    plan_before = deepcopy(updated.get("plan"))
+    proof_before = deepcopy(updated.get("proof"))
+    review_before = deepcopy(updated.get("review"))
+    execution_before = deepcopy(updated.get("execution"))
+    authorization_before = deepcopy(updated.get("authorization"))
+    legacy_index_before = deepcopy(_get(updated, "metadata.legacy_artifacts_index"))
+
+    metadata = deepcopy(dict(_metadata(updated, label="production-scoped-shadow bundle")))
+    metadata["bundle_revision"] = POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_BUNDLE_REVISION
+    metadata["generated_at"] = executed_at
+    updated["metadata"] = metadata
+
+    execution = deepcopy(dict(updated.get("execution") or {}))
+    execution.update(
+        {
+            "prod_scoped_shadow_production_default_api_user_visible_pilot_executed": True,
+            "prod_scoped_shadow_production_default_api_user_visible_pilot_passed": True,
+            "production_default_api_user_visible_pilot_run": deepcopy(
+                dict(production_default_api_user_visible_pilot_slice)
+            ),
+        }
+    )
+    updated["execution"] = execution
+
+    pilot_posture_fields = {
+        "prod_scoped_shadow_production_default_api_user_visible_pilot_executed": True,
+        "prod_scoped_shadow_production_default_api_user_visible_pilot_passed": True,
+        "prod_scoped_shadow_production_default_api_user_visible_authorization_requested": True,
+        "prod_scoped_shadow_production_default_api_user_visible_authorization_granted": True,
+        "prod_scoped_shadow_production_default_api_user_visible_authorized": True,
+        "missing_prod_scoped_shadow_production_default_api_user_visible_authorization": False,
+        "prod_scoped_shadow_flag_enablement_authorized": True,
+        "missing_prod_scoped_shadow_flag_enablement_authorization": False,
+        "prod_scoped_shadow_live_execution_authorized": True,
+        "missing_prod_scoped_shadow_live_execution_authorization": False,
+        "prod_scoped_shadow_live_read_only_execution_authorized": True,
+        "live_prod_source_reads_performed": True,
+        "prod_scoped_shadow_execution_authorized": False,
+        "online_shadow_execution_enabled": False,
+        "production_default_allowed": False,
+        "api_web_changes_allowed": False,
+        "user_visible_ranking_changed": False,
+        "writes_performed": False,
+        "runtime_writes_performed": False,
+    }
+    posture = deepcopy(dict(updated.get("posture") or {}))
+    posture.update(pilot_posture_fields)
+    updated["posture"] = posture
+
+    blockers = deepcopy(dict(updated.get("shadow_and_production_blockers") or {}))
+    blockers.update(pilot_posture_fields)
+    blockers.update(
+        {
+            "blockers_cleared_by_production_default_api_user_visible_pilot_run": [],
+            "blockers_introduced_by_production_default_api_user_visible_pilot_run": [],
+            "blockers_unchanged_by_production_default_api_user_visible_pilot_run": True,
+        }
+    )
+    blockers.pop("blockers_changed_by_production_default_api_user_visible_pilot_run", None)
+    updated["shadow_and_production_blockers"] = blockers
+    updated["writes_performed"] = False
+    updated["runtime_writes_performed"] = False
+    updated["recommended_next_stage"] = POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_NEXT_STAGE
+    updated["caveats"] = _caveats(mode="post_production_default_api_user_visible_pilot_run")
+
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production default/API/user-visible pilot run must preserve plan section"
+        )
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production default/API/user-visible pilot run must preserve proof section"
+        )
+    if updated.get("review") != review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production default/API/user-visible pilot run must preserve review section"
+        )
+    if updated.get("authorization") != authorization_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production default/API/user-visible pilot run must preserve authorization section"
+        )
+    for key, before_value in execution_before.items():
+        if _get(updated, f"execution.{key}") != before_value:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"production default/API/user-visible pilot run must preserve execution.{key}"
+            )
+    for key in ("pilot_harness", "pilot_run", "live_read_only_pilot_run", "live_execution_pilot_run", "flag_enablement_pilot_run"):
+        if _get(updated, f"execution.{key}") != _get(execution_before, key):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"production default/API/user-visible pilot run must preserve execution.{key}"
+            )
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "production default/API/user-visible pilot run must preserve legacy_artifacts_index"
+        )
+    return updated
+
+
 def run_flag_enablement_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
     *,
     bundle_path: Path,
@@ -8448,6 +9248,33 @@ def run_flag_enablement_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
         update_bundle=update_bundle,
         generated_at=generated_at,
         confirm_flag_enablement_pilot=confirm_flag_enablement_pilot,
+        confirm_live_read_only_prod_source_reads=confirm_live_read_only_prod_source_reads,
+    )
+
+
+def run_production_default_api_user_visible_ml_shadow_scorer_production_scoped_shadow_bundle(
+    *,
+    bundle_path: Path,
+    database_url: str | None = None,
+    pilot_run_id: str | None = None,
+    repo_root: Path | None = None,
+    update_bundle: bool = True,
+    generated_at: str | None = None,
+    confirm_production_default_api_user_visible_pilot: bool = False,
+    confirm_live_read_only_prod_source_reads: bool = False,
+) -> dict[str, Any]:
+    from pipeline.ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot import (
+        run_ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot,
+    )
+
+    return run_ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot(
+        bundle_path=bundle_path,
+        database_url=database_url,
+        pilot_run_id=pilot_run_id,
+        repo_root=repo_root,
+        update_bundle=update_bundle,
+        generated_at=generated_at,
+        confirm_production_default_api_user_visible_pilot=confirm_production_default_api_user_visible_pilot,
         confirm_live_read_only_prod_source_reads=confirm_live_read_only_prod_source_reads,
     )
 
@@ -8477,6 +9304,7 @@ def _infer_plan_mode(
     expect_flag_enablement_pilot_review_filed: bool | None,
     expect_production_default_api_user_visible_request_filed: bool | None,
     expect_production_default_api_user_visible_grant_filed: bool | None,
+    expect_production_default_api_user_visible_pilot_run_filed: bool | None,
 ) -> str:
     explicit = [
         expectation is not None
@@ -8503,10 +9331,76 @@ def _infer_plan_mode(
             expect_flag_enablement_pilot_review_filed,
             expect_production_default_api_user_visible_request_filed,
             expect_production_default_api_user_visible_grant_filed,
+            expect_production_default_api_user_visible_pilot_run_filed,
         )
     ]
     if sum(explicit) > 1:
         raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot/live read-only expectations conflict")
+    if expect_production_default_api_user_visible_pilot_run_filed is True:
+        return "post_production_default_api_user_visible_pilot_run"
+    if expect_production_default_api_user_visible_pilot_run_filed is False:
+        if _get(
+            bundle,
+            "execution.prod_scoped_shadow_production_default_api_user_visible_pilot_executed",
+        ) is True:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                "production default/API/user-visible pilot run must not be filed"
+            )
+        if (
+            _get(
+                bundle,
+                "authorization.prod_scoped_shadow_production_default_api_user_visible_authorization_granted",
+            )
+            is True
+        ):
+            return "post_production_default_api_user_visible_grant"
+        if (
+            _get(
+                bundle,
+                "authorization.prod_scoped_shadow_production_default_api_user_visible_authorization_requested",
+            )
+            is True
+        ):
+            return "post_production_default_api_user_visible_request"
+        if _get(bundle, "review.prod_scoped_shadow_flag_enablement_pilot_reviewed") is True:
+            return "post_flag_enablement_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_flag_enablement_pilot_executed") is True:
+            return "post_flag_enablement_pilot_run"
+        if _get(bundle, "authorization.prod_scoped_shadow_flag_enablement_authorization_granted") is True:
+            return "post_flag_enablement_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_flag_enablement_authorization_requested") is True:
+            return "post_flag_enablement_request"
+        if _get(bundle, "review.prod_scoped_shadow_live_execution_pilot_reviewed") is True:
+            return "post_live_execution_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_live_execution_pilot_executed") is True:
+            return "post_live_execution_pilot_run"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_granted") is True:
+            return "post_live_execution_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_execution_authorization_requested") is True:
+            return "post_live_execution_request"
+        if _get(bundle, "review.prod_scoped_shadow_live_read_only_pilot_reviewed") is True:
+            return "post_live_read_only_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_live_read_only_pilot_executed") is True:
+            return "post_live_read_only_pilot_run"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted") is True:
+            return "post_live_read_only_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_requested") is True:
+            return "post_live_read_only_request"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_reviewed") is True:
+            return "post_pilot_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_executed") is True:
+            return "post_pilot_run"
+        if _get(bundle, "review.prod_scoped_shadow_pilot_harness_reviewed") is True:
+            return "post_pilot_harness_review"
+        if _get(bundle, "execution.prod_scoped_shadow_pilot_harness_executed") is True:
+            return "post_pilot_harness"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorized") is True:
+            return "post_pilot_grant"
+        if _get(bundle, "authorization.prod_scoped_shadow_pilot_authorization_requested") is True:
+            return "post_pilot_request"
+        revision = _get(bundle, "metadata.bundle_revision")
+        proof_passed = _get(bundle, "posture.prod_scoped_shadow_proof_passed")
+        return "post_proof" if revision == POST_PROOF_BUNDLE_REVISION and proof_passed is True else "post_plan"
     if expect_production_default_api_user_visible_grant_filed is True:
         return "post_production_default_api_user_visible_grant"
     if expect_production_default_api_user_visible_grant_filed is False:
@@ -9135,6 +10029,54 @@ def _infer_plan_mode(
         bundle,
         "authorization.prod_scoped_shadow_production_default_api_user_visible_authorized",
     )
+    production_default_api_user_visible_pilot_executed = _get(
+        bundle,
+        "execution.prod_scoped_shadow_production_default_api_user_visible_pilot_executed",
+    )
+    production_default_api_user_visible_pilot_passed = _get(
+        bundle,
+        "execution.prod_scoped_shadow_production_default_api_user_visible_pilot_passed",
+    )
+    if (
+        revision == POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_BUNDLE_REVISION
+        and pilot_request is True
+        and pilot_grant is True
+        and pilot_authorized is True
+        and pilot_harness_executed is True
+        and pilot_harness_passed is True
+        and pilot_harness_reviewed is True
+        and pilot_harness_accepted is True
+        and pilot_executed is True
+        and pilot_reviewed is True
+        and pilot_accepted is True
+        and live_read_only_request is True
+        and live_read_only_grant is True
+        and live_read_only_authorized is True
+        and live_read_only_pilot_executed is True
+        and live_read_only_pilot_passed is True
+        and live_read_only_pilot_reviewed is True
+        and live_read_only_pilot_accepted is True
+        and live_execution_request is True
+        and live_execution_grant is True
+        and live_execution_authorized is True
+        and live_execution_pilot_executed is True
+        and live_execution_pilot_passed is True
+        and live_execution_pilot_reviewed is True
+        and live_execution_pilot_accepted is True
+        and flag_enablement_request is True
+        and flag_enablement_grant is True
+        and flag_enablement_authorized is True
+        and flag_enablement_pilot_executed is True
+        and flag_enablement_pilot_passed is True
+        and flag_enablement_pilot_reviewed is True
+        and flag_enablement_pilot_accepted is True
+        and production_default_api_user_visible_request is True
+        and production_default_api_user_visible_grant is True
+        and production_default_api_user_visible_authorized is True
+        and production_default_api_user_visible_pilot_executed is True
+        and production_default_api_user_visible_pilot_passed is True
+    ):
+        return "post_production_default_api_user_visible_pilot_run"
     if (
         revision == POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_BUNDLE_REVISION
         and pilot_request is True
@@ -12581,6 +13523,286 @@ def _verify_production_default_api_user_visible_grant_payload(
     }
 
 
+def _without_production_default_api_user_visible_pilot_run_payload(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    payload = deepcopy(dict(bundle))
+    metadata = deepcopy(dict(payload.get("metadata") or {}))
+    metadata["bundle_revision"] = POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_BUNDLE_REVISION
+    payload["metadata"] = metadata
+    execution = deepcopy(dict(payload.get("execution") or {}))
+    execution.pop("prod_scoped_shadow_production_default_api_user_visible_pilot_executed", None)
+    execution.pop("prod_scoped_shadow_production_default_api_user_visible_pilot_passed", None)
+    execution.pop("production_default_api_user_visible_pilot_run", None)
+    payload["execution"] = execution
+    posture = deepcopy(dict(payload.get("posture") or {}))
+    posture.pop("prod_scoped_shadow_production_default_api_user_visible_pilot_executed", None)
+    posture.pop("prod_scoped_shadow_production_default_api_user_visible_pilot_passed", None)
+    posture["prod_scoped_shadow_execution_authorized"] = False
+    posture["online_shadow_execution_enabled"] = False
+    posture["production_default_allowed"] = False
+    posture["api_web_changes_allowed"] = False
+    posture["user_visible_ranking_changed"] = False
+    posture["writes_performed"] = False
+    posture["runtime_writes_performed"] = False
+    payload["posture"] = posture
+    blockers = deepcopy(dict(payload.get("shadow_and_production_blockers") or {}))
+    blockers.pop("prod_scoped_shadow_production_default_api_user_visible_pilot_executed", None)
+    blockers.pop("prod_scoped_shadow_production_default_api_user_visible_pilot_passed", None)
+    blockers["prod_scoped_shadow_execution_authorized"] = False
+    blockers["online_shadow_execution_enabled"] = False
+    blockers["production_default_allowed"] = False
+    blockers["api_web_changes_allowed"] = False
+    blockers["user_visible_ranking_changed"] = False
+    blockers.pop("blockers_cleared_by_production_default_api_user_visible_pilot_run", None)
+    blockers.pop("blockers_introduced_by_production_default_api_user_visible_pilot_run", None)
+    blockers.pop("blockers_unchanged_by_production_default_api_user_visible_pilot_run", None)
+    blockers.pop("blockers_changed_by_production_default_api_user_visible_pilot_run", None)
+    payload["shadow_and_production_blockers"] = blockers
+    payload["writes_performed"] = False
+    payload["runtime_writes_performed"] = False
+    payload["recommended_next_stage"] = POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_NEXT_STAGE
+    payload["caveats"] = _caveats(mode="post_production_default_api_user_visible_grant")
+    return payload
+
+
+def _verify_production_default_api_user_visible_pilot_run_section(
+    production_default_api_user_visible_pilot_run: Any,
+    *,
+    repo_root: Path,
+    verify_local_files: bool = True,
+) -> None:
+    if not isinstance(production_default_api_user_visible_pilot_run, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.production_default_api_user_visible_pilot_run must be an object"
+        )
+    _validate_production_default_api_user_visible_pilot_run_slice(
+        production_default_api_user_visible_pilot_run
+    )
+    pilot_run_id = production_default_api_user_visible_pilot_run.get("pilot_run_id")
+    if not isinstance(pilot_run_id, str) or not pilot_run_id:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.production_default_api_user_visible_pilot_run.pilot_run_id must be populated"
+        )
+    validate_pilot_run_id(pilot_run_id)
+    if not pilot_run_id.startswith(f"{PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_ID_PREFIX}-"):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.production_default_api_user_visible_pilot_run.pilot_run_id must use prod-output prefix"
+        )
+    if "harness" in pilot_run_id:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.production_default_api_user_visible_pilot_run.pilot_run_id must not contain harness"
+        )
+    pilot_dir_ref = production_default_api_user_visible_pilot_run.get("pilot_run_directory")
+    if not isinstance(pilot_dir_ref, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.production_default_api_user_visible_pilot_run.pilot_run_directory must be an object"
+        )
+    _require_equal(
+        "execution.production_default_api_user_visible_pilot_run.pilot_run_directory.root_path",
+        pilot_dir_ref.get("root_path"),
+        PROD_SCOPED_SHADOW_ROOT,
+    )
+    _require_equal(
+        "execution.production_default_api_user_visible_pilot_run.pilot_run_directory.relative_path",
+        pilot_dir_ref.get("relative_path"),
+        f"{PROD_SCOPED_SHADOW_ROOT}{pilot_run_id}/",
+    )
+    pilot_dir = resolve_prod_scoped_pilot_directory(repo_root, pilot_run_id)
+    for index, record in enumerate(production_default_api_user_visible_pilot_run["files_written"]):
+        local_file = pilot_dir / str(record["relative_path"])
+        if verify_local_files and local_file.exists():
+            _require_equal(
+                f"execution.production_default_api_user_visible_pilot_run.files_written[{index}].sha256",
+                _sha256_file(local_file),
+                record.get("sha256"),
+            )
+            _require_equal(
+                f"execution.production_default_api_user_visible_pilot_run.files_written[{index}].byte_count",
+                local_file.stat().st_size,
+                record.get("byte_count"),
+            )
+
+
+def _verify_production_default_api_user_visible_pilot_run_payload(
+    bundle: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    verify_local_pilot_files: bool,
+) -> dict[str, Any]:
+    metadata = _metadata(bundle, label="production-scoped-shadow bundle")
+    _require_equal(
+        "metadata.bundle_revision",
+        metadata.get("bundle_revision"),
+        POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_BUNDLE_REVISION,
+    )
+    base_result = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        _without_production_default_api_user_visible_pilot_run_payload(bundle),
+        repo_root=repo_root,
+        expect_production_default_api_user_visible_grant_filed=True,
+        verify_local_pilot_files=verify_local_pilot_files,
+    )
+    authorization = bundle.get("authorization")
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    _require_true(
+        "authorization.prod_scoped_shadow_production_default_api_user_visible_authorization_requested",
+        authorization.get("prod_scoped_shadow_production_default_api_user_visible_authorization_requested"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_production_default_api_user_visible_authorization_granted",
+        authorization.get("prod_scoped_shadow_production_default_api_user_visible_authorization_granted"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_production_default_api_user_visible_authorized",
+        authorization.get("prod_scoped_shadow_production_default_api_user_visible_authorized"),
+    )
+    _require_false(
+        "authorization.prod_scoped_shadow_execution_authorized",
+        authorization.get("prod_scoped_shadow_execution_authorized"),
+    )
+    _verify_live_read_only_request_section(authorization)
+    _verify_live_read_only_grant_section(authorization)
+    _verify_live_execution_request_section(authorization)
+    _verify_live_execution_grant_section(authorization)
+    _verify_flag_enablement_request_section(authorization)
+    _verify_flag_enablement_grant_section(authorization)
+    _verify_production_default_api_user_visible_request_section(authorization)
+    _verify_production_default_api_user_visible_grant_section(authorization)
+    _verify_live_execution_pilot_review_section(bundle.get("review"))
+    _verify_flag_enablement_pilot_review_section(bundle.get("review"))
+
+    execution = bundle.get("execution")
+    if not isinstance(execution, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("execution must be an object")
+    _require_true(
+        "execution.prod_scoped_shadow_production_default_api_user_visible_pilot_executed",
+        execution.get("prod_scoped_shadow_production_default_api_user_visible_pilot_executed"),
+    )
+    _require_true(
+        "execution.prod_scoped_shadow_production_default_api_user_visible_pilot_passed",
+        execution.get("prod_scoped_shadow_production_default_api_user_visible_pilot_passed"),
+    )
+    _verify_live_read_only_pilot_run_section(
+        execution.get("live_read_only_pilot_run"),
+        repo_root=repo_root,
+        verify_local_files=verify_local_pilot_files,
+    )
+    _verify_live_execution_pilot_run_section(
+        execution.get("live_execution_pilot_run"),
+        repo_root=repo_root,
+        verify_local_files=verify_local_pilot_files,
+    )
+    _verify_flag_enablement_pilot_run_section(
+        execution.get("flag_enablement_pilot_run"),
+        repo_root=repo_root,
+        verify_local_files=verify_local_pilot_files,
+    )
+    _verify_production_default_api_user_visible_pilot_run_section(
+        execution.get("production_default_api_user_visible_pilot_run"),
+        repo_root=repo_root,
+        verify_local_files=verify_local_pilot_files,
+    )
+
+    for prefix, section in (
+        ("posture", bundle.get("posture")),
+        ("shadow_and_production_blockers", bundle.get("shadow_and_production_blockers")),
+    ):
+        if not isinstance(section, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError(f"{prefix} must be an object")
+        for field in (
+            "prod_scoped_shadow_production_default_api_user_visible_pilot_executed",
+            "prod_scoped_shadow_production_default_api_user_visible_pilot_passed",
+            "prod_scoped_shadow_production_default_api_user_visible_authorization_requested",
+            "prod_scoped_shadow_production_default_api_user_visible_authorization_granted",
+            "prod_scoped_shadow_production_default_api_user_visible_authorized",
+            "prod_scoped_shadow_flag_enablement_authorized",
+            "prod_scoped_shadow_live_execution_authorized",
+            "prod_scoped_shadow_live_read_only_execution_authorized",
+            "live_prod_source_reads_performed",
+        ):
+            _require_true(f"{prefix}.{field}", section.get(field))
+        for field in (
+            "missing_prod_scoped_shadow_production_default_api_user_visible_authorization",
+            "missing_prod_scoped_shadow_flag_enablement_authorization",
+            "missing_prod_scoped_shadow_live_execution_authorization",
+            "prod_scoped_shadow_execution_authorized",
+            "online_shadow_execution_enabled",
+            "production_default_allowed",
+            "api_web_changes_allowed",
+            "user_visible_ranking_changed",
+            "writes_performed",
+            "runtime_writes_performed",
+        ):
+            if field in section:
+                _require_false(f"{prefix}.{field}", section.get(field))
+    blockers = bundle.get("shadow_and_production_blockers")
+    if not isinstance(blockers, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("shadow_and_production_blockers must be an object")
+    _require_equal(
+        "shadow_and_production_blockers.blockers_cleared_by_production_default_api_user_visible_pilot_run",
+        blockers.get("blockers_cleared_by_production_default_api_user_visible_pilot_run"),
+        [],
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_introduced_by_production_default_api_user_visible_pilot_run",
+        blockers.get("blockers_introduced_by_production_default_api_user_visible_pilot_run"),
+        [],
+    )
+    _require_true(
+        "shadow_and_production_blockers.blockers_unchanged_by_production_default_api_user_visible_pilot_run",
+        blockers.get("blockers_unchanged_by_production_default_api_user_visible_pilot_run"),
+    )
+    if "blockers_changed_by_production_default_api_user_visible_pilot_run" in blockers:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "shadow_and_production_blockers.blockers_changed_by_production_default_api_user_visible_pilot_run "
+            "must not be used"
+        )
+    for path in (
+        "plan.feature_flag_iam_config_requirements.prod_scoped_flag_enablement_authorized_now",
+        "plan.production_default_api_user_visible_separation.production_default_allowed",
+        "plan.production_default_api_user_visible_separation.api_web_changes_allowed",
+        "plan.production_default_api_user_visible_separation.user_visible_ranking_changed",
+    ):
+        _require_false(path, _get(bundle, path))
+    _require_false("writes_performed", bundle.get("writes_performed"))
+    _require_false("runtime_writes_performed", bundle.get("runtime_writes_performed"))
+    _require_named_flags_not_true(
+        bundle,
+        (
+            "online_shadow_execution_enabled",
+            "production_default_allowed",
+            "api_web_changes_allowed",
+            "user_visible_ranking_changed",
+            "writes_performed",
+            "runtime_writes_performed",
+            "prod_scoped_shadow_execution_authorized",
+        ),
+    )
+    _require_equal(
+        "recommended_next_stage",
+        bundle.get("recommended_next_stage"),
+        POST_PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_NEXT_STAGE,
+    )
+    caveats = bundle.get("caveats")
+    if not isinstance(caveats, list):
+        raise MLShadowScorerProductionScopedShadowBundleError("caveats must be a list")
+    for caveat in _caveats(mode="post_production_default_api_user_visible_pilot_run"):
+        if caveat not in caveats:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"post_production_default_api_user_visible_pilot_run caveats missing {caveat!r}"
+            )
+    for item in PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_STILL_NOT_INCLUDED:
+        if item not in authorization.get("explicitly_not_included", []):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.explicitly_not_included missing {item!r}"
+            )
+    return {
+        **base_result,
+        "verification_mode": "post_production_default_api_user_visible_pilot_run",
+        "bundle_revision": metadata.get("bundle_revision"),
+        "recommended_next_stage": bundle.get("recommended_next_stage"),
+    }
+
+
 def _without_flag_enablement_request_payload(bundle: Mapping[str, Any]) -> dict[str, Any]:
     payload = deepcopy(dict(bundle))
     metadata = deepcopy(dict(payload.get("metadata") or {}))
@@ -13038,6 +14260,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     expect_flag_enablement_pilot_review_filed: bool | None = None,
     expect_production_default_api_user_visible_request_filed: bool | None = None,
     expect_production_default_api_user_visible_grant_filed: bool | None = None,
+    expect_production_default_api_user_visible_pilot_run_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
@@ -13072,7 +14295,16 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         expect_production_default_api_user_visible_grant_filed=(
             expect_production_default_api_user_visible_grant_filed
         ),
+        expect_production_default_api_user_visible_pilot_run_filed=(
+            expect_production_default_api_user_visible_pilot_run_filed
+        ),
     )
+    if mode == "post_production_default_api_user_visible_pilot_run":
+        return _verify_production_default_api_user_visible_pilot_run_payload(
+            bundle,
+            repo_root=root,
+            verify_local_pilot_files=verify_local_pilot_files,
+        )
     if mode == "post_production_default_api_user_visible_grant":
         return _verify_production_default_api_user_visible_grant_payload(
             bundle,
@@ -14344,6 +15576,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
     expect_flag_enablement_pilot_review_filed: bool | None = None,
     expect_production_default_api_user_visible_request_filed: bool | None = None,
     expect_production_default_api_user_visible_grant_filed: bool | None = None,
+    expect_production_default_api_user_visible_pilot_run_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
@@ -14376,6 +15609,9 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         expect_production_default_api_user_visible_grant_filed=(
             expect_production_default_api_user_visible_grant_filed
         ),
+        expect_production_default_api_user_visible_pilot_run_filed=(
+            expect_production_default_api_user_visible_pilot_run_filed
+        ),
         verify_local_pilot_files=verify_local_pilot_files,
     )
 
@@ -14404,6 +15640,11 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
     flag_enablement_pilot_run = (
         execution.get("flag_enablement_pilot_run")
         if isinstance(execution.get("flag_enablement_pilot_run"), Mapping)
+        else None
+    )
+    production_default_api_user_visible_pilot_run = (
+        execution.get("production_default_api_user_visible_pilot_run")
+        if isinstance(execution.get("production_default_api_user_visible_pilot_run"), Mapping)
         else None
     )
     review = payload.get("review") if isinstance(payload.get("review"), Mapping) else None
@@ -14486,7 +15727,11 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         == PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_SCOPE
         else None
     )
-    if production_default_api_user_visible_grant:
+    if production_default_api_user_visible_pilot_run:
+        summary = (
+            "This bundle records the bounded production-scoped online shadow production default/API/user-visible pilot run while keeping production output, API/web behavior, user-visible ranking, global/fleet execution, writes, refit/training, and label ingest disabled."
+        )
+    elif production_default_api_user_visible_grant:
         summary = (
             "This bundle records the production-scoped online shadow production default/API/user-visible authorization grant while keeping runtime enablement, production default, API/web, user-visible ranking, global/fleet execution, writes, refit/training, and label ingest disabled."
         )
@@ -14621,6 +15866,8 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         f"- Flag enablement pilot passed: {posture.get('prod_scoped_shadow_flag_enablement_pilot_passed')}",
         f"- Flag enablement pilot reviewed: {posture.get('prod_scoped_shadow_flag_enablement_pilot_reviewed')}",
         f"- Flag enablement pilot accepted: {posture.get('prod_scoped_shadow_flag_enablement_pilot_accepted')}",
+        f"- Production default/API/user-visible pilot executed: {posture.get('prod_scoped_shadow_production_default_api_user_visible_pilot_executed')}",
+        f"- Production default/API/user-visible pilot passed: {posture.get('prod_scoped_shadow_production_default_api_user_visible_pilot_passed')}",
         f"- Missing flag enablement authorization: {posture.get('missing_prod_scoped_shadow_flag_enablement_authorization')}",
         f"- Missing live execution authorization: {posture.get('missing_prod_scoped_shadow_live_execution_authorization')}",
         f"- Live production source reads performed: {posture.get('live_prod_source_reads_performed')}",
@@ -15082,6 +16329,63 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         )
         lines.extend(["", "## Production Default/API/User-Visible Grant Explicitly Not Included", ""])
         lines.extend(f"- {item}" for item in granted_scope["explicitly_still_not_included"])
+        lines.append("")
+    if production_default_api_user_visible_pilot_run:
+        live_source_reads = production_default_api_user_visible_pilot_run["live_source_reads"]
+        row_counts = live_source_reads["row_counts"]
+        incomplete = production_default_api_user_visible_pilot_run["incomplete_coverage_drill"]
+        probe = production_default_api_user_visible_pilot_run["production_default_api_user_visible_probe"]
+        lines.extend(
+            [
+                "## Production Default/API/User-Visible Pilot Run",
+                "",
+                f"- Pilot surface: `{production_default_api_user_visible_pilot_run['pilot_surface']}`",
+                f"- Pilot run id: `{production_default_api_user_visible_pilot_run['pilot_run_id']}`",
+                f"- API surface probe: `{probe['api_surface']}`",
+                f"- Joined candidate count: {production_default_api_user_visible_pilot_run['input_join_summary']['joined_candidate_count']}",
+                f"- Live prod source reads performed: {production_default_api_user_visible_pilot_run['live_prod_source_reads_performed']}",
+                f"- Pilot passed: {production_default_api_user_visible_pilot_run['pass_fail_evaluation']['overall_passed']}",
+                f"- User-visible response emitted: {probe['user_visible_response_emitted_to_users']}",
+                f"- Production default changed: {probe['production_default_changed']}",
+                f"- API/web changed: {probe['api_web_changed']}",
+                f"- User-visible ranking changed: {probe['user_visible_ranking_changed']}",
+                f"- Bridge surface included: {probe['bridge_surface_included']}",
+                f"- Pilot run directory: `{production_default_api_user_visible_pilot_run['pilot_run_directory']['relative_path']}`",
+                f"- Incomplete coverage status: `{incomplete['status']}`",
+                f"- Incomplete coverage shadow rows: {incomplete['shadow_row_count']}",
+                "",
+                "## Production Default/API/User-Visible Source Reads",
+                "",
+                f"- Approved tables: {', '.join(live_source_reads['approved_tables'])}",
+                f"- Ranking runs: {row_counts['ranking_runs']}",
+                f"- Paper scores: {row_counts['paper_scores']}",
+                f"- Works: {row_counts['works']}",
+                f"- Embeddings: {row_counts['embeddings']}",
+                f"- Candidate SHA: `{live_source_reads['input_identity_verification']['candidate_pool_work_set_sha256']}`",
+                "",
+                "## Production Default/API/User-Visible Pilot Checks",
+                "",
+            ]
+        )
+        for check_name in PRODUCTION_DEFAULT_API_USER_VISIBLE_PILOT_RUN_PASS_FAIL_CHECKS:
+            lines.append(
+                "- "
+                f"`{check_name}`: "
+                f"{production_default_api_user_visible_pilot_run['pass_fail_evaluation']['checks'][check_name]}"
+            )
+        lines.extend(
+            [
+                "",
+                "## Production Default/API/User-Visible Pilot Files",
+                "",
+                "| Path | Bytes | Rows | SHA-256 |",
+                "| --- | ---: | ---: | --- |",
+            ]
+        )
+        for file_record in production_default_api_user_visible_pilot_run["files_written"]:
+            lines.append(
+                f"| `{file_record['relative_path']}` | {file_record['byte_count']} | {file_record.get('row_count')} | `{file_record['sha256']}` |"
+            )
         lines.append("")
     if live_read_only_grant:
         grant_decision = live_read_only_grant
