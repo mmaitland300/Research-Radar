@@ -89,8 +89,8 @@ class FakeCursor:
             return None
         return {
             "ranking_run_id": "rank-83787b91ef",
-            "status": "completed",
-            "ranking_version": "test-ranking-version",
+            "status": "succeeded",
+            "ranking_version": "shadow-generalization-product-candidate-ranking-v1",
             "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
             "embedding_version": "shadow-generalization-text-embedding-v1",
         }
@@ -349,6 +349,10 @@ def test_happy_path_mocked_live_reads_write_four_artifacts_and_file_revision_11(
     assert live_run["live_source_reads"]["refit_training_performed"] is False
     assert live_run["live_source_reads"]["embedding_generation_performed"] is False
     assert live_run["live_source_reads"]["label_ingest_performed"] is False
+    derivation = live_run["live_source_reads"]["audit_embedding_probability_derivation"]
+    assert derivation["source"] == "computed_from_live_embedding_vectors_with_frozen_scorer"
+    assert derivation["live_embedding_vectors_used"] is True
+    assert derivation["frozen_candidate_score_artifact_used_as_primary_input"] is False
     assert live_run["runtime_drill"]["call_order"] == [
         "preflight_disabled",
         "pilot_enabled",
@@ -576,6 +580,20 @@ def test_verifier_passes_without_local_shadow_run_files_and_rejects_bad_live_fla
     payload["execution"]["pilot_run"]["live_prod_source_reads_performed"] = True
     bundle_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="live_prod_source_reads_performed"):
+        verify_ml_shadow_scorer_production_scoped_shadow_bundle(
+            bundle_path=bundle_path,
+            repo_root=root,
+            expect_live_read_only_pilot_run_filed=True,
+            verify_local_pilot_files=False,
+        )
+
+    payload = _load(bundle_path)
+    payload["execution"]["pilot_run"]["live_prod_source_reads_performed"] = False
+    payload["execution"]["live_read_only_pilot_run"]["live_source_reads"]["ranking_run"][
+        "ranking_version"
+    ] = "test-ranking-version"
+    bundle_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match="ranking_version"):
         verify_ml_shadow_scorer_production_scoped_shadow_bundle(
             bundle_path=bundle_path,
             repo_root=root,

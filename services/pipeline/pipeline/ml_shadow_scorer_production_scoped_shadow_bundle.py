@@ -85,6 +85,12 @@ LIVE_READ_ONLY_GRANT_SCOPE = "production_scoped_shadow_live_read_only_authorizat
 PILOT_HARNESS_SURFACE = "bounded_fixture_pilot_harness"
 PILOT_RUN_SURFACE = "bounded_read_only_audit_artifact_pilot"
 LIVE_READ_ONLY_PILOT_RUN_SURFACE = "bounded_live_read_only_prod_scoped_pilot"
+LIVE_READ_ONLY_PILOT_RUN_RANKING_VERSION = "shadow-generalization-product-candidate-ranking-v1"
+LIVE_READ_ONLY_PILOT_RUN_AUDIT_PROBABILITY_SOURCE = (
+    "computed_from_live_embedding_vectors_with_frozen_scorer"
+)
+LIVE_READ_ONLY_PILOT_RUN_SCORER_PATH = "docs/audit/ml-offline-audit-embedding-scorer-v2.json"
+LIVE_READ_ONLY_PILOT_RUN_SCORER_VERSION = "ml-offline-audit-embedding-scorer-v2"
 PILOT_HARNESS_EXPECTED_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
 PILOT_RUN_EXPECTED_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
 LIVE_READ_ONLY_PILOT_RUN_EXPECTED_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
@@ -2794,6 +2800,63 @@ def _validate_live_read_only_pilot_run_slice(live_read_only_pilot_slice: Mapping
         "joined_candidate_count": 528,
     }.items():
         _require_equal(f"live_read_only_pilot_slice.live_source_reads.row_counts.{field}", row_counts.get(field), expected)
+    ranking_run = live_source_reads.get("ranking_run")
+    if not isinstance(ranking_run, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads.ranking_run must be an object"
+        )
+    _require_equal(
+        "live_read_only_pilot_slice.live_source_reads.ranking_run.ranking_run_id",
+        ranking_run.get("ranking_run_id"),
+        PINNED_IDENTITY["ranking_run_id"],
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.live_source_reads.ranking_run.ranking_version",
+        ranking_run.get("ranking_version"),
+        LIVE_READ_ONLY_PILOT_RUN_RANKING_VERSION,
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.live_source_reads.ranking_run.status",
+        ranking_run.get("status"),
+        "succeeded",
+    )
+    derivation = live_source_reads.get("audit_embedding_probability_derivation")
+    if not isinstance(derivation, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation must be an object"
+        )
+    _require_equal(
+        "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation.source",
+        derivation.get("source"),
+        LIVE_READ_ONLY_PILOT_RUN_AUDIT_PROBABILITY_SOURCE,
+    )
+    _require_true(
+        "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation.live_embedding_vectors_used",
+        derivation.get("live_embedding_vectors_used"),
+    )
+    _require_false(
+        "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation.frozen_candidate_score_artifact_used_as_primary_input",
+        derivation.get("frozen_candidate_score_artifact_used_as_primary_input"),
+    )
+    scorer = derivation.get("scorer")
+    if not isinstance(scorer, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation.scorer must be an object"
+        )
+    _require_equal(
+        "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation.scorer.path",
+        scorer.get("path"),
+        LIVE_READ_ONLY_PILOT_RUN_SCORER_PATH,
+    )
+    _require_equal(
+        "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation.scorer.scorer_version",
+        scorer.get("scorer_version"),
+        LIVE_READ_ONLY_PILOT_RUN_SCORER_VERSION,
+    )
+    _require_true(
+        "live_read_only_pilot_slice.live_source_reads.audit_embedding_probability_derivation.scorer.loaded_after_confirmation",
+        scorer.get("loaded_after_confirmation"),
+    )
     identity = live_source_reads.get("input_identity_verification")
     if not isinstance(identity, Mapping):
         raise MLShadowScorerProductionScopedShadowBundleError(
