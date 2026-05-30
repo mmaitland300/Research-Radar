@@ -129,6 +129,9 @@ def _write_rev12_bundle(root: Path) -> Path:
     bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
     payload = _load(bundle_path)
     revision = payload["metadata"]["bundle_revision"]
+    if revision == 21:
+        payload = bundle_module._without_production_default_api_user_visible_request_payload(payload)
+        revision = payload["metadata"]["bundle_revision"]
     if revision == 20:
         payload = bundle_module._without_flag_enablement_pilot_review_payload(payload)
         revision = payload["metadata"]["bundle_revision"]

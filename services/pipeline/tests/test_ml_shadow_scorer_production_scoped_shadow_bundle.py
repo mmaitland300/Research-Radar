@@ -1189,6 +1189,10 @@ def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
     assert '"ml-shadow-scorer-production-scoped-shadow-bundle-request-live-execution"' in cli_source[assemble_start:next_command]
     assert '"ml-shadow-scorer-production-scoped-shadow-bundle-grant-live-execution"' in cli_source[assemble_start:next_command]
     assert '"ml-shadow-scorer-production-scoped-shadow-bundle-grant-live-read-only"' in cli_source[assemble_start:next_command]
+    assert (
+        '"ml-shadow-scorer-production-scoped-shadow-bundle-request-production-default-api-user-visible"'
+        in cli_source[assemble_start:next_command]
+    )
     assert '"ml-shadow-scorer-production-scoped-shadow-live-read-only-pilot-review"' in cli_source[assemble_start:next_command]
     assert '"--expect-live-read-only-grant-filed"' in cli_source[assemble_start:next_command]
     assert '"--expect-live-read-only-pilot-run-filed"' in cli_source[assemble_start:next_command]
@@ -1204,6 +1208,10 @@ def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
         assemble_start:next_command
     ]
     assert '"--expect-flag-enablement-pilot-review-filed"' in cli_source[assemble_start:next_command]
+    assert (
+        '"--expect-production-default-api-user-visible-request-filed"'
+        in cli_source[assemble_start:next_command]
+    )
     live_command = cli_source.index('"ml-shadow-scorer-production-scoped-shadow-live-read-only-pilot-run"', next_command)
     live_command_end = cli_source.index('"ml-fresh-product-candidate-source-build"', live_command)
     live_command_block = cli_source[live_command:live_command_end]
