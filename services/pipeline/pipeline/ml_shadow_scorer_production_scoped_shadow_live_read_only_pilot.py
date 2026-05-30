@@ -24,6 +24,11 @@ from typing import Any, Iterator, Mapping, Sequence
 import psycopg
 from psycopg.rows import dict_row
 
+from pipeline.ml_label_dataset import sha256_file
+from pipeline.ml_offline_audit_embedding_scorer_export import (
+    MLOfflineAuditEmbeddingScorerExportError,
+    score_audit_embedding_probability,
+)
 from pipeline.ml_shadow_scorer_generalization_second_surface import (
     MLShadowScorerGeneralizationSecondSurfaceError,
     _database_url_from_env,
@@ -66,6 +71,9 @@ from pipeline.shadow_write_path_guards import (
 EXPECTED_LIVE_READ_ONLY_PILOT_ROW_COUNT = 528
 APPROVED_SOURCE_TABLES = ("ranking_runs", "paper_scores", "works", "embeddings")
 ALLOWED_PILOT_FILES = ("manifest.json", "shadow_rows.jsonl", "observability.json", "write_counts.json")
+FROZEN_AUDIT_EMBEDDING_SCORER_PATH = Path("docs/audit/ml-offline-audit-embedding-scorer-v2.json")
+FROZEN_AUDIT_EMBEDDING_SCORER_VERSION = "ml-offline-audit-embedding-scorer-v2"
+FROZEN_AUDIT_EMBEDDING_SCORER_TYPE = "ml_offline_audit_embedding_scorer"
 _WORK_ID_RE = re.compile(r"(?:openalex\.org/)?(W\d+)\s*$", re.IGNORECASE)
 _WRITE_SQL_RE = re.compile(
     r"\b(insert|update|delete|drop|alter|create|truncate|merge|copy|grant|revoke|vacuum|call)\b",
@@ -127,6 +135,33 @@ def _float_or_none(value: Any) -> float | None:
     return number if math.isfinite(number) else None
 
 
+def _parse_vector(value: Any) -> list[float]:
+    raw = value
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+                f"embedding vector string is not valid JSON: {exc}"
+            ) from exc
+    if not isinstance(raw, (list, tuple)):
+        raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError("embedding vector must be an array")
+    vector: list[float] = []
+    for item in raw:
+        try:
+            number = float(item)
+        except (TypeError, ValueError) as exc:
+            raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+                f"embedding vector contains non-numeric value: {item!r}"
+            ) from exc
+        if not math.isfinite(number):
+            raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+                "embedding vector contains non-finite value"
+            )
+        vector.append(number)
+    return vector
+
+
 def _canonical_from_value(value: Any) -> str | None:
     text = str(value or "").strip()
     match = _WORK_ID_RE.search(text)
@@ -152,6 +187,46 @@ def _assert_live_read_only_database_url(database_url: str) -> dict[str, Any]:
 
 def _connect_readonly(database_url: str) -> Any:
     return psycopg.connect(database_url, autocommit=True, options="-c default_transaction_read_only=on")
+
+
+def _load_frozen_audit_embedding_scorer(repo_root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    scorer_path = (repo_root / FROZEN_AUDIT_EMBEDDING_SCORER_PATH).resolve()
+    payload = _load_json_object(scorer_path)
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, Mapping):
+        raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+            "frozen audit embedding scorer missing metadata"
+        )
+    if metadata.get("artifact_type") != FROZEN_AUDIT_EMBEDDING_SCORER_TYPE:
+        raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+            "frozen audit embedding scorer artifact_type mismatch"
+        )
+    if metadata.get("scorer_version") != FROZEN_AUDIT_EMBEDDING_SCORER_VERSION:
+        raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+            "frozen audit embedding scorer version mismatch"
+        )
+    if metadata.get("fit_mode") != "holdout_bound_train_only":
+        raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+            "frozen audit embedding scorer fit_mode mismatch"
+        )
+    if metadata.get("target") != "good_or_acceptable":
+        raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+            "frozen audit embedding scorer target mismatch"
+        )
+    dimensions = metadata.get("embedding_dimensions")
+    if not isinstance(dimensions, int) or isinstance(dimensions, bool) or dimensions <= 0:
+        raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+            "frozen audit embedding scorer embedding_dimensions must be positive"
+        )
+    return payload, {
+        "path": FROZEN_AUDIT_EMBEDDING_SCORER_PATH.as_posix(),
+        "sha256": sha256_file(scorer_path),
+        "scorer_version": FROZEN_AUDIT_EMBEDDING_SCORER_VERSION,
+        "fit_mode": metadata.get("fit_mode"),
+        "target": metadata.get("target"),
+        "embedding_dimensions": dimensions,
+        "loaded_after_confirmation": True,
+    }
 
 
 def _execute_select(cur: Any, sql: str, params: Sequence[Any] = ()) -> None:
@@ -205,7 +280,6 @@ def _query_candidate_inputs(
                 ps.work_id AS internal_work_id,
                 ps.recommendation_family,
                 ps.final_score,
-                ps.audit_embedding_probability_work,
                 w.openalex_id,
                 w.title,
                 w.year,
@@ -240,7 +314,12 @@ def _validate_ranking_run_row(row: Mapping[str, Any]) -> None:
         )
 
 
-def _build_runtime_rows_from_live_reads(raw_rows: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def _build_runtime_rows_from_live_reads(
+    raw_rows: Sequence[Mapping[str, Any]],
+    *,
+    scorer_payload: Mapping[str, Any],
+    scorer_summary: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if len(raw_rows) != EXPECTED_LIVE_READ_ONLY_PILOT_ROW_COUNT:
         raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
             f"incomplete live read coverage: expected {EXPECTED_LIVE_READ_ONLY_PILOT_ROW_COUNT}, got {len(raw_rows)}"
@@ -283,16 +362,19 @@ def _build_runtime_rows_from_live_reads(raw_rows: Sequence[Mapping[str, Any]]) -
                 f"candidate row {canonical} missing final_score"
             )
         final_score_coverage += 1
-        learned_probability = _float_or_none(row.get("audit_embedding_probability_work"))
-        if learned_probability is None:
-            raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
-                f"candidate row {canonical} missing audit_embedding_probability_work"
-            )
-        learned_probability_coverage += 1
         if row.get("observed_embedding_version") != EMBEDDING_VERSION or row.get("vector") is None:
             raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
                 f"candidate row {canonical} missing approved embedding coverage"
             )
+        vector = _parse_vector(row.get("vector"))
+        try:
+            learned_probability = score_audit_embedding_probability(vector, scorer_payload)
+        except MLOfflineAuditEmbeddingScorerExportError as exc:
+            raise MLShadowScorerProductionScopedShadowLiveReadOnlyPilotError(
+                f"candidate row {canonical} scorer application failed: {exc}",
+                code=exc.code,
+            ) from exc
+        learned_probability_coverage += 1
         embedding_coverage += 1
         runtime_rows.append(
             {
@@ -328,6 +410,8 @@ def _build_runtime_rows_from_live_reads(raw_rows: Sequence[Mapping[str, Any]]) -
         "embedding_coverage_count": embedding_coverage,
         "candidate_pool_work_set_sha256": observed_sha,
         "labels_not_used_for_scoring": True,
+        "audit_embedding_probability_source": "computed_from_live_embedding_vectors_with_frozen_scorer",
+        "audit_embedding_scorer": dict(scorer_summary),
         "refit_training_performed": False,
         "embedding_generation_performed": False,
         "label_ingest_performed": False,
@@ -524,6 +608,7 @@ def _observability_summary(
 def _build_live_source_reads(
     *,
     database_summary: Mapping[str, Any],
+    scorer_summary: Mapping[str, Any],
     ranking_row: Mapping[str, Any],
     raw_rows: Sequence[Mapping[str, Any]],
     join_summary: Mapping[str, Any],
@@ -543,6 +628,12 @@ def _build_live_source_reads(
             "joined_candidate_count": int(join_summary.get("joined_candidate_count") or 0),
         },
         "ranking_run": dict(ranking_row),
+        "audit_embedding_probability_derivation": {
+            "source": join_summary.get("audit_embedding_probability_source"),
+            "scorer": dict(scorer_summary),
+            "live_embedding_vectors_used": True,
+            "frozen_candidate_score_artifact_used_as_primary_input": False,
+        },
         "input_identity_verification": {
             **deepcopy(PINNED_IDENTITY),
             "matches_pinned_identity": True,
@@ -761,6 +852,7 @@ def run_ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot(
 
     db_url = database_url or _database_url_from_env()
     database_summary = _assert_live_read_only_database_url(db_url)
+    scorer_payload, scorer_summary = _load_frozen_audit_embedding_scorer(root)
     try:
         conn = _connect_readonly(db_url)
     except Exception as exc:
@@ -777,7 +869,11 @@ def run_ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot(
             corpus_snapshot_version=CORPUS_SNAPSHOT_VERSION,
             embedding_version=EMBEDDING_VERSION,
         )
-        runtime_rows, join_summary = _build_runtime_rows_from_live_reads(raw_rows)
+        runtime_rows, join_summary = _build_runtime_rows_from_live_reads(
+            raw_rows,
+            scorer_payload=scorer_payload,
+            scorer_summary=scorer_summary,
+        )
     finally:
         close = getattr(conn, "close", None)
         if callable(close):
@@ -785,6 +881,7 @@ def run_ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot(
 
     live_source_reads = _build_live_source_reads(
         database_summary=database_summary,
+        scorer_summary=scorer_summary,
         ranking_row=ranking_row,
         raw_rows=raw_rows,
         join_summary=join_summary,

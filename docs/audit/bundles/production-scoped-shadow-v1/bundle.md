@@ -190,11 +190,11 @@ This bundle records the bounded production-scoped online shadow live read-only p
 ## Live Read-Only Pilot Run
 
 - Pilot surface: `bounded_live_read_only_prod_scoped_pilot`
-- Pilot run id: `live-read-only-rank-83787b91ef-20260529T224500Z`
+- Pilot run id: `live-read-only-rank-83787b91ef-20260530T032631Z`
 - Joined candidate count: 528
 - Live prod source reads performed: True
 - Pilot passed: True
-- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/live-read-only-rank-83787b91ef-20260529T224500Z/`
+- Pilot run directory: `docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/live-read-only-rank-83787b91ef-20260530T032631Z/`
 - Labels used for scoring: False
 - Refit/training performed: False
 - Embedding generation performed: False
@@ -213,10 +213,10 @@ This bundle records the bounded production-scoped online shadow live read-only p
 
 | Path | Bytes | Rows | SHA-256 |
 | --- | ---: | ---: | --- |
-| `manifest.json` | 3602 | None | `277a469624d3b14f8926157bea718e2c1c8ecf79b1808b47a9344874d4ba1564` |
+| `manifest.json` | 4811 | None | `7a3e92a8f5fe9d7953c8563218c12e6741fa5baeaf87147518f63ac3e95da3f7` |
 | `shadow_rows.jsonl` | 407463 | 528 | `7f702bb1c43eca86d6a7ec8e472c43ff5da315d9df8e71b2e5d925c9b4829d03` |
-| `observability.json` | 15664 | None | `b709ba4b06add0ae9fe643cfa292a2e532e77eb89c1f6ecdedda48c44395f939` |
-| `write_counts.json` | 714 | None | `d5514d0eb5fe326ff6fcb3ee348a679679dbfff198caca2b5748cc81516ea31a` |
+| `observability.json` | 15663 | None | `385f5504983f45889239fce8967b69d4aa967c45f25ae0745134a0463438cef0` |
+| `write_counts.json` | 714 | None | `1901ab431a7426bbe2f458bf85262e5a5e5d50dcdf4a5e6ed452bc93ef4baf39` |
 
 ## Pilot Authorization Grant
 

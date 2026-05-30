@@ -180,13 +180,13 @@
   ],
   "execution": {
     "live_read_only_pilot_run": {
-      "executed_at": "2026-05-29T22:45:00Z",
+      "executed_at": "2026-05-30T03:26:31Z",
       "files_written": [
         {
-          "byte_count": 3602,
+          "byte_count": 4811,
           "relative_path": "manifest.json",
           "row_count": null,
-          "sha256": "277a469624d3b14f8926157bea718e2c1c8ecf79b1808b47a9344874d4ba1564",
+          "sha256": "7a3e92a8f5fe9d7953c8563218c12e6741fa5baeaf87147518f63ac3e95da3f7",
           "write_target": "isolated_prod_scoped_audit_artifacts"
         },
         {
@@ -197,21 +197,31 @@
           "write_target": "isolated_prod_scoped_audit_artifacts"
         },
         {
-          "byte_count": 15664,
+          "byte_count": 15663,
           "relative_path": "observability.json",
           "row_count": null,
-          "sha256": "b709ba4b06add0ae9fe643cfa292a2e532e77eb89c1f6ecdedda48c44395f939",
+          "sha256": "385f5504983f45889239fce8967b69d4aa967c45f25ae0745134a0463438cef0",
           "write_target": "isolated_prod_scoped_audit_artifacts"
         },
         {
           "byte_count": 714,
           "relative_path": "write_counts.json",
           "row_count": null,
-          "sha256": "d5514d0eb5fe326ff6fcb3ee348a679679dbfff198caca2b5748cc81516ea31a",
+          "sha256": "1901ab431a7426bbe2f458bf85262e5a5e5d50dcdf4a5e6ed452bc93ef4baf39",
           "write_target": "isolated_prod_scoped_audit_artifacts"
         }
       ],
       "input_join_summary": {
+        "audit_embedding_probability_source": "computed_from_live_embedding_vectors_with_frozen_scorer",
+        "audit_embedding_scorer": {
+          "embedding_dimensions": 1536,
+          "fit_mode": "holdout_bound_train_only",
+          "loaded_after_confirmation": true,
+          "path": "docs/audit/ml-offline-audit-embedding-scorer-v2.json",
+          "scorer_version": "ml-offline-audit-embedding-scorer-v2",
+          "sha256": "f2e7744c089360c9a218361d94b6ed9d55c6c9570775fff769713785d40ee795",
+          "target": "good_or_acceptable"
+        },
         "candidate_pool_work_set_sha256": "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc",
         "embedding_coverage_count": 528,
         "embedding_generation_performed": false,
@@ -232,6 +242,20 @@
           "works",
           "embeddings"
         ],
+        "audit_embedding_probability_derivation": {
+          "frozen_candidate_score_artifact_used_as_primary_input": false,
+          "live_embedding_vectors_used": true,
+          "scorer": {
+            "embedding_dimensions": 1536,
+            "fit_mode": "holdout_bound_train_only",
+            "loaded_after_confirmation": true,
+            "path": "docs/audit/ml-offline-audit-embedding-scorer-v2.json",
+            "scorer_version": "ml-offline-audit-embedding-scorer-v2",
+            "sha256": "f2e7744c089360c9a218361d94b6ed9d55c6c9570775fff769713785d40ee795",
+            "target": "good_or_acceptable"
+          },
+          "source": "computed_from_live_embedding_vectors_with_frozen_scorer"
+        },
         "candidate_pool_work_set_sha256_match": true,
         "database_url_scope": {
           "database_target_redacted": "postgresql://research_radar:***@localhost:5432/research_radar",
@@ -255,8 +279,8 @@
           "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
           "embedding_version": "shadow-generalization-text-embedding-v1",
           "ranking_run_id": "rank-83787b91ef",
-          "ranking_version": "test-ranking-version",
-          "status": "completed"
+          "ranking_version": "shadow-generalization-product-candidate-ranking-v1",
+          "status": "succeeded"
         },
         "read_only_assertions": {
           "approved_source_allowlist_enforced": true,
@@ -296,9 +320,9 @@
           "scorer_artifacts": 0
         },
         "latency": {
-          "pilot_elapsed_ms": 2.82599999991362,
-          "postflight_elapsed_ms": 0.015000001440057531,
-          "preflight_elapsed_ms": 0.026199999410891905
+          "pilot_elapsed_ms": 6.048800001735799,
+          "postflight_elapsed_ms": 0.03499999729683623,
+          "preflight_elapsed_ms": 0.06410000059986487
         },
         "live_prod_source_reads_performed": true,
         "observability_complete": true,
@@ -910,10 +934,10 @@
         "overall_passed": true
       },
       "pilot_run_directory": {
-        "relative_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/live-read-only-rank-83787b91ef-20260529T224500Z/",
+        "relative_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/live-read-only-rank-83787b91ef-20260530T032631Z/",
         "root_path": "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/"
       },
-      "pilot_run_id": "live-read-only-rank-83787b91ef-20260529T224500Z",
+      "pilot_run_id": "live-read-only-rank-83787b91ef-20260530T032631Z",
       "pilot_surface": "bounded_live_read_only_prod_scoped_pilot",
       "runtime_drill": {
         "call_order": [
@@ -923,7 +947,7 @@
         ],
         "environment_restored": true,
         "pilot": {
-          "elapsed_ms": 2.82599999991362,
+          "elapsed_ms": 6.048800001735799,
           "labels_used_for_scoring": false,
           "production_default_changed": false,
           "reason": "feature flag enabled in explicit test-only context; no writes performed",
@@ -938,7 +962,7 @@
           "writes_performed": false
         },
         "postflight": {
-          "elapsed_ms": 0.015000001440057531,
+          "elapsed_ms": 0.03499999729683623,
           "labels_used_for_scoring": false,
           "production_default_changed": false,
           "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
@@ -953,7 +977,7 @@
           "writes_performed": false
         },
         "preflight": {
-          "elapsed_ms": 0.026199999410891905,
+          "elapsed_ms": 0.06410000059986487,
           "labels_used_for_scoring": false,
           "production_default_changed": false,
           "reason": "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED is off or unset",
@@ -974,7 +998,7 @@
         "forbidden_nonzero_write_counts": {},
         "forbidden_write_counts_zero": true,
         "local_artifact_tree_writes_performed": true,
-        "pilot_run_id": "live-read-only-rank-83787b91ef-20260529T224500Z",
+        "pilot_run_id": "live-read-only-rank-83787b91ef-20260530T032631Z",
         "pilot_surface": "bounded_live_read_only_prod_scoped_pilot",
         "production_writes_performed": false,
         "runtime_writes_performed": false,
@@ -1992,7 +2016,7 @@
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
     "bundle_revision": 11,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-29T22:45:00Z",
+    "generated_at": "2026-05-30T03:26:31Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",

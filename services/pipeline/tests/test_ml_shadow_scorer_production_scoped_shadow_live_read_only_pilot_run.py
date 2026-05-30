@@ -64,6 +64,7 @@ FIXTURE_RELS = {
     "phase2_write_authorization_grant": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase2-isolated-audit-write-authorization-grant-v1.json",
     "phase1_review": "docs/audit/ml-shadow-scorer-v1-online-shadow-phase1-no-write-pilot-review-v1.json",
     "learned_probability": "docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json",
+    "offline_audit_embedding_scorer": "docs/audit/ml-offline-audit-embedding-scorer-v2.json",
     "generalization_audit": "docs/audit/ml-shadow-scorer-v1-second-surface-generalization-audit-v1.json",
 }
 
@@ -222,13 +223,12 @@ def _live_rows(root: Path, *, count: int = 528, include_label: bool = False) -> 
             "internal_work_id": index,
             "recommendation_family": row["family"],
             "final_score": row["final_score"],
-            "audit_embedding_probability_work": row["audit_embedding_probability_work"],
             "openalex_id": f"https://openalex.org/{row['canonical_openalex_work_id']}",
             "title": row["title"],
             "year": row["year"],
             "corpus_snapshot_version": row["corpus_snapshot_version"],
             "observed_embedding_version": row["embedding_version"],
-            "vector": [0.0],
+            "vector": [0.0] * 1536,
         }
         if include_label:
             out["good_or_acceptable"] = True
