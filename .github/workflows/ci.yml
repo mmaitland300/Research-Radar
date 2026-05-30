@@ -35,7 +35,7 @@ jobs:
         working-directory: services/pipeline
 
       - name: Verify production-scoped-shadow bundle (post-live-read-only-pilot-review)
-        run: python -m pipeline.cli ml-shadow-scorer-production-scoped-shadow-bundle-verify --bundle ../../docs/audit/bundles/production-scoped-shadow-v1/bundle.json --expect-live-read-only-pilot-review-filed
+        run: python -m pipeline.cli ml-shadow-scorer-production-scoped-shadow-bundle-verify --bundle ../../docs/audit/bundles/production-scoped-shadow-v1/bundle.json --expect-live-execution-request-filed
         working-directory: services/pipeline
 
   web-build:

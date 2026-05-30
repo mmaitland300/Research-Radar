@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped online shadow live read-only pilot review (accepted) while keeping global shadow enablement, production default, API/web, and user-visible behavior disabled.
+This bundle records the production-scoped online shadow live execution authorization request while keeping live execution unauthorized, global shadow enablement, production default, API/web, and user-visible behavior disabled.
 
-- Bundle revision: 12
+- Bundle revision: 13
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -25,9 +25,13 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 - Live read-only pilot passed: True
 - Live read-only pilot reviewed: True
 - Live read-only pilot accepted: True
+- Live execution authorization requested: True
+- Live execution authorization granted: False
+- Live execution authorized: False
+- Missing live execution authorization: True
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `request_production_scoped_online_shadow_live_execution_authorization_v1`
+- Recommended next stage: `record_production_scoped_online_shadow_live_execution_authorization_grant_v1`
 
 ## Pinned Identity
 
@@ -116,6 +120,8 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 - Live read-only authorization requested: True
 - Live read-only authorization granted: True
 - Live read-only authorized: True
+- Live execution authorization requested: True
+- Live execution authorized: False
 - Proof authorized: False
 - Pilot authorized: True
 
@@ -153,6 +159,45 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 - refit/training
 - fleet-wide enablement
 - live reads at request time
+
+## Live Execution Authorization Request
+
+- Decision: `requested`
+- Requester: Matt Maitland
+- Requested at: 2026-05-30T16:17:22Z
+- Request notes: Production-scoped live execution authorization request paperwork only.
+- Requested scope: `production_scoped_shadow_live_execution_paperwork_only`
+- Missing live execution authorization: True
+- Live reads performed: True
+
+## Live Execution Future Grant Requirements
+
+- accepted live read-only pilot review evidence
+- exact bounded live-execution scope under plan/proof contract
+- pinned identity/ranking-run/family boundaries
+- process-scoped runtime flag boundaries
+- forbidden write targets remain zero
+- rollback/flag-off drill for live execution mode
+- observability requirements for live execution
+- no production default/API/user-visible behavior changes
+- no global/fleet enablement
+- time-bound grant/review requirements
+- owner/second-review requirements
+
+## Live Execution Request Explicitly Not Included
+
+- global enablement
+- production default
+- API/web
+- user-visible ranking
+- DB writes/DDL
+- refit/training
+- fleet-wide enablement
+- live execution at request time
+- online_shadow_execution_enabled globally
+- production_default_allowed
+- api_web_changes_allowed
+- user_visible_ranking_changed
 
 ## Live Read-Only Authorization Grant
 
@@ -228,7 +273,7 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 - Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
 - Live read-only pilot accepted: True
 - Failed review checks: None
-- Next stage: `request_production_scoped_online_shadow_live_execution_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_live_execution_authorization_grant_v1`
 
 ## Live Read-Only Pilot Review Checks
 
@@ -361,7 +406,7 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `request_production_scoped_online_shadow_live_execution_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_live_execution_authorization_grant_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -398,6 +443,7 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 - fleet-wide flag enablement
 - global enablement
 - global flag enablement
+- live execution at request time
 - live prod execution beyond an explicitly granted bounded pilot
 - live reads at grant time
 - live reads at request time
@@ -422,7 +468,7 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 
 ## Recommended Next Stage
 
-`request_production_scoped_online_shadow_live_execution_authorization_v1`
+`record_production_scoped_online_shadow_live_execution_authorization_grant_v1`
 
 ## Caveats
 
@@ -444,3 +490,9 @@ This bundle records the production-scoped online shadow live read-only pilot rev
 - Review does not grant global/live/fleet online shadow execution.
 - Review does not change production default, API/web, or user-visible ranking.
 - Accepted review clears the live read-only pilot evidence gate only.
+- Bundle live-execution request milestone only; grants no live execution authorization.
+- Accepted live read-only pilot review is necessary but not sufficient for live execution authorization.
+- Live execution remains unauthorized until a separate grant milestone.
+- Does not enable global/live/fleet online shadow execution.
+- Production default/API/user-visible behavior remains unchanged.
+- Live prod source reads already recorded by rev 11 remain unchanged; this request does not perform new reads.
