@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped online shadow production default/API/user-visible authorization request while granting no authorization, enabling no production output, and keeping online_shadow_execution_enabled, production default, API/web, and user-visible behavior disabled.
+This bundle records the production-scoped online shadow production default/API/user-visible authorization grant while keeping runtime enablement, production default, API/web, user-visible ranking, global/fleet execution, writes, refit/training, and label ingest disabled.
 
-- Bundle revision: 21
+- Bundle revision: 22
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -43,7 +43,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Missing live execution authorization: False
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Recommended next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Pinned Identity
 
@@ -300,7 +300,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Accepted bounded live execution pilot evidence review.
 - Live execution pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Live Execution Pilot Review Checks
 
@@ -352,7 +352,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Flag Enablement Future Grant Requirements
 
@@ -398,7 +398,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Flag Enablement Grant Authorizes For Chain Only
 
@@ -491,7 +491,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Accepted rev 19 flag enablement pilot evidence review
 - Flag enablement pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Flag Enablement Pilot Review Checks
 
@@ -542,14 +542,14 @@ This bundle records the production-scoped online shadow production default/API/u
 - Requested at: 2026-05-30T21:47:13Z
 - Request notes: Request production-scoped online shadow production default/API/user-visible authorization paperwork only; no grant, no runtime, no production output.
 - Requested scope: `production_scoped_shadow_production_default_api_user_visible_paperwork_only`
-- Missing production default/API/user-visible authorization: True
+- Missing production default/API/user-visible authorization: False
 - Flag enablement authorized: True
 - Live execution authorized: True
 - Production default allowed: False
 - API/web changes allowed: False
 - User-visible ranking changed: False
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Production Default/API/User-Visible Future Grant Requirements
 
@@ -577,6 +577,69 @@ This bundle records the production-scoped online shadow production default/API/u
 - DB writes/DDL
 - refit/training
 - label ingest
+- authorization grant
+- production default changes at request time
+- API/web changes at request time
+- user-visible ranking changes at request time
+- production recommendation output at request time
+- global/fleet online shadow execution
+- online_shadow_execution_enabled
+- prod_scoped_shadow_execution_authorized
+- DB writes/DDL
+- refit/training
+- label ingest
+
+## Production Default/API/User-Visible Authorization Grant
+
+- Decision: `granted`
+- Owner: Matt Maitland
+- Granted at: 2026-05-30T22:33:16Z
+- Expiry date: 2026-08-27
+- Review by: 2026-08-27
+- Grant notes: production default api user visible authorization grant paperwork only
+- Second reviewer: None
+- Owner equivalent review: owner equivalent production default grant review
+- Granted scope: `production_scoped_shadow_production_default_api_user_visible_grant_paperwork_only`
+- Missing production default/API/user-visible authorization: False
+- Production default allowed: False
+- API/web changes allowed: False
+- User-visible ranking changed: False
+- Online shadow execution enabled: False
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+
+## Production Default/API/User-Visible Grant Authorizes For Chain Only
+
+- bounded production-scoped production default/API/user-visible authorization paperwork complete
+- bounded production default/API/user-visible pilot run may be executed in a separate rev 23 run milestone
+- bounded production default/API/user-visible pilot review may be recorded after the separate rev 23 run milestone
+
+## Production Default/API/User-Visible Grant Boundaries
+
+- no bounded production default/API/user-visible pilot run performed at grant time
+- no production_default_allowed changes at grant time
+- no api_web_changes_allowed changes at grant time
+- no user_visible_ranking_changed changes at grant time
+- no new live reads performed at grant time
+- no writes performed at grant time
+- no execution.production_default_api_user_visible_pilot_run slice recorded at grant time
+
+## Production Default/API/User-Visible Grant Explicitly Not Included
+
+- runtime enablement at grant time
+- production default changes at grant time
+- API/web changes at grant time
+- user-visible ranking changes at grant time
+- production default/API/user-visible recommendation output at grant time
+- global/fleet online shadow execution
+- online_shadow_execution_enabled globally
+- prod_scoped_shadow_execution_authorized
+- DB writes/DDL
+- refit/training
+- label ingest
+- broad rollout
+- production_default_allowed
+- api_web_changes_allowed
+- user_visible_ranking_changed
 
 ## Live Read-Only Authorization Grant
 
@@ -652,7 +715,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
 - Live read-only pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Live Read-Only Pilot Review Checks
 
@@ -785,7 +848,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -816,10 +879,12 @@ This bundle records the production-scoped online shadow production default/API/u
 ## Explicitly Not Included
 
 - API/web
+- API/web changes at grant time
 - API/web changes at request time
 - DB writes/DDL
 - api_web_changes_allowed
 - authorization grant
+- broad rollout
 - fleet-wide enablement
 - fleet-wide flag enablement
 - global enablement
@@ -840,13 +905,17 @@ This bundle records the production-scoped online shadow production default/API/u
 - prod_scoped_shadow_execution_authorized
 - production default
 - production default / API / fleet-wide enablement
+- production default changes at grant time
 - production default changes at request time
 - production default/API/user-visible recommendation output
+- production default/API/user-visible recommendation output at grant time
 - production recommendation output at request time
 - production_default_allowed
 - refit/training
+- runtime enablement at grant time
 - user-visible ranking
 - user-visible ranking changes
+- user-visible ranking changes at grant time
 - user-visible ranking changes at request time
 - user_visible_ranking_changed
 
@@ -860,7 +929,7 @@ This bundle records the production-scoped online shadow production default/API/u
 
 ## Recommended Next Stage
 
-`record_production_scoped_online_shadow_production_default_api_user_visible_authorization_grant_v1`
+`run_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
 
 ## Caveats
 
@@ -931,3 +1000,8 @@ This bundle records the production-scoped online shadow production default/API/u
 - Does not enable online_shadow_execution_enabled or prod_scoped_shadow_execution_authorized.
 - Does not change production default, API/web, or user-visible ranking.
 - Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest.
+- Grant milestone only; does not run bounded production default/API/user-visible pilot.
+- Does not enable online_shadow_execution_enabled or prod_scoped_shadow_execution_authorized.
+- Does not change production default, API/web, or user-visible ranking.
+- Does not perform runtime calls, DB reads, shadow-runs reads, writes, refit/training, or label ingest.
+- Bounded production default/API/user-visible pilot run remains a separate rev 23 milestone.

@@ -133,10 +133,11 @@ def _downgrade_to_rev12(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _prepare_rev12_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
-    revision = payload["metadata"]["bundle_revision"]
-    if revision == 21:
+    if payload["metadata"]["bundle_revision"] == 22:
+        payload = bundle_module._without_production_default_api_user_visible_grant_payload(payload)
+    if payload["metadata"]["bundle_revision"] == 21:
         payload = bundle_module._without_production_default_api_user_visible_request_payload(payload)
-        revision = payload["metadata"]["bundle_revision"]
+    revision = payload["metadata"]["bundle_revision"]
     if revision == 20:
         payload = bundle_module._without_flag_enablement_pilot_review_payload(payload)
         revision = payload["metadata"]["bundle_revision"]
@@ -176,10 +177,11 @@ def _prepare_rev12_template_bundle(bundle_path: Path) -> None:
 def _ensure_rev13_bundle(root: Path) -> Path:
     bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
     payload = _load(bundle_path)
-    revision = payload["metadata"]["bundle_revision"]
-    if revision == 21:
+    if payload["metadata"]["bundle_revision"] == 22:
+        payload = bundle_module._without_production_default_api_user_visible_grant_payload(payload)
+    if payload["metadata"]["bundle_revision"] == 21:
         payload = bundle_module._without_production_default_api_user_visible_request_payload(payload)
-        revision = payload["metadata"]["bundle_revision"]
+    revision = payload["metadata"]["bundle_revision"]
     if revision == 20:
         payload = bundle_module._without_flag_enablement_pilot_review_payload(payload)
         revision = payload["metadata"]["bundle_revision"]
@@ -327,6 +329,8 @@ def test_committed_bundle_matches_post_live_execution_grant() -> None:
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] == 22:
+        payload = bundle_module._without_production_default_api_user_visible_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 21:
         payload = bundle_module._without_production_default_api_user_visible_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 20:

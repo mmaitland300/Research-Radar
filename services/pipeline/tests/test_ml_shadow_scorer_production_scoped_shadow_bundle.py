@@ -1209,7 +1209,7 @@ def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
     ]
     assert '"--expect-flag-enablement-pilot-review-filed"' in cli_source[assemble_start:next_command]
     assert (
-        '"--expect-production-default-api-user-visible-request-filed"'
+        '"--expect-production-default-api-user-visible-grant-filed"'
         in cli_source[assemble_start:next_command]
     )
     live_command = cli_source.index('"ml-shadow-scorer-production-scoped-shadow-live-read-only-pilot-run"', next_command)
