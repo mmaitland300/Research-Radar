@@ -319,6 +319,44 @@ def test_rejects_non_empty_failed_review_checks(
 
 
 @pytest.mark.parametrize(
+    ("authorization_field", "mutation", "error_match"),
+    [
+        ("request_decision", "pop", "request_decision"),
+        ("requested_scope", "pop", "requested_scope"),
+        ("live_read_only_grant_decision", "pop", "live_read_only_grant_decision"),
+        ("live_read_only_granted_scope", "pop", "live_read_only_granted_scope"),
+        (
+            "prod_scoped_shadow_live_read_only_authorization_requested",
+            "false",
+            "prod_scoped_shadow_live_read_only_authorization_requested",
+        ),
+        (
+            "prod_scoped_shadow_live_read_only_authorization_granted",
+            "false",
+            "prod_scoped_shadow_live_read_only_authorization_granted",
+        ),
+    ],
+)
+def test_apply_rejects_missing_live_read_only_request_or_grant_slices(
+    tmp_path: Path,
+    live_read_only_pilot_review_template_root: Path,
+    authorization_field: str,
+    mutation: str,
+    error_match: str,
+) -> None:
+    root = _copy_template_repo(live_read_only_pilot_review_template_root, tmp_path)
+    bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
+    payload = _load(bundle_path)
+    if mutation == "pop":
+        payload["authorization"].pop(authorization_field, None)
+    else:
+        payload["authorization"][authorization_field] = False
+
+    with pytest.raises(MLShadowScorerProductionScopedShadowBundleError, match=error_match):
+        apply_production_scoped_shadow_live_execution_authorization_request(payload)
+
+
+@pytest.mark.parametrize(
     "field_path",
     [
         "authorization.prod_scoped_shadow_live_execution_authorization_granted",

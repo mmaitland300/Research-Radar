@@ -3620,6 +3620,31 @@ def apply_production_scoped_shadow_live_execution_authorization_request(
         _get(bundle, "authorization.prod_scoped_shadow_live_read_only_execution_authorized"),
     )
     _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_authorization_requested",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_requested"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_live_read_only_authorization_granted",
+        _get(bundle, "authorization.prod_scoped_shadow_live_read_only_authorization_granted"),
+    )
+    if not isinstance(_get(bundle, "authorization.request_decision"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization.request_decision must be an object")
+    if not isinstance(_get(bundle, "authorization.requested_scope"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization.requested_scope must be an object")
+    if not isinstance(_get(bundle, "authorization.live_read_only_grant_decision"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_read_only_grant_decision must be an object"
+        )
+    if not isinstance(_get(bundle, "authorization.live_read_only_granted_scope"), Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.live_read_only_granted_scope must be an object"
+        )
+    authorization = bundle.get("authorization")
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    _verify_live_read_only_request_section(authorization)
+    _verify_live_read_only_grant_section(authorization)
+    _require_true(
         "posture.live_prod_source_reads_performed",
         _get(bundle, "posture.live_prod_source_reads_performed"),
     )
