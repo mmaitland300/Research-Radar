@@ -363,15 +363,18 @@ function ArmColumn({
   );
 }
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
 type PageProps = {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<SearchParams>;
 };
 
 export default async function EvaluationPage({ searchParams }: PageProps) {
-  const family = parseFamily(searchParams.family);
-  const focusPaperId = parseSingleParam(searchParams.paper);
-  const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
-  const limit = parseLimit(searchParams.limit, 12, 50);
+  const resolvedSearchParams = await searchParams;
+  const family = parseFamily(resolvedSearchParams.family);
+  const focusPaperId = parseSingleParam(resolvedSearchParams.paper);
+  const rankingRunId = parseSingleParam(resolvedSearchParams.ranking_run_id);
+  const limit = parseLimit(resolvedSearchParams.limit, 12, 50);
   const { data, error, status } = await (async () => {
     const params = new URLSearchParams({ family, limit: String(limit) });
     if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);

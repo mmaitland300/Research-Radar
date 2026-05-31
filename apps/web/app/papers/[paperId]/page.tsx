@@ -339,13 +339,15 @@ export default async function PaperDetailPage({
   params,
   searchParams
 }: {
-  params: { paperId: string };
-  searchParams?: Record<string, string | string[] | undefined>;
+  params: Promise<{ paperId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const canonicalPaperId = decodeURIComponent(params.paperId);
-  const rankingRunIdParam = Array.isArray(searchParams?.ranking_run_id)
-    ? searchParams?.ranking_run_id[0]
-    : searchParams?.ranking_run_id;
+  const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const canonicalPaperId = decodeURIComponent(resolvedParams.paperId);
+  const rankingRunIdParam = Array.isArray(resolvedSearchParams?.ranking_run_id)
+    ? resolvedSearchParams?.ranking_run_id[0]
+    : resolvedSearchParams?.ranking_run_id;
   const { paper, error } = await fetchPaperDetail(canonicalPaperId);
 
   const similar: SimilarPapersState | null =
