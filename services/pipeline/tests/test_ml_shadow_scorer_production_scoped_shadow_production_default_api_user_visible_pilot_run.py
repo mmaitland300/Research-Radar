@@ -47,6 +47,8 @@ from test_ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_run imp
 
 def _prepare_rev22_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 24:
+        payload = bundle_module._without_production_default_api_user_visible_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 23:
         payload = bundle_module._without_production_default_api_user_visible_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 21:
@@ -386,6 +388,9 @@ def test_committed_bundle_verifies_with_expect_production_default_api_user_visib
     committed = REPO_ROOT / FIXTURE_RELS["production_scoped_bundle"]
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
+    payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] != 23:
+        pytest.skip("committed production-scoped bundle is not revision 23 yet")
     result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         bundle_path=committed,
         repo_root=REPO_ROOT,

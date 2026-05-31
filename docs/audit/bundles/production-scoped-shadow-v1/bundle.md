@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the bounded production-scoped online shadow production default/API/user-visible pilot run while keeping production output, API/web behavior, user-visible ranking, global/fleet execution, writes, refit/training, and label ingest disabled.
+This bundle records the production-scoped online shadow production default/API/user-visible pilot review (accepted) while keeping runtime enablement, production default, API/web, user-visible ranking, global/fleet execution, writes, refit/training, label ingest, and bridge recommendations disabled.
 
-- Bundle revision: 23
+- Bundle revision: 24
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -45,7 +45,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - Missing live execution authorization: False
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Recommended next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Pinned Identity
 
@@ -302,7 +302,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - Review notes: Accepted bounded live execution pilot evidence review.
 - Live execution pilot accepted: True
 - Failed review checks: None
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Live Execution Pilot Review Checks
 
@@ -354,7 +354,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Flag Enablement Future Grant Requirements
 
@@ -400,7 +400,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Flag Enablement Grant Authorizes For Chain Only
 
@@ -493,7 +493,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - Review notes: Accepted rev 19 flag enablement pilot evidence review
 - Flag enablement pilot accepted: True
 - Failed review checks: None
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Flag Enablement Pilot Review Checks
 
@@ -551,7 +551,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - API/web changes allowed: False
 - User-visible ranking changed: False
 - Online shadow execution enabled: False
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Production Default/API/User-Visible Future Grant Requirements
 
@@ -607,7 +607,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - API/web changes allowed: False
 - User-visible ranking changed: False
 - Online shadow execution enabled: False
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Production Default/API/User-Visible Grant Authorizes For Chain Only
 
@@ -706,6 +706,68 @@ This bundle records the bounded production-scoped online shadow production defau
 | `observability.json` | 22902 | None | `05758e9ba7b7cee2b717d748842971bc880021ad6756c4cf6b2acdded7f1964b` |
 | `write_counts.json` | 732 | None | `5dabe5a0e38848abaf49ded40528335256b26af8996e88057ff151e371a05f4d` |
 
+## Production Default/API/User-Visible Pilot Review
+
+- Decision: `accepted`
+- Reviewer: Matt Maitland
+- Reviewed at: 2026-05-30T23:53:37Z
+- Review notes: Accepted rev 23 production default/API/user-visible pilot evidence; paperwork-only review.
+- Production default/API/user-visible pilot accepted: True
+- Failed review checks: None
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+
+## Production Default/API/User-Visible Pilot Review Checks
+
+- `production_default_api_user_visible_pilot_run_pass_fail_overall_passed`: True
+- `joined_candidate_count_528`: True
+- `runtime_row_count_528`: True
+- `runtime_drill_call_order`: True
+- `preflight_postflight_disabled`: True
+- `pilot_status_succeeded_test_only`: True
+- `process_scoped_runtime_flag_only`: True
+- `runtime_flag_enabled_only_during_pilot`: True
+- `environment_restored`: True
+- `incomplete_coverage_skip_verified`: True
+- `approved_source_reread_verified`: True
+- `ranking_version_not_test_fixture`: True
+- `bounded_api_surface_probe_performed`: True
+- `would_be_shadow_scorer_output_built`: True
+- `no_public_user_traffic`: True
+- `no_http_server_bind_or_outbound_api_route`: True
+- `production_default_api_user_visible_changed_false`: True
+- `paper_scores_and_ranking_runs_not_written`: True
+- `forbidden_write_counts_zero`: True
+- `isolated_artifact_count_expected`: True
+- `expected_files_recorded`: True
+- `production_default_api_user_visible_grant_slices_present`: True
+- `upstream_live_flag_read_only_chain_still_valid`: True
+- `global_execution_authorization_false`: True
+- `plan_flag_authorized_now_false`: True
+- `bridge_surface_not_included`: True
+- `no_labels_refit_embedding_generation_or_label_ingest`: True
+
+## Production Default/API/User-Visible Pilot Review Accepted Evidence
+
+- recorded rev 23 production default/API/user-visible pilot passed all review checks
+- bounded production default/API/user-visible pilot stayed process-scoped with runtime flag restored afterward
+- forbidden production write counts were zero
+- production default/API/user-visible authorization grant slices remained present in recorded pilot evidence
+- upstream live read-only, live execution, and flag enablement authorization chain remained valid
+- production default, API/web, and user-visible behavior remained unchanged
+- global online shadow execution remained unauthorized
+- bridge recommendations remained out of scope
+
+## Production Default/API/User-Visible Pilot Review Limitations
+
+- production default/API/user-visible pilot review evaluates recorded rev 23 pilot evidence only
+- no runtime rerun was performed
+- no database connection was opened by the review
+- no shadow-runs artifact reads or writes were performed
+- no API routes were called and no HTTP server was bound
+- no live production recommendation/output enablement was performed
+- production default, API/web, and user-visible ranking remained unchanged
+- bridge recommendations remain out of scope
+
 ## Live Read-Only Authorization Grant
 
 - Decision: `granted`
@@ -780,7 +842,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
 - Live read-only pilot accepted: True
 - Failed review checks: None
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Live Read-Only Pilot Review Checks
 
@@ -913,7 +975,7 @@ This bundle records the bounded production-scoped online shadow production defau
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -994,7 +1056,7 @@ This bundle records the bounded production-scoped online shadow production defau
 
 ## Recommended Next Stage
 
-`review_production_scoped_online_shadow_production_default_api_user_visible_pilot_v1`
+`request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
 
 ## Caveats
 
@@ -1077,4 +1139,9 @@ This bundle records the bounded production-scoped online shadow production defau
 - Does not set online_shadow_execution_enabled, prod_scoped_shadow_execution_authorized, production_default_allowed, api_web_changes_allowed, or user_visible_ranking_changed.
 - Does not write paper_scores, ranking_runs, production config, labels, embeddings, or scorer artifacts.
 - Bridge recommendations remain out of scope for this emerging-family pilot.
-- Review is required before any further production default/API/user-visible chain.
+- Review milestone only; does not rerun bounded production default/API/user-visible pilot.
+- Does not call runtime, connect to DB, read shadow-runs files, call API routes, bind HTTP, or perform new live reads.
+- Accepted review is necessary but not sufficient for controlled production recommendation authorization.
+- Does not enable global/fleet online shadow execution.
+- Does not change production default, API/web, or user-visible ranking.
+- Bridge recommendations remain out of scope.

@@ -35,7 +35,7 @@ jobs:
         working-directory: services/pipeline
 
       - name: Verify production-scoped-shadow bundle (post-production-default-api-user-visible-grant)
-        run: python -m pipeline.cli ml-shadow-scorer-production-scoped-shadow-bundle-verify --bundle ../../docs/audit/bundles/production-scoped-shadow-v1/bundle.json --expect-production-default-api-user-visible-pilot-run-filed
+        run: python -m pipeline.cli ml-shadow-scorer-production-scoped-shadow-bundle-verify --bundle ../../docs/audit/bundles/production-scoped-shadow-v1/bundle.json --expect-production-default-api-user-visible-pilot-review-filed
         working-directory: services/pipeline
 
   web-build:

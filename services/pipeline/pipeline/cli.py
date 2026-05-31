@@ -6531,6 +6531,11 @@ def main() -> None:
         action="store_true",
         help="Require post-production-default/API/user-visible-pilot-run production-scoped shadow bundle state",
     )
+    plan_bundle_verify_group.add_argument(
+        "--expect-production-default-api-user-visible-pilot-review-filed",
+        action="store_true",
+        help="Require post-production-default/API/user-visible-pilot-review production-scoped shadow bundle state",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
         default=None,
@@ -6806,6 +6811,32 @@ def main() -> None:
         dest="update_bundle",
         action="store_false",
         help="Run the production default/API/user-visible pilot and write local artifacts without updating the bundle",
+    )
+    ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot_review_parser = (
+        subparsers.add_parser(
+            "ml-shadow-scorer-production-scoped-shadow-production-default-api-user-visible-pilot-review",
+            help="Review the recorded bounded production default/API/user-visible production-scoped pilot evidence",
+        )
+    )
+    ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot_review_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot_review_parser.add_argument(
+        "--reviewer",
+        required=True,
+        help="Reviewer name to record",
+    )
+    ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot_review_parser.add_argument(
+        "--review-notes",
+        default=None,
+        help="Optional free-text production default/API/user-visible pilot review notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot_review_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
     )
     ml_fresh_product_candidate_source_build_parser = subparsers.add_parser(
         "ml-fresh-product-candidate-source-build",
@@ -10289,6 +10320,35 @@ def main() -> None:
         print(result["recommended_next_stage"])
         return
 
+    if (
+        args.command
+        == "ml-shadow-scorer-production-scoped-shadow-production-default-api-user-visible-pilot-review"
+    ):
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot_review import (
+            MLShadowScorerProductionScopedShadowProductionDefaultAPIUserVisiblePilotReviewError,
+            review_ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = review_ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot(
+                bundle_path=Path(args.bundle),
+                reviewer=str(args.reviewer),
+                review_notes=args.review_notes,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowProductionDefaultAPIUserVisiblePilotReviewError as e:
+            print(
+                "ml-shadow-scorer-production-scoped-shadow-production-default-api-user-visible-pilot-review: "
+                f"{e}",
+                file=sys.stderr,
+            )
+            raise SystemExit(e.code) from e
+        print(result["review"]["production_default_api_user_visible_pilot_review_decision"]["decision"])
+        print(result["production_default_api_user_visible_pilot_accepted"])
+        print(result["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-verify":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -10319,6 +10379,7 @@ def main() -> None:
         expect_production_default_api_user_visible_request_filed = None
         expect_production_default_api_user_visible_grant_filed = None
         expect_production_default_api_user_visible_pilot_run_filed = None
+        expect_production_default_api_user_visible_pilot_review_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -10367,6 +10428,8 @@ def main() -> None:
             expect_production_default_api_user_visible_grant_filed = True
         elif args.expect_production_default_api_user_visible_pilot_run_filed:
             expect_production_default_api_user_visible_pilot_run_filed = True
+        elif args.expect_production_default_api_user_visible_pilot_review_filed:
+            expect_production_default_api_user_visible_pilot_review_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -10399,6 +10462,9 @@ def main() -> None:
                 ),
                 expect_production_default_api_user_visible_pilot_run_filed=(
                     expect_production_default_api_user_visible_pilot_run_filed
+                ),
+                expect_production_default_api_user_visible_pilot_review_filed=(
+                    expect_production_default_api_user_visible_pilot_review_filed
                 ),
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:

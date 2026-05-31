@@ -1218,4 +1218,12 @@ def test_no_forbidden_imports_or_database_url_on_bundle_cli() -> None:
     assert "--database-url" in live_command_block
     assert '"ml-shadow-scorer-production-scoped-shadow-bundle-run-live-read-only-pilot"' in live_command_block
     assert '"ml-shadow-scorer-production-scoped-shadow-bundle-run-live-execution-pilot"' in live_command_block
+    assert (
+        '"ml-shadow-scorer-production-scoped-shadow-production-default-api-user-visible-pilot-review"'
+        in live_command_block
+    )
+    assert (
+        '"--expect-production-default-api-user-visible-pilot-review-filed"'
+        in cli_source[assemble_start:next_command]
+    )
     assert "run_ml_shadow_scorer_v1_online_shadow_runtime" not in module_source
