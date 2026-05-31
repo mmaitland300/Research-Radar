@@ -14,6 +14,7 @@ from app.evaluation_repo import (
     EvalTopicOverlap,
     _arm_stats,
     _pool_cte_sql,
+    _select_from_pool,
 )
 
 
@@ -125,6 +126,36 @@ def test_pool_sql_non_undercited_uses_all_included_snapshot_works_only() -> None
     assert "w.year >= %s" not in sql
     assert "w.citation_count <= %s" not in sql
     assert params == ("snap",)
+
+
+def test_select_from_pool_uses_parameterized_static_ordering() -> None:
+    sql, params = _select_from_pool(
+        ordering="citation",
+        limit=5,
+        corpus_snapshot_version="snap",
+        family="emerging",
+        low_cite_min_year=2019,
+        low_cite_max_citations=30,
+    )
+
+    assert "ORDER BY\n        CASE WHEN %s = 'citation' THEN pool.citation_count END DESC" in sql
+    assert "ORDER BY {" not in sql
+    assert params == ("snap", "citation", 5)
+
+
+def test_select_from_pool_undercited_keeps_low_cite_params_before_ordering() -> None:
+    sql, params = _select_from_pool(
+        ordering="date",
+        limit=10,
+        corpus_snapshot_version="snap",
+        family="undercited",
+        low_cite_min_year=2020,
+        low_cite_max_citations=12,
+    )
+
+    assert "w.is_core_corpus = TRUE" in sql
+    assert "CASE WHEN %s = 'citation' THEN pool.citation_count END DESC" in sql
+    assert params == ("snap", 2020, 12, "date", 10)
 
 
 def test_evaluation_compare_smoke(monkeypatch) -> None:
