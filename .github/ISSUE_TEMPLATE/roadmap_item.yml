@@ -1,0 +1,64 @@
+name: Roadmap item
+description: Track a scoped Research Radar improvement or public follow-up.
+title: "[Roadmap]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for planned work that should be understandable from the
+        public repo. Keep implementation details narrow and avoid secrets,
+        private data, or unpublished provider payloads.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Ranking and recommendations
+        - Evaluation
+        - Corpus and ingest
+        - API contract
+        - Web product surface
+        - Operations and release
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should be true when this is done?
+      placeholder: |
+        A reviewer can...
+        A user can...
+        The maintainer can...
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Name the likely files, routes, commands, or docs involved.
+      placeholder: |
+        In scope:
+        Out of scope:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and checks
+      description: How should this be verified?
+      placeholder: |
+        Tests:
+        CLI/API route:
+        Demo path:
+        Docs:
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Known limitations
+      description: Any caveats that should remain visible after this ships.
+

@@ -1,5 +1,9 @@
 # Research Radar
 
+[![CI](https://github.com/mmaitland300/Research-Radar/actions/workflows/ci.yml/badge.svg)](https://github.com/mmaitland300/Research-Radar/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/mmaitland300/Research-Radar/actions/workflows/codeql.yml/badge.svg)](https://github.com/mmaitland300/Research-Radar/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Research Radar is a deployed prototype for exploring and ranking papers in a
 curated MIR and audio-ML corpus. It includes search, recommended feeds, paper
 detail pages, trends, and evaluation views. Bridge diagnostics are experimental,
@@ -11,6 +15,8 @@ and the project is not presented as a validated recommender system.
 - Run the no-key demo with `npm run demo:local` after installing the API and web
   dependencies.
 - Inspect the current evaluation boundary in [EVALUATION.md](EVALUATION.md).
+- Read the [public roadmap](docs/public-roadmap.md) and
+  [v0.1.0 public baseline notes](docs/releases/v0.1.0-public-baseline.md).
 - Check the ranked API and fixture-mode tests if you want to see the core
   behavior under test.
 - Main limitation: the corpus is intentionally narrow, and evaluation is still
@@ -27,6 +33,9 @@ and the project is not presented as a validated recommender system.
 ## Status
 
 Current status: deployed working prototype.
+
+Public baseline: `v0.1.0-public-baseline` documents the current review surface,
+release smoke path, and known limits.
 
 Implemented public surfaces:
 
