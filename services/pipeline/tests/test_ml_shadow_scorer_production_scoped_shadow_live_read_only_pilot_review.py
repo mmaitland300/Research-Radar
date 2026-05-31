@@ -1,4 +1,4 @@
-﻿"""Tests for reviewing the recorded live read-only production-scoped pilot run."""
+"""Tests for reviewing the recorded live read-only production-scoped pilot run."""
 
 from __future__ import annotations
 
@@ -95,6 +95,8 @@ def _downgrade_to_rev11(payload: dict[str, Any]) -> dict[str, Any]:
 def _write_rev11_bundle(root: Path) -> Path:
     bundle_path = _fixture(root, "production_scoped_bundle")
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 29:
+        payload = bundle_module._without_limited_production_recommendation_rollout_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 28:
         payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:

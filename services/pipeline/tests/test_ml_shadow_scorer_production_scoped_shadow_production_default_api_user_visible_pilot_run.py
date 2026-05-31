@@ -1,4 +1,4 @@
-﻿"""Tests for the production-scoped production default/API/user-visible pilot run."""
+"""Tests for the production-scoped production default/API/user-visible pilot run."""
 
 from __future__ import annotations
 
@@ -47,6 +47,8 @@ from test_ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_run imp
 
 def _prepare_rev22_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 29:
+        payload = bundle_module._without_limited_production_recommendation_rollout_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 28:
         payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:

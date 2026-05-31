@@ -1,4 +1,4 @@
-﻿"""Tests for the production-scoped flag enablement shadow pilot run."""
+"""Tests for the production-scoped flag enablement shadow pilot run."""
 
 from __future__ import annotations
 
@@ -49,6 +49,8 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 def _prepare_rev18_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 29:
+        payload = bundle_module._without_limited_production_recommendation_rollout_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 28:
         payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:

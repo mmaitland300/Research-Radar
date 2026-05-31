@@ -6151,6 +6151,35 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_limited_rollout_parser = (
+        subparsers.add_parser(
+            "ml-shadow-scorer-production-scoped-shadow-bundle-request-limited-production-recommendation-rollout",
+            help=(
+                "File the production-scoped online shadow limited production recommendation rollout "
+                "authorization request in the bundle"
+            ),
+        )
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_limited_rollout_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_limited_rollout_parser.add_argument(
+        "--requester",
+        default="Matt Maitland",
+        help="Requester name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_limited_rollout_parser.add_argument(
+        "--request-notes",
+        default=None,
+        help="Optional free-text limited production recommendation rollout request notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_request_limited_rollout_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser = (
         subparsers.add_parser(
             "ml-shadow-scorer-production-scoped-shadow-bundle-grant-controlled-production-recommendation",
@@ -6638,6 +6667,11 @@ def main() -> None:
         "--expect-controlled-production-recommendation-pilot-review-filed",
         action="store_true",
         help="Require post-controlled-production-recommendation-pilot-review production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-limited-production-recommendation-rollout-request-filed",
+        action="store_true",
+        help="Require post-limited-production-recommendation-rollout-request production-scoped shadow bundle state",
     )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -10222,6 +10256,41 @@ def main() -> None:
         print(payload["recommended_next_stage"])
         return
 
+    if (
+        args.command
+        == "ml-shadow-scorer-production-scoped-shadow-bundle-request-limited-production-recommendation-rollout"
+    ):
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+            MLShadowScorerProductionScopedShadowBundleError,
+            request_limited_production_recommendation_rollout_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = (
+                request_limited_production_recommendation_rollout_ml_shadow_scorer_production_scoped_shadow_bundle(
+                    bundle_path=Path(args.bundle),
+                    requester=str(args.requester),
+                    request_notes=args.request_notes,
+                    repo_root=repo_root,
+                )
+            )
+        except MLShadowScorerProductionScopedShadowBundleError as e:
+            print(
+                "ml-shadow-scorer-production-scoped-shadow-bundle-request-limited-production-recommendation-rollout: "
+                f"{e}",
+                file=sys.stderr,
+            )
+            raise SystemExit(e.code) from e
+        print(payload["authorization"]["limited_production_recommendation_rollout_request_decision"]["decision"])
+        print(
+            payload["authorization"][
+                "prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested"
+            ]
+        )
+        print(payload["recommended_next_stage"])
+        return
+
     if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-grant-controlled-production-recommendation":
         from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
             MLShadowScorerProductionScopedShadowBundleError,
@@ -10695,6 +10764,7 @@ def main() -> None:
         expect_controlled_production_recommendation_grant_filed = None
         expect_controlled_production_recommendation_pilot_run_filed = None
         expect_controlled_production_recommendation_pilot_review_filed = None
+        expect_limited_production_recommendation_rollout_request_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -10753,6 +10823,8 @@ def main() -> None:
             expect_controlled_production_recommendation_pilot_run_filed = True
         elif args.expect_controlled_production_recommendation_pilot_review_filed:
             expect_controlled_production_recommendation_pilot_review_filed = True
+        elif args.expect_limited_production_recommendation_rollout_request_filed:
+            expect_limited_production_recommendation_rollout_request_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -10801,11 +10873,15 @@ def main() -> None:
                 expect_controlled_production_recommendation_pilot_review_filed=(
                     expect_controlled_production_recommendation_pilot_review_filed
                 ),
+                expect_limited_production_recommendation_rollout_request_filed=(
+                    expect_limited_production_recommendation_rollout_request_filed
+                ),
                 verify_local_pilot_files=not bool(
                     expect_controlled_production_recommendation_request_filed
                     or expect_controlled_production_recommendation_grant_filed
                     or expect_controlled_production_recommendation_pilot_run_filed
                     or expect_controlled_production_recommendation_pilot_review_filed
+                    or expect_limited_production_recommendation_rollout_request_filed
                 ),
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
