@@ -1,4 +1,4 @@
-"""Tests for the controlled production recommendation pilot run."""
+﻿"""Tests for the controlled production recommendation pilot run."""
 
 from __future__ import annotations
 
@@ -46,6 +46,8 @@ from test_ml_shadow_scorer_production_scoped_shadow_live_execution_pilot_run imp
 
 def _prepare_rev26_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 28:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:
         payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] != 26:

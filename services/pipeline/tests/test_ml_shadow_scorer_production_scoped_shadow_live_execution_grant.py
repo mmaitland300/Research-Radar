@@ -1,4 +1,4 @@
-"""Tests for granting production-scoped live execution shadow authorization."""
+﻿"""Tests for granting production-scoped live execution shadow authorization."""
 
 from __future__ import annotations
 
@@ -133,6 +133,8 @@ def _downgrade_to_rev12(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _prepare_rev12_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 28:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:
         payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
@@ -187,6 +189,8 @@ def _prepare_rev12_template_bundle(bundle_path: Path) -> None:
 def _ensure_rev13_bundle(root: Path) -> Path:
     bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 28:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:
         payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
@@ -349,6 +353,8 @@ def test_committed_bundle_matches_post_live_execution_grant() -> None:
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] == 28:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:
         payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:

@@ -1,4 +1,4 @@
-"""Tests for granting production default/API/user-visible shadow authorization."""
+﻿"""Tests for granting production default/API/user-visible shadow authorization."""
 
 from __future__ import annotations
 
@@ -54,6 +54,8 @@ def _shadow_runs_files(root: Path) -> set[str]:
 
 def _prepare_rev21_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 28:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 27:
         payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:

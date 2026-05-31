@@ -611,7 +611,13 @@
     "Does not enable global/fleet online shadow execution.",
     "Does not write paper_scores, ranking_runs, config, labels, embeddings, or scorer artifacts.",
     "Bridge recommendations remain out of scope.",
-    "Review is required before any further rollout."
+    "Review milestone only; does not rerun bounded controlled production recommendation pilot.",
+    "Does not call runtime, connect to DB, read shadow-runs files, call API routes, bind HTTP, or perform new live reads.",
+    "Accepted review is necessary but not sufficient for limited public rollout.",
+    "Does not enable public production recommendation serving.",
+    "Does not enable global/fleet online shadow execution.",
+    "Does not change production default, API/web behavior, or user-visible ranking.",
+    "Bridge recommendations remain out of scope."
   ],
   "execution": {
     "controlled_production_recommendation_pilot_run": {
@@ -7091,9 +7097,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 27,
+    "bundle_revision": 28,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-31T06:04:19Z",
+    "generated_at": "2026-05-31T17:13:03Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -7302,8 +7308,10 @@
     "prod_scoped_shadow_controlled_production_recommendation_authorization_granted": true,
     "prod_scoped_shadow_controlled_production_recommendation_authorization_requested": true,
     "prod_scoped_shadow_controlled_production_recommendation_authorized": true,
+    "prod_scoped_shadow_controlled_production_recommendation_pilot_accepted": true,
     "prod_scoped_shadow_controlled_production_recommendation_pilot_executed": true,
     "prod_scoped_shadow_controlled_production_recommendation_pilot_passed": true,
+    "prod_scoped_shadow_controlled_production_recommendation_pilot_reviewed": true,
     "prod_scoped_shadow_execution_authorized": false,
     "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
@@ -7508,8 +7516,69 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "review_production_scoped_online_shadow_controlled_production_recommendation_pilot_v1",
+  "recommended_next_stage": "request_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_v1",
   "review": {
+    "controlled_production_recommendation_pilot_review_decision": {
+      "accepted_evidence": [
+        "recorded rev 27 controlled production recommendation pilot evidence: pilot_run_id=prod-controlled-rec-rank-83787b91ef-20260531T060419Z; route=/api/v1/recommendations/ranked; family=emerging; item count=20; top work IDs=W4408772031, W4402645135, W4410091503, W4401909510, W7119099299; pass/fail summary overall_passed=True failed_checks=[]",
+        "controlled pilot response was emitted only to the allowlisted in-process pilot client",
+        "recorded route, family, response schema, and top-k match checks passed",
+        "public user traffic and public-user emission were recorded false",
+        "forbidden production write counts were zero and only isolated audit artifacts were recorded",
+        "upstream live read-only, live execution, flag enablement, production default/API/user-visible, and controlled recommendation authorization chains remained valid",
+        "global online shadow execution, production defaults, API/web changes, and user-visible ranking remained disabled",
+        "bridge recommendations remained out of scope"
+      ],
+      "checks": {
+        "approved_source_reread_verified": true,
+        "bridge_surface_not_included": true,
+        "controlled_production_recommendation_grant_slices_present": true,
+        "controlled_production_recommendation_pilot_run_pass_fail_overall_passed": true,
+        "controlled_route_allowlisted": true,
+        "controlled_test_client_response_emitted": true,
+        "emitted_to_public_users_false": true,
+        "environment_restored": true,
+        "expected_files_recorded": true,
+        "forbidden_write_counts_zero": true,
+        "global_execution_authorization_false": true,
+        "incomplete_coverage_skip_verified": true,
+        "isolated_artifact_count_expected": true,
+        "joined_candidate_count_528": true,
+        "no_http_server_bind": true,
+        "no_labels_refit_embedding_generation_or_label_ingest": true,
+        "no_outbound_api_call": true,
+        "paper_scores_and_ranking_runs_not_written": true,
+        "pilot_status_succeeded_controlled_test_client": true,
+        "plan_flag_authorized_now_false": true,
+        "preflight_postflight_disabled": true,
+        "process_scoped_runtime_flag_only": true,
+        "production_default_api_user_visible_global_flags_false": true,
+        "public_user_traffic_false": true,
+        "ranking_version_not_test_fixture": true,
+        "response_items_match_shadow_top_k": true,
+        "response_schema_valid": true,
+        "response_status_200": true,
+        "rollback_flag_off_drill_verified": true,
+        "runtime_drill_call_order": true,
+        "runtime_flag_enabled_only_during_pilot": true,
+        "runtime_row_count_528": true,
+        "upstream_chains_still_valid": true
+      },
+      "decision": "accepted",
+      "failed_review_checks": [],
+      "limitations": [
+        "controlled production recommendation pilot review evaluates recorded rev 27 pilot evidence only; no runtime rerun was performed",
+        "no database connection was opened by the review",
+        "no shadow-runs artifact reads or writes were performed",
+        "no API routes were called and no HTTP server was bound by the review",
+        "no public production serving and no broad rollout are authorized by this review",
+        "controlled recommendation output remains bounded to the allowlisted in-process pilot client only",
+        "bridge recommendations remain out of scope"
+      ],
+      "review_notes": "Accepted paperwork-only review of recorded rev 27 controlled production recommendation pilot evidence; no runtime rerun, DB connection, shadow-runs reads, API route call, HTTP bind, production default change, broad rollout, public production serving, or bridge recommendation authorization.",
+      "reviewed_at": "2026-05-31T17:13:03Z",
+      "reviewer": "Matt Maitland"
+    },
     "flag_enablement_pilot_review_decision": {
       "accepted_evidence": [
         "recorded rev 19 flag enablement pilot passed all review checks",
@@ -7680,6 +7749,8 @@
       "reviewed_at": "2026-05-29T20:35:40Z",
       "reviewer": "Matt Maitland"
     },
+    "prod_scoped_shadow_controlled_production_recommendation_pilot_accepted": true,
+    "prod_scoped_shadow_controlled_production_recommendation_pilot_reviewed": true,
     "prod_scoped_shadow_flag_enablement_pilot_accepted": true,
     "prod_scoped_shadow_flag_enablement_pilot_reviewed": true,
     "prod_scoped_shadow_live_execution_pilot_accepted": true,
@@ -7800,6 +7871,7 @@
     "blockers_cleared_by_controlled_production_recommendation_grant": [
       "missing_prod_scoped_shadow_controlled_production_recommendation_authorization"
     ],
+    "blockers_cleared_by_controlled_production_recommendation_pilot_review": [],
     "blockers_cleared_by_controlled_production_recommendation_pilot_run": [],
     "blockers_cleared_by_controlled_production_recommendation_request": [],
     "blockers_cleared_by_flag_enablement_grant": [
@@ -7834,6 +7906,7 @@
     "blockers_cleared_by_production_default_api_user_visible_pilot_run": [],
     "blockers_cleared_by_production_default_api_user_visible_request": [],
     "blockers_introduced_by_controlled_production_recommendation_grant": [],
+    "blockers_introduced_by_controlled_production_recommendation_pilot_review": [],
     "blockers_introduced_by_controlled_production_recommendation_pilot_run": [],
     "blockers_introduced_by_controlled_production_recommendation_request": [
       "missing_prod_scoped_shadow_controlled_production_recommendation_authorization"
@@ -7870,6 +7943,7 @@
       "missing_prod_scoped_shadow_production_default_api_user_visible_authorization"
     ],
     "blockers_unchanged_by_controlled_production_recommendation_grant": true,
+    "blockers_unchanged_by_controlled_production_recommendation_pilot_review": true,
     "blockers_unchanged_by_controlled_production_recommendation_pilot_run": true,
     "blockers_unchanged_by_controlled_production_recommendation_request": true,
     "blockers_unchanged_by_flag_enablement_grant": true,
@@ -7909,8 +7983,10 @@
     "prod_scoped_shadow_controlled_production_recommendation_authorization_granted": true,
     "prod_scoped_shadow_controlled_production_recommendation_authorization_requested": true,
     "prod_scoped_shadow_controlled_production_recommendation_authorized": true,
+    "prod_scoped_shadow_controlled_production_recommendation_pilot_accepted": true,
     "prod_scoped_shadow_controlled_production_recommendation_pilot_executed": true,
     "prod_scoped_shadow_controlled_production_recommendation_pilot_passed": true,
+    "prod_scoped_shadow_controlled_production_recommendation_pilot_reviewed": true,
     "prod_scoped_shadow_execution_authorized": false,
     "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
