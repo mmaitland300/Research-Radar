@@ -255,21 +255,8 @@ def _select_from_pool(
 ) -> tuple[str, tuple[Any, ...]]:
     if ordering not in ("citation", "date"):
         raise ValueError(f"Invalid pool ordering: {ordering!r}")
-    topic_lateral = """
-    LEFT JOIN LATERAL (
-        SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
-        FROM (
-            SELECT t.name AS topic_name, wt.score AS score
-            FROM work_topics wt
-            JOIN topics t ON t.id = wt.topic_id
-            WHERE wt.work_id = pool.id
-            ORDER BY wt.score DESC, t.name ASC
-            LIMIT 3
-        ) sub
-    ) topic_agg ON TRUE
-    """
     if family == "undercited":
-        sql = f"""
+        sql = """
         WITH pool AS (
             SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
             FROM works w
@@ -284,7 +271,17 @@ def _select_from_pool(
         SELECT pool.openalex_id, pool.title, pool.year, pool.citation_count, pool.source_slug,
                COALESCE(topic_agg.topics, '[]'::json) AS topics
         FROM pool
-        {topic_lateral}
+        LEFT JOIN LATERAL (
+            SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
+            FROM (
+                SELECT t.name AS topic_name, wt.score AS score
+                FROM work_topics wt
+                JOIN topics t ON t.id = wt.topic_id
+                WHERE wt.work_id = pool.id
+                ORDER BY wt.score DESC, t.name ASC
+                LIMIT 3
+            ) sub
+        ) topic_agg ON TRUE
         ORDER BY
             CASE WHEN %s = 'citation' THEN pool.citation_count END DESC,
             pool.year DESC,
@@ -300,7 +297,7 @@ def _select_from_pool(
         )
         return sql, params
 
-    sql = f"""
+    sql = """
     WITH pool AS (
         SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
         FROM works w
@@ -310,7 +307,17 @@ def _select_from_pool(
     SELECT pool.openalex_id, pool.title, pool.year, pool.citation_count, pool.source_slug,
            COALESCE(topic_agg.topics, '[]'::json) AS topics
     FROM pool
-    {topic_lateral}
+    LEFT JOIN LATERAL (
+        SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
+        FROM (
+            SELECT t.name AS topic_name, wt.score AS score
+            FROM work_topics wt
+            JOIN topics t ON t.id = wt.topic_id
+            WHERE wt.work_id = pool.id
+            ORDER BY wt.score DESC, t.name ASC
+            LIMIT 3
+        ) sub
+    ) topic_agg ON TRUE
     ORDER BY
         CASE WHEN %s = 'citation' THEN pool.citation_count END DESC,
         pool.year DESC,
