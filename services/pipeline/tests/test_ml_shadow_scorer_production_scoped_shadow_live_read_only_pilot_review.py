@@ -95,6 +95,8 @@ def _downgrade_to_rev11(payload: dict[str, Any]) -> dict[str, Any]:
 def _write_rev11_bundle(root: Path) -> Path:
     bundle_path = _fixture(root, "production_scoped_bundle")
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 25:

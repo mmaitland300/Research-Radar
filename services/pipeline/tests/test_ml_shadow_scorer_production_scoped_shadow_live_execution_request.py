@@ -128,6 +128,8 @@ def _downgrade_to_rev12(payload: dict[str, Any]) -> dict[str, Any]:
 def _write_rev12_bundle(root: Path) -> Path:
     bundle_path = root / FIXTURE_RELS["production_scoped_bundle"]
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 25:

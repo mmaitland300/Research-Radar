@@ -40,6 +40,8 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 def _prepare_rev25_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] != 25:
@@ -419,6 +421,9 @@ def test_committed_bundle_verifies_with_expect_controlled_production_recommendat
     committed = REPO_ROOT / FIXTURE_RELS["production_scoped_bundle"]
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
+    payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] != 26:
+        pytest.skip("committed production-scoped bundle is no longer revision 26")
     result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         bundle_path=committed,
         repo_root=REPO_ROOT,

@@ -143,6 +143,8 @@ def _set_path(payload: dict[str, Any], dotted_path: str, value: Any) -> None:
 
 def _prepare_rev14_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 25:
@@ -176,6 +178,8 @@ def _prepare_rev14_template_bundle(bundle_path: Path) -> None:
 
 def _prepare_rev15_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 25:
@@ -207,6 +211,8 @@ def _prepare_rev15_template_bundle(bundle_path: Path) -> None:
 
 def _prepare_rev16_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 25:
@@ -236,6 +242,8 @@ def _prepare_rev16_template_bundle(bundle_path: Path) -> None:
 
 def _prepare_rev17_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 25:

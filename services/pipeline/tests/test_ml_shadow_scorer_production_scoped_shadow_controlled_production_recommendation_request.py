@@ -39,6 +39,8 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 def _prepare_rev24_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 27:
+        payload = bundle_module._without_controlled_production_recommendation_pilot_run_payload(payload)
     if payload["metadata"]["bundle_revision"] == 26:
         payload = bundle_module._without_controlled_production_recommendation_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 25:

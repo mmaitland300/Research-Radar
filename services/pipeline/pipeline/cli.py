@@ -6629,6 +6629,11 @@ def main() -> None:
         action="store_true",
         help="Require post-controlled-production-recommendation-grant production-scoped shadow bundle state",
     )
+    plan_bundle_verify_group.add_argument(
+        "--expect-controlled-production-recommendation-pilot-run-filed",
+        action="store_true",
+        help="Require post-controlled-production-recommendation-pilot-run production-scoped shadow bundle state",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
         default=None,
@@ -6905,6 +6910,65 @@ def main() -> None:
         action="store_false",
         help="Run the production default/API/user-visible pilot and write local artifacts without updating the bundle",
     )
+    for command_name, help_text in (
+        (
+            "ml-shadow-scorer-production-scoped-shadow-controlled-production-recommendation-pilot-run",
+            "Run the bounded production-scoped controlled production recommendation pilot",
+        ),
+        (
+            "ml-shadow-scorer-production-scoped-shadow-bundle-run-controlled-production-recommendation-pilot",
+            "Run the bounded controlled production recommendation pilot and update the bundle",
+        ),
+    ):
+        controlled_production_recommendation_pilot_parser = subparsers.add_parser(command_name, help=help_text)
+        controlled_production_recommendation_pilot_parser.add_argument(
+            "--bundle",
+            required=True,
+            help="Path to production-scoped shadow bundle JSON",
+        )
+        controlled_production_recommendation_pilot_parser.add_argument(
+            "--confirm-controlled-production-recommendation-pilot",
+            action="store_true",
+            required=True,
+            help="Required confirmation before the bounded controlled recommendation pilot",
+        )
+        controlled_production_recommendation_pilot_parser.add_argument(
+            "--confirm-live-read-only-prod-source-reads",
+            action="store_true",
+            required=True,
+            help="Required confirmation before any live read-only production source reads",
+        )
+        controlled_production_recommendation_pilot_parser.add_argument(
+            "--database-url",
+            default=None,
+            help="Local Postgres URL for live read-only source reads (default: DATABASE_URL or PG* env)",
+        )
+        controlled_production_recommendation_pilot_parser.add_argument(
+            "--pilot-run-id",
+            default=None,
+            help="Optional safe pilot run id; defaults to prod-controlled-rec ranking_run_id plus UTC timestamp",
+        )
+        controlled_production_recommendation_pilot_parser.add_argument(
+            "--repo-root",
+            default=None,
+            help="Optional repository root for resolving references and prod-scoped artifact paths",
+        )
+        controlled_production_recommendation_pilot_update_group = (
+            controlled_production_recommendation_pilot_parser.add_mutually_exclusive_group()
+        )
+        controlled_production_recommendation_pilot_update_group.add_argument(
+            "--update-bundle",
+            dest="update_bundle",
+            action="store_true",
+            default=True,
+            help="Update the bundle JSON and Markdown after the pilot passes (default)",
+        )
+        controlled_production_recommendation_pilot_update_group.add_argument(
+            "--no-update-bundle",
+            dest="update_bundle",
+            action="store_false",
+            help="Run the controlled recommendation pilot and write local artifacts without updating the bundle",
+        )
     ml_shadow_scorer_production_scoped_shadow_production_default_api_user_visible_pilot_review_parser = (
         subparsers.add_parser(
             "ml-shadow-scorer-production-scoped-shadow-production-default-api-user-visible-pilot-review",
@@ -10478,6 +10542,36 @@ def main() -> None:
         print(result["recommended_next_stage"])
         return
 
+    if args.command in {
+        "ml-shadow-scorer-production-scoped-shadow-controlled-production-recommendation-pilot-run",
+        "ml-shadow-scorer-production-scoped-shadow-bundle-run-controlled-production-recommendation-pilot",
+    }:
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_controlled_production_recommendation_pilot import (
+            MLShadowScorerProductionScopedShadowControlledProductionRecommendationPilotError,
+            run_controlled_production_recommendation_pilot_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            result = run_controlled_production_recommendation_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
+                bundle_path=Path(args.bundle),
+                database_url=args.database_url,
+                pilot_run_id=args.pilot_run_id,
+                repo_root=repo_root,
+                update_bundle=bool(args.update_bundle),
+                confirm_controlled_production_recommendation_pilot=bool(
+                    args.confirm_controlled_production_recommendation_pilot
+                ),
+                confirm_live_read_only_prod_source_reads=bool(args.confirm_live_read_only_prod_source_reads),
+            )
+        except MLShadowScorerProductionScopedShadowControlledProductionRecommendationPilotError as e:
+            print(f"{args.command}: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(result["pilot_run_id"])
+        print(result["prod_scoped_shadow_controlled_production_recommendation_pilot_passed"])
+        print(result["recommended_next_stage"])
+        return
+
     if (
         args.command
         == "ml-shadow-scorer-production-scoped-shadow-production-default-api-user-visible-pilot-review"
@@ -10540,6 +10634,7 @@ def main() -> None:
         expect_production_default_api_user_visible_pilot_review_filed = None
         expect_controlled_production_recommendation_request_filed = None
         expect_controlled_production_recommendation_grant_filed = None
+        expect_controlled_production_recommendation_pilot_run_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -10594,6 +10689,8 @@ def main() -> None:
             expect_controlled_production_recommendation_request_filed = True
         elif args.expect_controlled_production_recommendation_grant_filed:
             expect_controlled_production_recommendation_grant_filed = True
+        elif args.expect_controlled_production_recommendation_pilot_run_filed:
+            expect_controlled_production_recommendation_pilot_run_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -10635,6 +10732,9 @@ def main() -> None:
                 ),
                 expect_controlled_production_recommendation_grant_filed=(
                     expect_controlled_production_recommendation_grant_filed
+                ),
+                expect_controlled_production_recommendation_pilot_run_filed=(
+                    expect_controlled_production_recommendation_pilot_run_filed
                 ),
                 verify_local_pilot_files=not bool(
                     expect_controlled_production_recommendation_request_filed
