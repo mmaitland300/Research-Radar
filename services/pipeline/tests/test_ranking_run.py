@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from pipeline.bridge_neighbor_mix import NEIGHBOR_MIX_V1_DEFAULT_K, NeighborMixV1Result
 from pipeline.config import RankingCounts, RankingRun
 from pipeline.ranking import RankingCandidate
@@ -508,4 +510,6 @@ def test_build_ranking_config_exclude_persistent_has_exclusion_metadata() -> Non
     ex = cfg.get("bridge_eligibility_exclusion")
     assert isinstance(ex, dict)
     assert ex["excluded_work_ids"] == [10, 14, 125, 131, 138]
-    assert "openalex.org" in ex["excluded_paper_ids"][0]
+    excluded_paper_url = urlparse(ex["excluded_paper_ids"][0])
+    assert excluded_paper_url.scheme == "https"
+    assert excluded_paper_url.netloc == "openalex.org"
