@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the production-scoped online shadow production default/API/user-visible pilot review (accepted) while keeping runtime enablement, production default, API/web, user-visible ranking, global/fleet execution, writes, refit/training, label ingest, and bridge recommendations disabled.
+This bundle records the controlled production recommendation authorization request only; it grants no real output authorization, emits no recommendations, and keeps production defaults, API/web behavior, user-visible ranking, writes, runtime enablement, and bridge recommendations disabled.
 
-- Bundle revision: 24
+- Bundle revision: 25
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -45,7 +45,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Missing live execution authorization: False
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Recommended next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Pinned Identity
 
@@ -302,7 +302,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Accepted bounded live execution pilot evidence review.
 - Live execution pilot accepted: True
 - Failed review checks: None
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Live Execution Pilot Review Checks
 
@@ -354,7 +354,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Flag Enablement Future Grant Requirements
 
@@ -400,7 +400,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Flag Enablement Grant Authorizes For Chain Only
 
@@ -493,7 +493,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Accepted rev 19 flag enablement pilot evidence review
 - Flag enablement pilot accepted: True
 - Failed review checks: None
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Flag Enablement Pilot Review Checks
 
@@ -551,7 +551,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - API/web changes allowed: False
 - User-visible ranking changed: False
 - Online shadow execution enabled: False
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Production Default/API/User-Visible Future Grant Requirements
 
@@ -607,7 +607,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - API/web changes allowed: False
 - User-visible ranking changed: False
 - Online shadow execution enabled: False
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Production Default/API/User-Visible Grant Authorizes For Chain Only
 
@@ -714,7 +714,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Accepted rev 23 production default/API/user-visible pilot evidence; paperwork-only review.
 - Production default/API/user-visible pilot accepted: True
 - Failed review checks: None
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Production Default/API/User-Visible Pilot Review Checks
 
@@ -767,6 +767,55 @@ This bundle records the production-scoped online shadow production default/API/u
 - no live production recommendation/output enablement was performed
 - production default, API/web, and user-visible ranking remained unchanged
 - bridge recommendations remain out of scope
+
+## Controlled Production Recommendation Authorization Request
+
+- Decision: `requested`
+- Requester: Matt Maitland
+- Requested at: 2026-05-31T01:37:36Z
+- Request notes: Request-only paperwork for future bounded controlled production recommendation pilot; grants nothing and emits nothing.
+- Requested scope: `production_scoped_shadow_controlled_production_recommendation_paperwork_only`
+- Missing controlled production recommendation authorization: True
+- Controlled production recommendation authorization granted: False
+- Controlled production recommendation authorized: False
+- Real recommendations emitted at request time: False
+- Bridge recommendations included: False
+- Online shadow execution enabled: False
+- Production default allowed: False
+- API/web changes allowed: False
+- User-visible ranking changed: False
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
+
+## Controlled Production Recommendation Future Grant Requirements
+
+- accepted production default/API/user-visible pilot review evidence
+- exact controlled serving surface and route/path allowlist
+- explicit exposure bounds/canary cohort
+- owner approval for real recommendation output
+- rollback and disable-switch owner
+- rollback/flag-off drill before controlled serving
+- observability and incident response requirements
+- production default/API/user-visible separation remains explicit
+- no broad rollout/fleet default without separate authorization
+- no DB writes/refit/training/label ingest unless separately authorized
+- expiry and review-by requirements
+
+## Controlled Production Recommendation Request Explicitly Not Included
+
+- authorization grant
+- runtime enablement at request time
+- production default changes at request time
+- API/web behavior changes at request time
+- user-visible ranking changes at request time
+- real production recommendation output at request time
+- broad/global/fleet rollout
+- prod_scoped_shadow_execution_authorized
+- online_shadow_execution_enabled
+- DB writes/DDL
+- paper_scores/ranking_runs writes
+- refit/training
+- label ingest
+- bridge recommendations
 
 ## Live Read-Only Authorization Grant
 
@@ -842,7 +891,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
 - Live read-only pilot accepted: True
 - Failed review checks: None
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Live Read-Only Pilot Review Checks
 
@@ -975,7 +1024,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+- Next stage: `record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -1006,12 +1055,15 @@ This bundle records the production-scoped online shadow production default/API/u
 ## Explicitly Not Included
 
 - API/web
+- API/web behavior changes at request time
 - API/web changes at grant time
 - API/web changes at request time
 - DB writes/DDL
 - api_web_changes_allowed
 - authorization grant
+- bridge recommendations
 - broad rollout
+- broad/global/fleet rollout
 - fleet-wide enablement
 - fleet-wide flag enablement
 - global enablement
@@ -1028,6 +1080,7 @@ This bundle records the production-scoped online shadow production default/API/u
 - model refit, embedding generation, label ingest
 - online_shadow_execution_enabled
 - online_shadow_execution_enabled globally
+- paper_scores/ranking_runs writes
 - prod default
 - prod_scoped_shadow_execution_authorized
 - production default
@@ -1038,8 +1091,10 @@ This bundle records the production-scoped online shadow production default/API/u
 - production default/API/user-visible recommendation output at grant time
 - production recommendation output at request time
 - production_default_allowed
+- real production recommendation output at request time
 - refit/training
 - runtime enablement at grant time
+- runtime enablement at request time
 - user-visible ranking
 - user-visible ranking changes
 - user-visible ranking changes at grant time
@@ -1056,7 +1111,7 @@ This bundle records the production-scoped online shadow production default/API/u
 
 ## Recommended Next Stage
 
-`request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1`
+`record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1`
 
 ## Caveats
 
@@ -1144,4 +1199,10 @@ This bundle records the production-scoped online shadow production default/API/u
 - Accepted review is necessary but not sufficient for controlled production recommendation authorization.
 - Does not enable global/fleet online shadow execution.
 - Does not change production default, API/web, or user-visible ranking.
+- Bridge recommendations remain out of scope.
+- Request milestone only; grants no controlled production recommendation authorization.
+- Does not enable real production recommendation output.
+- Does not change production default, API/web behavior, or user-visible ranking.
+- Does not enable online_shadow_execution_enabled or prod_scoped_shadow_execution_authorized.
+- Accepted production default/API/user-visible pilot review is necessary but not sufficient for real output.
 - Bridge recommendations remain out of scope.

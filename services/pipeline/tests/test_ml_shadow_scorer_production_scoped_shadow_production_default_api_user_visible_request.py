@@ -52,6 +52,8 @@ def _shadow_runs_files(root: Path) -> set[str]:
 
 def _prepare_rev20_template_bundle(bundle_path: Path) -> None:
     payload = _load(bundle_path)
+    if payload["metadata"]["bundle_revision"] == 25:
+        payload = bundle_module._without_controlled_production_recommendation_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 24:
         payload = bundle_module._without_production_default_api_user_visible_pilot_review_payload(payload)
     if payload["metadata"]["bundle_revision"] == 23:

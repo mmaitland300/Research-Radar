@@ -1,13 +1,57 @@
 {
   "authorization": {
+    "controlled_production_recommendation_request_decision": {
+      "decision": "requested",
+      "request_notes": "Request-only paperwork for future bounded controlled production recommendation pilot; grants nothing and emits nothing.",
+      "requested_at": "2026-05-31T01:37:36Z",
+      "requester": "Matt Maitland"
+    },
+    "controlled_production_recommendation_requested_scope": {
+      "authorization_scope": "production_scoped_shadow_controlled_production_recommendation_paperwork_only",
+      "bridge_recommendations_included": false,
+      "controlled_production_recommendation_output_requested_for_future_grant_only": true,
+      "explicitly_not_included": [
+        "authorization grant",
+        "runtime enablement at request time",
+        "production default changes at request time",
+        "API/web behavior changes at request time",
+        "user-visible ranking changes at request time",
+        "real production recommendation output at request time",
+        "broad/global/fleet rollout",
+        "prod_scoped_shadow_execution_authorized",
+        "online_shadow_execution_enabled",
+        "DB writes/DDL",
+        "paper_scores/ranking_runs writes",
+        "refit/training",
+        "label ingest",
+        "bridge recommendations"
+      ],
+      "future_grant_would_require": [
+        "accepted production default/API/user-visible pilot review evidence",
+        "exact controlled serving surface and route/path allowlist",
+        "explicit exposure bounds/canary cohort",
+        "owner approval for real recommendation output",
+        "rollback and disable-switch owner",
+        "rollback/flag-off drill before controlled serving",
+        "observability and incident response requirements",
+        "production default/API/user-visible separation remains explicit",
+        "no broad rollout/fleet default without separate authorization",
+        "no DB writes/refit/training/label ingest unless separately authorized",
+        "expiry and review-by requirements"
+      ],
+      "real_recommendations_emitted_at_request_time": false
+    },
     "explicitly_not_included": [
       "API/web",
+      "API/web behavior changes at request time",
       "API/web changes at grant time",
       "API/web changes at request time",
       "DB writes/DDL",
       "api_web_changes_allowed",
       "authorization grant",
+      "bridge recommendations",
       "broad rollout",
+      "broad/global/fleet rollout",
       "fleet-wide enablement",
       "fleet-wide flag enablement",
       "global enablement",
@@ -24,6 +68,7 @@
       "model refit, embedding generation, label ingest",
       "online_shadow_execution_enabled",
       "online_shadow_execution_enabled globally",
+      "paper_scores/ranking_runs writes",
       "prod default",
       "prod_scoped_shadow_execution_authorized",
       "production default",
@@ -34,8 +79,10 @@
       "production default/API/user-visible recommendation output at grant time",
       "production recommendation output at request time",
       "production_default_allowed",
+      "real production recommendation output at request time",
       "refit/training",
       "runtime enablement at grant time",
+      "runtime enablement at request time",
       "user-visible ranking",
       "user-visible ranking changes",
       "user-visible ranking changes at grant time",
@@ -260,6 +307,9 @@
         "rollback/flag-off drill"
       ]
     },
+    "prod_scoped_shadow_controlled_production_recommendation_authorization_granted": false,
+    "prod_scoped_shadow_controlled_production_recommendation_authorization_requested": true,
+    "prod_scoped_shadow_controlled_production_recommendation_authorized": false,
     "prod_scoped_shadow_execution_authorized": false,
     "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
@@ -477,6 +527,12 @@
     "Accepted review is necessary but not sufficient for controlled production recommendation authorization.",
     "Does not enable global/fleet online shadow execution.",
     "Does not change production default, API/web, or user-visible ranking.",
+    "Bridge recommendations remain out of scope.",
+    "Request milestone only; grants no controlled production recommendation authorization.",
+    "Does not enable real production recommendation output.",
+    "Does not change production default, API/web behavior, or user-visible ranking.",
+    "Does not enable online_shadow_execution_enabled or prod_scoped_shadow_execution_authorized.",
+    "Accepted production default/API/user-visible pilot review is necessary but not sufficient for real output.",
     "Bridge recommendations remain out of scope."
   ],
   "execution": {
@@ -5617,9 +5673,9 @@
   },
   "metadata": {
     "artifact_type": "ml_shadow_scorer_production_scoped_shadow_bundle",
-    "bundle_revision": 24,
+    "bundle_revision": 25,
     "bundle_version": "online-shadow-production-scoped-v1",
-    "generated_at": "2026-05-30T23:53:37Z",
+    "generated_at": "2026-05-31T01:37:36Z",
     "legacy_artifacts_index": [
       {
         "path": "docs/audit/bundles/production-readiness-v1/bundle.json",
@@ -5816,6 +5872,7 @@
   "posture": {
     "api_web_changes_allowed": false,
     "live_prod_source_reads_performed": true,
+    "missing_prod_scoped_shadow_controlled_production_recommendation_authorization": true,
     "missing_prod_scoped_shadow_flag_enablement_authorization": false,
     "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
@@ -5824,6 +5881,9 @@
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_controlled_production_recommendation_authorization_granted": false,
+    "prod_scoped_shadow_controlled_production_recommendation_authorization_requested": true,
+    "prod_scoped_shadow_controlled_production_recommendation_authorized": false,
     "prod_scoped_shadow_execution_authorized": false,
     "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
@@ -6028,7 +6088,7 @@
       "write_target": "isolated_prod_scoped_audit_artifacts"
     }
   },
-  "recommended_next_stage": "request_production_scoped_online_shadow_controlled_production_recommendation_authorization_v1",
+  "recommended_next_stage": "record_production_scoped_online_shadow_controlled_production_recommendation_authorization_grant_v1",
   "review": {
     "flag_enablement_pilot_review_decision": {
       "accepted_evidence": [
@@ -6317,6 +6377,7 @@
     "blockers_changed_by_proof": [
       "missing_prod_scoped_shadow_proof"
     ],
+    "blockers_cleared_by_controlled_production_recommendation_request": [],
     "blockers_cleared_by_flag_enablement_grant": [
       "missing_prod_scoped_shadow_flag_enablement_authorization"
     ],
@@ -6348,6 +6409,9 @@
     "blockers_cleared_by_production_default_api_user_visible_pilot_review": [],
     "blockers_cleared_by_production_default_api_user_visible_pilot_run": [],
     "blockers_cleared_by_production_default_api_user_visible_request": [],
+    "blockers_introduced_by_controlled_production_recommendation_request": [
+      "missing_prod_scoped_shadow_controlled_production_recommendation_authorization"
+    ],
     "blockers_introduced_by_flag_enablement_grant": [],
     "blockers_introduced_by_flag_enablement_pilot_review": [],
     "blockers_introduced_by_flag_enablement_pilot_run": [],
@@ -6379,6 +6443,7 @@
     "blockers_introduced_by_production_default_api_user_visible_request": [
       "missing_prod_scoped_shadow_production_default_api_user_visible_authorization"
     ],
+    "blockers_unchanged_by_controlled_production_recommendation_request": true,
     "blockers_unchanged_by_flag_enablement_grant": true,
     "blockers_unchanged_by_flag_enablement_pilot_review": true,
     "blockers_unchanged_by_flag_enablement_pilot_run": true,
@@ -6404,6 +6469,7 @@
     "blockers_unchanged_by_production_default_api_user_visible_request": true,
     "blockers_unchanged_by_proof": true,
     "live_prod_source_reads_performed": true,
+    "missing_prod_scoped_shadow_controlled_production_recommendation_authorization": true,
     "missing_prod_scoped_shadow_flag_enablement_authorization": false,
     "missing_prod_scoped_shadow_live_execution_authorization": false,
     "missing_prod_scoped_shadow_live_read_only_authorization": false,
@@ -6412,6 +6478,9 @@
     "missing_prod_scoped_shadow_proof": false,
     "missing_production_readiness_authorization": false,
     "online_shadow_execution_enabled": false,
+    "prod_scoped_shadow_controlled_production_recommendation_authorization_granted": false,
+    "prod_scoped_shadow_controlled_production_recommendation_authorization_requested": true,
+    "prod_scoped_shadow_controlled_production_recommendation_authorized": false,
     "prod_scoped_shadow_execution_authorized": false,
     "prod_scoped_shadow_flag_enablement_authorization_granted": true,
     "prod_scoped_shadow_flag_enablement_authorization_requested": true,
