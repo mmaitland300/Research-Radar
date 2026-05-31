@@ -171,8 +171,11 @@ def test_shadow_row_count_must_be_528_on_happy_path(
 def test_map_shadow_rows_to_paper_ids_preserves_order_and_limit() -> None:
     rows = [
         {"canonical_openalex_work_id": "W3"},
-        {"canonical_openalex_work_id": "W1"},
+        {"canonical_openalex_work_id": "https://openalex.org/W1"},
         {"canonical_openalex_work_id": "W2"},
     ]
 
-    assert serving.map_shadow_rows_to_paper_ids(rows, limit=2) == ["W3", "W1"]
+    assert serving.map_shadow_rows_to_paper_ids(rows, limit=2) == [
+        "https://openalex.org/W3",
+        "https://openalex.org/W1",
+    ]

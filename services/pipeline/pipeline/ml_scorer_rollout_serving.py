@@ -27,6 +27,7 @@ from pipeline.ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot imp
 from pipeline.repo_paths import default_repo_root
 
 PINNED_RANKING_VERSION = "shadow-generalization-product-candidate-ranking-v1"
+OPENALEX_WORK_URL_PREFIX = "https://openalex.org/"
 
 
 class MLScorerRolloutServingError(Exception):
@@ -116,5 +117,7 @@ def map_shadow_rows_to_paper_ids(
     for row in shadow_rows[:limit]:
         paper_id = str(row.get("canonical_openalex_work_id") or "").strip()
         if paper_id:
+            if paper_id.startswith("W"):
+                paper_id = f"{OPENALEX_WORK_URL_PREFIX}{paper_id}"
             out.append(paper_id)
     return out
