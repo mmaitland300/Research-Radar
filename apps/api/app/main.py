@@ -2,11 +2,10 @@ import logging
 from typing import Literal
 
 import psycopg
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 
 from app.config import PRODUCT_RANKING_METADATA_NOTE, settings
 from app.ranked_explanations import (
-    build_list_ranking_explanation,
     build_signal_explanations,
     family_weights_from_config,
 )
@@ -34,8 +33,6 @@ from app.contracts import (
     PaperListItem,
     PaperListResponse,
     ProductSummary,
-    RankedListExplanation,
-    RankedRecommendationItem,
     RankedRecommendationsResponse,
     RankedSignalExplanation,
     RankedSignals,
@@ -72,6 +69,11 @@ from app.demo_fixtures import (
 from app.clusters_repo import load_cluster_inspection
 from app.bridge_distinctness_repo import load_bridge_distinctness_report
 from app.evaluation_repo import EvalListArm, load_evaluation_compare
+from app.ml_scorer_rollout import (
+    build_ranked_recommendations_response,
+    get_canary_subject,
+    maybe_build_scorer_ranked_response,
+)
 from app.papers_repo import database_url_from_env
 from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
@@ -263,6 +265,7 @@ def get_recommendations_undercited(
     response_model_exclude_none=False,
 )
 def get_recommendations_ranked(
+    request: Request,
     family: Literal["emerging", "bridge", "undercited"] = Query(...),
     limit: int = Query(default=20, ge=1, le=100),
     corpus_snapshot_version: str | None = Query(default=None),
@@ -288,6 +291,19 @@ def get_recommendations_ranked(
             bridge_eligible_only=bridge_eligible_only,
         )
     try:
+        subject = get_canary_subject(request)
+        scorer_response = maybe_build_scorer_ranked_response(
+            family=family,
+            limit=limit,
+            corpus_snapshot_version=corpus_snapshot_version,
+            ranking_run_id=ranking_run_id,
+            ranking_version=ranking_version,
+            bridge_eligible_only=bridge_eligible_only,
+            subject=subject,
+        )
+        if scorer_response is not None:
+            return scorer_response
+
         resolved = list_ranked_recommendations(
             family=family,
             limit=limit,
@@ -311,52 +327,7 @@ def get_recommendations_ranked(
         )
 
     ctx, rows, run_config = resolved
-    weights = family_weights_from_config(run_config, family)
-    list_payload = build_list_ranking_explanation(family=family, weights=weights)
-    list_explanation = RankedListExplanation(**list_payload)
-
-    items_out: list[RankedRecommendationItem] = []
-    for r in rows:
-        expl = build_signal_explanations(
-            family=family,
-            semantic=r.semantic_score,
-            citation_velocity=r.citation_velocity_score,
-            topic_growth=r.topic_growth_score,
-            bridge=r.bridge_score,
-            diversity_penalty=r.diversity_penalty,
-            weights=weights,
-        )
-        items_out.append(
-            RankedRecommendationItem(
-                paper_id=r.paper_id,
-                title=r.title,
-                year=r.year,
-                citation_count=r.citation_count,
-                source_slug=r.source_slug,
-                topics=r.topics,
-                signals=RankedSignals(
-                    semantic=r.semantic_score,
-                    citation_velocity=r.citation_velocity_score,
-                    topic_growth=r.topic_growth_score,
-                    bridge=r.bridge_score,
-                    diversity_penalty=r.diversity_penalty,
-                ),
-                final_score=r.final_score,
-                reason_short=r.reason_short,
-                signal_explanations=[RankedSignalExplanation(**x) for x in expl],
-                bridge_eligible=r.bridge_eligible,
-            )
-        )
-
-    return RankedRecommendationsResponse(
-        ranking_run_id=ctx.ranking_run_id,
-        ranking_version=ctx.ranking_version,
-        corpus_snapshot_version=ctx.corpus_snapshot_version,
-        family=family,
-        total=len(rows),
-        list_explanation=list_explanation,
-        items=items_out,
-    )
+    return build_ranked_recommendations_response(ctx, rows, run_config, family)
 
 
 @app.get("/api/v1/recommendations/families", response_model=list[RankingFamily])

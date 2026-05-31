@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping
 
 import psycopg
 from psycopg.rows import dict_row
@@ -226,6 +226,35 @@ def _parse_config_json(raw: Any) -> dict[str, Any]:
     return {}
 
 
+def _ranked_recommendation_row_from_db_row(row: Mapping[str, Any]) -> RankedRecommendationRow:
+    return RankedRecommendationRow(
+        paper_id=str(row["openalex_id"]),
+        title=str(row["title"]),
+        year=int(row["year"]),
+        citation_count=int(row["citation_count"] or 0),
+        source_slug=str(row["source_slug"]) if row["source_slug"] is not None else None,
+        topics=_topic_names_from_json(row["topics"]),
+        semantic_score=float(row["semantic_score"]) if row["semantic_score"] is not None else None,
+        citation_velocity_score=(
+            float(row["citation_velocity_score"])
+            if row["citation_velocity_score"] is not None
+            else None
+        ),
+        topic_growth_score=(
+            float(row["topic_growth_score"]) if row["topic_growth_score"] is not None else None
+        ),
+        bridge_score=float(row["bridge_score"]) if row["bridge_score"] is not None else None,
+        diversity_penalty=(
+            float(row["diversity_penalty"]) if row["diversity_penalty"] is not None else None
+        ),
+        final_score=float(row["final_score"]),
+        reason_short=str(row["reason_short"]),
+        bridge_eligible=(
+            None if row.get("bridge_eligible") is None else bool(row["bridge_eligible"])
+        ),
+    )
+
+
 def list_ranked_recommendations(
     *,
     family: str,
@@ -305,36 +334,69 @@ def list_ranked_recommendations(
         ).fetchone()
         run_config = _parse_config_json(cfg_row["config_json"] if cfg_row else None)
 
-    items = [
-        RankedRecommendationRow(
-            paper_id=str(row["openalex_id"]),
-            title=str(row["title"]),
-            year=int(row["year"]),
-            citation_count=int(row["citation_count"] or 0),
-            source_slug=str(row["source_slug"]) if row["source_slug"] is not None else None,
-            topics=_topic_names_from_json(row["topics"]),
-            semantic_score=float(row["semantic_score"]) if row["semantic_score"] is not None else None,
-            citation_velocity_score=float(row["citation_velocity_score"])
-            if row["citation_velocity_score"] is not None
-            else None,
-            topic_growth_score=float(row["topic_growth_score"])
-            if row["topic_growth_score"] is not None
-            else None,
-            bridge_score=float(row["bridge_score"]) if row["bridge_score"] is not None else None,
-            diversity_penalty=float(row["diversity_penalty"])
-            if row["diversity_penalty"] is not None
-            else None,
-            final_score=float(row["final_score"]),
-            reason_short=str(row["reason_short"]),
-            bridge_eligible=(
-                None
-                if row.get("bridge_eligible") is None
-                else bool(row["bridge_eligible"])
-            ),
-        )
-        for row in rows
-    ]
+    items = [_ranked_recommendation_row_from_db_row(row) for row in rows]
     return ctx, items, run_config
+
+
+def hydrate_ranked_recommendation_rows_for_paper_ids(
+    *,
+    ctx: RankedRunContext,
+    family: str,
+    ordered_openalex_ids: list[str],
+) -> list[RankedRecommendationRow] | None:
+    if family != "emerging":
+        raise ValueError("ML scorer hydration is only supported for emerging recommendations.")
+    if len(set(ordered_openalex_ids)) != len(ordered_openalex_ids):
+        return None
+    if not ordered_openalex_ids:
+        return []
+
+    placeholders = ", ".join(["%s"] * len(ordered_openalex_ids))
+    query = f"""
+        SELECT
+            w.openalex_id,
+            w.title,
+            w.year,
+            w.citation_count,
+            w.source_slug,
+            COALESCE(topic_agg.topics, '[]'::json) AS topics,
+            ps.semantic_score,
+            ps.citation_velocity_score,
+            ps.topic_growth_score,
+            ps.bridge_score,
+            ps.diversity_penalty,
+            ps.final_score,
+            ps.reason_short,
+            ps.bridge_eligible
+        FROM paper_scores ps
+        JOIN works w ON w.id = ps.work_id
+        LEFT JOIN LATERAL (
+            SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
+            FROM (
+                SELECT t.name AS topic_name, wt.score AS score
+                FROM work_topics wt
+                JOIN topics t ON t.id = wt.topic_id
+                WHERE wt.work_id = w.id
+                ORDER BY wt.score DESC, t.name ASC
+                LIMIT 3
+            ) sub
+        ) topic_agg ON TRUE
+        WHERE ps.ranking_run_id = %s
+          AND ps.recommendation_family = %s
+          AND w.openalex_id IN ({placeholders})
+    """
+    params = (ctx.ranking_run_id, family, *ordered_openalex_ids)
+
+    with psycopg.connect(database_url_from_env(), row_factory=dict_row) as conn:
+        rows = conn.execute(query, params).fetchall()
+
+    by_id = {str(row["openalex_id"]): row for row in rows}
+    if len(by_id) != len(ordered_openalex_ids):
+        return None
+    return [
+        _ranked_recommendation_row_from_db_row(by_id[openalex_id])
+        for openalex_id in ordered_openalex_ids
+    ]
 
 
 def get_paper_family_rankings(
