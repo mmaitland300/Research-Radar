@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
 def default_repo_root() -> Path:
     """Research Radar repo root (parent of ``services``)."""
+    env_root = os.environ.get("RESEARCH_RADAR_REPO_ROOT", "").strip()
+    if env_root:
+        return Path(env_root).resolve()
     return Path(__file__).resolve().parents[3]
 
 
