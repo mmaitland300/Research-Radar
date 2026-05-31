@@ -6151,6 +6151,60 @@ def main() -> None:
         default=None,
         help="Optional repository root for resolving bundle references",
     )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser = (
+        subparsers.add_parser(
+            "ml-shadow-scorer-production-scoped-shadow-bundle-grant-controlled-production-recommendation",
+            help=(
+                "File the production-scoped online shadow controlled production recommendation "
+                "authorization grant in the bundle"
+            ),
+        )
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to production-scoped shadow bundle JSON",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--owner",
+        default="Matt Maitland",
+        help="Owner name to record (default: Matt Maitland)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--second-reviewer",
+        default=None,
+        help="Optional second reviewer; must differ from owner when provided",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--owner-documents-equivalent-review",
+        default=None,
+        help="Optional non-empty owner rationale used instead of a second reviewer",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--grant-notes",
+        default=None,
+        help="Optional free-text controlled production recommendation authorization grant notes recorded verbatim",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--expiry-date",
+        default="2026-08-27",
+        help="Grant expiry date to record (default: 2026-08-27)",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--review-by",
+        default=None,
+        help="Optional review-by date; defaults to expiry date",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--generated-at",
+        default=None,
+        help="Optional generated-at timestamp override for deterministic tests",
+    )
+    ml_shadow_scorer_production_scoped_shadow_bundle_grant_controlled_production_recommendation_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Optional repository root for resolving bundle references",
+    )
     ml_shadow_scorer_production_scoped_shadow_bundle_grant_production_default_api_user_visible_parser = (
         subparsers.add_parser(
             "ml-shadow-scorer-production-scoped-shadow-bundle-grant-production-default-api-user-visible",
@@ -6569,6 +6623,11 @@ def main() -> None:
         "--expect-controlled-production-recommendation-request-filed",
         action="store_true",
         help="Require post-controlled-production-recommendation-request production-scoped shadow bundle state",
+    )
+    plan_bundle_verify_group.add_argument(
+        "--expect-controlled-production-recommendation-grant-filed",
+        action="store_true",
+        help="Require post-controlled-production-recommendation-grant production-scoped shadow bundle state",
     )
     ml_shadow_scorer_production_scoped_shadow_bundle_verify_parser.add_argument(
         "--repo-root",
@@ -10068,6 +10127,41 @@ def main() -> None:
         print(payload["recommended_next_stage"])
         return
 
+    if args.command == "ml-shadow-scorer-production-scoped-shadow-bundle-grant-controlled-production-recommendation":
+        from pipeline.ml_shadow_scorer_production_scoped_shadow_bundle import (
+            MLShadowScorerProductionScopedShadowBundleError,
+            grant_controlled_production_recommendation_ml_shadow_scorer_production_scoped_shadow_bundle,
+        )
+
+        repo_root = Path(args.repo_root) if args.repo_root else None
+        try:
+            payload = grant_controlled_production_recommendation_ml_shadow_scorer_production_scoped_shadow_bundle(
+                bundle_path=Path(args.bundle),
+                owner=str(args.owner),
+                second_reviewer=args.second_reviewer,
+                owner_documents_equivalent_review=args.owner_documents_equivalent_review,
+                expiry_date=str(args.expiry_date),
+                review_by=args.review_by,
+                grant_notes=args.grant_notes,
+                generated_at=args.generated_at,
+                repo_root=repo_root,
+            )
+        except MLShadowScorerProductionScopedShadowBundleError as e:
+            print(
+                "ml-shadow-scorer-production-scoped-shadow-bundle-grant-controlled-production-recommendation: "
+                f"{e}",
+                file=sys.stderr,
+            )
+            raise SystemExit(e.code) from e
+        print(payload["authorization"]["controlled_production_recommendation_grant_decision"]["decision"])
+        print(
+            payload["authorization"][
+                "prod_scoped_shadow_controlled_production_recommendation_authorization_granted"
+            ]
+        )
+        print(payload["recommended_next_stage"])
+        return
+
     if (
         args.command
         == "ml-shadow-scorer-production-scoped-shadow-bundle-grant-production-default-api-user-visible"
@@ -10445,6 +10539,7 @@ def main() -> None:
         expect_production_default_api_user_visible_pilot_run_filed = None
         expect_production_default_api_user_visible_pilot_review_filed = None
         expect_controlled_production_recommendation_request_filed = None
+        expect_controlled_production_recommendation_grant_filed = None
         if args.expect_plan_filed:
             expect_plan_filed = True
         elif args.expect_plan_not_filed:
@@ -10497,6 +10592,8 @@ def main() -> None:
             expect_production_default_api_user_visible_pilot_review_filed = True
         elif args.expect_controlled_production_recommendation_request_filed:
             expect_controlled_production_recommendation_request_filed = True
+        elif args.expect_controlled_production_recommendation_grant_filed:
+            expect_controlled_production_recommendation_grant_filed = True
         try:
             result = verify_ml_shadow_scorer_production_scoped_shadow_bundle(
                 bundle_path=Path(args.bundle),
@@ -10536,7 +10633,13 @@ def main() -> None:
                 expect_controlled_production_recommendation_request_filed=(
                     expect_controlled_production_recommendation_request_filed
                 ),
-                verify_local_pilot_files=not bool(expect_controlled_production_recommendation_request_filed),
+                expect_controlled_production_recommendation_grant_filed=(
+                    expect_controlled_production_recommendation_grant_filed
+                ),
+                verify_local_pilot_files=not bool(
+                    expect_controlled_production_recommendation_request_filed
+                    or expect_controlled_production_recommendation_grant_filed
+                ),
             )
         except MLShadowScorerProductionScopedShadowBundleError as e:
             print(f"ml-shadow-scorer-production-scoped-shadow-bundle-verify: {e}", file=sys.stderr)
