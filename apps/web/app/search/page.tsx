@@ -63,8 +63,10 @@ type SearchResponse = {
   resolved_corpus_snapshot_version?: string | null;
 };
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
 type PageProps = {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<SearchParams>;
 };
 
 function parseSingleParam(raw: string | string[] | undefined): string | undefined {
@@ -312,17 +314,18 @@ function familyLabel(family: FamilyHint): string {
 }
 
 export default async function SearchPage({ searchParams }: PageProps) {
-  const q = parseSingleParam(searchParams.q);
-  const limit = parseIntegerParam(searchParams.limit, 15, { min: 1, max: 100 });
-  const offset = parseIntegerParam(searchParams.offset, 0, { min: 0, max: 10_000 });
-  const yearFrom = parseOptionalYear(searchParams.year_from);
-  const yearTo = parseOptionalYear(searchParams.year_to);
-  const includedScope = parseIncludedScope(searchParams.included_scope);
-  const sourceSlug = parseSingleParam(searchParams.source_slug);
-  const topic = parseSingleParam(searchParams.topic);
-  const familyHint = parseFamilyHint(searchParams.family_hint);
-  const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
-  const rankingVersion = parseSingleParam(searchParams.ranking_version);
+  const resolvedSearchParams = await searchParams;
+  const q = parseSingleParam(resolvedSearchParams.q);
+  const limit = parseIntegerParam(resolvedSearchParams.limit, 15, { min: 1, max: 100 });
+  const offset = parseIntegerParam(resolvedSearchParams.offset, 0, { min: 0, max: 10_000 });
+  const yearFrom = parseOptionalYear(resolvedSearchParams.year_from);
+  const yearTo = parseOptionalYear(resolvedSearchParams.year_to);
+  const includedScope = parseIncludedScope(resolvedSearchParams.included_scope);
+  const sourceSlug = parseSingleParam(resolvedSearchParams.source_slug);
+  const topic = parseSingleParam(resolvedSearchParams.topic);
+  const familyHint = parseFamilyHint(resolvedSearchParams.family_hint);
+  const rankingRunId = parseSingleParam(resolvedSearchParams.ranking_run_id);
+  const rankingVersion = parseSingleParam(resolvedSearchParams.ranking_version);
 
   const currentState: SearchState = {
     q,
