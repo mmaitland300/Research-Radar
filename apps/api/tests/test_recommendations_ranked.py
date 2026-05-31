@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 from app import main
 from app.scores_repo import RankedRecommendationRow, RankedRunContext
 
-
 client = TestClient(main.app)
 
 
@@ -48,7 +47,9 @@ def test_get_recommendations_ranked_smoke(monkeypatch) -> None:
         ]
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+    )
     response = client.get(
         "/api/v1/recommendations/ranked?family=undercited&limit=10"
         "&corpus_snapshot_version=snap-1&ranking_version=v0-test"
@@ -60,6 +61,8 @@ def test_get_recommendations_ranked_smoke(monkeypatch) -> None:
     assert payload["ranking_version"] == "v0-test"
     assert payload["corpus_snapshot_version"] == "snap-1"
     assert payload["family"] == "undercited"
+    assert payload["ranking_mode"] == "materialized_heuristic"
+    assert payload["ranking_mode_detail"] is None
     assert payload["total"] == 1
     item = payload["items"][0]
     assert item["paper_id"] == "W999"
@@ -74,7 +77,9 @@ def test_get_recommendations_ranked_smoke(monkeypatch) -> None:
     assert item["bridge_eligible"] is None
 
 
-def test_get_recommendations_ranked_bridge_eligible_on_bridge_family(monkeypatch) -> None:
+def test_get_recommendations_ranked_bridge_eligible_on_bridge_family(
+    monkeypatch,
+) -> None:
     def fake_list_ranked_recommendations(
         *,
         family: str,
@@ -127,7 +132,9 @@ def test_get_recommendations_ranked_bridge_eligible_on_bridge_family(monkeypatch
         ]
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+    )
     response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=20")
 
     assert response.status_code == 200
@@ -137,7 +144,9 @@ def test_get_recommendations_ranked_bridge_eligible_on_bridge_family(monkeypatch
     assert payload["items"][1]["bridge_eligible"] is False
 
 
-def test_get_recommendations_ranked_bridge_eligible_only_forwarded_for_bridge(monkeypatch) -> None:
+def test_get_recommendations_ranked_bridge_eligible_only_forwarded_for_bridge(
+    monkeypatch,
+) -> None:
     seen: dict[str, object] = {}
 
     def fake_list_ranked_recommendations(
@@ -157,15 +166,21 @@ def test_get_recommendations_ranked_bridge_eligible_only_forwarded_for_bridge(mo
         )
         return ctx, [], {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
-    response = client.get("/api/v1/recommendations/ranked?family=bridge&bridge_eligible_only=true")
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+    )
+    response = client.get(
+        "/api/v1/recommendations/ranked?family=bridge&bridge_eligible_only=true"
+    )
 
     assert response.status_code == 200
     assert seen["bridge_eligible_only"] is True
     assert response.json()["total"] == 0
 
 
-def test_get_recommendations_ranked_bridge_eligible_only_forwarded_but_ignored_family(monkeypatch) -> None:
+def test_get_recommendations_ranked_bridge_eligible_only_forwarded_but_ignored_family(
+    monkeypatch,
+) -> None:
     """API passes the flag through; repo must not apply the SQL filter for non-bridge families."""
 
     seen: dict[str, object] = {}
@@ -206,7 +221,9 @@ def test_get_recommendations_ranked_bridge_eligible_only_forwarded_but_ignored_f
         ]
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+    )
     response = client.get(
         "/api/v1/recommendations/ranked?family=emerging&bridge_eligible_only=true&limit=5"
     )
@@ -217,7 +234,9 @@ def test_get_recommendations_ranked_bridge_eligible_only_forwarded_but_ignored_f
     assert response.json()["total"] == 1
 
 
-def test_get_recommendations_ranked_legacy_bridge_row_null_eligibility(monkeypatch) -> None:
+def test_get_recommendations_ranked_legacy_bridge_row_null_eligibility(
+    monkeypatch,
+) -> None:
     """Runs before neighbor_mix persist null bridge_eligible; API exposes null."""
 
     def fake_list_ranked_recommendations(**_kwargs):
@@ -246,7 +265,9 @@ def test_get_recommendations_ranked_legacy_bridge_row_null_eligibility(monkeypat
         ]
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+    )
     response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=5")
     assert response.status_code == 200
     assert response.json()["items"][0]["bridge_eligible"] is None
@@ -283,7 +304,9 @@ def test_get_recommendations_ranked_bridge_false_encodes_neighbor_mix_not_legacy
         ]
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_list_ranked_recommendations)
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+    )
     response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=5")
     assert response.status_code == 200
     assert response.json()["items"][0]["bridge_eligible"] is False

@@ -73,8 +73,41 @@ def test_wrong_limit_returns_false() -> None:
 def test_cohort_ineligible_returns_false() -> None:
     gate = _open_gate()
 
-    assert _attempt(gate, subject=None) == (False, "cohort_ineligible")
+    assert _attempt(gate, subject=None) == (False, "public_rollout_disabled")
     assert _attempt(gate, subject="not-allowed") == (False, "cohort_ineligible")
+
+
+def test_public_rollout_disabled_without_canary_returns_false() -> None:
+    gate = _open_gate()
+
+    assert gate.is_rollout_subject_eligible(None) == (False, "public_rollout_disabled")
+
+
+def test_public_rollout_percent_closed_without_stable_subject() -> None:
+    gate = build_gate_from_env(
+        {
+            "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED": "true",
+            "ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_ENABLED": "true",
+            "ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_PERCENT": "50",
+            "ML_SHADOW_SCORER_V1_ROLLOUT_EXPOSURE_CAP": "5",
+        }
+    )
+
+    assert _attempt(gate, subject=None) == (False, "public_rollout_percent_closed")
+
+
+def test_public_rollout_percent_100_allows_empty_allowlist_without_subject() -> None:
+    gate = build_gate_from_env(
+        {
+            "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED": "true",
+            "ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_ENABLED": "true",
+            "ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_PERCENT": "100",
+            "ML_SHADOW_SCORER_V1_ROLLOUT_EXPOSURE_CAP": "5",
+        }
+    )
+
+    assert gate.cohort_allowlist == frozenset()
+    assert _attempt(gate, subject=None) == (True, None)
 
 
 def test_cap_exhausted_returns_false() -> None:

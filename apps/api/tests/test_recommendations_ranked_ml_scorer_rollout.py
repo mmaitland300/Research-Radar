@@ -22,6 +22,8 @@ _ENV_KEYS = (
     "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED",
     "ML_SHADOW_SCORER_V1_ROLLOUT_COHORT_ALLOWLIST",
     "ML_SHADOW_SCORER_V1_ROLLOUT_EXPOSURE_CAP",
+    "ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_ENABLED",
+    "ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_PERCENT",
 )
 
 
@@ -38,6 +40,21 @@ def _enable_gate(monkeypatch: pytest.MonkeyPatch, *, cap: str = "5") -> None:
     monkeypatch.setenv("ML_SHADOW_SCORER_V1_RUNTIME_ENABLED", "true")
     monkeypatch.setenv("ML_SHADOW_SCORER_V1_ROLLOUT_COHORT_ALLOWLIST", "canary-a")
     monkeypatch.setenv("ML_SHADOW_SCORER_V1_ROLLOUT_EXPOSURE_CAP", cap)
+
+
+def _enable_public_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    cap: str = "5",
+    percent: str = "100",
+    allowlist: str | None = None,
+) -> None:
+    monkeypatch.setenv("ML_SHADOW_SCORER_V1_RUNTIME_ENABLED", "true")
+    monkeypatch.setenv("ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_ENABLED", "true")
+    monkeypatch.setenv("ML_SHADOW_SCORER_V1_PUBLIC_ROLLOUT_PERCENT", percent)
+    monkeypatch.setenv("ML_SHADOW_SCORER_V1_ROLLOUT_EXPOSURE_CAP", cap)
+    if allowlist is not None:
+        monkeypatch.setenv("ML_SHADOW_SCORER_V1_ROLLOUT_COHORT_ALLOWLIST", allowlist)
 
 
 def _ctx(
@@ -84,8 +101,12 @@ def _baseline_rows() -> list[RankedRecommendationRow]:
     return [_row("WBASE001", score=0.91)]
 
 
-def _expected_json(ctx: RankedRunContext, rows: list[RankedRecommendationRow], family: str):
-    return build_ranked_recommendations_response(ctx, rows, {}, family).model_dump(mode="json")
+def _expected_json(
+    ctx: RankedRunContext, rows: list[RankedRecommendationRow], family: str
+):
+    return build_ranked_recommendations_response(ctx, rows, {}, family).model_dump(
+        mode="json"
+    )
 
 
 class _FakeServing:
@@ -134,12 +155,39 @@ def test_default_env_absent_scorer_helper_not_called_and_baseline_called(
     assert response.json() == _expected_json(ctx, rows, "emerging")
 
 
+def test_runtime_on_public_rollout_disabled_no_header_returns_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ML_SHADOW_SCORER_V1_RUNTIME_ENABLED", "true")
+    monkeypatch.setenv("ML_SHADOW_SCORER_V1_ROLLOUT_EXPOSURE_CAP", "5")
+    ctx = _ctx()
+    rows = _baseline_rows()
+
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        rollout,
+        "_load_pipeline_serving_module",
+        lambda: (_ for _ in ()).throw(
+            AssertionError("public rollout disabled must not call scorer")
+        ),
+    )
+
+    response = client.get("/api/v1/recommendations/ranked?family=emerging&limit=20")
+
+    assert response.status_code == 200
+    assert response.json() == _expected_json(ctx, rows, "emerging")
+
+
 def test_bridge_flag_on_scorer_not_called(monkeypatch: pytest.MonkeyPatch) -> None:
     _enable_gate(monkeypatch)
     ctx = _ctx()
     rows = [_row("WBRIDGE001", bridge_eligible=True)]
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
     monkeypatch.setattr(
         rollout,
         "_load_pipeline_serving_module",
@@ -153,6 +201,54 @@ def test_bridge_flag_on_scorer_not_called(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert response.status_code == 200
     assert response.json() == _expected_json(ctx, rows, "bridge")
+
+
+def test_bridge_public_rollout_enabled_still_returns_materialized_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_public_gate(monkeypatch)
+    ctx = _ctx()
+    rows = [_row("WBRIDGE001", bridge_eligible=True)]
+
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        rollout,
+        "_load_pipeline_serving_module",
+        lambda: (_ for _ in ()).throw(AssertionError("bridge must not call scorer")),
+    )
+
+    response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=20")
+
+    assert response.status_code == 200
+    assert response.json()["ranking_mode"] == "materialized_heuristic"
+    assert response.json() == _expected_json(ctx, rows, "bridge")
+
+
+def test_undercited_public_rollout_enabled_still_returns_materialized_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_public_gate(monkeypatch)
+    ctx = _ctx()
+    rows = [_row("WUNDER001")]
+
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        rollout,
+        "_load_pipeline_serving_module",
+        lambda: (_ for _ in ()).throw(
+            AssertionError("undercited must not call scorer")
+        ),
+    )
+
+    response = client.get("/api/v1/recommendations/ranked?family=undercited&limit=20")
+
+    assert response.status_code == 200
+    assert response.json()["ranking_mode"] == "materialized_heuristic"
+    assert response.json() == _expected_json(ctx, rows, "undercited")
 
 
 def test_resolved_identity_mismatch_scorer_not_called_and_baseline_json_unchanged(
@@ -170,13 +266,44 @@ def test_resolved_identity_mismatch_scorer_not_called_and_baseline_json_unchange
     monkeypatch.setattr(
         rollout,
         "_load_pipeline_serving_module",
-        lambda: (_ for _ in ()).throw(AssertionError("identity mismatch must not call scorer")),
+        lambda: (_ for _ in ()).throw(
+            AssertionError("identity mismatch must not call scorer")
+        ),
     )
 
     response = client.get(
         "/api/v1/recommendations/ranked?family=emerging&limit=20",
         headers={"X-Research-Radar-Canary-Subject": "canary-a"},
     )
+
+    assert response.status_code == 200
+    assert response.json() == _expected_json(ctx, rows, "emerging")
+
+
+def test_scorer_gate_db_read_failure_falls_back_to_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_public_gate(monkeypatch)
+    ctx = _ctx()
+    rows = _baseline_rows()
+
+    monkeypatch.setattr(
+        rollout,
+        "list_ranked_recommendations",
+        lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("db down")),
+    )
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        rollout,
+        "_load_pipeline_serving_module",
+        lambda: (_ for _ in ()).throw(
+            AssertionError("db read failure must not call scorer")
+        ),
+    )
+
+    response = client.get("/api/v1/recommendations/ranked?family=emerging&limit=20")
 
     assert response.status_code == 200
     assert response.json() == _expected_json(ctx, rows, "emerging")
@@ -192,11 +319,15 @@ def test_wildcard_allowlist_env_fails_closed_to_baseline(
     ctx = _ctx()
     rows = _baseline_rows()
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
     monkeypatch.setattr(
         rollout,
         "_load_pipeline_serving_module",
-        lambda: (_ for _ in ()).throw(AssertionError("invalid env must not call scorer")),
+        lambda: (_ for _ in ()).throw(
+            AssertionError("invalid env must not call scorer")
+        ),
     )
 
     with caplog.at_level(logging.INFO, logger=rollout.__name__):
@@ -229,7 +360,9 @@ def test_gate_open_pinned_context_scorer_order_hydrated_outside_baseline_top20(
     monkeypatch.setattr(
         main,
         "list_ranked_recommendations",
-        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("baseline fallback should not run")),
+        lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("baseline fallback should not run")
+        ),
     )
     monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
 
@@ -240,7 +373,9 @@ def test_gate_open_pinned_context_scorer_order_hydrated_outside_baseline_top20(
             for index, paper_id in enumerate(kwargs["ordered_openalex_ids"])
         ]
 
-    monkeypatch.setattr(rollout, "hydrate_ranked_recommendation_rows_for_paper_ids", hydrate)
+    monkeypatch.setattr(
+        rollout, "hydrate_ranked_recommendation_rows_for_paper_ids", hydrate
+    )
 
     response = client.get(
         "/api/v1/recommendations/ranked?family=emerging&limit=20",
@@ -256,14 +391,112 @@ def test_gate_open_pinned_context_scorer_order_hydrated_outside_baseline_top20(
     assert serving.envs[0]["ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"] == "true"
 
 
-def test_hydration_incomplete_falls_back_to_baseline(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_public_rollout_percent_100_pinned_context_returns_scorer_mode_without_header(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_public_gate(monkeypatch, allowlist="")
+    baseline_rows = [_row(f"WBASE{i:03d}", score=1.0 - (i / 1000)) for i in range(20)]
+    scorer_ids = [f"WPUBLIC{i:03d}" for i in range(20)]
+    serving = _FakeServing(scorer_ids)
+
+    monkeypatch.setattr(
+        rollout,
+        "list_ranked_recommendations",
+        lambda **_kwargs: (_pinned_ctx(), baseline_rows, {}),
+    )
+    monkeypatch.setattr(
+        main,
+        "list_ranked_recommendations",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("baseline fallback should not run")
+        ),
+    )
+    monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
+    monkeypatch.setattr(
+        rollout,
+        "hydrate_ranked_recommendation_rows_for_paper_ids",
+        lambda **kwargs: [
+            _row(paper_id, score=1.0 - (index / 1000))
+            for index, paper_id in enumerate(kwargs["ordered_openalex_ids"])
+        ],
+    )
+
+    response = client.get("/api/v1/recommendations/ranked?family=emerging&limit=20")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ranking_mode"] == "bounded_ml_scorer"
+    assert payload["ranking_mode_detail"]
+    assert [item["paper_id"] for item in payload["items"]] == scorer_ids
+    assert serving.calls == 1
+
+
+def test_public_rollout_cap_zero_returns_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_public_gate(monkeypatch, cap="0")
+    ctx = _pinned_ctx()
+    rows = _baseline_rows()
+
+    monkeypatch.setattr(
+        rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        rollout,
+        "_load_pipeline_serving_module",
+        lambda: (_ for _ in ()).throw(AssertionError("cap zero must not call scorer")),
+    )
+
+    response = client.get("/api/v1/recommendations/ranked?family=emerging&limit=20")
+
+    assert response.status_code == 200
+    assert response.json() == _expected_json(ctx, rows, "emerging")
+
+
+def test_public_rollout_partial_percent_without_subject_returns_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_public_gate(monkeypatch, percent="25")
+    ctx = _pinned_ctx()
+    rows = _baseline_rows()
+
+    monkeypatch.setattr(
+        rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        rollout,
+        "_load_pipeline_serving_module",
+        lambda: (_ for _ in ()).throw(
+            AssertionError("partial public rollout must not call scorer")
+        ),
+    )
+
+    response = client.get("/api/v1/recommendations/ranked?family=emerging&limit=20")
+
+    assert response.status_code == 200
+    assert response.json() == _expected_json(ctx, rows, "emerging")
+
+
+def test_hydration_incomplete_falls_back_to_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _enable_gate(monkeypatch, cap="1")
     ctx = _pinned_ctx()
     rows = _baseline_rows()
     serving = _FakeServing([f"WSCORER{i:03d}" for i in range(20)])
 
-    monkeypatch.setattr(rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(
+        rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
     monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
     monkeypatch.setattr(
         rollout,
@@ -278,6 +511,7 @@ def test_hydration_incomplete_falls_back_to_baseline(monkeypatch: pytest.MonkeyP
 
     assert response.status_code == 200
     assert response.json() == _expected_json(ctx, rows, "emerging")
+    assert response.json()["ranking_mode"] == "materialized_heuristic"
     assert get_rollout_served_count() == 0
 
 
@@ -287,10 +521,16 @@ def test_scorer_helper_raises_falls_back_to_exact_baseline_json(
     _enable_gate(monkeypatch, cap="1")
     ctx = _pinned_ctx()
     rows = _baseline_rows()
-    serving = _FakeServing([f"WSCORER{i:03d}" for i in range(20)], exc=RuntimeError("boom"))
+    serving = _FakeServing(
+        [f"WSCORER{i:03d}" for i in range(20)], exc=RuntimeError("boom")
+    )
 
-    monkeypatch.setattr(rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(
+        rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
     monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
 
     response = client.get(
@@ -300,6 +540,7 @@ def test_scorer_helper_raises_falls_back_to_exact_baseline_json(
 
     assert response.status_code == 200
     assert response.json() == _expected_json(ctx, rows, "emerging")
+    assert response.json()["ranking_mode"] == "materialized_heuristic"
     assert get_rollout_served_count() == 0
 
 
@@ -317,12 +558,16 @@ def test_exposure_counter_increments_once_and_stops_at_cap(
         "list_ranked_recommendations",
         lambda **_kwargs: (ctx, baseline_rows, {}),
     )
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, baseline_rows, {}))
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, baseline_rows, {})
+    )
     monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
     monkeypatch.setattr(
         rollout,
         "hydrate_ranked_recommendation_rows_for_paper_ids",
-        lambda **kwargs: [_row(paper_id) for paper_id in kwargs["ordered_openalex_ids"]],
+        lambda **kwargs: [
+            _row(paper_id) for paper_id in kwargs["ordered_openalex_ids"]
+        ],
     )
 
     first = client.get(
@@ -350,7 +595,9 @@ def test_subject_value_is_not_logged(
     rows = _baseline_rows()
     sensitive_subject = "secret-canary-subject"
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(
+        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+    )
 
     with caplog.at_level(logging.INFO, logger=rollout.__name__):
         response = client.get(
@@ -360,4 +607,49 @@ def test_subject_value_is_not_logged(
 
     assert response.status_code == 200
     assert sensitive_subject not in caplog.text
+    assert "gate_closed" in caplog.text
+    assert "exception_type=None" in caplog.text
+
+
+def test_gate_open_log_omits_subject_value_and_includes_public_rollout_fields(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _enable_gate(monkeypatch)
+    ctx = _pinned_ctx()
+    sensitive_subject = "canary-a"
+    serving = _FakeServing([f"WSCORER{i:03d}" for i in range(20)])
+
+    monkeypatch.setattr(
+        rollout,
+        "list_ranked_recommendations",
+        lambda **_kwargs: (ctx, _baseline_rows(), {}),
+    )
+    monkeypatch.setattr(
+        main,
+        "list_ranked_recommendations",
+        lambda **_kwargs: (ctx, _baseline_rows(), {}),
+    )
+    monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
+    monkeypatch.setattr(
+        rollout,
+        "hydrate_ranked_recommendation_rows_for_paper_ids",
+        lambda **kwargs: [
+            _row(paper_id) for paper_id in kwargs["ordered_openalex_ids"]
+        ],
+    )
+
+    with caplog.at_level(logging.INFO, logger=rollout.__name__):
+        response = client.get(
+            "/api/v1/recommendations/ranked?family=emerging&limit=20",
+            headers={"X-Research-Radar-Canary-Subject": sensitive_subject},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["ranking_mode"] == "bounded_ml_scorer"
+    assert sensitive_subject not in caplog.text
     assert "subject_present=True" in caplog.text
+    assert "public_rollout_enabled=False" in caplog.text
+    assert "public_rollout_percent=0" in caplog.text
+    assert "cap=5" in caplog.text
+    assert "current_served=0" in caplog.text

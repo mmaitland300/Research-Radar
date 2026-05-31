@@ -387,7 +387,9 @@ class RankedSignals(BaseModel):
     diversity_penalty: float | None = None
 
 
-RankedSignalRole = Literal["used", "measured", "experimental", "penalty", "not_computed"]
+RankedSignalRole = Literal[
+    "used", "measured", "experimental", "penalty", "not_computed"
+]
 
 
 class RankedSignalExplanation(BaseModel):
@@ -434,6 +436,9 @@ class RankedRecommendationItem(BaseModel):
     )
 
 
+RankedRankingMode = Literal["materialized_heuristic", "bounded_ml_scorer"]
+
+
 class RankedRecommendationsResponse(BaseModel):
     """Materialized ranking run: one row per (work, family) from pipeline ranking-run."""
 
@@ -441,6 +446,8 @@ class RankedRecommendationsResponse(BaseModel):
     ranking_version: str
     corpus_snapshot_version: str
     family: str
+    ranking_mode: RankedRankingMode = "materialized_heuristic"
+    ranking_mode_detail: str | None = None
     total: int
     list_explanation: RankedListExplanation
     items: list[RankedRecommendationItem]

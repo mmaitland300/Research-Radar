@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 
 from app import main
 
-
 client = TestClient(main.app)
 
 
@@ -32,7 +31,10 @@ def test_fixture_mode_serves_core_surfaces_without_database(monkeypatch) -> None
 
     meta = client.get("/api/v1/meta/product")
     assert meta.status_code == 200
-    assert meta.json()["materialized_ranking"]["ranking_version"] == "fixture-demo-v0-no-db"
+    assert (
+        meta.json()["materialized_ranking"]["ranking_version"]
+        == "fixture-demo-v0-no-db"
+    )
 
     search = client.get("/api/v1/search?q=audio&family_hint=emerging&limit=3")
     assert search.status_code == 200
@@ -42,13 +44,16 @@ def test_fixture_mode_serves_core_surfaces_without_database(monkeypatch) -> None
     ranked = client.get("/api/v1/recommendations/ranked?family=emerging&limit=2")
     assert ranked.status_code == 200
     assert ranked.json()["family"] == "emerging"
+    assert ranked.json()["ranking_mode"] == "materialized_heuristic"
     assert ranked.json()["items"][0]["signal_explanations"]
 
     undercited = client.get("/api/v1/recommendations/undercited?limit=2")
     assert undercited.status_code == 200
     assert undercited.json()["heuristic_version"] == "fixture-v0"
 
-    bridge = client.get("/api/v1/evaluation/bridge-distinctness?ranking_run_id=ignored-in-fixture&k=2")
+    bridge = client.get(
+        "/api/v1/evaluation/bridge-distinctness?ranking_run_id=ignored-in-fixture&k=2"
+    )
     assert bridge.status_code == 200
     assert bridge.json()["ranking_run_id"] == "fixture-rank-demo-001"
     assert bridge.json()["cluster_version"] == "fixture-kmeans-v0"
@@ -60,7 +65,9 @@ def test_fixture_mode_serves_core_surfaces_without_database(monkeypatch) -> None
     assert trends.json()["corpus_snapshot_version"] == "fixture-snapshot-mir-audio-2026"
     assert trends.json()["items"]
 
-    clusters = client.get("/api/v1/clusters/ignored-in-fixture/inspect?sample_per_cluster=2")
+    clusters = client.get(
+        "/api/v1/clusters/ignored-in-fixture/inspect?sample_per_cluster=2"
+    )
     assert clusters.status_code == 200
     assert clusters.json()["cluster_version"] == "fixture-kmeans-v0"
     assert clusters.json()["groups"]
@@ -78,6 +85,8 @@ def test_fixture_mode_serves_core_surfaces_without_database(monkeypatch) -> None
     assert ranking.status_code == 200
     assert ranking.json()["families"]
 
-    similar = client.get(f"/api/v1/papers/{paper_id}/similar?embedding_version=fixture-title-abstract-v0")
+    similar = client.get(
+        f"/api/v1/papers/{paper_id}/similar?embedding_version=fixture-title-abstract-v0"
+    )
     assert similar.status_code == 200
     assert similar.json()["items"]

@@ -20,6 +20,7 @@ const FAMILY_NOTES: Record<Family, string[]> = {
   emerging: [
     "Topic-growth and citation-velocity signals should dominate the list.",
     "General semantic relevance is not treated as a default quality score. Some pinned runs use embedding fit as one bounded ranking feature, and the UI labels when that feature is used.",
+    "A bounded ML scorer rollout may reorder Emerging only when the backend gate is explicitly enabled.",
     "The goal is early importance, not raw popularity."
   ],
   bridge: [
@@ -60,6 +61,8 @@ type RankedListExplanation = {
   experimental: string[];
 };
 
+type RankingMode = "materialized_heuristic" | "bounded_ml_scorer";
+
 type RankedItem = {
   paper_id: string;
   title: string;
@@ -79,6 +82,8 @@ type RankedResponse = {
   ranking_version: string;
   corpus_snapshot_version: string;
   family: string;
+  ranking_mode: RankingMode;
+  ranking_mode_detail: string | null;
   total: number;
   list_explanation: RankedListExplanation;
   items: RankedItem[];
@@ -99,6 +104,9 @@ const SIGNAL_ROLES: RankedSignalExplanation["role"][] = [
   "penalty",
   "not_computed"
 ];
+
+const SCORER_RESPONSE_COPY =
+  "This response was ordered by the bounded ML scorer rollout. Displayed scores and signal explanations still come from the materialized ranking row.";
 
 function coerceSignalExplanation(e: Record<string, unknown>): RankedSignalExplanation {
   const roleRaw = e.role;
@@ -208,11 +216,18 @@ function normalizeRankedPayload(json: unknown, family: Family): RankedResponse |
     };
   });
 
+  const modeRaw = raw.ranking_mode;
+  const ranking_mode: RankingMode =
+    modeRaw === "bounded_ml_scorer" ? "bounded_ml_scorer" : "materialized_heuristic";
+
   return {
     ranking_run_id: String(raw.ranking_run_id ?? ""),
     ranking_version: String(raw.ranking_version ?? ""),
     corpus_snapshot_version: String(raw.corpus_snapshot_version ?? ""),
     family: typeof raw.family === "string" ? raw.family : family,
+    ranking_mode,
+    ranking_mode_detail:
+      typeof raw.ranking_mode_detail === "string" ? raw.ranking_mode_detail : null,
     total: typeof raw.total === "number" ? raw.total : items.length,
     list_explanation,
     items
@@ -292,17 +307,33 @@ function explanationSummary(explanations: RankedSignalExplanation[]): string {
   return parts.length > 0 ? parts.join(" | ") : "No signal breakdown";
 }
 
-function EmergingHowPanel({ expl }: { expl: RankedListExplanation }) {
+function EmergingHowPanel({
+  expl,
+  rankingMode
+}: {
+  expl: RankedListExplanation;
+  rankingMode: RankingMode;
+}) {
+  const scorerOrdered = rankingMode === "bounded_ml_scorer";
   return (
     <div className="ranking-how-panel">
       <h3>{expl.headline}</h3>
+      {scorerOrdered ? (
+        <>
+          <p className="muted-inline">Order selected by bounded ML scorer rollout.</p>
+          <p className="ranking-how-meta">
+            <strong>Displayed score metadata.</strong>
+          </p>
+        </>
+      ) : null}
       <ul>
         {expl.bullets.map((b) => (
           <li key={b}>{b}</li>
         ))}
       </ul>
       <p className="ranking-how-meta">
-        <strong>Used in ordering:</strong> {expl.used_in_ordering.join(", ") || "none"}
+        <strong>{scorerOrdered ? "Materialized score signals:" : "Used in ordering:"}</strong>{" "}
+        {expl.used_in_ordering.join(", ") || "none"}
         <br />
         <strong>Measured only (transparency):</strong> {expl.measured_only.join(", ") || "none"}
         {expl.experimental.length > 0 ? (
@@ -524,7 +555,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
   const family = parseFamily(searchParams.family);
   const focusPaperId = parseSingleParam(searchParams.paper);
   const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
-  const limit = parseLimit(searchParams.limit, 15, 100);
+  const defaultLimit = family === "emerging" ? 20 : 15;
+  const limit = parseLimit(searchParams.limit, defaultLimit, 100);
   const bridgeEligibleOnlyRequested =
     family === "bridge" && parseBooleanParam(searchParams.bridge_eligible_only);
   const bridgeEligibleOnly = ENABLE_EXPERIMENTAL_BRIDGE_VIEW && bridgeEligibleOnlyRequested;
@@ -704,8 +736,12 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             ) : null}
             {data ? (
               <p className="muted-inline">
-                Showing {data.total} {data.total === 1 ? "paper" : "papers"} from a materialized{" "}
-                {FAMILY_LABEL[family].toLowerCase()} ranking run; {surfacedWithTopics} include topic labels.
+                Showing {data.total} {data.total === 1 ? "paper" : "papers"} from{" "}
+                {data.ranking_mode === "bounded_ml_scorer"
+                  ? "bounded ML scorer order over materialized metadata"
+                  : `a materialized ${FAMILY_LABEL[family].toLowerCase()} ranking run`}
+                {"; "}
+                {surfacedWithTopics} include topic labels.
               </p>
             ) : null}
             <p className="muted-inline">
@@ -731,6 +767,16 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 Resolved run label: <code>{data?.ranking_version ?? "unavailable"}</code>.
               </p>
               <p className="result-breakdown">
+                Ranking mode: <code>{data?.ranking_mode ?? "materialized_heuristic"}</code>
+                {data?.ranking_mode_detail ? <>. {data.ranking_mode_detail}</> : "."}
+              </p>
+              {family === "emerging" ? (
+                <p className="result-breakdown">
+                  Bounded scorer serving is eligible only for Emerging requests with{" "}
+                  <code>limit=20</code>; other limits use materialized heuristic order.
+                </p>
+              ) : null}
+              <p className="result-breakdown">
                 {RANKING_VERSION ? (
                   <>
                     Run label filter: <code>{RANKING_VERSION}</code>.
@@ -748,8 +794,20 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               </p>
               <p className="result-breakdown">
                 Storage provenance: materialized family rows are read from <code>paper_scores</code>.
-                Result ordering is <code>final_score desc, work_id asc</code>. The undercited pool
-                definition is documented in <code>docs/candidate-pool-low-cite.md</code>.
+                {data?.ranking_mode === "bounded_ml_scorer" ? (
+                  <>
+                    {" "}
+                    Result order was selected by the bounded ML scorer; displayed{" "}
+                    <code>final_score</code> and signal metadata still come from the materialized row.
+                  </>
+                ) : (
+                  <>
+                    {" "}
+                    Result ordering is <code>final_score desc, work_id asc</code>.
+                  </>
+                )}{" "}
+                The undercited pool definition is documented in{" "}
+                <code>docs/candidate-pool-low-cite.md</code>.
               </p>
             </details>
           </div>
@@ -785,7 +843,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
           <p>{error}</p>
           {status === 404 ? (
             <p className="muted-inline">
-              Example run label: <code>v0-heuristic-no-embeddings-step3</code>
+              Example run label:{" "}
+              <code>shadow-generalization-product-candidate-ranking-v1</code>
             </p>
           ) : null}
         </section>
@@ -809,10 +868,17 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               {family === "bridge" && bridgeEligibleOnly ? (
                 <span className="stamp">Eligible only</span>
               ) : null}
-              <span className="stamp">Order: score desc, stable tie-break</span>
+              {data.ranking_mode === "bounded_ml_scorer" ? (
+                <span className="stamp">Bounded ML scorer order</span>
+              ) : (
+                <span className="stamp">Order: score desc, stable tie-break</span>
+              )}
               <span className="stamp">Limit: {limit}</span>
             </div>
           </div>
+          {data.ranking_mode === "bounded_ml_scorer" ? (
+            <p className="muted-inline">{SCORER_RESPONSE_COPY}</p>
+          ) : null}
           {family === "bridge" ? (
             <p className="muted-inline">
               Bridge preview shows measured cross-cluster signal for the resolved run. Some rows may not
@@ -820,7 +886,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             </p>
           ) : null}
           {family === "emerging" || family === "bridge" ? (
-            <EmergingHowPanel expl={data.list_explanation} />
+            <EmergingHowPanel expl={data.list_explanation} rankingMode={data.ranking_mode} />
           ) : null}
           {data.items.length === 0 ? (
             <p>No rows for this family in the selected run.</p>
@@ -914,9 +980,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
         <article className="card">
           <h2>Current ML boundary</h2>
           <p>
-            ML milestone 1 delivers retrieval for similar papers. Writing{" "}
-            <code>semantic_score</code> into ranked families stays gated until a defined relevance target;
-            bridge remains experimental and outside the default recommendation path.
+            Emerging can be reordered by the bounded ML scorer only when the backend rollout gate is
+            enabled. Bridge and Under-cited are not served by that scorer; their order comes from
+            materialized ranking rows.
           </p>
         </article>
         <article className="card">
