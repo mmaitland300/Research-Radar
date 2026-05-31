@@ -34,6 +34,11 @@ from pipeline.ml_shadow_scorer_production_readiness_bundle import (
     POST_GRANT_NEXT_STAGE as PRODUCTION_READINESS_POST_GRANT_NEXT_STAGE,
     verify_ml_shadow_scorer_production_readiness_bundle_payload,
 )
+from pipeline.ml_shadow_scorer_shadow_transition import (
+    ShadowTransition,
+    transition_by_expect_flag,
+    transition_by_plan_mode,
+)
 from pipeline.repo_paths import default_repo_root, portable_repo_path
 from pipeline.shadow_write_path_guards import (
     ISOLATED_PROD_SCOPED_AUDIT_ARTIFACTS,
@@ -13775,6 +13780,63 @@ def _infer_plan_mode(
     ]
     if sum(explicit) > 1:
         raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot/live read-only expectations conflict")
+    expectations_by_flag = {
+        "expect_plan_filed": expect_plan_filed,
+        "expect_proof_filed": expect_proof_filed,
+        "expect_pilot_request_filed": expect_pilot_request_filed,
+        "expect_pilot_grant_filed": expect_pilot_grant_filed,
+        "expect_pilot_harness_filed": expect_pilot_harness_filed,
+        "expect_pilot_harness_review_filed": expect_pilot_harness_review_filed,
+        "expect_pilot_run_filed": expect_pilot_run_filed,
+        "expect_pilot_review_filed": expect_pilot_review_filed,
+        "expect_live_read_only_request_filed": expect_live_read_only_request_filed,
+        "expect_live_read_only_grant_filed": expect_live_read_only_grant_filed,
+        "expect_live_read_only_pilot_run_filed": expect_live_read_only_pilot_run_filed,
+        "expect_live_read_only_pilot_review_filed": expect_live_read_only_pilot_review_filed,
+        "expect_live_execution_request_filed": expect_live_execution_request_filed,
+        "expect_live_execution_grant_filed": expect_live_execution_grant_filed,
+        "expect_live_execution_pilot_run_filed": expect_live_execution_pilot_run_filed,
+        "expect_live_execution_pilot_review_filed": expect_live_execution_pilot_review_filed,
+        "expect_flag_enablement_request_filed": expect_flag_enablement_request_filed,
+        "expect_flag_enablement_grant_filed": expect_flag_enablement_grant_filed,
+        "expect_flag_enablement_pilot_run_filed": expect_flag_enablement_pilot_run_filed,
+        "expect_flag_enablement_pilot_review_filed": expect_flag_enablement_pilot_review_filed,
+        "expect_production_default_api_user_visible_request_filed": (
+            expect_production_default_api_user_visible_request_filed
+        ),
+        "expect_production_default_api_user_visible_grant_filed": (
+            expect_production_default_api_user_visible_grant_filed
+        ),
+        "expect_production_default_api_user_visible_pilot_run_filed": (
+            expect_production_default_api_user_visible_pilot_run_filed
+        ),
+        "expect_production_default_api_user_visible_pilot_review_filed": (
+            expect_production_default_api_user_visible_pilot_review_filed
+        ),
+        "expect_controlled_production_recommendation_request_filed": (
+            expect_controlled_production_recommendation_request_filed
+        ),
+        "expect_controlled_production_recommendation_grant_filed": (
+            expect_controlled_production_recommendation_grant_filed
+        ),
+        "expect_controlled_production_recommendation_pilot_run_filed": (
+            expect_controlled_production_recommendation_pilot_run_filed
+        ),
+        "expect_controlled_production_recommendation_pilot_review_filed": (
+            expect_controlled_production_recommendation_pilot_review_filed
+        ),
+        "expect_limited_production_recommendation_rollout_request_filed": (
+            expect_limited_production_recommendation_rollout_request_filed
+        ),
+        "expect_limited_production_recommendation_rollout_grant_filed": (
+            expect_limited_production_recommendation_rollout_grant_filed
+        ),
+    }
+    for flag_name, expectation in expectations_by_flag.items():
+        if expectation is True:
+            transition = transition_by_expect_flag(flag_name)
+            if transition is not None:
+                return transition.plan_mode
     if expect_limited_production_recommendation_rollout_grant_filed is True:
         return "post_limited_production_recommendation_rollout_grant"
     if expect_limited_production_recommendation_rollout_grant_filed is False:
@@ -15840,6 +15902,39 @@ def _infer_plan_mode(
     raise MLShadowScorerProductionScopedShadowBundleError(
         "could not infer production-scoped-shadow bundle mode from revision and plan/proof state"
     )
+
+
+def _transition_payload_verifier(transition: ShadowTransition) -> Any:
+    if transition.payload_verifier_name is None:
+        return None
+    fn = globals().get(transition.payload_verifier_name)
+    if not callable(fn):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            f"transition payload verifier not found: {transition.payload_verifier_name}"
+        )
+    return fn
+
+
+def _transition_strip_fn(transition: ShadowTransition) -> Any:
+    if transition.strip_fn_name is None:
+        return None
+    fn = globals().get(transition.strip_fn_name)
+    if not callable(fn):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            f"transition strip function not found: {transition.strip_fn_name}"
+        )
+    return fn
+
+
+def _transition_apply_fn(transition: ShadowTransition) -> Any:
+    if transition.apply_fn_name is None:
+        return None
+    fn = globals().get(transition.apply_fn_name)
+    if not callable(fn):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            f"transition apply function not found: {transition.apply_fn_name}"
+        )
+    return fn
 
 
 def _verify_proof_section(proof: Any) -> None:
@@ -21770,133 +21865,32 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
             expect_limited_production_recommendation_rollout_grant_filed
         ),
     )
-    if mode == "post_limited_production_recommendation_rollout_grant":
-        return _verify_limited_production_recommendation_rollout_grant_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_limited_production_recommendation_rollout_request":
-        return _verify_limited_production_recommendation_rollout_request_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_controlled_production_recommendation_pilot_review":
-        return _verify_controlled_production_recommendation_pilot_review_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_controlled_production_recommendation_pilot_run":
-        return _verify_controlled_production_recommendation_pilot_run_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_controlled_production_recommendation_grant":
-        return _verify_controlled_production_recommendation_grant_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_controlled_production_recommendation_request":
-        return _verify_controlled_production_recommendation_request_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_production_default_api_user_visible_pilot_review":
-        return _verify_production_default_api_user_visible_pilot_review_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_production_default_api_user_visible_pilot_run":
-        return _verify_production_default_api_user_visible_pilot_run_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_production_default_api_user_visible_grant":
-        return _verify_production_default_api_user_visible_grant_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_production_default_api_user_visible_request":
-        return _verify_production_default_api_user_visible_request_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_flag_enablement_pilot_review":
-        return _verify_flag_enablement_pilot_review_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_flag_enablement_pilot_run":
-        return _verify_flag_enablement_pilot_run_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_flag_enablement_grant":
-        return _verify_flag_enablement_grant_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_flag_enablement_request":
-        return _verify_flag_enablement_request_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_live_execution_pilot_review":
-        return _verify_live_execution_pilot_review_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_live_execution_pilot_run":
-        return _verify_live_execution_pilot_run_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_live_execution_grant":
-        return _verify_live_execution_grant_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_live_execution_request":
-        return _verify_live_execution_request_payload(
-            bundle,
-            repo_root=root,
-            verify_local_pilot_files=verify_local_pilot_files,
-        )
-    if mode == "post_live_read_only_pilot_review":
-        return _verify_live_read_only_pilot_review_payload(
+    transition = None if mode == "pre_plan" else transition_by_plan_mode(mode)
+    verifier = None if transition is None else _transition_payload_verifier(transition)
+    if verifier is not None:
+        return verifier(
             bundle,
             repo_root=root,
             verify_local_pilot_files=verify_local_pilot_files,
         )
     expected_revision = {
         "pre_plan": PRE_PLAN_BUNDLE_REVISION,
-        "post_plan": POST_PLAN_BUNDLE_REVISION,
-        "post_proof": POST_PROOF_BUNDLE_REVISION,
-        "post_pilot_request": POST_PILOT_REQUEST_BUNDLE_REVISION,
-        "post_pilot_grant": POST_PILOT_GRANT_BUNDLE_REVISION,
-        "post_pilot_harness": POST_PILOT_HARNESS_BUNDLE_REVISION,
-        "post_pilot_harness_review": POST_PILOT_HARNESS_REVIEW_BUNDLE_REVISION,
-        "post_pilot_run": POST_PILOT_RUN_BUNDLE_REVISION,
-        "post_pilot_review": POST_PILOT_REVIEW_BUNDLE_REVISION,
-        "post_live_read_only_request": POST_LIVE_READ_ONLY_REQUEST_BUNDLE_REVISION,
-        "post_live_read_only_grant": POST_LIVE_READ_ONLY_GRANT_BUNDLE_REVISION,
-        "post_live_read_only_pilot_run": POST_LIVE_READ_ONLY_PILOT_RUN_BUNDLE_REVISION,
+        **{
+            item.plan_mode: globals()[item.bundle_revision_constant]
+            for item in (
+                transition_by_plan_mode("post_plan"),
+                transition_by_plan_mode("post_proof"),
+                transition_by_plan_mode("post_pilot_request"),
+                transition_by_plan_mode("post_pilot_grant"),
+                transition_by_plan_mode("post_pilot_harness"),
+                transition_by_plan_mode("post_pilot_harness_review"),
+                transition_by_plan_mode("post_pilot_run"),
+                transition_by_plan_mode("post_pilot_review"),
+                transition_by_plan_mode("post_live_read_only_request"),
+                transition_by_plan_mode("post_live_read_only_grant"),
+                transition_by_plan_mode("post_live_read_only_pilot_run"),
+            )
+        },
     }[mode]
     _require_equal("metadata.bundle_revision", metadata.get("bundle_revision"), expected_revision)
     _validate_identity(metadata.get("pinned_identity"), label="metadata.pinned_identity")
