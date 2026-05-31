@@ -112,6 +112,16 @@ def _copy_fixture_repo(tmp_path: Path) -> Path:
         dest = root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
+    production_scoped_bundle = root / FIXTURE_RELS["production_scoped_bundle"]
+    if production_scoped_bundle.exists():
+        payload = json.loads(production_scoped_bundle.read_text(encoding="utf-8"))
+        if payload.get("metadata", {}).get("bundle_revision") == 30:
+            payload = bundle_module._without_limited_production_recommendation_rollout_grant_payload(payload)
+            production_scoped_bundle.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            production_scoped_bundle.with_name("bundle.md").write_text(
+                bundle_module.markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload),
+                encoding="utf-8",
+            )
     return root
 
 

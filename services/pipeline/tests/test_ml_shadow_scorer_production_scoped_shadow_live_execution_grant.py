@@ -65,6 +65,15 @@ def _copy_fixture_repo(tmp_path: Path) -> Path:
         dest = root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
+    production_scoped_bundle = root / FIXTURE_RELS["production_scoped_bundle"]
+    payload = _load(production_scoped_bundle)
+    if payload["metadata"]["bundle_revision"] == 30:
+        payload = bundle_module._without_limited_production_recommendation_rollout_grant_payload(payload)
+        _write_json(production_scoped_bundle, payload)
+        production_scoped_bundle.with_name("bundle.md").write_text(
+            bundle_module.markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload),
+            encoding="utf-8",
+        )
     return root
 
 
@@ -357,6 +366,8 @@ def test_committed_bundle_matches_post_live_execution_grant() -> None:
     if not committed.exists():
         pytest.skip("production-scoped-shadow bundle not generated yet")
     payload = _load(committed)
+    if payload["metadata"]["bundle_revision"] == 30:
+        payload = bundle_module._without_limited_production_recommendation_rollout_grant_payload(payload)
     if payload["metadata"]["bundle_revision"] == 29:
         payload = bundle_module._without_limited_production_recommendation_rollout_request_payload(payload)
     if payload["metadata"]["bundle_revision"] == 28:

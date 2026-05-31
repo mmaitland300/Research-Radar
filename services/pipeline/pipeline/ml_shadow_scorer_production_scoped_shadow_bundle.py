@@ -156,6 +156,10 @@ POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_BUNDLE_REVISION = 29
 POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_NEXT_STAGE = (
     "record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1"
 )
+POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_BUNDLE_REVISION = 30
+POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_NEXT_STAGE = (
+    "run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1"
+)
 FEATURE_FLAG = "ML_SHADOW_SCORER_V1_RUNTIME_ENABLED"
 FUTURE_ARTIFACT_ROOT = "docs/audit/shadow-runs/ml-shadow-scorer-v1/prod-scoped/<pilot_run_id>/"
 PILOT_REQUEST_SCOPE = "production_scoped_shadow_pilot_paperwork_only"
@@ -168,6 +172,9 @@ FLAG_ENABLEMENT_REQUEST_SCOPE = "production_scoped_shadow_flag_enablement_paperw
 FLAG_ENABLEMENT_GRANT_SCOPE = "production_scoped_shadow_flag_enablement_authorization_only"
 LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_SCOPE = (
     "production_scoped_shadow_limited_production_recommendation_rollout_paperwork_only"
+)
+LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_SCOPE = (
+    "production_scoped_shadow_limited_production_recommendation_rollout_grant_paperwork_only"
 )
 PILOT_HARNESS_SURFACE = "bounded_fixture_pilot_harness"
 PILOT_RUN_SURFACE = "bounded_read_only_audit_artifact_pilot"
@@ -1079,6 +1086,54 @@ LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_CAVEATS = (
     "Future grant still requires exact route/path allowlist, canary cohort, owner approval, kill switch, rollback drill, monitoring, expiry_date, and review_by.",
 )
 
+LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_AUTHORIZES_FOR_CHAIN_ONLY = (
+    "bounded limited production recommendation rollout authorization paperwork complete",
+    "bounded limited/canary production recommendation rollout may be executed in a separate rev 31 run milestone under the grant contract",
+    "bounded limited rollout review may be recorded after the separate rev 31 run milestone",
+)
+
+LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_STILL_NOT_INCLUDED = (
+    "rollout execution at grant time",
+    "public production recommendation serving at grant time",
+    "broad/global/fleet rollout",
+    "bridge recommendations",
+    "global online shadow execution",
+    "prod_scoped_shadow_execution_authorized",
+    "online_shadow_execution_enabled",
+    "production_default_allowed",
+    "api_web_changes_allowed",
+    "user_visible_ranking_changed",
+    "DB writes/DDL",
+    "paper_scores/ranking_runs writes",
+    "refit/training",
+    "label ingest",
+)
+
+LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_TIME_BOUNDARIES = (
+    "exact route/path allowlist recorded at grant time",
+    "exact canary cohort recorded at grant time",
+    "maximum exposure cap recorded at grant time",
+    "kill switch owner recorded at grant time",
+    "rollback/flag-off drill required before rollout execution",
+    "monitoring and alert destinations recorded at grant time",
+    "incident owner recorded at grant time",
+    "bridge recommendations excluded",
+    "no rollout run performed at grant time",
+    "no execution.limited_production_recommendation_rollout_run slice at grant time",
+    "no production_default_allowed/API/user-visible/global flags changed at grant time",
+    "no DB writes/refit/training/label ingest at grant time",
+    "expiry_date and review_by recorded at grant time",
+)
+
+LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_CAVEATS = (
+    "Grant milestone only; does not run the limited production recommendation rollout.",
+    "Does not enable runtime, public serving, broad/global/fleet rollout, or bridge recommendations at grant time.",
+    "Does not change production default, API/web behavior, or user-visible ranking at grant time.",
+    "Does not set online_shadow_execution_enabled or prod_scoped_shadow_execution_authorized.",
+    "Does not perform DB writes/DDL, paper_scores/ranking_runs writes, refit/training, or label ingest.",
+    "Rollout execution remains a separate rev 31 milestone under the grant boundaries.",
+)
+
 FLAG_ENABLEMENT_GRANT_ONLY_EXPLICITLY_NOT_INCLUDED = tuple(
     sorted(
         set(FLAG_ENABLEMENT_GRANT_STILL_NOT_INCLUDED)
@@ -1257,6 +1312,26 @@ CONTROLLED_PRODUCTION_RECOMMENDATION_GRANT_ONLY_EXPLICITLY_NOT_INCLUDED = tuple(
 LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_ONLY_EXPLICITLY_NOT_INCLUDED = tuple(
     sorted(
         set(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        - set(CONTROLLED_PRODUCTION_RECOMMENDATION_GRANT_STILL_NOT_INCLUDED)
+        - set(CONTROLLED_PRODUCTION_RECOMMENDATION_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        - set(PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_STILL_NOT_INCLUDED)
+        - set(PRODUCTION_DEFAULT_API_USER_VISIBLE_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        - set(FLAG_ENABLEMENT_GRANT_STILL_NOT_INCLUDED)
+        - set(FLAG_ENABLEMENT_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        - set(LIVE_EXECUTION_GRANT_STILL_NOT_INCLUDED)
+        - set(LIVE_EXECUTION_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        - set(LIVE_READ_ONLY_GRANT_STILL_NOT_INCLUDED)
+        - set(LIVE_READ_ONLY_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        - set(PILOT_GRANT_STILL_NOT_INCLUDED)
+        - set(PILOT_REQUEST_EXPLICITLY_NOT_INCLUDED)
+        - set(EXPLICITLY_NOT_INCLUDED)
+    )
+)
+
+LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_ONLY_EXPLICITLY_NOT_INCLUDED = tuple(
+    sorted(
+        set(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_STILL_NOT_INCLUDED)
+        - set(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_EXPLICITLY_NOT_INCLUDED)
         - set(CONTROLLED_PRODUCTION_RECOMMENDATION_GRANT_STILL_NOT_INCLUDED)
         - set(CONTROLLED_PRODUCTION_RECOMMENDATION_REQUEST_EXPLICITLY_NOT_INCLUDED)
         - set(PRODUCTION_DEFAULT_API_USER_VISIBLE_GRANT_STILL_NOT_INCLUDED)
@@ -1728,6 +1803,10 @@ def _caveats(*, mode: str) -> list[str]:
     if mode == "post_limited_production_recommendation_rollout_request":
         caveats = _caveats(mode="post_controlled_production_recommendation_pilot_review")
         caveats.extend(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_CAVEATS)
+        return caveats
+    if mode == "post_limited_production_recommendation_rollout_grant":
+        caveats = _caveats(mode="post_limited_production_recommendation_rollout_request")
+        caveats.extend(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_CAVEATS)
         return caveats
     raise MLShadowScorerProductionScopedShadowBundleError(f"unknown caveat mode {mode!r}")
     return caveats
@@ -13100,6 +13179,450 @@ def apply_production_scoped_shadow_limited_production_recommendation_rollout_aut
     return updated
 
 
+def _resolve_limited_production_recommendation_rollout_route_path_allowlist(
+    route_path_allowlist: list[str] | None,
+) -> list[str]:
+    routes = (
+        list(CONTROLLED_PRODUCTION_RECOMMENDATION_PILOT_ROUTE_ALLOWLIST)
+        if route_path_allowlist is None
+        else list(route_path_allowlist)
+    )
+    if not routes:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "route_path_allowlist must contain at least one route"
+        )
+    resolved: list[str] = []
+    broad_routes = {"/", "/*", "*", "/api", "/api/", "/api/v1", "/api/v1/"}
+    for index, route in enumerate(routes):
+        if not isinstance(route, str) or not route.strip():
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"route_path_allowlist[{index}] must be a non-empty string"
+            )
+        route = route.strip()
+        lower_route = route.lower()
+        if not route.startswith("/"):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"route_path_allowlist[{index}] must be an absolute path"
+            )
+        if (
+            route in broad_routes
+            or "*" in route
+            or lower_route in {"all", "any"}
+            or "broad" in lower_route
+            or "fleet" in lower_route
+            or "global" in lower_route
+        ):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"route_path_allowlist[{index}] must be narrow and must not be wildcard or broad"
+            )
+        resolved.append(route)
+    if len(set(resolved)) != len(resolved):
+        raise MLShadowScorerProductionScopedShadowBundleError("route_path_allowlist must not contain duplicates")
+    return resolved
+
+
+def _resolve_limited_production_recommendation_rollout_monitoring_and_alerts(
+    monitoring_and_alerts: list[str] | None,
+) -> list[str]:
+    alerts = (
+        [
+            "bounded rollout dashboard monitored by owner",
+            "limited rollout alert routed to incident owner",
+        ]
+        if monitoring_and_alerts is None
+        else list(monitoring_and_alerts)
+    )
+    if not alerts or not all(isinstance(item, str) and item.strip() for item in alerts):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "monitoring_and_alerts must be a non-empty list of strings"
+        )
+    return [item.strip() for item in alerts]
+
+
+def apply_production_scoped_shadow_limited_production_recommendation_rollout_authorization_grant(
+    bundle: Mapping[str, Any],
+    *,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    grant_notes: str | None = None,
+    route_path_allowlist: list[str] | None = None,
+    canary_cohort: str = "bounded allowlisted internal/canary cohort only",
+    maximum_exposure: str = "limited canary exposure only; no broad/fleet rollout",
+    kill_switch_owner: str = "Matt Maitland",
+    monitoring_and_alerts: list[str] | None = None,
+    incident_owner: str = "Matt Maitland",
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(bundle, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("bundle must be an object")
+    _validate_pilot_grant_review(
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+    )
+    resolved_routes = _resolve_limited_production_recommendation_rollout_route_path_allowlist(route_path_allowlist)
+    resolved_monitoring = _resolve_limited_production_recommendation_rollout_monitoring_and_alerts(
+        monitoring_and_alerts
+    )
+    for field_name, value in (
+        ("canary_cohort", canary_cohort),
+        ("maximum_exposure", maximum_exposure),
+        ("kill_switch_owner", kill_switch_owner),
+        ("incident_owner", incident_owner),
+        ("expiry_date", expiry_date),
+    ):
+        if not isinstance(value, str) or not value.strip():
+            raise MLShadowScorerProductionScopedShadowBundleError(f"{field_name} must be populated")
+    if (
+        _get(
+            bundle,
+            "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted",
+        )
+        is True
+    ):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout authorization grant has already been filed"
+        )
+    if (
+        _get(bundle, "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorized")
+        is True
+    ):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout must not already be authorized"
+        )
+    if _get(bundle, "authorization.limited_production_recommendation_rollout_grant_decision") is not None:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.limited_production_recommendation_rollout_grant_decision must not already exist"
+        )
+    if _get(bundle, "authorization.limited_production_recommendation_rollout_granted_scope") is not None:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.limited_production_recommendation_rollout_granted_scope must not already exist"
+        )
+    execution = bundle.get("execution")
+    if not isinstance(execution, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("execution must be an object")
+    if "limited_production_recommendation_rollout_run" in execution:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.limited_production_recommendation_rollout_run must not already exist"
+        )
+    if execution.get("prod_scoped_shadow_limited_production_recommendation_rollout_executed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.prod_scoped_shadow_limited_production_recommendation_rollout_executed must not already be true"
+        )
+    if execution.get("prod_scoped_shadow_limited_production_recommendation_rollout_passed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.prod_scoped_shadow_limited_production_recommendation_rollout_passed must not already be true"
+        )
+    _require_equal(
+        "metadata.bundle_revision",
+        _get(bundle, "metadata.bundle_revision"),
+        POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_BUNDLE_REVISION,
+    )
+    _require_equal(
+        "recommended_next_stage",
+        bundle.get("recommended_next_stage"),
+        POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_NEXT_STAGE,
+    )
+    authorization = bundle.get("authorization")
+    _verify_limited_production_recommendation_rollout_request_section(authorization)
+    _require_limited_production_recommendation_rollout_request_prior_chain(bundle)
+
+    for section_name, section in (
+        ("posture", bundle.get("posture")),
+        ("shadow_and_production_blockers", bundle.get("shadow_and_production_blockers")),
+    ):
+        if not isinstance(section, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError(f"{section_name} must be an object")
+        _require_true(
+            f"{section_name}.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested",
+            section.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested"),
+        )
+        _require_false(
+            f"{section_name}.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted",
+            section.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted"),
+        )
+        _require_false(
+            f"{section_name}.prod_scoped_shadow_limited_production_recommendation_rollout_authorized",
+            section.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorized"),
+        )
+        _require_true(
+            f"{section_name}.missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization",
+            section.get("missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization"),
+        )
+        _require_limited_production_recommendation_rollout_request_section_chain(
+            section,
+            section_name=section_name,
+        )
+    blockers = bundle.get("shadow_and_production_blockers")
+    if not isinstance(blockers, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("shadow_and_production_blockers must be an object")
+    _require_equal(
+        "shadow_and_production_blockers.blockers_introduced_by_limited_production_recommendation_rollout_request",
+        blockers.get("blockers_introduced_by_limited_production_recommendation_rollout_request"),
+        ["missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization"],
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_cleared_by_limited_production_recommendation_rollout_request",
+        blockers.get("blockers_cleared_by_limited_production_recommendation_rollout_request"),
+        [],
+    )
+    _require_true(
+        "shadow_and_production_blockers.blockers_unchanged_by_limited_production_recommendation_rollout_request",
+        blockers.get("blockers_unchanged_by_limited_production_recommendation_rollout_request"),
+    )
+    if "blockers_changed_by_limited_production_recommendation_rollout_request" in blockers:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "shadow_and_production_blockers.blockers_changed_by_limited_production_recommendation_rollout_request "
+            "must not be used"
+        )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_cleared_by_controlled_production_recommendation_grant",
+        blockers.get("blockers_cleared_by_controlled_production_recommendation_grant"),
+        ["missing_prod_scoped_shadow_controlled_production_recommendation_authorization"],
+    )
+    _require_false(
+        "shadow_and_production_blockers.missing_prod_scoped_shadow_controlled_production_recommendation_authorization",
+        blockers.get("missing_prod_scoped_shadow_controlled_production_recommendation_authorization"),
+    )
+    _require_named_flags_not_true(
+        bundle,
+        (
+            "prod_scoped_shadow_execution_authorized",
+            "online_shadow_execution_enabled",
+            "production_default_allowed",
+            "api_web_changes_allowed",
+            "user_visible_ranking_changed",
+            "writes_performed",
+            "runtime_writes_performed",
+        ),
+    )
+    _require_false(
+        "plan.feature_flag_iam_config_requirements.prod_scoped_flag_enablement_authorized_now",
+        _get(bundle, "plan.feature_flag_iam_config_requirements.prod_scoped_flag_enablement_authorized_now"),
+    )
+    _require_false(
+        "plan.production_default_api_user_visible_separation.production_default_allowed",
+        _get(bundle, "plan.production_default_api_user_visible_separation.production_default_allowed"),
+    )
+    _require_false(
+        "plan.production_default_api_user_visible_separation.api_web_changes_allowed",
+        _get(bundle, "plan.production_default_api_user_visible_separation.api_web_changes_allowed"),
+    )
+    _require_false(
+        "plan.production_default_api_user_visible_separation.user_visible_ranking_changed",
+        _get(bundle, "plan.production_default_api_user_visible_separation.user_visible_ranking_changed"),
+    )
+
+    granted_at = generated_at or _now_iso_z()
+    resolved_review_by = review_by or expiry_date
+    updated = deepcopy(dict(bundle))
+    plan_before = deepcopy(updated.get("plan"))
+    proof_before = deepcopy(updated.get("proof"))
+    execution_before = deepcopy(updated.get("execution"))
+    review_before = deepcopy(updated.get("review"))
+    legacy_index_before = deepcopy(_get(updated, "metadata.legacy_artifacts_index"))
+    prior_authorization_slices = {
+        path: deepcopy(_get(updated, path))
+        for path in (
+            "authorization.request_decision",
+            "authorization.requested_scope",
+            "authorization.grant_decision",
+            "authorization.granted_scope",
+            "authorization.live_read_only_grant_decision",
+            "authorization.live_read_only_granted_scope",
+            "authorization.live_execution_request_decision",
+            "authorization.live_execution_requested_scope",
+            "authorization.live_execution_grant_decision",
+            "authorization.live_execution_granted_scope",
+            "authorization.flag_enablement_request_decision",
+            "authorization.flag_enablement_requested_scope",
+            "authorization.flag_enablement_grant_decision",
+            "authorization.flag_enablement_granted_scope",
+            "authorization.production_default_api_user_visible_request_decision",
+            "authorization.production_default_api_user_visible_requested_scope",
+            "authorization.production_default_api_user_visible_grant_decision",
+            "authorization.production_default_api_user_visible_granted_scope",
+            "authorization.controlled_production_recommendation_request_decision",
+            "authorization.controlled_production_recommendation_requested_scope",
+            "authorization.controlled_production_recommendation_grant_decision",
+            "authorization.controlled_production_recommendation_granted_scope",
+            "authorization.limited_production_recommendation_rollout_request_decision",
+            "authorization.limited_production_recommendation_rollout_requested_scope",
+        )
+    }
+
+    metadata = deepcopy(dict(_metadata(updated, label="production-scoped-shadow bundle")))
+    metadata["bundle_revision"] = POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_BUNDLE_REVISION
+    metadata["generated_at"] = granted_at
+    updated["metadata"] = metadata
+
+    authorization_updated = deepcopy(dict(updated.get("authorization") or {}))
+    authorization_updated.update(
+        {
+            "prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested": True,
+            "prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted": True,
+            "prod_scoped_shadow_limited_production_recommendation_rollout_authorized": True,
+            "limited_production_recommendation_rollout_grant_decision": {
+                "decision": "granted",
+                "owner": owner,
+                "granted_at": granted_at,
+                "expiry_date": expiry_date,
+                "review_by": resolved_review_by,
+                "grant_notes": grant_notes,
+            },
+            "limited_production_recommendation_rollout_granted_scope": {
+                "authorization_scope": LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_SCOPE,
+                "authorizes_for_chain_only": list(
+                    LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_AUTHORIZES_FOR_CHAIN_ONLY
+                ),
+                "explicitly_still_not_included": list(
+                    LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_STILL_NOT_INCLUDED
+                ),
+                "grant_time_limited_production_recommendation_rollout_boundaries": list(
+                    LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_TIME_BOUNDARIES
+                ),
+                "route_path_allowlist": resolved_routes,
+                "canary_cohort": canary_cohort,
+                "maximum_exposure": maximum_exposure,
+                "kill_switch_owner": kill_switch_owner,
+                "monitoring_and_alerts": resolved_monitoring,
+                "incident_owner": incident_owner,
+                "limited_production_recommendation_rollout_output_authorized_for_chain_only": True,
+                "bridge_recommendations_included": False,
+                "rollout_run_performed_at_grant_time": False,
+                "public_production_serving_enabled_at_grant_time": False,
+                "real_production_recommendation_output_to_public_users_at_grant_time": False,
+            },
+        }
+    )
+    if second_reviewer is not None:
+        authorization_updated["limited_production_recommendation_rollout_grant_decision"][
+            "second_reviewer"
+        ] = second_reviewer
+    if owner_documents_equivalent_review is not None:
+        authorization_updated["limited_production_recommendation_rollout_grant_decision"][
+            "owner_documents_equivalent_review"
+        ] = owner_documents_equivalent_review
+    authorization_updated["explicitly_not_included"] = sorted(
+        set(authorization_updated.get("explicitly_not_included") or []).union(
+            LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_STILL_NOT_INCLUDED
+        )
+    )
+    updated["authorization"] = authorization_updated
+
+    rollout_grant_fields = {
+        "prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested": True,
+        "prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted": True,
+        "prod_scoped_shadow_limited_production_recommendation_rollout_authorized": True,
+        "missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization": False,
+        "prod_scoped_shadow_controlled_production_recommendation_pilot_reviewed": True,
+        "prod_scoped_shadow_controlled_production_recommendation_pilot_accepted": True,
+        "prod_scoped_shadow_controlled_production_recommendation_pilot_executed": True,
+        "prod_scoped_shadow_controlled_production_recommendation_pilot_passed": True,
+        "prod_scoped_shadow_controlled_production_recommendation_authorization_requested": True,
+        "prod_scoped_shadow_controlled_production_recommendation_authorization_granted": True,
+        "prod_scoped_shadow_controlled_production_recommendation_authorized": True,
+        "missing_prod_scoped_shadow_controlled_production_recommendation_authorization": False,
+        "prod_scoped_shadow_production_default_api_user_visible_pilot_executed": True,
+        "prod_scoped_shadow_production_default_api_user_visible_pilot_passed": True,
+        "prod_scoped_shadow_production_default_api_user_visible_pilot_reviewed": True,
+        "prod_scoped_shadow_production_default_api_user_visible_pilot_accepted": True,
+        "prod_scoped_shadow_production_default_api_user_visible_authorization_requested": True,
+        "prod_scoped_shadow_production_default_api_user_visible_authorization_granted": True,
+        "prod_scoped_shadow_production_default_api_user_visible_authorized": True,
+        "missing_prod_scoped_shadow_production_default_api_user_visible_authorization": False,
+        "prod_scoped_shadow_flag_enablement_pilot_executed": True,
+        "prod_scoped_shadow_flag_enablement_pilot_passed": True,
+        "prod_scoped_shadow_flag_enablement_pilot_reviewed": True,
+        "prod_scoped_shadow_flag_enablement_pilot_accepted": True,
+        "prod_scoped_shadow_flag_enablement_authorization_requested": True,
+        "prod_scoped_shadow_flag_enablement_authorization_granted": True,
+        "prod_scoped_shadow_flag_enablement_authorized": True,
+        "missing_prod_scoped_shadow_flag_enablement_authorization": False,
+        "prod_scoped_shadow_live_execution_pilot_executed": True,
+        "prod_scoped_shadow_live_execution_pilot_passed": True,
+        "prod_scoped_shadow_live_execution_pilot_reviewed": True,
+        "prod_scoped_shadow_live_execution_pilot_accepted": True,
+        "prod_scoped_shadow_live_execution_authorization_requested": True,
+        "prod_scoped_shadow_live_execution_authorization_granted": True,
+        "prod_scoped_shadow_live_execution_authorized": True,
+        "missing_prod_scoped_shadow_live_execution_authorization": False,
+        "prod_scoped_shadow_live_read_only_pilot_executed": True,
+        "prod_scoped_shadow_live_read_only_pilot_passed": True,
+        "prod_scoped_shadow_live_read_only_pilot_reviewed": True,
+        "prod_scoped_shadow_live_read_only_pilot_accepted": True,
+        "prod_scoped_shadow_live_read_only_authorization_requested": True,
+        "prod_scoped_shadow_live_read_only_authorization_granted": True,
+        "prod_scoped_shadow_live_read_only_authorized": True,
+        "prod_scoped_shadow_live_read_only_execution_authorized": True,
+        "missing_prod_scoped_shadow_live_read_only_authorization": False,
+        "live_prod_source_reads_performed": True,
+        "prod_scoped_shadow_execution_authorized": False,
+        "online_shadow_execution_enabled": False,
+        "production_default_allowed": False,
+        "api_web_changes_allowed": False,
+        "user_visible_ranking_changed": False,
+        "writes_performed": False,
+        "runtime_writes_performed": False,
+    }
+    posture = deepcopy(dict(updated.get("posture") or {}))
+    posture.update(rollout_grant_fields)
+    updated["posture"] = posture
+
+    blockers_updated = deepcopy(dict(updated.get("shadow_and_production_blockers") or {}))
+    blockers_updated.update(rollout_grant_fields)
+    blockers_updated.update(
+        {
+            "blockers_cleared_by_limited_production_recommendation_rollout_grant": [
+                "missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization"
+            ],
+            "blockers_introduced_by_limited_production_recommendation_rollout_grant": [],
+            "blockers_unchanged_by_limited_production_recommendation_rollout_grant": True,
+        }
+    )
+    blockers_updated.pop("blockers_changed_by_limited_production_recommendation_rollout_grant", None)
+    updated["shadow_and_production_blockers"] = blockers_updated
+
+    updated["writes_performed"] = False
+    updated["runtime_writes_performed"] = False
+    updated["recommended_next_stage"] = POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_NEXT_STAGE
+    updated["caveats"] = _caveats(mode="post_limited_production_recommendation_rollout_grant")
+
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve plan section"
+        )
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve proof section"
+        )
+    if updated.get("execution") != execution_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve execution section"
+        )
+    if "limited_production_recommendation_rollout_run" in (updated.get("execution") or {}):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must not add execution rollout run slice"
+        )
+    if updated.get("review") != review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve review section"
+        )
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve legacy_artifacts_index"
+        )
+    for path, before_value in prior_authorization_slices.items():
+        if _get(updated, path) != before_value:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"limited production recommendation rollout grant must preserve {path}"
+            )
+    return updated
+
+
 def run_controlled_production_recommendation_pilot_ml_shadow_scorer_production_scoped_shadow_bundle(
     *,
     bundle_path: Path,
@@ -13213,6 +13736,7 @@ def _infer_plan_mode(
     expect_controlled_production_recommendation_pilot_run_filed: bool | None,
     expect_controlled_production_recommendation_pilot_review_filed: bool | None,
     expect_limited_production_recommendation_rollout_request_filed: bool | None,
+    expect_limited_production_recommendation_rollout_grant_filed: bool | None,
 ) -> str:
     explicit = [
         expectation is not None
@@ -13246,10 +13770,40 @@ def _infer_plan_mode(
             expect_controlled_production_recommendation_pilot_run_filed,
             expect_controlled_production_recommendation_pilot_review_filed,
             expect_limited_production_recommendation_rollout_request_filed,
+            expect_limited_production_recommendation_rollout_grant_filed,
         )
     ]
     if sum(explicit) > 1:
         raise MLShadowScorerProductionScopedShadowBundleError("plan/proof/pilot/live read-only expectations conflict")
+    if expect_limited_production_recommendation_rollout_grant_filed is True:
+        return "post_limited_production_recommendation_rollout_grant"
+    if expect_limited_production_recommendation_rollout_grant_filed is False:
+        if (
+            _get(
+                bundle,
+                "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted",
+            )
+            is True
+        ):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                "limited production recommendation rollout authorization grant must not be filed"
+            )
+        if (
+            _get(
+                bundle,
+                "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested",
+            )
+            is True
+        ):
+            return "post_limited_production_recommendation_rollout_request"
+        if (
+            _get(
+                bundle,
+                "review.prod_scoped_shadow_controlled_production_recommendation_pilot_reviewed",
+            )
+            is True
+        ):
+            return "post_controlled_production_recommendation_pilot_review"
     if expect_limited_production_recommendation_rollout_request_filed is True:
         return "post_limited_production_recommendation_rollout_request"
     if expect_limited_production_recommendation_rollout_request_filed is False:
@@ -14470,6 +15024,57 @@ def _infer_plan_mode(
         bundle,
         "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorized",
     )
+    if (
+        revision == POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_BUNDLE_REVISION
+        and pilot_request is True
+        and pilot_grant is True
+        and pilot_authorized is True
+        and pilot_harness_executed is True
+        and pilot_harness_passed is True
+        and pilot_harness_reviewed is True
+        and pilot_harness_accepted is True
+        and pilot_executed is True
+        and pilot_reviewed is True
+        and pilot_accepted is True
+        and live_read_only_request is True
+        and live_read_only_grant is True
+        and live_read_only_authorized is True
+        and live_read_only_pilot_executed is True
+        and live_read_only_pilot_passed is True
+        and live_read_only_pilot_reviewed is True
+        and live_read_only_pilot_accepted is True
+        and live_execution_request is True
+        and live_execution_grant is True
+        and live_execution_authorized is True
+        and live_execution_pilot_executed is True
+        and live_execution_pilot_passed is True
+        and live_execution_pilot_reviewed is True
+        and live_execution_pilot_accepted is True
+        and flag_enablement_request is True
+        and flag_enablement_grant is True
+        and flag_enablement_authorized is True
+        and flag_enablement_pilot_executed is True
+        and flag_enablement_pilot_passed is True
+        and flag_enablement_pilot_reviewed is True
+        and flag_enablement_pilot_accepted is True
+        and production_default_api_user_visible_request is True
+        and production_default_api_user_visible_grant is True
+        and production_default_api_user_visible_authorized is True
+        and production_default_api_user_visible_pilot_executed is True
+        and production_default_api_user_visible_pilot_passed is True
+        and production_default_api_user_visible_pilot_reviewed is True
+        and controlled_production_recommendation_request is True
+        and controlled_production_recommendation_grant is True
+        and controlled_production_recommendation_authorized is True
+        and controlled_production_recommendation_pilot_executed is True
+        and controlled_production_recommendation_pilot_passed is True
+        and controlled_production_recommendation_pilot_reviewed is True
+        and controlled_production_recommendation_pilot_accepted is True
+        and limited_production_recommendation_rollout_request is True
+        and limited_production_recommendation_rollout_grant is True
+        and limited_production_recommendation_rollout_authorized is True
+    ):
+        return "post_limited_production_recommendation_rollout_grant"
     if (
         revision == POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_BUNDLE_REVISION
         and pilot_request is True
@@ -20086,6 +20691,150 @@ def _verify_limited_production_recommendation_rollout_request_section(authorizat
     )
 
 
+def _verify_limited_production_recommendation_rollout_grant_section(authorization: Any) -> None:
+    if not isinstance(authorization, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("authorization must be an object")
+    request_authorization = deepcopy(dict(authorization))
+    request_authorization["prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted"] = False
+    request_authorization["prod_scoped_shadow_limited_production_recommendation_rollout_authorized"] = False
+    _verify_limited_production_recommendation_rollout_request_section(request_authorization)
+    _require_true(
+        "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested",
+        authorization.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted",
+        authorization.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted"),
+    )
+    _require_true(
+        "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorized",
+        authorization.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorized"),
+    )
+    grant_decision = authorization.get("limited_production_recommendation_rollout_grant_decision")
+    if not isinstance(grant_decision, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.limited_production_recommendation_rollout_grant_decision must be an object"
+        )
+    _require_equal(
+        "authorization.limited_production_recommendation_rollout_grant_decision.decision",
+        grant_decision.get("decision"),
+        "granted",
+    )
+    for field in ("owner", "granted_at", "expiry_date", "review_by"):
+        if not isinstance(grant_decision.get(field), str) or not grant_decision.get(field):
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.limited_production_recommendation_rollout_grant_decision.{field} "
+                "must be populated"
+            )
+    _validate_pilot_grant_review(
+        owner=str(grant_decision["owner"]),
+        second_reviewer=(
+            str(grant_decision["second_reviewer"]) if grant_decision.get("second_reviewer") is not None else None
+        ),
+        owner_documents_equivalent_review=(
+            str(grant_decision["owner_documents_equivalent_review"])
+            if grant_decision.get("owner_documents_equivalent_review") is not None
+            else None
+        ),
+    )
+
+    granted_scope = authorization.get("limited_production_recommendation_rollout_granted_scope")
+    if not isinstance(granted_scope, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.limited_production_recommendation_rollout_granted_scope must be an object"
+        )
+    _require_equal(
+        "authorization.limited_production_recommendation_rollout_granted_scope.authorization_scope",
+        granted_scope.get("authorization_scope"),
+        LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_SCOPE,
+    )
+    _require_equal(
+        "authorization.limited_production_recommendation_rollout_granted_scope.authorizes_for_chain_only",
+        granted_scope.get("authorizes_for_chain_only"),
+        list(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_AUTHORIZES_FOR_CHAIN_ONLY),
+    )
+    explicitly_still_not_included = granted_scope.get("explicitly_still_not_included")
+    if not isinstance(explicitly_still_not_included, list):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.limited_production_recommendation_rollout_granted_scope."
+            "explicitly_still_not_included must be a list"
+        )
+    for item in LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_STILL_NOT_INCLUDED:
+        if item not in explicitly_still_not_included:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                "authorization.limited_production_recommendation_rollout_granted_scope."
+                f"explicitly_still_not_included missing {item!r}"
+            )
+    _require_equal(
+        "authorization.limited_production_recommendation_rollout_granted_scope."
+        "grant_time_limited_production_recommendation_rollout_boundaries",
+        granted_scope.get("grant_time_limited_production_recommendation_rollout_boundaries"),
+        list(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_TIME_BOUNDARIES),
+    )
+    routes = granted_scope.get("route_path_allowlist")
+    if not isinstance(routes, list):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.limited_production_recommendation_rollout_granted_scope.route_path_allowlist "
+            "must be a list"
+        )
+    _require_equal(
+        "authorization.limited_production_recommendation_rollout_granted_scope.route_path_allowlist",
+        routes,
+        _resolve_limited_production_recommendation_rollout_route_path_allowlist(routes),
+    )
+    for field in ("canary_cohort", "maximum_exposure", "kill_switch_owner", "incident_owner"):
+        if not isinstance(granted_scope.get(field), str) or not granted_scope.get(field).strip():
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.limited_production_recommendation_rollout_granted_scope.{field} "
+                "must be populated"
+            )
+    monitoring_and_alerts = granted_scope.get("monitoring_and_alerts")
+    if not isinstance(monitoring_and_alerts, list):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.limited_production_recommendation_rollout_granted_scope.monitoring_and_alerts "
+            "must be a list"
+        )
+    _require_equal(
+        "authorization.limited_production_recommendation_rollout_granted_scope.monitoring_and_alerts",
+        monitoring_and_alerts,
+        _resolve_limited_production_recommendation_rollout_monitoring_and_alerts(monitoring_and_alerts),
+    )
+    _require_true(
+        "authorization.limited_production_recommendation_rollout_granted_scope."
+        "limited_production_recommendation_rollout_output_authorized_for_chain_only",
+        granted_scope.get("limited_production_recommendation_rollout_output_authorized_for_chain_only"),
+    )
+    _require_false(
+        "authorization.limited_production_recommendation_rollout_granted_scope.bridge_recommendations_included",
+        granted_scope.get("bridge_recommendations_included"),
+    )
+    _require_false(
+        "authorization.limited_production_recommendation_rollout_granted_scope."
+        "rollout_run_performed_at_grant_time",
+        granted_scope.get("rollout_run_performed_at_grant_time"),
+    )
+    _require_false(
+        "authorization.limited_production_recommendation_rollout_granted_scope."
+        "public_production_serving_enabled_at_grant_time",
+        granted_scope.get("public_production_serving_enabled_at_grant_time"),
+    )
+    _require_false(
+        "authorization.limited_production_recommendation_rollout_granted_scope."
+        "real_production_recommendation_output_to_public_users_at_grant_time",
+        granted_scope.get("real_production_recommendation_output_to_public_users_at_grant_time"),
+    )
+    authorization_explicitly_not_included = authorization.get("explicitly_not_included")
+    if not isinstance(authorization_explicitly_not_included, list):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "authorization.explicitly_not_included must be a list"
+        )
+    for item in LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_STILL_NOT_INCLUDED:
+        if item not in authorization_explicitly_not_included:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"authorization.explicitly_not_included missing {item!r}"
+            )
+
+
 def _without_limited_production_recommendation_rollout_request_payload(
     bundle: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -20101,10 +20850,12 @@ def _without_limited_production_recommendation_rollout_request_payload(
     authorization.pop("limited_production_recommendation_rollout_request_decision", None)
     authorization.pop("limited_production_recommendation_rollout_requested_scope", None)
     authorization.pop("limited_production_recommendation_rollout_grant_decision", None)
+    authorization.pop("limited_production_recommendation_rollout_granted_scope", None)
     if "explicitly_not_included" in authorization:
         authorization["explicitly_not_included"] = sorted(
             set(authorization["explicitly_not_included"])
             - set(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_ONLY_EXPLICITLY_NOT_INCLUDED)
+            - set(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_ONLY_EXPLICITLY_NOT_INCLUDED)
         )
     payload["authorization"] = authorization
 
@@ -20126,6 +20877,10 @@ def _without_limited_production_recommendation_rollout_request_payload(
     blockers.pop("blockers_cleared_by_limited_production_recommendation_rollout_request", None)
     blockers.pop("blockers_unchanged_by_limited_production_recommendation_rollout_request", None)
     blockers.pop("blockers_changed_by_limited_production_recommendation_rollout_request", None)
+    blockers.pop("blockers_cleared_by_limited_production_recommendation_rollout_grant", None)
+    blockers.pop("blockers_introduced_by_limited_production_recommendation_rollout_grant", None)
+    blockers.pop("blockers_unchanged_by_limited_production_recommendation_rollout_grant", None)
+    blockers.pop("blockers_changed_by_limited_production_recommendation_rollout_grant", None)
     payload["shadow_and_production_blockers"] = blockers
 
     payload["writes_performed"] = False
@@ -20266,6 +21021,226 @@ def _verify_limited_production_recommendation_rollout_request_payload(
     return {
         **base_result,
         "verification_mode": "post_limited_production_recommendation_rollout_request",
+        "bundle_revision": metadata.get("bundle_revision"),
+        "recommended_next_stage": bundle.get("recommended_next_stage"),
+    }
+
+
+def _without_limited_production_recommendation_rollout_grant_payload(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    payload = deepcopy(dict(bundle))
+    metadata = deepcopy(dict(payload.get("metadata") or {}))
+    metadata["bundle_revision"] = POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_BUNDLE_REVISION
+    payload["metadata"] = metadata
+
+    authorization = deepcopy(dict(payload.get("authorization") or {}))
+    authorization["prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested"] = True
+    authorization["prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted"] = False
+    authorization["prod_scoped_shadow_limited_production_recommendation_rollout_authorized"] = False
+    authorization.pop("limited_production_recommendation_rollout_grant_decision", None)
+    authorization.pop("limited_production_recommendation_rollout_granted_scope", None)
+    if "explicitly_not_included" in authorization:
+        authorization["explicitly_not_included"] = sorted(
+            set(authorization["explicitly_not_included"])
+            - set(LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_ONLY_EXPLICITLY_NOT_INCLUDED)
+        )
+    payload["authorization"] = authorization
+
+    limited_request_fields = {
+        "prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested": True,
+        "prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted": False,
+        "prod_scoped_shadow_limited_production_recommendation_rollout_authorized": False,
+        "missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization": True,
+    }
+    posture = deepcopy(dict(payload.get("posture") or {}))
+    posture.update(limited_request_fields)
+    payload["posture"] = posture
+
+    blockers = deepcopy(dict(payload.get("shadow_and_production_blockers") or {}))
+    blockers.update(limited_request_fields)
+    blockers.pop("blockers_cleared_by_limited_production_recommendation_rollout_grant", None)
+    blockers.pop("blockers_introduced_by_limited_production_recommendation_rollout_grant", None)
+    blockers.pop("blockers_unchanged_by_limited_production_recommendation_rollout_grant", None)
+    blockers.pop("blockers_changed_by_limited_production_recommendation_rollout_grant", None)
+    blockers["blockers_introduced_by_limited_production_recommendation_rollout_request"] = [
+        "missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization"
+    ]
+    blockers["blockers_cleared_by_limited_production_recommendation_rollout_request"] = []
+    blockers["blockers_unchanged_by_limited_production_recommendation_rollout_request"] = True
+    blockers.pop("blockers_changed_by_limited_production_recommendation_rollout_request", None)
+    payload["shadow_and_production_blockers"] = blockers
+
+    payload["writes_performed"] = False
+    payload["runtime_writes_performed"] = False
+    payload["recommended_next_stage"] = POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_NEXT_STAGE
+    payload["caveats"] = _caveats(mode="post_limited_production_recommendation_rollout_request")
+    return payload
+
+
+def _verify_limited_production_recommendation_rollout_grant_payload(
+    bundle: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    verify_local_pilot_files: bool,
+) -> dict[str, Any]:
+    metadata = _metadata(bundle, label="production-scoped-shadow bundle")
+    _require_equal(
+        "metadata.bundle_revision",
+        metadata.get("bundle_revision"),
+        POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_BUNDLE_REVISION,
+    )
+    base_result = verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        _without_limited_production_recommendation_rollout_grant_payload(bundle),
+        repo_root=repo_root,
+        expect_limited_production_recommendation_rollout_request_filed=True,
+        verify_local_pilot_files=verify_local_pilot_files,
+    )
+    _require_limited_production_recommendation_rollout_request_prior_chain(bundle)
+    authorization = bundle.get("authorization")
+    _verify_limited_production_recommendation_rollout_grant_section(authorization)
+    _verify_controlled_production_recommendation_pilot_review_section(bundle.get("review"))
+    _verify_controlled_production_recommendation_request_section(authorization)
+    _verify_controlled_production_recommendation_grant_section(authorization)
+    _verify_live_read_only_request_section(authorization)
+    _verify_live_read_only_grant_section(authorization)
+    _verify_live_execution_request_section(authorization)
+    _verify_live_execution_grant_section(authorization)
+    _verify_flag_enablement_request_section(authorization)
+    _verify_flag_enablement_grant_section(authorization)
+    _verify_production_default_api_user_visible_request_section(authorization)
+    _verify_production_default_api_user_visible_grant_section(authorization)
+
+    for section_name, section in (
+        ("posture", bundle.get("posture")),
+        ("shadow_and_production_blockers", bundle.get("shadow_and_production_blockers")),
+    ):
+        if not isinstance(section, Mapping):
+            raise MLShadowScorerProductionScopedShadowBundleError(f"{section_name} must be an object")
+        _require_true(
+            f"{section_name}.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested",
+            section.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorization_requested"),
+        )
+        _require_true(
+            f"{section_name}.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted",
+            section.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted"),
+        )
+        _require_true(
+            f"{section_name}.prod_scoped_shadow_limited_production_recommendation_rollout_authorized",
+            section.get("prod_scoped_shadow_limited_production_recommendation_rollout_authorized"),
+        )
+        _require_false(
+            f"{section_name}.missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization",
+            section.get("missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization"),
+        )
+        _require_limited_production_recommendation_rollout_request_section_chain(
+            section,
+            section_name=section_name,
+        )
+
+    blockers = bundle.get("shadow_and_production_blockers")
+    if not isinstance(blockers, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("shadow_and_production_blockers must be an object")
+    _require_equal(
+        "shadow_and_production_blockers.blockers_introduced_by_limited_production_recommendation_rollout_request",
+        blockers.get("blockers_introduced_by_limited_production_recommendation_rollout_request"),
+        ["missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization"],
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_cleared_by_limited_production_recommendation_rollout_request",
+        blockers.get("blockers_cleared_by_limited_production_recommendation_rollout_request"),
+        [],
+    )
+    _require_true(
+        "shadow_and_production_blockers.blockers_unchanged_by_limited_production_recommendation_rollout_request",
+        blockers.get("blockers_unchanged_by_limited_production_recommendation_rollout_request"),
+    )
+    if "blockers_changed_by_limited_production_recommendation_rollout_request" in blockers:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "shadow_and_production_blockers.blockers_changed_by_limited_production_recommendation_rollout_request "
+            "must not be used"
+        )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_cleared_by_limited_production_recommendation_rollout_grant",
+        blockers.get("blockers_cleared_by_limited_production_recommendation_rollout_grant"),
+        ["missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization"],
+    )
+    _require_equal(
+        "shadow_and_production_blockers.blockers_introduced_by_limited_production_recommendation_rollout_grant",
+        blockers.get("blockers_introduced_by_limited_production_recommendation_rollout_grant"),
+        [],
+    )
+    _require_true(
+        "shadow_and_production_blockers.blockers_unchanged_by_limited_production_recommendation_rollout_grant",
+        blockers.get("blockers_unchanged_by_limited_production_recommendation_rollout_grant"),
+    )
+    if "blockers_changed_by_limited_production_recommendation_rollout_grant" in blockers:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "shadow_and_production_blockers.blockers_changed_by_limited_production_recommendation_rollout_grant "
+            "must not be used"
+        )
+    _require_equal(
+        "recommended_next_stage",
+        bundle.get("recommended_next_stage"),
+        POST_LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_NEXT_STAGE,
+    )
+    _require_false("writes_performed", bundle.get("writes_performed"))
+    _require_false("runtime_writes_performed", bundle.get("runtime_writes_performed"))
+    _require_false(
+        "plan.feature_flag_iam_config_requirements.prod_scoped_flag_enablement_authorized_now",
+        _get(bundle, "plan.feature_flag_iam_config_requirements.prod_scoped_flag_enablement_authorized_now"),
+    )
+    _require_false(
+        "plan.production_default_api_user_visible_separation.production_default_allowed",
+        _get(bundle, "plan.production_default_api_user_visible_separation.production_default_allowed"),
+    )
+    _require_false(
+        "plan.production_default_api_user_visible_separation.api_web_changes_allowed",
+        _get(bundle, "plan.production_default_api_user_visible_separation.api_web_changes_allowed"),
+    )
+    _require_false(
+        "plan.production_default_api_user_visible_separation.user_visible_ranking_changed",
+        _get(bundle, "plan.production_default_api_user_visible_separation.user_visible_ranking_changed"),
+    )
+    _require_named_flags_not_true(
+        bundle,
+        (
+            "prod_scoped_shadow_execution_authorized",
+            "online_shadow_execution_enabled",
+            "production_default_allowed",
+            "api_web_changes_allowed",
+            "user_visible_ranking_changed",
+            "writes_performed",
+            "runtime_writes_performed",
+        ),
+    )
+    execution = bundle.get("execution")
+    if not isinstance(execution, Mapping):
+        raise MLShadowScorerProductionScopedShadowBundleError("execution must be an object")
+    if "limited_production_recommendation_rollout_run" in execution:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.limited_production_recommendation_rollout_run must not be present "
+            "at post_limited_production_recommendation_rollout_grant"
+        )
+    if execution.get("prod_scoped_shadow_limited_production_recommendation_rollout_executed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.prod_scoped_shadow_limited_production_recommendation_rollout_executed "
+            "must not be true at post_limited_production_recommendation_rollout_grant"
+        )
+    if execution.get("prod_scoped_shadow_limited_production_recommendation_rollout_passed") is True:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "execution.prod_scoped_shadow_limited_production_recommendation_rollout_passed "
+            "must not be true at post_limited_production_recommendation_rollout_grant"
+        )
+    caveats = bundle.get("caveats")
+    if not isinstance(caveats, list):
+        raise MLShadowScorerProductionScopedShadowBundleError("caveats must be a list")
+    for caveat in _caveats(mode="post_limited_production_recommendation_rollout_grant"):
+        if caveat not in caveats:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"post_limited_production_recommendation_rollout_grant caveats missing {caveat!r}"
+            )
+    return {
+        **base_result,
+        "verification_mode": "post_limited_production_recommendation_rollout_grant",
         "bundle_revision": metadata.get("bundle_revision"),
         "recommended_next_stage": bundle.get("recommended_next_stage"),
     }
@@ -20735,6 +21710,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
     expect_controlled_production_recommendation_pilot_run_filed: bool | None = None,
     expect_controlled_production_recommendation_pilot_review_filed: bool | None = None,
     expect_limited_production_recommendation_rollout_request_filed: bool | None = None,
+    expect_limited_production_recommendation_rollout_grant_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
@@ -20790,7 +21766,16 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
         expect_limited_production_recommendation_rollout_request_filed=(
             expect_limited_production_recommendation_rollout_request_filed
         ),
+        expect_limited_production_recommendation_rollout_grant_filed=(
+            expect_limited_production_recommendation_rollout_grant_filed
+        ),
     )
+    if mode == "post_limited_production_recommendation_rollout_grant":
+        return _verify_limited_production_recommendation_rollout_grant_payload(
+            bundle,
+            repo_root=root,
+            verify_local_pilot_files=verify_local_pilot_files,
+        )
     if mode == "post_limited_production_recommendation_rollout_request":
         return _verify_limited_production_recommendation_rollout_request_payload(
             bundle,
@@ -22111,6 +23096,7 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
     expect_controlled_production_recommendation_pilot_run_filed: bool | None = None,
     expect_controlled_production_recommendation_pilot_review_filed: bool | None = None,
     expect_limited_production_recommendation_rollout_request_filed: bool | None = None,
+    expect_limited_production_recommendation_rollout_grant_filed: bool | None = None,
     verify_local_pilot_files: bool = True,
 ) -> dict[str, Any]:
     payload = _load_json_object(Path(bundle_path).resolve())
@@ -22163,6 +23149,9 @@ def verify_ml_shadow_scorer_production_scoped_shadow_bundle(
         ),
         expect_limited_production_recommendation_rollout_request_filed=(
             expect_limited_production_recommendation_rollout_request_filed
+        ),
+        expect_limited_production_recommendation_rollout_grant_filed=(
+            expect_limited_production_recommendation_rollout_grant_filed
         ),
         verify_local_pilot_files=verify_local_pilot_files,
     )
@@ -22320,7 +23309,19 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         == LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_REQUEST_SCOPE
         else None
     )
-    if limited_production_recommendation_rollout_request:
+    limited_production_recommendation_rollout_grant = (
+        authorization.get("limited_production_recommendation_rollout_grant_decision")
+        if isinstance(authorization.get("limited_production_recommendation_rollout_grant_decision"), Mapping)
+        and isinstance(authorization.get("limited_production_recommendation_rollout_granted_scope"), Mapping)
+        and authorization["limited_production_recommendation_rollout_granted_scope"].get("authorization_scope")
+        == LIMITED_PRODUCTION_RECOMMENDATION_ROLLOUT_GRANT_SCOPE
+        else None
+    )
+    if limited_production_recommendation_rollout_grant:
+        summary = (
+            "This bundle records the limited production recommendation rollout authorization grant paperwork only; it does not run the rollout, enable runtime or public production serving, change production default/API/web/user-visible behavior, perform writes, or include bridge recommendations or broad/global/fleet rollout."
+        )
+    elif limited_production_recommendation_rollout_request:
         summary = (
             "This bundle records the limited production recommendation rollout authorization request paperwork only; it grants no authorization, enables no runtime or public production serving, changes no production default/API/web/user-visible behavior, performs no writes, and keeps bridge recommendations and broad/global/fleet rollout out of scope."
         )
@@ -23231,6 +24232,53 @@ def markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(payload: Mapp
         lines.extend(f"- {item}" for item in requested_scope["future_grant_would_require"])
         lines.extend(["", "## Limited Production Recommendation Rollout Explicitly Not Included", ""])
         lines.extend(f"- {item}" for item in requested_scope["explicitly_not_included"])
+        lines.append("")
+    if limited_production_recommendation_rollout_grant:
+        grant_decision = limited_production_recommendation_rollout_grant
+        granted_scope = authorization["limited_production_recommendation_rollout_granted_scope"]
+        lines.extend(
+            [
+                "## Limited Production Recommendation Rollout Authorization Grant",
+                "",
+                f"- Decision: `{grant_decision['decision']}`",
+                f"- Owner: {grant_decision['owner']}",
+                f"- Granted at: {grant_decision['granted_at']}",
+                f"- Expiry date: {grant_decision['expiry_date']}",
+                f"- Review by: {grant_decision['review_by']}",
+                f"- Grant notes: {grant_decision.get('grant_notes')}",
+                f"- Second reviewer: {grant_decision.get('second_reviewer')}",
+                f"- Owner equivalent review: {grant_decision.get('owner_documents_equivalent_review')}",
+                f"- Granted scope: `{granted_scope['authorization_scope']}`",
+                f"- Missing limited rollout authorization: {posture.get('missing_prod_scoped_shadow_limited_production_recommendation_rollout_authorization')}",
+                f"- Limited rollout authorization granted: {authorization.get('prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted')}",
+                f"- Limited rollout authorized: {authorization.get('prod_scoped_shadow_limited_production_recommendation_rollout_authorized')}",
+                f"- Output authorized for chain only: {granted_scope.get('limited_production_recommendation_rollout_output_authorized_for_chain_only')}",
+                f"- Rollout run performed at grant time: {granted_scope.get('rollout_run_performed_at_grant_time')}",
+                f"- Public production serving enabled at grant time: {granted_scope.get('public_production_serving_enabled_at_grant_time')}",
+                f"- Real production recommendation output to public users at grant time: {granted_scope.get('real_production_recommendation_output_to_public_users_at_grant_time')}",
+                f"- Bridge recommendations included: {granted_scope.get('bridge_recommendations_included')}",
+                f"- Canary cohort: {granted_scope.get('canary_cohort')}",
+                f"- Maximum exposure: {granted_scope.get('maximum_exposure')}",
+                f"- Kill switch owner: {granted_scope.get('kill_switch_owner')}",
+                f"- Incident owner: {granted_scope.get('incident_owner')}",
+                f"- Next stage: `{payload['recommended_next_stage']}`",
+                "",
+                "## Limited Production Recommendation Rollout Grant Route Allowlist",
+                "",
+            ]
+        )
+        lines.extend(f"- `{item}`" for item in granted_scope["route_path_allowlist"])
+        lines.extend(["", "## Limited Production Recommendation Rollout Grant Monitoring And Alerts", ""])
+        lines.extend(f"- {item}" for item in granted_scope["monitoring_and_alerts"])
+        lines.extend(["", "## Limited Production Recommendation Rollout Grant Authorizes For Chain Only", ""])
+        lines.extend(f"- {item}" for item in granted_scope["authorizes_for_chain_only"])
+        lines.extend(["", "## Limited Production Recommendation Rollout Grant Boundaries", ""])
+        lines.extend(
+            f"- {item}"
+            for item in granted_scope["grant_time_limited_production_recommendation_rollout_boundaries"]
+        )
+        lines.extend(["", "## Limited Production Recommendation Rollout Grant Explicitly Still Not Included", ""])
+        lines.extend(f"- {item}" for item in granted_scope["explicitly_still_not_included"])
         lines.append("")
     if live_read_only_grant:
         grant_decision = live_read_only_grant
@@ -24502,6 +25550,150 @@ def request_limited_production_recommendation_rollout_ml_shadow_scorer_productio
         updated,
         repo_root=root,
         expect_limited_production_recommendation_rollout_request_filed=True,
+        verify_local_pilot_files=False,
+    )
+    bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    bundle_path.with_name("bundle.md").write_text(
+        markdown_from_ml_shadow_scorer_production_scoped_shadow_bundle(updated),
+        encoding="utf-8",
+    )
+    return updated
+
+
+def grant_limited_production_recommendation_rollout_ml_shadow_scorer_production_scoped_shadow_bundle(
+    *,
+    bundle_path: Path,
+    owner: str = "Matt Maitland",
+    second_reviewer: str | None = None,
+    owner_documents_equivalent_review: str | None = None,
+    expiry_date: str = "2026-08-27",
+    review_by: str | None = None,
+    grant_notes: str | None = None,
+    route_path_allowlist: list[str] | None = None,
+    canary_cohort: str = "bounded allowlisted internal/canary cohort only",
+    maximum_exposure: str = "limited canary exposure only; no broad/fleet rollout",
+    kill_switch_owner: str = "Matt Maitland",
+    monitoring_and_alerts: list[str] | None = None,
+    incident_owner: str = "Matt Maitland",
+    generated_at: str | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    root = Path(repo_root).resolve() if repo_root is not None else default_repo_root()
+    bundle_path = Path(bundle_path).resolve()
+    payload = _load_json_object(bundle_path)
+    if (
+        _get(
+            payload,
+            "authorization.prod_scoped_shadow_limited_production_recommendation_rollout_authorization_granted",
+        )
+        is True
+    ):
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout authorization grant has already been filed"
+        )
+    verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        payload,
+        repo_root=root,
+        expect_limited_production_recommendation_rollout_request_filed=True,
+        verify_local_pilot_files=False,
+    )
+    plan_before = deepcopy(payload.get("plan"))
+    proof_before = deepcopy(payload.get("proof"))
+    execution_before = deepcopy(payload.get("execution"))
+    review_before = deepcopy(payload.get("review"))
+    legacy_index_before = deepcopy(_get(payload, "metadata.legacy_artifacts_index"))
+    prior_authorization_slices = {
+        path: deepcopy(_get(payload, path))
+        for path in (
+            "authorization.request_decision",
+            "authorization.requested_scope",
+            "authorization.grant_decision",
+            "authorization.granted_scope",
+            "authorization.live_read_only_grant_decision",
+            "authorization.live_read_only_granted_scope",
+            "authorization.live_execution_request_decision",
+            "authorization.live_execution_requested_scope",
+            "authorization.live_execution_grant_decision",
+            "authorization.live_execution_granted_scope",
+            "authorization.flag_enablement_request_decision",
+            "authorization.flag_enablement_requested_scope",
+            "authorization.flag_enablement_grant_decision",
+            "authorization.flag_enablement_granted_scope",
+            "authorization.production_default_api_user_visible_request_decision",
+            "authorization.production_default_api_user_visible_requested_scope",
+            "authorization.production_default_api_user_visible_grant_decision",
+            "authorization.production_default_api_user_visible_granted_scope",
+            "authorization.controlled_production_recommendation_request_decision",
+            "authorization.controlled_production_recommendation_requested_scope",
+            "authorization.controlled_production_recommendation_grant_decision",
+            "authorization.controlled_production_recommendation_granted_scope",
+            "authorization.limited_production_recommendation_rollout_request_decision",
+            "authorization.limited_production_recommendation_rollout_requested_scope",
+        )
+    }
+    prior_review_decisions = {
+        path: deepcopy(_get(payload, path))
+        for path in (
+            "review.pilot_harness_review_decision",
+            "review.pilot_review_decision",
+            "review.live_read_only_pilot_review_decision",
+            "review.live_execution_pilot_review_decision",
+            "review.flag_enablement_pilot_review_decision",
+            "review.production_default_api_user_visible_pilot_review_decision",
+            "review.controlled_production_recommendation_pilot_review_decision",
+        )
+    }
+
+    updated = apply_production_scoped_shadow_limited_production_recommendation_rollout_authorization_grant(
+        payload,
+        owner=owner,
+        second_reviewer=second_reviewer,
+        owner_documents_equivalent_review=owner_documents_equivalent_review,
+        expiry_date=expiry_date,
+        review_by=review_by,
+        grant_notes=grant_notes,
+        route_path_allowlist=route_path_allowlist,
+        canary_cohort=canary_cohort,
+        maximum_exposure=maximum_exposure,
+        kill_switch_owner=kill_switch_owner,
+        monitoring_and_alerts=monitoring_and_alerts,
+        incident_owner=incident_owner,
+        generated_at=generated_at,
+    )
+    if updated.get("plan") != plan_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve plan section"
+        )
+    if updated.get("proof") != proof_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve proof section"
+        )
+    if updated.get("execution") != execution_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve execution section"
+        )
+    if updated.get("review") != review_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve review section"
+        )
+    if _get(updated, "metadata.legacy_artifacts_index") != legacy_index_before:
+        raise MLShadowScorerProductionScopedShadowBundleError(
+            "limited production recommendation rollout grant must preserve legacy_artifacts_index"
+        )
+    for path, before_value in prior_authorization_slices.items():
+        if _get(updated, path) != before_value:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"limited production recommendation rollout grant must preserve {path}"
+            )
+    for path, before_value in prior_review_decisions.items():
+        if _get(updated, path) != before_value:
+            raise MLShadowScorerProductionScopedShadowBundleError(
+                f"limited production recommendation rollout grant must preserve {path}"
+            )
+    verify_ml_shadow_scorer_production_scoped_shadow_bundle_payload(
+        updated,
+        repo_root=root,
+        expect_limited_production_recommendation_rollout_grant_filed=True,
         verify_local_pilot_files=False,
     )
     bundle_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")

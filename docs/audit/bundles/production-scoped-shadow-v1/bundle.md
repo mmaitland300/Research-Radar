@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-This bundle records the limited production recommendation rollout authorization request paperwork only; it grants no authorization, enables no runtime or public production serving, changes no production default/API/web/user-visible behavior, performs no writes, and keeps bridge recommendations and broad/global/fleet rollout out of scope.
+This bundle records the limited production recommendation rollout authorization grant paperwork only; it does not run the rollout, enable runtime or public production serving, change production default/API/web/user-visible behavior, perform writes, or include bridge recommendations or broad/global/fleet rollout.
 
-- Bundle revision: 29
+- Bundle revision: 30
 - Production-scoped plan defined: True
 - Production-scoped proof passed: True
 - Missing production-scoped shadow proof: False
@@ -51,13 +51,13 @@ This bundle records the limited production recommendation rollout authorization 
 - Controlled production recommendation pilot reviewed: True
 - Controlled production recommendation pilot accepted: True
 - Limited production recommendation rollout authorization requested: True
-- Limited production recommendation rollout authorization granted: False
-- Limited production recommendation rollout authorized: False
+- Limited production recommendation rollout authorization granted: True
+- Limited production recommendation rollout authorized: True
 - Missing flag enablement authorization: False
 - Missing live execution authorization: False
 - Live production source reads performed: True
 - Online shadow execution enabled: False
-- Recommended next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Recommended next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Pinned Identity
 
@@ -314,7 +314,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Review notes: Accepted bounded live execution pilot evidence review.
 - Live execution pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Live Execution Pilot Review Checks
 
@@ -366,7 +366,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Flag Enablement Future Grant Requirements
 
@@ -412,7 +412,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Missing flag enablement authorization: False
 - Live execution authorized: True
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Flag Enablement Grant Authorizes For Chain Only
 
@@ -505,7 +505,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Review notes: Accepted rev 19 flag enablement pilot evidence review
 - Flag enablement pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Flag Enablement Pilot Review Checks
 
@@ -563,7 +563,7 @@ This bundle records the limited production recommendation rollout authorization 
 - API/web changes allowed: False
 - User-visible ranking changed: False
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Production Default/API/User-Visible Future Grant Requirements
 
@@ -619,7 +619,7 @@ This bundle records the limited production recommendation rollout authorization 
 - API/web changes allowed: False
 - User-visible ranking changed: False
 - Online shadow execution enabled: False
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Production Default/API/User-Visible Grant Authorizes For Chain Only
 
@@ -726,7 +726,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Review notes: Accepted rev 23 production default/API/user-visible pilot evidence; paperwork-only review.
 - Production default/API/user-visible pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Production Default/API/User-Visible Pilot Review Checks
 
@@ -796,7 +796,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Production default allowed: False
 - API/web changes allowed: False
 - User-visible ranking changed: False
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Controlled Production Recommendation Future Grant Requirements
 
@@ -850,7 +850,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Production default allowed: False
 - API/web changes allowed: False
 - User-visible ranking changed: False
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Controlled Production Recommendation Grant Authorizes For Chain Only
 
@@ -978,7 +978,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Review notes: Accepted paperwork-only review of recorded rev 27 controlled production recommendation pilot evidence; no runtime rerun, DB connection, shadow-runs reads, API route call, HTTP bind, production default change, broad rollout, public production serving, or bridge recommendation authorization.
 - Controlled production recommendation pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Controlled Production Recommendation Pilot Review Checks
 
@@ -1048,7 +1048,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Real production recommendation output to public users at request time: False
 - Public production serving enabled at request time: False
 - Bridge recommendations included: False
-- Missing limited rollout authorization: True
+- Missing limited rollout authorization: False
 
 ## Limited Production Recommendation Rollout Future Grant Requirements
 
@@ -1073,6 +1073,79 @@ This bundle records the limited production recommendation rollout authorization 
 - user-visible ranking changes at request time
 - broad/global/fleet rollout
 - bridge recommendations
+- DB writes/DDL
+- paper_scores/ranking_runs writes
+- refit/training
+- label ingest
+
+## Limited Production Recommendation Rollout Authorization Grant
+
+- Decision: `granted`
+- Owner: Matt Maitland
+- Granted at: 2026-05-31T18:00:00Z
+- Expiry date: 2026-08-27
+- Review by: 2026-08-27
+- Grant notes: Limited production recommendation rollout grant paperwork only; no rollout execution, public serving, runtime enablement, production default change, API/web change, user-visible ranking change, writes, refit/training, label ingest, or bridge recommendations at grant time.
+- Second reviewer: None
+- Owner equivalent review: Owner documents equivalent limited production recommendation rollout grant review; grant paperwork only and no rollout execution, runtime enablement, public serving, production default change, API/web change, user-visible ranking change, or bridge recommendations.
+- Granted scope: `production_scoped_shadow_limited_production_recommendation_rollout_grant_paperwork_only`
+- Missing limited rollout authorization: False
+- Limited rollout authorization granted: True
+- Limited rollout authorized: True
+- Output authorized for chain only: True
+- Rollout run performed at grant time: False
+- Public production serving enabled at grant time: False
+- Real production recommendation output to public users at grant time: False
+- Bridge recommendations included: False
+- Canary cohort: bounded allowlisted internal/canary cohort only
+- Maximum exposure: limited canary exposure only; no broad/fleet rollout
+- Kill switch owner: Matt Maitland
+- Incident owner: Matt Maitland
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
+
+## Limited Production Recommendation Rollout Grant Route Allowlist
+
+- `/api/v1/recommendations/ranked`
+
+## Limited Production Recommendation Rollout Grant Monitoring And Alerts
+
+- bounded rollout dashboard monitored by owner
+- limited rollout alert routed to incident owner
+
+## Limited Production Recommendation Rollout Grant Authorizes For Chain Only
+
+- bounded limited production recommendation rollout authorization paperwork complete
+- bounded limited/canary production recommendation rollout may be executed in a separate rev 31 run milestone under the grant contract
+- bounded limited rollout review may be recorded after the separate rev 31 run milestone
+
+## Limited Production Recommendation Rollout Grant Boundaries
+
+- exact route/path allowlist recorded at grant time
+- exact canary cohort recorded at grant time
+- maximum exposure cap recorded at grant time
+- kill switch owner recorded at grant time
+- rollback/flag-off drill required before rollout execution
+- monitoring and alert destinations recorded at grant time
+- incident owner recorded at grant time
+- bridge recommendations excluded
+- no rollout run performed at grant time
+- no execution.limited_production_recommendation_rollout_run slice at grant time
+- no production_default_allowed/API/user-visible/global flags changed at grant time
+- no DB writes/refit/training/label ingest at grant time
+- expiry_date and review_by recorded at grant time
+
+## Limited Production Recommendation Rollout Grant Explicitly Still Not Included
+
+- rollout execution at grant time
+- public production recommendation serving at grant time
+- broad/global/fleet rollout
+- bridge recommendations
+- global online shadow execution
+- prod_scoped_shadow_execution_authorized
+- online_shadow_execution_enabled
+- production_default_allowed
+- api_web_changes_allowed
+- user_visible_ranking_changed
 - DB writes/DDL
 - paper_scores/ranking_runs writes
 - refit/training
@@ -1152,7 +1225,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Review notes: Reviewed recorded production-scoped live read-only pilot evidence; accepted for live execution authorization request preparation.
 - Live read-only pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Live Read-Only Pilot Review Checks
 
@@ -1285,7 +1358,7 @@ This bundle records the limited production recommendation rollout authorization 
 - Review notes: Reviewed bounded 528-work audit-artifact pilot evidence; accepted for live read-only authorization request preparation.
 - Pilot accepted: True
 - Failed review checks: None
-- Next stage: `record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+- Next stage: `run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Production-Scoped Pilot Review Checks
 
@@ -1329,6 +1402,7 @@ This bundle records the limited production recommendation rollout authorization 
 - fleet-wide flag enablement
 - global enablement
 - global flag enablement
+- global online shadow execution
 - global/fleet flag enablement
 - global/fleet online shadow execution
 - label ingest
@@ -1352,11 +1426,13 @@ This bundle records the limited production recommendation rollout authorization 
 - production default/API/user-visible recommendation output at grant time
 - production recommendation output at request time
 - production_default_allowed
+- public production recommendation serving at grant time
 - public production recommendation serving at request time
 - real production recommendation output at grant time
 - real production recommendation output at request time
 - real production recommendation output to users or clients at grant time
 - refit/training
+- rollout execution at grant time
 - runtime enablement at grant time
 - runtime enablement at request time
 - user-visible ranking
@@ -1375,7 +1451,7 @@ This bundle records the limited production recommendation rollout authorization 
 
 ## Recommended Next Stage
 
-`record_production_scoped_online_shadow_limited_production_recommendation_rollout_authorization_grant_v1`
+`run_production_scoped_online_shadow_limited_production_recommendation_rollout_v1`
 
 ## Caveats
 
@@ -1497,3 +1573,9 @@ This bundle records the limited production recommendation rollout authorization 
 - Does not enable broad/global/fleet rollout or bridge recommendations.
 - Does not perform DB writes/DDL, paper_scores/ranking_runs writes, refit/training, or label ingest.
 - Future grant still requires exact route/path allowlist, canary cohort, owner approval, kill switch, rollback drill, monitoring, expiry_date, and review_by.
+- Grant milestone only; does not run the limited production recommendation rollout.
+- Does not enable runtime, public serving, broad/global/fleet rollout, or bridge recommendations at grant time.
+- Does not change production default, API/web behavior, or user-visible ranking at grant time.
+- Does not set online_shadow_execution_enabled or prod_scoped_shadow_execution_authorized.
+- Does not perform DB writes/DDL, paper_scores/ranking_runs writes, refit/training, or label ingest.
+- Rollout execution remains a separate rev 31 milestone under the grant boundaries.
