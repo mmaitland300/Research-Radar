@@ -319,12 +319,10 @@ function EmergingHowPanel({
     <div className="ranking-how-panel">
       <h3>{expl.headline}</h3>
       {scorerOrdered ? (
-        <>
-          <p className="muted-inline">Order selected by bounded ML scorer rollout.</p>
-          <p className="ranking-how-meta">
-            <strong>Displayed score metadata.</strong>
-          </p>
-        </>
+        <p className="muted-inline">
+          Order selected by bounded ML scorer rollout. The bullets below describe materialized row
+          metadata from the ranking run, not the final visible order.
+        </p>
       ) : null}
       <ul>
         {expl.bullets.map((b) => (

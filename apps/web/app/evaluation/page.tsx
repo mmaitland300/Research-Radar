@@ -444,6 +444,13 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
           candidate pool under three orderings: materialized ranking, citation-sorted, and
           date-sorted. Nothing here claims human relevance - only distributional checks on short
           lists.
+          {family === "emerging" ? (
+            <>
+              {" "}
+              For Emerging, this compares the materialized <code>paper_scores</code> order, not
+              the bounded ML scorer reorder.
+            </>
+          ) : null}
         </p>
         {data ? (
           <div className="hero-metrics" aria-label="Evaluation summary">

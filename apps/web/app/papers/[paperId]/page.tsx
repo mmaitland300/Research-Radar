@@ -548,9 +548,10 @@ export default async function PaperDetailPage({
           {ranking?.kind === "ok" ? (
             <>
               <p className="hero-lead dossier-ranking-lead">
-                This block uses the same resolved ranking run as Recommended. Family rank is
-                global within each family, but rank is only shown when this paper lands inside the
-                surfaced top {ranking.data.top_n}.
+                This block uses the same resolved ranking run as Recommended. Ranks here are
+                materialized <code>paper_scores</code> ranks; live Emerging may be reordered by the
+                bounded ML scorer. Family rank is global within each family, but rank is only shown
+                when this paper lands inside the surfaced top {ranking.data.top_n}.
               </p>
               <div className="hero-metrics hero-metrics-compact" aria-label="Ranking dossier summary">
                 <article className="metric-card">
@@ -719,6 +720,10 @@ export default async function PaperDetailPage({
               </div>
             ) : null}
           </div>
+          <p className="muted-inline">
+            Similar papers use a separately configured neighbor embedding; it may differ from the
+            embedding version used by the current ranked run.
+          </p>
           {similar.kind === "disabled" ? (
             <p className="muted-inline">
               Configure an active embedding version to enable embedding-backed
