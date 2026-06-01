@@ -7477,6 +7477,43 @@ def main() -> None:
         default=20260531,
         help="Random seed for StratifiedKFold and LogisticRegression (default: 20260531)",
     )
+    ml_bounded_hybrid_bridge_eval_parser = subparsers.add_parser(
+        "ml-offline-bounded-hybrid-bridge-eval-v1",
+        help=(
+            "Evaluate offline bounded bridge hybrids on the v12 bridge negative-mining labeled slice "
+            "(file-only, OOF probabilities only, no DB writes)"
+        ),
+    )
+    ml_bounded_hybrid_bridge_eval_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v12.json",
+    )
+    ml_bounded_hybrid_bridge_eval_parser.add_argument(
+        "--bridge-scorer",
+        required=True,
+        help="Path to docs/audit/ml-offline-bridge-recommendable-scorer-v1.json",
+    )
+    ml_bounded_hybrid_bridge_eval_parser.add_argument(
+        "--readiness-matrix",
+        required=True,
+        help="Path to docs/audit/ml-label-readiness-matrix-v9.json",
+    )
+    ml_bounded_hybrid_bridge_eval_parser.add_argument(
+        "--embeddings-provenance",
+        required=True,
+        help="Path to second snapshot embeddings provenance JSON",
+    )
+    ml_bounded_hybrid_bridge_eval_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write bounded hybrid bridge eval JSON",
+    )
+    ml_bounded_hybrid_bridge_eval_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
 
     ml_blind_family_context_parser = subparsers.add_parser(
         "ml-blind-family-context-eval",
@@ -8230,6 +8267,31 @@ def main() -> None:
             )
         except MLOfflineBridgeRecommendableScorerError as e:
             print(f"ml-offline-bridge-recommendable-scorer-v1: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-bounded-hybrid-bridge-eval-v1":
+        from pipeline.ml_offline_bounded_hybrid_bridge_eval import (
+            MLOfflineBoundedHybridBridgeEvalError,
+            run_ml_offline_bounded_hybrid_bridge_eval_cli,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_offline_bounded_hybrid_bridge_eval_cli(
+                label_dataset_path=Path(args.label_dataset),
+                bridge_scorer_path=Path(args.bridge_scorer),
+                readiness_matrix_path=Path(args.readiness_matrix),
+                embeddings_provenance_path=Path(args.embeddings_provenance),
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLOfflineBoundedHybridBridgeEvalError as e:
+            print(f"ml-offline-bounded-hybrid-bridge-eval-v1: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
