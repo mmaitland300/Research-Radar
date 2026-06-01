@@ -7434,6 +7434,49 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_bridge_recommendable_scorer_parser = subparsers.add_parser(
+        "ml-offline-bridge-recommendable-scorer-v1",
+        help=(
+            "Train/evaluate an offline diagnostic bridge_recommendable scorer on the v12 "
+            "bridge negative-mining slice (SELECT-only embeddings, no writes)"
+        ),
+    )
+    ml_bridge_recommendable_scorer_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v12.json",
+    )
+    ml_bridge_recommendable_scorer_parser.add_argument(
+        "--readiness-matrix",
+        required=True,
+        help="Path to docs/audit/ml-label-readiness-matrix-v9.json",
+    )
+    ml_bridge_recommendable_scorer_parser.add_argument(
+        "--embeddings-provenance",
+        required=True,
+        help="Path to second snapshot embeddings provenance JSON",
+    )
+    ml_bridge_recommendable_scorer_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write offline bridge recommendable scorer JSON",
+    )
+    ml_bridge_recommendable_scorer_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_bridge_recommendable_scorer_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Read-only Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+    ml_bridge_recommendable_scorer_parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=20260531,
+        help="Random seed for StratifiedKFold and LogisticRegression (default: 20260531)",
+    )
 
     ml_blind_family_context_parser = subparsers.add_parser(
         "ml-blind-family-context-eval",
@@ -8159,6 +8202,34 @@ def main() -> None:
             )
         except MLLabelReadinessMatrixError as e:
             print(f"ml-label-readiness-matrix: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-bridge-recommendable-scorer-v1":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_offline_bridge_recommendable_scorer import (
+            MLOfflineBridgeRecommendableScorerError,
+            run_ml_offline_bridge_recommendable_scorer_cli,
+        )
+
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_offline_bridge_recommendable_scorer_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                readiness_matrix_path=Path(args.readiness_matrix),
+                embeddings_provenance_path=Path(args.embeddings_provenance),
+                output_json=out_json,
+                markdown_output=out_md,
+                random_seed=int(args.random_seed),
+            )
+        except MLOfflineBridgeRecommendableScorerError as e:
+            print(f"ml-offline-bridge-recommendable-scorer-v1: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:

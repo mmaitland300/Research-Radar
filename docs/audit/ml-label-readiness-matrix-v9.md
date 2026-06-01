@@ -6,9 +6,9 @@ Read-only summary of **manual label coverage** and **offline baseline readiness*
 
 - **label_dataset_path:** `docs/audit/ml-label-dataset-v12.json`
 - **label_dataset_version:** `ml-label-dataset-v12`
-- **label_dataset_sha256:** `47b89742b68f557aa38103d44793383c6ec874624595c58a4eac8bc1811cada2`
+- **label_dataset_sha256:** `74d614103544d25409a4278efd861d6dd74e277fcd94323f7f839c5128e0e963`
 - **duplicate_row_id_skipped (global):** 0
-- **generated_at:** `2026-06-01T05:04:08Z`
+- **generated_at:** `2026-06-01T12:41:47Z`
 
 ## Caveats
 
