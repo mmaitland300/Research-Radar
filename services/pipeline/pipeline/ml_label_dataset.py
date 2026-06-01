@@ -29,7 +29,12 @@ VERBATIM_CAVEATS = (
 
 _WORK_ID_RE = re.compile(r"(?:openalex\.org/)?(W\d+)\s*$", re.IGNORECASE)
 
-DERIVED_TARGET_FIELDS = ("good_or_acceptable", "surprising_or_useful", "bridge_like_yes_or_partial")
+DERIVED_TARGET_FIELDS = (
+    "good_or_acceptable",
+    "surprising_or_useful",
+    "bridge_like_yes_or_partial",
+    "bridge_recommendable",
+)
 
 BLIND_REVIEW_POOL_VARIANT = "ml_blind_snapshot_audit"
 BLIND_SNAPSHOT_REVIEW_V2_WORKSHEET_VERSION = "ml-blind-snapshot-review-v2"
@@ -64,6 +69,13 @@ SHADOW_GENERALIZATION_RANKING_RUN_ID = "rank-83787b91ef"
 SHADOW_GENERALIZATION_FAMILY = "emerging"
 SHADOW_GENERALIZATION_CANDIDATE_SHA = "f0f00911608dae99f71bd0394640bd9554315eee0c98c68c4bba836ae4320fcc"
 SHADOW_GENERALIZATION_EXPECTED_ROWS = 168
+BRIDGE_NEGATIVE_MINING_WORKSHEET_VERSION = "ml-bridge-negative-mining-v1"
+BRIDGE_NEGATIVE_MINING_REVIEW_POOL_VARIANT = "ml_bridge_negative_mining_audit"
+BRIDGE_NEGATIVE_MINING_CONTEXT_ARTIFACT_TYPE = "ml_bridge_negative_mining_v1_context"
+BRIDGE_NEGATIVE_MINING_RANKING_RUN_ID = "rank-83787b91ef"
+BRIDGE_NEGATIVE_MINING_FAMILY = "bridge"
+BRIDGE_NEGATIVE_MINING_EXPECTED_ROWS = 70
+BRIDGE_NEGATIVE_MINING_SAMPLE_SEED = 20260531
 ALLOWED_RELEVANCE_LABELS = {"good", "acceptable", "miss", "irrelevant"}
 ALLOWED_NOVELTY_LABELS = {"surprising", "useful", "obvious", "not_useful", "neither"}
 ALLOWED_BRIDGE_LIKE_LABELS = {"yes", "partial", "no", "not_applicable"}
@@ -184,6 +196,17 @@ def bridge_like_yes_or_partial(bridge_like_label: str | None) -> bool | None:
         return False
     if t in {"not_applicable", "not applicable"}:
         return None
+    return None
+
+
+def bridge_recommendable_from_derived(
+    good_or_acceptable_value: bool | None,
+    bridge_like_yes_or_partial_value: bool | None,
+) -> bool | None:
+    if good_or_acceptable_value is True and bridge_like_yes_or_partial_value is True:
+        return True
+    if good_or_acceptable_value is False or bridge_like_yes_or_partial_value is False:
+        return False
     return None
 
 
@@ -321,6 +344,9 @@ def parse_manual_review_worksheet(
             family_inferred = True
         else:
             family = None
+        goa = good_or_acceptable(rel_l)
+        sou = surprising_or_useful(nov_l)
+        blyop = bridge_like_yes_or_partial(br_l)
         out: dict[str, Any] = {
             "dataset_version": dataset_version,
             "row_id": row_id,
@@ -343,9 +369,10 @@ def parse_manual_review_worksheet(
             "reviewer_notes": notes,
             "label_provenance": "manual_review_worksheet_csv",
             "split": "audit_only",
-            "good_or_acceptable": good_or_acceptable(rel_l),
-            "surprising_or_useful": surprising_or_useful(nov_l),
-            "bridge_like_yes_or_partial": bridge_like_yes_or_partial(br_l),
+            "good_or_acceptable": goa,
+            "surprising_or_useful": sou,
+            "bridge_like_yes_or_partial": blyop,
+            "bridge_recommendable": bridge_recommendable_from_derived(goa, blyop),
         }
         if family_inferred:
             out["family_inferred"] = True
@@ -606,6 +633,34 @@ def _read_shadow_generalization_sidecar_rows(
         row_id = _norm_ws(row.get("row_id"))
         if not row_id:
             raise MLLabelDatasetError(f"{context_sidecar_path} shadow-generalization sidecar row {idx} has blank row_id")
+        if row_id in by_id:
+            raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
+        by_id[row_id] = row
+    return payload, by_id
+
+
+def _read_bridge_negative_mining_sidecar_rows(
+    context_sidecar_path: Path,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    payload = _load_json_object(context_sidecar_path)
+    artifact_type = _norm_ws(payload.get("artifact_type"))
+    if artifact_type != BRIDGE_NEGATIVE_MINING_CONTEXT_ARTIFACT_TYPE:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} artifact_type={artifact_type!r} does not match "
+            f"{BRIDGE_NEGATIVE_MINING_CONTEXT_ARTIFACT_TYPE!r}"
+        )
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise MLLabelDatasetError(f"{context_sidecar_path} missing rows array")
+    by_id: dict[str, dict[str, Any]] = {}
+    for idx, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise MLLabelDatasetError(f"{context_sidecar_path} bridge negative-mining sidecar row {idx} is not an object")
+        row_id = _norm_ws(row.get("row_id"))
+        if not row_id:
+            raise MLLabelDatasetError(
+                f"{context_sidecar_path} bridge negative-mining sidecar row {idx} has blank row_id"
+            )
         if row_id in by_id:
             raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
         by_id[row_id] = row
@@ -1773,6 +1828,14 @@ def _appended_label_distribution(rows: list[dict[str, Any]]) -> dict[str, dict[s
         counts = Counter(_bool_key(row.get(field)) for row in rows)
         out[field] = {key: counts.get(key, 0) for key in ("true", "false", "null")}
     return out
+
+
+def _backfill_bridge_recommendable(rows: list[dict[str, Any]]) -> None:
+    for row in rows:
+        row["bridge_recommendable"] = bridge_recommendable_from_derived(
+            row.get("good_or_acceptable"),
+            row.get("bridge_like_yes_or_partial"),
+        )
 
 
 def build_ml_label_dataset_v8_transfer_gap_ingest(
@@ -3110,6 +3173,428 @@ def build_ml_label_dataset_v11_shadow_generalization_ingest(
     )
 
 
+def build_ml_label_dataset_v12_bridge_negative_mining_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    dataset_version: str = "ml-label-dataset-v12",
+) -> dict[str, Any]:
+    """Build v12 as v11 rows plus bridge negative-mining labels for offline scorer work."""
+
+    root = repo_root.resolve()
+    base_path = base_dataset_path.resolve()
+    blank_path = blank_worksheet_path.resolve()
+    labeled_path = labeled_worksheet_path.resolve()
+    sidecar_path = context_sidecar_path.resolve()
+    conflict_path = conflict_policy_path.resolve()
+    input_paths = [base_path, blank_path, labeled_path, sidecar_path, conflict_path]
+    for path in input_paths:
+        if not path.is_file():
+            raise MLLabelDatasetError(f"required input not found: {path}")
+
+    base_payload = _load_json_object(base_path)
+    base_metadata = base_payload.get("metadata") if isinstance(base_payload.get("metadata"), dict) else {}
+    base_version = _norm_ws(base_payload.get("dataset_version") or base_metadata.get("dataset_version"))
+    if base_version != "ml-label-dataset-v11":
+        raise MLLabelDatasetError(f"{base_path} dataset_version={base_version!r}; expected 'ml-label-dataset-v11'")
+    base_rows_raw = base_payload.get("rows")
+    if not isinstance(base_rows_raw, list):
+        raise MLLabelDatasetError(f"{base_path} missing rows array")
+    base_rows: list[dict[str, Any]] = copy.deepcopy(base_rows_raw)
+    _backfill_bridge_recommendable(base_rows)
+
+    blank_fieldnames, blank_rows = _read_csv_rows(blank_path)
+    labeled_fieldnames, labeled_rows = _read_csv_rows(labeled_path)
+    if len(labeled_rows) != BRIDGE_NEGATIVE_MINING_EXPECTED_ROWS:
+        raise MLLabelDatasetError(
+            f"{labeled_path} must contain exactly {BRIDGE_NEGATIVE_MINING_EXPECTED_ROWS} "
+            f"bridge negative-mining labeled data rows"
+        )
+    _validate_labeled_matches_blank_template(
+        blank_path=blank_path,
+        blank_fieldnames=blank_fieldnames,
+        blank_rows=blank_rows,
+        labeled_path=labeled_path,
+        labeled_fieldnames=labeled_fieldnames,
+        labeled_rows=labeled_rows,
+    )
+
+    sidecar_payload, sidecar_by_id = _read_bridge_negative_mining_sidecar_rows(sidecar_path)
+    labeled_ids = {_norm_ws(r.get("row_id")) for r in labeled_rows}
+    if set(sidecar_by_id) != labeled_ids:
+        missing = sorted(labeled_ids - set(sidecar_by_id))
+        extra = sorted(set(sidecar_by_id) - labeled_ids)
+        raise MLLabelDatasetError(
+            f"bridge negative-mining sidecar row_id set differs from labeled CSV; "
+            f"missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    sidecar_provenance = sidecar_payload.get("provenance")
+    if not isinstance(sidecar_provenance, dict):
+        raise MLLabelDatasetError("bridge negative-mining sidecar missing provenance object")
+    sidecar_ws_version = _norm_ws(sidecar_provenance.get("worksheet_version"))
+    if sidecar_ws_version != BRIDGE_NEGATIVE_MINING_WORKSHEET_VERSION:
+        raise MLLabelDatasetError(
+            f"bridge negative-mining sidecar worksheet_version={sidecar_ws_version!r} does not match "
+            f"{BRIDGE_NEGATIVE_MINING_WORKSHEET_VERSION!r}"
+        )
+    sidecar_pool = _norm_ws(sidecar_provenance.get("review_pool_variant"))
+    if sidecar_pool != BRIDGE_NEGATIVE_MINING_REVIEW_POOL_VARIANT:
+        raise MLLabelDatasetError(
+            f"bridge negative-mining sidecar review_pool_variant={sidecar_pool!r} does not match "
+            f"{BRIDGE_NEGATIVE_MINING_REVIEW_POOL_VARIANT!r}"
+        )
+    sidecar_seed = sidecar_provenance.get("sample_seed")
+    if not isinstance(sidecar_seed, int) or isinstance(sidecar_seed, bool):
+        raise MLLabelDatasetError("bridge negative-mining sidecar provenance.sample_seed must be an integer")
+    if sidecar_seed != BRIDGE_NEGATIVE_MINING_SAMPLE_SEED:
+        raise MLLabelDatasetError(
+            f"bridge negative-mining sidecar sample_seed={sidecar_seed!r} does not match "
+            f"{BRIDGE_NEGATIVE_MINING_SAMPLE_SEED!r}"
+        )
+    if _norm_ws(sidecar_provenance.get("ranking_run_id")) != BRIDGE_NEGATIVE_MINING_RANKING_RUN_ID:
+        raise MLLabelDatasetError("bridge negative-mining sidecar ranking_run_id mismatch")
+
+    base_sha = sha256_file(base_path)
+    sidecar_base_sha = _norm_ws(sidecar_provenance.get("label_dataset_sha256"))
+    if sidecar_base_sha != base_sha:
+        raise MLLabelDatasetError(
+            "bridge negative-mining sidecar label_dataset_sha256 does not match base dataset SHA; "
+            f"sidecar={sidecar_base_sha!r}, base={base_sha!r}"
+        )
+
+    source_rel = _repo_relative(labeled_path, repo_root=root)
+    source_sha = sha256_file(labeled_path)
+    bridge_rows: list[dict[str, Any]] = []
+    seen_row_ids: set[str] = set()
+    seen_work_ids: set[str] = set()
+    for source_row_number, row in enumerate(labeled_rows, start=2):
+        row_id = _norm_ws(row.get("row_id"))
+        if row_id in seen_row_ids:
+            raise MLLabelDatasetError(f"duplicate bridge negative-mining labeled row_id {row_id}")
+        seen_row_ids.add(row_id)
+        _validate_nonempty_allowed_labels(row, source_row_number=source_row_number)
+
+        worksheet_version = _norm_ws(row.get("worksheet_version"))
+        if worksheet_version != BRIDGE_NEGATIVE_MINING_WORKSHEET_VERSION:
+            raise MLLabelDatasetError(
+                f"bridge negative-mining labeled row {source_row_number} has worksheet_version={worksheet_version!r}"
+            )
+        review_pool_variant = _norm_ws(row.get("review_pool_variant"))
+        if review_pool_variant != BRIDGE_NEGATIVE_MINING_REVIEW_POOL_VARIANT:
+            raise MLLabelDatasetError(
+                f"bridge negative-mining labeled row {source_row_number} has review_pool_variant={review_pool_variant!r}"
+            )
+
+        paper_id = _norm_ws(row.get("paper_id"))
+        openalex_work_id = _norm_ws(row.get("openalex_work_id"))
+        work_id = _norm_ws(row.get("work_id"))
+        expected_work_id = paper_id_to_work_id(paper_id)
+        if not expected_work_id:
+            raise MLLabelDatasetError(
+                f"bridge negative-mining labeled row {source_row_number} has non-OpenAlex paper_id={paper_id!r}"
+            )
+        if work_id != expected_work_id or openalex_work_id != expected_work_id:
+            raise MLLabelDatasetError(
+                "bridge negative-mining labeled row "
+                f"{source_row_number} must keep OpenAlex W token in work_id/openalex_work_id"
+            )
+        if work_id in seen_work_ids:
+            raise MLLabelDatasetError(f"duplicate bridge negative-mining work_id {work_id}")
+        seen_work_ids.add(work_id)
+
+        expected_row_id = _sha256_text(f"{worksheet_version}|{sidecar_seed}|{paper_id}")
+        if row_id != expected_row_id:
+            raise MLLabelDatasetError(
+                "bridge negative-mining labeled row "
+                f"{source_row_number} row_id does not match worksheet_version|sample_seed|paper_id"
+            )
+
+        context_row = copy.deepcopy(sidecar_by_id[row_id])
+        if _norm_ws(context_row.get("paper_id")) != paper_id:
+            raise MLLabelDatasetError(f"bridge negative-mining sidecar paper_id mismatch for row_id={row_id}")
+        if _norm_ws(context_row.get("openalex_work_id")) != openalex_work_id:
+            raise MLLabelDatasetError(f"bridge negative-mining sidecar openalex_work_id mismatch for row_id={row_id}")
+        if _norm_ws(context_row.get("ranking_run_id")) != BRIDGE_NEGATIVE_MINING_RANKING_RUN_ID:
+            raise MLLabelDatasetError(f"bridge negative-mining sidecar ranking_run_id mismatch for row_id={row_id}")
+        if _norm_ws(context_row.get("family")) != BRIDGE_NEGATIVE_MINING_FAMILY:
+            raise MLLabelDatasetError(f"bridge negative-mining sidecar family mismatch for row_id={row_id}")
+        context_seed = context_row.get("sample_seed", sidecar_seed)
+        if context_seed != sidecar_seed:
+            raise MLLabelDatasetError(f"bridge negative-mining sidecar sample_seed mismatch for row_id={row_id}")
+
+        rel_l = _raw_csv_or_none(row, "relevance_label")
+        nov_l = _raw_csv_or_none(row, "novelty_label")
+        br_l = _raw_csv_or_none(row, "bridge_like_label")
+        notes = _raw_csv_or_none(row, "reviewer_notes")
+        goa = good_or_acceptable(rel_l)
+        sou = surprising_or_useful(nov_l)
+        blyop = bridge_like_yes_or_partial(br_l)
+        family_rank = context_row.get("family_rank")
+        out: dict[str, Any] = {
+            "dataset_version": dataset_version,
+            "row_id": row_id,
+            "paper_id": paper_id,
+            "work_id": work_id,
+            "title": _norm_ws(row.get("title")) or None,
+            "year": _norm_ws(row.get("year")) or None,
+            "citation_count": _norm_ws(row.get("citation_count")) or None,
+            "source_slug": _norm_ws(row.get("source_slug")) or None,
+            "topics": _norm_ws(row.get("topics")) or None,
+            "abstract_preview": _norm_ws(row.get("abstract_preview")) or None,
+            "ranking_run_id": context_row.get("ranking_run_id"),
+            "ranking_version": context_row.get("ranking_version"),
+            "corpus_snapshot_version": context_row.get("corpus_snapshot_version"),
+            "embedding_version": context_row.get("embedding_version"),
+            "cluster_version": context_row.get("cluster_version"),
+            "family": context_row.get("family"),
+            "review_pool_variant": review_pool_variant,
+            "rank": family_rank,
+            "rank_in_family": family_rank,
+            "family_rank": family_rank,
+            "experiment_rank": None,
+            "final_score": context_row.get("final_score"),
+            "semantic_score": context_row.get("semantic_score"),
+            "citation_velocity_score": context_row.get("citation_velocity_score"),
+            "topic_growth_score": context_row.get("topic_growth_score"),
+            "bridge_score": context_row.get("bridge_score"),
+            "diversity_penalty": context_row.get("diversity_penalty"),
+            "bridge_eligible": context_row.get("bridge_eligible"),
+            "reason_short": context_row.get("reason_short"),
+            "sample_reason": _norm_ws(row.get("sample_reason")) or context_row.get("sample_reason") or None,
+            "source_worksheet_path": source_rel,
+            "source_worksheet_sha256": source_sha,
+            "source_row_number": source_row_number,
+            "relevance_label": rel_l,
+            "novelty_label": nov_l,
+            "bridge_like_label": br_l,
+            "reviewer_notes": notes,
+            "label_provenance": "manual_review_worksheet_csv",
+            "split": "audit_only",
+            "good_or_acceptable": goa,
+            "surprising_or_useful": sou,
+            "bridge_like_yes_or_partial": blyop,
+            "bridge_recommendable": bridge_recommendable_from_derived(goa, blyop),
+            "worksheet_version": worksheet_version,
+            "sample_seed": sidecar_seed,
+            "openalex_work_id": openalex_work_id,
+            "internal_work_id": context_row.get("internal_work_id"),
+            "bridge_negative_mining_context": context_row,
+        }
+        bridge_rows.append(out)
+
+    label_distribution = _appended_label_distribution(bridge_rows)
+    expected_bridge_like = {"yes": 13, "partial": 25, "no": 32}
+    expected_relevance = {"good": 33, "acceptable": 27, "miss": 6, "irrelevant": 4}
+    bridge_like_counts = label_distribution["bridge_like_label"]
+    relevance_counts = label_distribution["relevance_label"]
+    if {k: bridge_like_counts.get(k, 0) for k in expected_bridge_like} != expected_bridge_like:
+        raise MLLabelDatasetError(
+            "bridge negative-mining bridge_like_label counts mismatch; "
+            f"observed={bridge_like_counts}, expected={expected_bridge_like}"
+        )
+    if {k: relevance_counts.get(k, 0) for k in expected_relevance} != expected_relevance:
+        raise MLLabelDatasetError(
+            "bridge negative-mining relevance_label counts mismatch; "
+            f"observed={relevance_counts}, expected={expected_relevance}"
+        )
+
+    bridge_positive = sum(1 for row in bridge_rows if row.get("bridge_recommendable") is True)
+    bridge_negative = sum(1 for row in bridge_rows if row.get("bridge_recommendable") is False)
+    if bridge_positive != 38 or bridge_negative != 32:
+        raise MLLabelDatasetError(
+            "bridge negative-mining bridge_recommendable counts mismatch; "
+            f"observed={bridge_positive}/{bridge_negative}, expected=38/32"
+        )
+    hard_negative_count = sum(
+        1
+        for row in bridge_rows
+        if _norm_label_token(row.get("relevance_label")) in {"good", "acceptable"}
+        and _norm_label_token(row.get("bridge_like_label")) == "no"
+    )
+    if hard_negative_count != 22:
+        raise MLLabelDatasetError(
+            f"bridge negative-mining hard negative count mismatch; observed={hard_negative_count}, expected=22"
+        )
+    bridge_like_positive_relevance_leak_count = sum(
+        1
+        for row in bridge_rows
+        if _norm_label_token(row.get("bridge_like_label")) in {"yes", "partial"}
+        and row.get("good_or_acceptable") is False
+    )
+    if bridge_like_positive_relevance_leak_count != 0:
+        raise MLLabelDatasetError(
+            "bridge negative-mining bridge-like positive relevance leakage detected; "
+            f"observed={bridge_like_positive_relevance_leak_count}"
+        )
+
+    sample_reason_counts: Counter[str] = Counter()
+    for row in bridge_rows:
+        sample_reason_counts[str(row.get("sample_reason") or "(null)")] += 1
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    source_worksheets = list(base_payload.get("source_worksheets") or [])
+    source_worksheets.append(source_rel)
+    source_sha256 = dict(base_payload.get("source_worksheet_sha256") or {})
+    source_sha256[source_rel] = source_sha
+    row_counts_by_source = dict(base_metadata.get("row_counts_by_source") or {})
+    row_counts_by_source[source_rel] = len(labeled_rows)
+    included_by_source = dict(base_metadata.get("included_labeled_row_counts_by_source") or {})
+    included_by_source[source_rel] = len(bridge_rows)
+    blank_rows_by_source = dict(base_metadata.get("skipped_blank_row_counts_by_source") or {})
+    blank_rows_by_source[source_rel] = 0
+    skipped_blank_worksheets = list(base_metadata.get("skipped_blank_worksheets") or [])
+    skipped_malformed_rows = copy.deepcopy(base_metadata.get("skipped_malformed_rows") or [])
+    manual_review_dir_rel = str(base_metadata.get("manual_review_dir") or "docs/audit/manual-review")
+
+    previous_ingests = {
+        key: copy.deepcopy(value)
+        for key, value in base_metadata.items()
+        if key.endswith("_ingest") or key.startswith("previous_")
+    }
+    blank_sha = sha256_file(blank_path)
+    sidecar_sha = sha256_file(sidecar_path)
+    conflict_sha = sha256_file(conflict_path)
+    inputs = [
+        _input_record("base_dataset", base_path, repo_root=root),
+        _input_record("blank_worksheet", blank_path, repo_root=root),
+        _input_record("labeled_worksheet", labeled_path, repo_root=root),
+        _input_record("context_sidecar", sidecar_path, repo_root=root),
+        _input_record("conflict_policy", conflict_path, repo_root=root),
+    ]
+
+    extra_metadata = {
+        **previous_ingests,
+        "dataset_version": dataset_version,
+        "previous_dataset_version": base_version,
+        "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+        "previous_dataset_sha256": base_sha,
+        "inputs": inputs,
+        "bridge_negative_mining_v1_ingest": {
+            "row_count_appended": len(bridge_rows),
+            "base_row_count": len(base_rows),
+            "output_row_count": len(base_rows) + len(bridge_rows),
+            "worksheet_version": BRIDGE_NEGATIVE_MINING_WORKSHEET_VERSION,
+            "review_pool_variant": BRIDGE_NEGATIVE_MINING_REVIEW_POOL_VARIANT,
+            "context_artifact_type": BRIDGE_NEGATIVE_MINING_CONTEXT_ARTIFACT_TYPE,
+            "ranking_run_id": BRIDGE_NEGATIVE_MINING_RANKING_RUN_ID,
+            "family": BRIDGE_NEGATIVE_MINING_FAMILY,
+            "sample_seed": BRIDGE_NEGATIVE_MINING_SAMPLE_SEED,
+            "label_distribution": label_distribution,
+            "bridge_recommendable_positive_count": bridge_positive,
+            "bridge_recommendable_negative_count": bridge_negative,
+            "hard_negative_count": hard_negative_count,
+            "bridge_like_positive_relevance_leak_count": bridge_like_positive_relevance_leak_count,
+            "sample_reason_counts": dict(sorted(sample_reason_counts.items())),
+            "context_preserved_field_name": "bridge_negative_mining_context",
+            "bridge_negative_mining_context_fields_preserved": (
+                "entire sidecar row object preserved verbatim under bridge_negative_mining_context"
+            ),
+            "copied_sidecar_context_fields": [
+                "ranking_run_id",
+                "ranking_version",
+                "corpus_snapshot_version",
+                "embedding_version",
+                "cluster_version",
+                "family",
+                "family_rank",
+                "internal_work_id",
+                "final_score",
+                "semantic_score",
+                "citation_velocity_score",
+                "topic_growth_score",
+                "bridge_score",
+                "diversity_penalty",
+                "bridge_eligible",
+                "reason_short",
+            ],
+            "row_id_policy": {
+                "source": "CSV canonical; sidecar parity required",
+                "formula": "sha256(worksheet_version|sample_seed|paper_id)",
+                "stable_row_id_formula_validated": True,
+                "csv_row_id_set_equals_sidecar_row_id_set": True,
+            },
+            "source_row_number_convention": "physical CSV line including header; first data row = 2",
+            "blank_worksheet_path": _repo_relative(blank_path, repo_root=root),
+            "blank_worksheet_sha256": blank_sha,
+            "labeled_worksheet_path": source_rel,
+            "labeled_worksheet_sha256": source_sha,
+            "context_sidecar_path": _repo_relative(sidecar_path, repo_root=root),
+            "context_sidecar_sha256": sidecar_sha,
+            "conflict_policy_path": _repo_relative(conflict_path, repo_root=root),
+            "conflict_policy_sha256": conflict_sha,
+            "previous_dataset_version": base_version,
+            "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+            "previous_dataset_sha256": base_sha,
+            "sidecar_provenance": copy.deepcopy(sidecar_provenance),
+            "validation_summary": {
+                "labeled_rows_found": len(labeled_rows),
+                "expected_labeled_rows": BRIDGE_NEGATIVE_MINING_EXPECTED_ROWS,
+                "blank_and_labeled_row_id_sets_matched": True,
+                "non_review_columns_unchanged": True,
+                "review_columns_required_non_empty": True,
+                "closed_label_sets_validated": True,
+                "sidecar_artifact_type_matched": True,
+                "sidecar_row_ids_matched": True,
+                "context_sidecar_provenance_matched": True,
+                "sidecar_base_dataset_sha256_matched": True,
+                "stable_row_id_formula_validated": True,
+                "duplicate_row_id_count": 0,
+                "duplicate_work_id_count": 0,
+                "sidecar_family_ranking_metadata_copied": True,
+                "bridge_recommendable_backfilled_on_all_rows": True,
+                "conflict_policy_recorded_as_provenance_only": True,
+            },
+            "conflict_report_policy": {
+                "policy_path": _repo_relative(conflict_path, repo_root=root),
+                "policy_sha256": conflict_sha,
+                "silent_deduplication_used": False,
+                "base_duplicate_paper_id_count": (base_metadata.get("duplicate_paper_id_report") or {}).get(
+                    "duplicate_paper_id_count",
+                    0,
+                )
+                if isinstance(base_metadata.get("duplicate_paper_id_report"), dict)
+                else 0,
+                "base_conflicting_label_count": (base_metadata.get("conflicting_label_report") or {}).get(
+                    "conflicting_label_count",
+                    0,
+                )
+                if isinstance(base_metadata.get("conflicting_label_report"), dict)
+                else 0,
+                "post_ingest_duplicate_report_location": "metadata.duplicate_paper_id_report",
+                "post_ingest_conflict_report_location": "metadata.conflicting_label_report",
+                "post_ingest_derived_target_conflict_report_location": "metadata.derived_target_conflict_report",
+            },
+            "recommended_next_stage": "train_offline_bridge_recommendable_scorer_v1",
+        },
+    }
+    extra_caveats = [
+        "Bridge negative-mining labels are offline label-data plumbing for an offline bridge scorer only.",
+        "Training experiments should filter to review_pool_variant=ml_bridge_negative_mining_audit unless a later experiment defines another slice policy.",
+        "This v12 ingest is not validation, production readiness, serving authorization, training output, or a production/runtime behavior change.",
+        "Global duplicate paper_id overlaps are reported, not silently deduplicated.",
+    ]
+    return _assemble_dataset_payload_from_rows(
+        dataset_version=dataset_version,
+        generated_at=generated_at,
+        source_worksheets=source_worksheets,
+        source_sha256=source_sha256,
+        all_rows=base_rows + bridge_rows,
+        manual_review_dir_rel=manual_review_dir_rel,
+        row_counts_by_source=row_counts_by_source,
+        included_by_source=included_by_source,
+        blank_rows_by_source=blank_rows_by_source,
+        skipped_blank_worksheets=skipped_blank_worksheets,
+        skipped_malformed_rows=skipped_malformed_rows,
+        extra_metadata=extra_metadata,
+        extra_caveats=extra_caveats,
+    )
+
+
 def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     meta = payload["metadata"]
     dup = meta["duplicate_paper_id_report"]
@@ -3123,7 +3608,18 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     v9_ingest = meta.get("fresh_hybrid_v1_ingest")
     v10_ingest = meta.get("fresh_hybrid_positive_topup_v1_ingest")
     v11_ingest = meta.get("shadow_generalization_second_surface_v1_ingest")
-    if isinstance(v11_ingest, dict):
+    v12_ingest = meta.get("bridge_negative_mining_v1_ingest")
+    if isinstance(v12_ingest, dict):
+        regenerate_command = (
+            "Machine-readable export: regenerate via `python -m pipeline.cli "
+            "ml-label-dataset-v12-bridge-negative-mining-ingest "
+            f"--base-dataset {v12_ingest['previous_dataset_path']} "
+            f"--blank-worksheet {v12_ingest['blank_worksheet_path']} "
+            f"--labeled-worksheet {v12_ingest['labeled_worksheet_path']} "
+            f"--context-sidecar {v12_ingest['context_sidecar_path']} "
+            f"--conflict-policy {v12_ingest['conflict_policy_path']} --output <path>.json`."
+        )
+    elif isinstance(v11_ingest, dict):
         regenerate_command = (
             "Machine-readable export: regenerate via `python -m pipeline.cli "
             "ml-label-dataset-v11-shadow-generalization-ingest "
@@ -3250,6 +3746,7 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "| `good_or_acceptable` | `true` if `relevance_label` is one of good, acceptable; `false` if one of miss, irrelevant; else `null` |",
         "| `surprising_or_useful` | `true` if `novelty_label` is one of surprising, useful; `false` if one of obvious, not_useful, neither; else `null` |",
         "| `bridge_like_yes_or_partial` | `true` if `bridge_like_label` is one of yes, partial; `false` if `no`; `null` if missing, empty, `not_applicable`, or unknown token |",
+        "| `bridge_recommendable` | `true` when `good_or_acceptable` and `bridge_like_yes_or_partial` are both `true`; `false` when either is `false`; else `null` |",
         "",
         "## Known biases",
         "",
@@ -3328,6 +3825,36 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "keyed sidecar object under nested `shadow_generalization_second_surface_context`. The sidecar is provenance "
         "only; labels are metric evidence and are never scorer features.",
         "",
+        "## Bridge negative-mining context fields",
+        "",
+        "Rows from worksheets with `review_pool_variant=ml_bridge_negative_mining_audit` are bridge-family labels from "
+        "`rank-83787b91ef` created to make an **offline bridge scorer trainable**. They preserve family/ranking metadata "
+        "from the sidecar and keep the full row-id keyed sidecar object under nested `bridge_negative_mining_context`. "
+        "Training should filter to `review_pool_variant == ml_bridge_negative_mining_audit` unless a later experiment "
+        "defines another slice policy. This is **not validation, production readiness, or a serving change**.",
+        "",
+        *(
+            [
+                "### Bridge negative-mining v1 ingest",
+                "",
+                f"- **Rows appended:** {v12_ingest['row_count_appended']}",
+                "- **Legacy rows:** copied from v11 with deterministic `bridge_recommendable` backfilled onto every row.",
+                f"- **Final dataset rows:** {v12_ingest['output_row_count']}",
+                f"- **Ranking run / family:** `{v12_ingest['ranking_run_id']}` / `{v12_ingest['family']}`",
+                f"- **Review pool:** `{v12_ingest['review_pool_variant']}`",
+                f"- **Raw relevance distribution:** `{v12_ingest['label_distribution']['relevance_label']}`",
+                f"- **Raw bridge-like distribution:** `{v12_ingest['label_distribution']['bridge_like_label']}`",
+                f"- **bridge_recommendable positives / negatives:** {v12_ingest['bridge_recommendable_positive_count']} / {v12_ingest['bridge_recommendable_negative_count']}",
+                f"- **Hard negatives:** {v12_ingest['hard_negative_count']}",
+                f"- **Bridge-like positive relevance leakage:** {v12_ingest['bridge_like_positive_relevance_leak_count']}",
+                "- **Offline scorer training slice:** filter to `review_pool_variant == ml_bridge_negative_mining_audit` unless a later experiment defines another slice policy.",
+                "- **Scope:** offline label-data plumbing only; this is not validation, production readiness, or a serving change.",
+                f"- **Next step:** `{v12_ingest['recommended_next_stage']}`.",
+                "",
+            ]
+            if isinstance(v12_ingest, dict)
+            else []
+        ),
         *(
             [
                 "### Shadow generalization second surface v1 ingest",
@@ -3413,7 +3940,8 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "",
         "## Derived target conflicts",
         "",
-        "For each derived boolean target (`good_or_acceptable`, `surprising_or_useful`, `bridge_like_yes_or_partial`), "
+        "For each derived boolean target (`good_or_acceptable`, `surprising_or_useful`, "
+        "`bridge_like_yes_or_partial`, `bridge_recommendable`), "
         "we group by `paper_id` and compare non-null values only. A conflict is recorded when the same paper has **both** "
         "`true` and `false` for that target across rows (e.g. `surprising` vs `obvious` both map into `surprising_or_useful` "
         "and therefore do **not** count as a conflict on that target).",
@@ -3664,6 +4192,35 @@ def write_ml_label_dataset_v11_shadow_generalization_ingest(
         labeled_worksheet_path=labeled_worksheet_path,
         context_sidecar_path=context_sidecar_path,
         generalization_second_surface_path=generalization_second_surface_path,
+        conflict_policy_path=conflict_policy_path,
+        dataset_version=dataset_version,
+    )
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    if markdown_path is not None:
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(markdown_from_ml_label_dataset(payload), encoding="utf-8")
+    return payload
+
+
+def write_ml_label_dataset_v12_bridge_negative_mining_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    conflict_policy_path: Path,
+    json_path: Path,
+    markdown_path: Path | None,
+    dataset_version: str = "ml-label-dataset-v12",
+) -> dict[str, Any]:
+    payload = build_ml_label_dataset_v12_bridge_negative_mining_ingest(
+        repo_root=repo_root,
+        base_dataset_path=base_dataset_path,
+        blank_worksheet_path=blank_worksheet_path,
+        labeled_worksheet_path=labeled_worksheet_path,
+        context_sidecar_path=context_sidecar_path,
         conflict_policy_path=conflict_policy_path,
         dataset_version=dataset_version,
     )

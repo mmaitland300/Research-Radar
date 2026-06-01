@@ -98,6 +98,7 @@ def test_build_groups_by_run_family_target(monkeypatch: pytest.MonkeyPatch, tmp_
                     "good_or_acceptable": True,
                     "surprising_or_useful": False,
                     "bridge_like_yes_or_partial": None,
+                    "bridge_recommendable": None,
                 },
                 {
                     "split": "audit_only",
@@ -110,6 +111,7 @@ def test_build_groups_by_run_family_target(monkeypatch: pytest.MonkeyPatch, tmp_
                     "good_or_acceptable": False,
                     "surprising_or_useful": True,
                     "bridge_like_yes_or_partial": True,
+                    "bridge_recommendable": False,
                 },
             ),
             indent=2,
@@ -156,11 +158,12 @@ def test_build_groups_by_run_family_target(monkeypatch: pytest.MonkeyPatch, tmp_
     conn = MagicMock()
     payload = build_ml_label_readiness_matrix_payload(conn, label_dataset_path=p)
     groups = { (g["ranking_run_id"], g["family"], g["target"]): g for g in payload["groups"] }
-    assert len(groups) == 6
+    assert len(groups) == 8
     b_go = groups[("run-a", "bridge", "good_or_acceptable")]
     assert b_go["positive_count"] == 1 and b_go["negative_count"] == 0
     assert b_go["review_pool_variant_counts"] == {"rank_top_k": 1}
     assert b_go["paper_scores_joinable_count"] == 1 and b_go["missing_score_count"] == 0
+    assert ("run-a", "bridge", "bridge_recommendable") in groups
     e_go = groups[("run-a", "emerging", "good_or_acceptable")]
     assert e_go["positive_count"] == 0 and e_go["negative_count"] == 1
     assert e_go["review_pool_variant_counts"] == {"ml_blind_snapshot_audit": 1}
@@ -203,6 +206,66 @@ def test_run_missing_and_not_succeeded_joinable_zero(monkeypatch: pytest.MonkeyP
     assert g["paper_scores_joinable_count"] == 0
     assert g["missing_score_count"] == 1
     assert g["ranking_run_exists"] is False
+
+
+def test_bridge_recommendable_slice_is_offline_diagnostic_trainable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    rows = []
+    score_rows = []
+    for index in range(1, 71):
+        work_token = f"W990{index:04d}"
+        rows.append(
+            {
+                "split": "audit_only",
+                "row_id": f"r{index}",
+                "ranking_run_id": "rank-83787b91ef",
+                "family": "bridge",
+                "review_pool_variant": "ml_bridge_negative_mining_audit",
+                "work_id": work_token,
+                "paper_id": f"https://openalex.org/{work_token}",
+                "good_or_acceptable": index <= 60,
+                "surprising_or_useful": index <= 38,
+                "bridge_like_yes_or_partial": index <= 38,
+                "bridge_recommendable": index <= 38,
+            }
+        )
+        score_rows.append(
+            {
+                "work_id": index,
+                "recommendation_family": "bridge",
+                "semantic_score": 0.1,
+                "citation_velocity_score": 0.2,
+                "topic_growth_score": 0.3,
+                "bridge_score": None,
+                "diversity_penalty": 0.0,
+                "final_score": 1.0 - index / 1000,
+                "openalex_id": f"https://openalex.org/{work_token}",
+                "_rank": index,
+            }
+        )
+    p = tmp_path / "labels.json"
+    p.write_text(json.dumps(_minimal_payload(*rows), indent=2), encoding="utf-8")
+
+    monkeypatch.setattr(
+        mlrm,
+        "fetch_run_db_snapshot",
+        lambda _c, *, ranking_run_id: _snap(exists=True, succeeded=True, n_scores=70),
+    )
+    monkeypatch.setattr(mlrm, "fetch_paper_scores_with_openalex", lambda *_a, **_k: score_rows)
+
+    payload = build_ml_label_readiness_matrix_payload(MagicMock(), label_dataset_path=p)
+    groups = {(g["ranking_run_id"], g["family"], g["target"]): g for g in payload["groups"]}
+    g = groups[("rank-83787b91ef", "bridge", "bridge_recommendable")]
+
+    assert g["positive_count"] == 38
+    assert g["negative_count"] == 32
+    assert g["readiness"]["has_both_classes"] is True
+    assert g["readiness"]["enough_for_diagnostic_auc"] is True
+    assert g["readiness"]["enough_for_tiny_baseline"] is True
+    assert g["paper_scores_joinable_count"] == 70
+    assert g["trainable_next_step"] == "train_offline_diagnostic_bridge_recommendable_scorer_only_not_production_readiness"
 
 
 def test_markdown_includes_caveats(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

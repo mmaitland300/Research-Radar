@@ -28,6 +28,7 @@ CAVEATS = (
     "All rows remain audit_only.",
     "No production ranking change is supported.",
 )
+READINESS_TARGET_FIELDS = tuple(dict.fromkeys((*TARGET_FIELDS, "bridge_recommendable")))
 
 
 class MLLabelReadinessMatrixError(Exception):
@@ -138,6 +139,22 @@ def _readiness_flags(pos: int, neg: int) -> dict[str, bool]:
     }
 
 
+def _trainable_next_step(*, family: str, target: str, flags: dict[str, bool]) -> str:
+    if family == "bridge" and target == "bridge_recommendable":
+        if flags["enough_for_tiny_baseline"]:
+            return "train_offline_diagnostic_bridge_recommendable_scorer_only_not_production_readiness"
+        if flags["has_both_classes"]:
+            return "collect_more_bridge_negative_mining_labels_before_offline_diagnostic_bridge_scorer"
+        return "collect_contrastive_bridge_negative_mining_labels_before_offline_diagnostic_bridge_scorer"
+    if flags["enough_for_tiny_baseline"]:
+        return "run_offline_tiny_baseline_diagnostic_only"
+    if flags["enough_for_diagnostic_auc"]:
+        return "run_score_aligned_diagnostic_auc_only"
+    if flags["has_both_classes"]:
+        return "collect_more_labels_before_stable_offline_diagnostic"
+    return "collect_contrastive_labels_before_offline_diagnostic"
+
+
 def _review_pool_variant_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
     out: dict[str, int] = defaultdict(int)
     for r in rows:
@@ -184,7 +201,7 @@ def build_ml_label_readiness_matrix_payload(
     group_keys: list[tuple[str, str, str]] = []
     for rid in run_ids:
         for fam in sorted({str(r.get("family") or "") for r in rows if str(r.get("ranking_run_id") or "") == rid}):
-            for tgt in TARGET_FIELDS:
+            for tgt in READINESS_TARGET_FIELDS:
                 group_keys.append((rid, fam, tgt))
 
     groups_out: list[dict[str, Any]] = []
@@ -207,6 +224,7 @@ def build_ml_label_readiness_matrix_payload(
             joinable = sum(1 for r in rows_g if join_label_row_to_score(r, by_w, by_tok) is not None)
         missing_score = len(rows_g) - joinable
         flags = _readiness_flags(pos, neg)
+        trainable_next_step = _trainable_next_step(family=fam, target=target, flags=flags)
         groups_out.append(
             {
                 "ranking_run_id": rid,
@@ -226,6 +244,7 @@ def build_ml_label_readiness_matrix_payload(
                 "paper_scores_joinable_count": joinable,
                 "missing_score_count": missing_score,
                 "readiness": flags,
+                "trainable_next_step": trainable_next_step,
             }
         )
 
@@ -241,6 +260,7 @@ def build_ml_label_readiness_matrix_payload(
             "has_both_classes": g["readiness"]["has_both_classes"],
             "enough_for_diagnostic_auc": g["readiness"]["enough_for_diagnostic_auc"],
             "enough_for_tiny_baseline": g["readiness"]["enough_for_tiny_baseline"],
+            "trainable_next_step": g["trainable_next_step"],
             "review_pool_variant_counts": g["review_pool_variant_counts"],
         }
         for g in groups_out
@@ -284,7 +304,8 @@ def build_ml_label_readiness_matrix_payload(
                 "Run `ml-offline-baseline-eval` for each succeeded `ranking_run_id` that appears under "
                 "`run_ml_offline_baseline_eval_for` once you care about score-aligned metrics for those slices. "
                 "For groups without both classes or below diagnostic counts, prioritize **targeted worksheets** "
-                "(explicit negatives / contrastive rows) before expecting stable AUC or tiny baselines."
+                "(explicit negatives / contrastive rows) before expecting stable AUC or tiny baselines. "
+                "`bridge_recommendable` is for an offline/diagnostic bridge scorer only and is not production readiness."
             ),
         },
     }
@@ -334,7 +355,9 @@ def markdown_from_ml_label_readiness_matrix(payload: dict[str, Any]) -> str:
         "## Source-slice summary",
         "",
         "See JSON `source_slice_summary` for per-slice diagnostics (`positive_count`, `negative_count`, `null_count`, "
-        "`has_both_classes`, `enough_for_diagnostic_auc`, `enough_for_tiny_baseline`) plus `review_pool_variant_counts`.",
+        "`has_both_classes`, `enough_for_diagnostic_auc`, `enough_for_tiny_baseline`, `trainable_next_step`) plus "
+        "`review_pool_variant_counts`. `bridge_recommendable` next steps are offline/diagnostic bridge-scorer guidance "
+        "only, not production readiness.",
         "",
     ]
     return "\n".join(lines).rstrip() + "\n"
