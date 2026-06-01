@@ -7,7 +7,7 @@ from collections import Counter
 from dataclasses import dataclass
 from math import fsum
 from statistics import median
-from typing import Any
+from typing import Any, Literal
 
 import psycopg
 from psycopg.rows import dict_row
@@ -124,6 +124,9 @@ class EvalComparePayload:
     citation_baseline: EvalListArm
     date_baseline: EvalListArm
     topic_overlap: EvalTopicOverlap
+
+
+PoolOrdering = Literal["citation", "date"]
 
 
 def _topic_label_set(items: list[EvalPaperRow]) -> set[str]:
@@ -243,28 +246,17 @@ def _pool_cte_sql(
 
 def _select_from_pool(
     *,
-    order_clause: str,
+    ordering: PoolOrdering,
     limit: int,
     corpus_snapshot_version: str,
     family: str,
     low_cite_min_year: int,
     low_cite_max_citations: int,
 ) -> tuple[str, tuple[Any, ...]]:
-    topic_lateral = """
-    LEFT JOIN LATERAL (
-        SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
-        FROM (
-            SELECT t.name AS topic_name, wt.score AS score
-            FROM work_topics wt
-            JOIN topics t ON t.id = wt.topic_id
-            WHERE wt.work_id = pool.id
-            ORDER BY wt.score DESC, t.name ASC
-            LIMIT 3
-        ) sub
-    ) topic_agg ON TRUE
-    """
+    if ordering not in ("citation", "date"):
+        raise ValueError(f"Invalid pool ordering: {ordering!r}")
     if family == "undercited":
-        sql = f"""
+        sql = """
         WITH pool AS (
             SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
             FROM works w
@@ -279,19 +271,33 @@ def _select_from_pool(
         SELECT pool.openalex_id, pool.title, pool.year, pool.citation_count, pool.source_slug,
                COALESCE(topic_agg.topics, '[]'::json) AS topics
         FROM pool
-        {topic_lateral}
-        ORDER BY {order_clause}
+        LEFT JOIN LATERAL (
+            SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
+            FROM (
+                SELECT t.name AS topic_name, wt.score AS score
+                FROM work_topics wt
+                JOIN topics t ON t.id = wt.topic_id
+                WHERE wt.work_id = pool.id
+                ORDER BY wt.score DESC, t.name ASC
+                LIMIT 3
+            ) sub
+        ) topic_agg ON TRUE
+        ORDER BY
+            CASE WHEN %s = 'citation' THEN pool.citation_count END DESC,
+            pool.year DESC,
+            pool.openalex_id ASC
         LIMIT %s
         """
         params = (
             corpus_snapshot_version,
             low_cite_min_year,
             low_cite_max_citations,
+            ordering,
             limit,
         )
         return sql, params
 
-    sql = f"""
+    sql = """
     WITH pool AS (
         SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
         FROM works w
@@ -301,11 +307,24 @@ def _select_from_pool(
     SELECT pool.openalex_id, pool.title, pool.year, pool.citation_count, pool.source_slug,
            COALESCE(topic_agg.topics, '[]'::json) AS topics
     FROM pool
-    {topic_lateral}
-    ORDER BY {order_clause}
+    LEFT JOIN LATERAL (
+        SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
+        FROM (
+            SELECT t.name AS topic_name, wt.score AS score
+            FROM work_topics wt
+            JOIN topics t ON t.id = wt.topic_id
+            WHERE wt.work_id = pool.id
+            ORDER BY wt.score DESC, t.name ASC
+            LIMIT 3
+        ) sub
+    ) topic_agg ON TRUE
+    ORDER BY
+        CASE WHEN %s = 'citation' THEN pool.citation_count END DESC,
+        pool.year DESC,
+        pool.openalex_id ASC
     LIMIT %s
     """
-    return sql, (corpus_snapshot_version, limit)
+    return sql, (corpus_snapshot_version, ordering, limit)
 
 
 def load_evaluation_compare(
@@ -407,11 +426,8 @@ def load_evaluation_compare(
         ranked_params.append(limit)
         ranked_rows = conn.execute(ranked_sql, tuple(ranked_params)).fetchall()
 
-        cit_order = "pool.citation_count DESC, pool.year DESC, pool.openalex_id ASC"
-        date_order = "pool.year DESC, pool.openalex_id ASC"
-
         cit_sql, cit_params = _select_from_pool(
-            order_clause=cit_order,
+            ordering="citation",
             limit=limit,
             corpus_snapshot_version=ctx.corpus_snapshot_version,
             family=family,
@@ -419,7 +435,7 @@ def load_evaluation_compare(
             low_cite_max_citations=low_max,
         )
         date_sql, date_params = _select_from_pool(
-            order_clause=date_order,
+            ordering="date",
             limit=limit,
             corpus_snapshot_version=ctx.corpus_snapshot_version,
             family=family,

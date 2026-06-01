@@ -13,6 +13,8 @@ easier to evaluate without overstating the recommender quality.
 - Full local path: Postgres, pgvector, OpenAlex ingest, pipeline, API, and web.
 - Evidence: CI, fixture/API tests, evaluation docs, audit artifacts, and release
   smoke checklist.
+- Emerging may be ordered by the bounded ML scorer when the live gate is
+  configured; evaluation is still not a validation claim.
 
 ## Near-Term Work
 
@@ -69,4 +71,3 @@ Goal: advance learned scoring only through explicit gates.
 - Bridge diagnostics remain experimental.
 - Proxy metrics are useful for iteration, but they are not a substitute for
   labeled relevance evaluation.
-

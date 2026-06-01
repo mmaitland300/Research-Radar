@@ -505,8 +505,10 @@ async function fetchRanked(
   }
 }
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
 type PageProps = {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<SearchParams>;
 };
 
 function parseSingleParam(raw: string | string[] | undefined): string | undefined {
@@ -552,13 +554,14 @@ function buildRecommendedFamilyHref(
 }
 
 export default async function RecommendedPage({ searchParams }: PageProps) {
-  const family = parseFamily(searchParams.family);
-  const focusPaperId = parseSingleParam(searchParams.paper);
-  const rankingRunId = parseSingleParam(searchParams.ranking_run_id);
+  const resolvedSearchParams = await searchParams;
+  const family = parseFamily(resolvedSearchParams.family);
+  const focusPaperId = parseSingleParam(resolvedSearchParams.paper);
+  const rankingRunId = parseSingleParam(resolvedSearchParams.ranking_run_id);
   const defaultLimit = family === "emerging" ? 20 : 15;
-  const limit = parseLimit(searchParams.limit, defaultLimit, 100);
+  const limit = parseLimit(resolvedSearchParams.limit, defaultLimit, 100);
   const bridgeEligibleOnlyRequested =
-    family === "bridge" && parseBooleanParam(searchParams.bridge_eligible_only);
+    family === "bridge" && parseBooleanParam(resolvedSearchParams.bridge_eligible_only);
   const bridgeEligibleOnly = ENABLE_EXPERIMENTAL_BRIDGE_VIEW && bridgeEligibleOnlyRequested;
   const bridgeEligibleOnlyDisabledNotice =
     family === "bridge" && bridgeEligibleOnlyRequested && !ENABLE_EXPERIMENTAL_BRIDGE_VIEW;
