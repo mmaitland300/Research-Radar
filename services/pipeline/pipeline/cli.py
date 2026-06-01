@@ -7678,6 +7678,57 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_bridge_negative_ws_parser = subparsers.add_parser(
+        "ml-bridge-negative-mining-worksheet",
+        help="Write reviewer-blind bridge negative-mining CSV plus hidden sidecar (read-only DB; no training)",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON used to exclude already labeled bridge works",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--conflict-policy",
+        required=True,
+        help="Path to label conflict policy Markdown (provenance only; no conflict resolution)",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--ranking-run-id",
+        default="rank-83787b91ef",
+        help="Bridge ranking run id to mine (default: rank-83787b91ef)",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--rows",
+        type=int,
+        default=70,
+        help="Target worksheet row count (1-200; default 70)",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--seed",
+        type=int,
+        default=20260531,
+        help="Deterministic sampling seed (default 20260531)",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--output",
+        required=True,
+        help="Reviewer CSV output path",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--context-output",
+        required=True,
+        help="Hidden context sidecar JSON path",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Companion Markdown path",
+    )
+    ml_bridge_negative_ws_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     ml_external_near_miss_ws_parser = subparsers.add_parser(
         "ml-external-near-miss-review-worksheet",
         help=(
@@ -7890,6 +7941,46 @@ def main() -> None:
             )
         except MLHardNegativeReviewWorksheetError as e:
             print(f"ml-hard-negative-review-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_csv.resolve(), file=sys.stderr)
+        print(out_ctx.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(int(debug.get("achieved_rows", 0)))
+        return
+
+    if args.command == "ml-bridge-negative-mining-worksheet":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_bridge_negative_mining_worksheet import (
+            MAX_ROWS as _BRIDGE_NEG_MAX_ROWS,
+            MIN_ROWS as _BRIDGE_NEG_MIN_ROWS,
+            MLBridgeNegativeMiningWorksheetError,
+            run_ml_bridge_negative_mining_worksheet_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        nrows = int(args.rows)
+        if nrows < _BRIDGE_NEG_MIN_ROWS or nrows > _BRIDGE_NEG_MAX_ROWS:
+            parser.error(f"--rows must be between {_BRIDGE_NEG_MIN_ROWS} and {_BRIDGE_NEG_MAX_ROWS}")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_csv = Path(args.output)
+        out_ctx = Path(args.context_output)
+        out_md = Path(args.markdown_output)
+        try:
+            debug = run_ml_bridge_negative_mining_worksheet_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                conflict_policy_path=Path(args.conflict_policy),
+                ranking_run_id=rid,
+                rows=nrows,
+                seed=int(args.seed),
+                csv_output_path=out_csv,
+                context_output_path=out_ctx,
+                markdown_output_path=out_md,
+            )
+        except MLBridgeNegativeMiningWorksheetError as e:
+            print(f"ml-bridge-negative-mining-worksheet: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_csv.resolve(), file=sys.stderr)
         print(out_ctx.resolve(), file=sys.stderr)
