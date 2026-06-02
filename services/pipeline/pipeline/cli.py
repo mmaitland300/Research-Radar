@@ -7643,6 +7643,50 @@ def main() -> None:
         help="Read-only Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    ml_bridge_shadow_pilot_parser = subparsers.add_parser(
+        "ml-bridge-shadow-pilot",
+        help=(
+            "Offline bridge shadow pilot: apply frozen v2 ML model to all Bridge candidates, "
+            "compute hybrid_bridge_score_50_50, compare top-20 lists, generate worksheet "
+            "(SELECT-only DB access, no writes, no serving change)"
+        ),
+    )
+    ml_bridge_shadow_pilot_parser.add_argument(
+        "--v2-scorer",
+        required=True,
+        help="Path to docs/audit/ml-offline-bridge-recommendable-scorer-v2.json",
+    )
+    ml_bridge_shadow_pilot_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Ranking run ID with bridge_score populated (e.g. rank-5a7efa5ca3)",
+    )
+    ml_bridge_shadow_pilot_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write shadow pilot JSON artifact",
+    )
+    ml_bridge_shadow_pilot_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown review",
+    )
+    ml_bridge_shadow_pilot_parser.add_argument(
+        "--worksheet-csv",
+        default=None,
+        help="Optional path to write blank disagreement worksheet CSV",
+    )
+    ml_bridge_shadow_pilot_parser.add_argument(
+        "--worksheet-sidecar",
+        default=None,
+        help="Optional path to write worksheet context sidecar JSON",
+    )
+    ml_bridge_shadow_pilot_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Read-only Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     ml_blind_family_context_parser = subparsers.add_parser(
         "ml-blind-family-context-eval",
         help=(
@@ -8568,6 +8612,42 @@ def main() -> None:
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
             print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-bridge-shadow-pilot":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_bridge_shadow_pilot import (
+            MLBridgeShadowPilotError,
+            run_ml_bridge_shadow_pilot_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        ws_csv = Path(args.worksheet_csv) if args.worksheet_csv else None
+        ws_sidecar = Path(args.worksheet_sidecar) if args.worksheet_sidecar else None
+        try:
+            run_ml_bridge_shadow_pilot_cli(
+                v2_scorer_path=Path(args.v2_scorer),
+                ranking_run_id=rid,
+                database_url=args.database_url,
+                output_json=out_json,
+                markdown_output=out_md,
+                worksheet_csv=ws_csv,
+                worksheet_sidecar=ws_sidecar,
+            )
+        except MLBridgeShadowPilotError as e:
+            print(f"ml-bridge-shadow-pilot: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        if ws_csv is not None:
+            print(ws_csv.resolve(), file=sys.stderr)
+        if ws_sidecar is not None:
+            print(ws_sidecar.resolve(), file=sys.stderr)
         return
 
     if args.command == "ml-blind-family-context-eval":
