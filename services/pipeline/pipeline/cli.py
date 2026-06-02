@@ -7605,6 +7605,44 @@ def main() -> None:
         help="Optional path to write companion Markdown summary",
     )
 
+    ml_bridge_score_hybrid_eval_parser = subparsers.add_parser(
+        "ml-offline-bridge-score-hybrid-eval",
+        help=(
+            "Offline diagnostic: compare v2 ML OOF probabilities with bridge_score from a "
+            "clustering-enabled ranking run (SELECT-only DB access, no writes)"
+        ),
+    )
+    ml_bridge_score_hybrid_eval_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v13.json",
+    )
+    ml_bridge_score_hybrid_eval_parser.add_argument(
+        "--v2-scorer",
+        required=True,
+        help="Path to docs/audit/ml-offline-bridge-recommendable-scorer-v2.json",
+    )
+    ml_bridge_score_hybrid_eval_parser.add_argument(
+        "--ranking-run-id",
+        required=True,
+        help="Ranking run ID with bridge_score populated (produced by cluster-works + ranking-run)",
+    )
+    ml_bridge_score_hybrid_eval_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write bridge_score hybrid eval JSON",
+    )
+    ml_bridge_score_hybrid_eval_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_bridge_score_hybrid_eval_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Read-only Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     ml_blind_family_context_parser = subparsers.add_parser(
         "ml-blind-family-context-eval",
         help=(
@@ -8497,6 +8535,35 @@ def main() -> None:
             )
         except MLOfflineBoundedHybridBridgeEvalError as e:
             print(f"ml-offline-bounded-hybrid-bridge-eval-v1: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-bridge-score-hybrid-eval":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_offline_bridge_score_hybrid_eval import (
+            MLOfflineBridgeScoreHybridEvalError,
+            run_ml_offline_bridge_score_hybrid_eval_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_offline_bridge_score_hybrid_eval_cli(
+                label_dataset_path=Path(args.label_dataset),
+                v2_scorer_path=Path(args.v2_scorer),
+                ranking_run_id=rid,
+                database_url=args.database_url,
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLOfflineBridgeScoreHybridEvalError as e:
+            print(f"ml-offline-bridge-score-hybrid-eval: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
