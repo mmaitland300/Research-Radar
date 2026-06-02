@@ -7861,6 +7861,58 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+    ml_bridge_top_ranked_ws_parser = subparsers.add_parser(
+        "ml-bridge-top-ranked-validation-worksheet",
+        help="Write bridge top-ranked + contrastive validation CSV plus hidden sidecar (read-only DB; no training)",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to ml-label-dataset JSON used to exclude already-labeled bridge works from contrastive stratum",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--ranking-run-id",
+        default="rank-83787b91ef",
+        help="Bridge ranking run id (default: rank-83787b91ef)",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--top-n",
+        type=int,
+        default=20,
+        help="Number of top-ranked rows to include (default 20)",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--contrastive-n",
+        type=int,
+        default=10,
+        help="Number of contrastive borderline rows to include (default 10)",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--contrastive-rank-max",
+        type=int,
+        default=40,
+        help="Upper family_rank bound for contrastive stratum (default 40)",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--output",
+        required=True,
+        help="Reviewer CSV output path",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--context-output",
+        required=True,
+        help="Hidden context sidecar JSON path",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Companion Markdown path",
+    )
+    ml_bridge_top_ranked_ws_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
     ml_external_near_miss_ws_parser = subparsers.add_parser(
         "ml-external-near-miss-review-worksheet",
         help=(
@@ -8118,6 +8170,41 @@ def main() -> None:
         print(out_ctx.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
         print(int(debug.get("achieved_rows", 0)))
+        return
+
+    if args.command == "ml-bridge-top-ranked-validation-worksheet":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_bridge_top_ranked_validation_worksheet import (
+            MLBridgeTopRankedValidationWorksheetError,
+            run_top_ranked_validation_worksheet_cli,
+        )
+
+        rid = (args.ranking_run_id or "").strip()
+        if not rid:
+            parser.error("--ranking-run-id is required and must be non-empty")
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_csv = Path(args.output)
+        out_ctx = Path(args.context_output)
+        out_md = Path(args.markdown_output)
+        try:
+            result = run_top_ranked_validation_worksheet_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                ranking_run_id=rid,
+                top_n=int(args.top_n),
+                contrastive_n=int(args.contrastive_n),
+                contrastive_rank_max=int(args.contrastive_rank_max),
+                csv_output_path=out_csv,
+                context_output_path=out_ctx,
+                markdown_output_path=out_md,
+            )
+        except MLBridgeTopRankedValidationWorksheetError as e:
+            print(f"ml-bridge-top-ranked-validation-worksheet: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_csv.resolve(), file=sys.stderr)
+        print(out_ctx.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        print(int(result.get("debug", {}).get("total_rows", 0)))
         return
 
     if args.command == "ml-external-near-miss-review-worksheet":
