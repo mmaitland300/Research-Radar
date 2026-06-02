@@ -2079,6 +2079,53 @@ def main() -> None:
         default="ml-label-dataset-v13",
         help="Version string for the new artifact and appended bridge top-ranked rows (default: ml-label-dataset-v13)",
     )
+    ml_label_dataset_v14_parser = subparsers.add_parser(
+        "ml-label-dataset-v14-bridge-shadow-pilot-ingest",
+        help=(
+            "Build ml-label-dataset v14 from v13 plus the completed bridge shadow-pilot "
+            "disagreement labeled worksheet"
+        ),
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--base-dataset",
+        required=True,
+        help="Path to base ml-label-dataset JSON (for v14, docs/audit/ml-label-dataset-v13.json)",
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--blank-worksheet",
+        required=True,
+        help="Path to blank bridge shadow-pilot disagreement CSV template",
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--labeled-worksheet",
+        required=True,
+        help="Path to completed bridge shadow-pilot disagreement labeled CSV",
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--context-sidecar",
+        required=True,
+        help="Path to bridge shadow-pilot work_id-keyed context sidecar JSON",
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write ml-label-dataset v14 JSON",
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Path to write companion Markdown data card",
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--repo-root",
+        default=None,
+        help="Repository root (default: parent of services/pipeline)",
+    )
+    ml_label_dataset_v14_parser.add_argument(
+        "--dataset-version",
+        default="ml-label-dataset-v14",
+        help="Version string for the new artifact and appended bridge shadow-pilot rows (default: ml-label-dataset-v14)",
+    )
     ml_offline_baseline_parser = subparsers.add_parser(
         "ml-offline-baseline-eval",
         help="Read-only offline label baseline metrics (join ml-label-dataset to paper_scores for one ranking_run_id)",
@@ -12439,6 +12486,31 @@ def main() -> None:
             )
         except MLLabelDatasetError as e:
             print(f"ml-label-dataset-v13-bridge-top-ranked-ingest: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-label-dataset-v14-bridge-shadow-pilot-ingest":
+        from pipeline.ml_label_dataset import MLLabelDatasetError, write_ml_label_dataset_v14_bridge_shadow_pilot_ingest
+
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parents[3]
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output)
+        dver = (args.dataset_version or "").strip() or "ml-label-dataset-v14"
+        try:
+            write_ml_label_dataset_v14_bridge_shadow_pilot_ingest(
+                repo_root=repo_root,
+                base_dataset_path=Path(args.base_dataset),
+                blank_worksheet_path=Path(args.blank_worksheet),
+                labeled_worksheet_path=Path(args.labeled_worksheet),
+                context_sidecar_path=Path(args.context_sidecar),
+                json_path=out_json,
+                markdown_path=out_md,
+                dataset_version=dver,
+            )
+        except MLLabelDatasetError as e:
+            print(f"ml-label-dataset-v14-bridge-shadow-pilot-ingest: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)

@@ -83,6 +83,12 @@ BRIDGE_TOP_RANKED_RANKING_RUN_ID = "rank-83787b91ef"
 BRIDGE_TOP_RANKED_FAMILY = "bridge"
 BRIDGE_TOP_RANKED_EXPECTED_ROWS = 30
 BRIDGE_TOP_RANKED_SAMPLE_SEED = 20260601
+BRIDGE_SHADOW_PILOT_WORKSHEET_VERSION = "ml-bridge-shadow-pilot-disagreements-v1"
+BRIDGE_SHADOW_PILOT_CONTEXT_ARTIFACT_TYPE = "ml_bridge_shadow_pilot_disagreements_context"
+BRIDGE_SHADOW_PILOT_REVIEW_POOL_VARIANT = "ml_bridge_shadow_pilot_audit"
+BRIDGE_SHADOW_PILOT_RANKING_RUN_ID = "rank-5a7efa5ca3"
+BRIDGE_SHADOW_PILOT_FAMILY = "bridge"
+BRIDGE_SHADOW_PILOT_EXPECTED_ROWS = 60
 ALLOWED_RELEVANCE_LABELS = {"good", "acceptable", "miss", "irrelevant"}
 ALLOWED_NOVELTY_LABELS = {"surprising", "useful", "obvious", "not_useful", "neither"}
 ALLOWED_BRIDGE_LIKE_LABELS = {"yes", "partial", "no", "not_applicable"}
@@ -700,6 +706,172 @@ def _read_bridge_top_ranked_sidecar_rows(
             raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate row_id {row_id}")
         by_id[row_id] = row
     return payload, by_id
+
+
+def _read_bridge_shadow_pilot_sidecar_rows(
+    context_sidecar_path: Path,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    payload = _load_json_object(context_sidecar_path)
+    artifact_type = _norm_ws(payload.get("artifact_type"))
+    if artifact_type != BRIDGE_SHADOW_PILOT_CONTEXT_ARTIFACT_TYPE:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} artifact_type={artifact_type!r} does not match "
+            f"{BRIDGE_SHADOW_PILOT_CONTEXT_ARTIFACT_TYPE!r}"
+        )
+    worksheet_version = _norm_ws(payload.get("worksheet_version"))
+    if worksheet_version != BRIDGE_SHADOW_PILOT_WORKSHEET_VERSION:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} worksheet_version={worksheet_version!r} does not match "
+            f"{BRIDGE_SHADOW_PILOT_WORKSHEET_VERSION!r}"
+        )
+    ranking_run_id = _norm_ws(payload.get("ranking_run_id"))
+    if ranking_run_id != BRIDGE_SHADOW_PILOT_RANKING_RUN_ID:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} ranking_run_id={ranking_run_id!r} does not match "
+            f"{BRIDGE_SHADOW_PILOT_RANKING_RUN_ID!r}"
+        )
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise MLLabelDatasetError(f"{context_sidecar_path} missing rows array")
+    if len(rows) != BRIDGE_SHADOW_PILOT_EXPECTED_ROWS:
+        raise MLLabelDatasetError(
+            f"{context_sidecar_path} must contain exactly {BRIDGE_SHADOW_PILOT_EXPECTED_ROWS} context rows"
+        )
+    by_work_id: dict[str, dict[str, Any]] = {}
+    required_context_fields = {
+        "work_id",
+        "current_family_rank",
+        "hybrid_rank",
+        "disagreement_bucket",
+        "work_id_int",
+        "ml_probability",
+        "bridge_score",
+        "hybrid_score",
+        "ml_rank_pct",
+        "bridge_score_rank_pct",
+    }
+    for idx, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise MLLabelDatasetError(f"{context_sidecar_path} bridge shadow-pilot sidecar row {idx} is not an object")
+        missing = sorted(field for field in required_context_fields if field not in row)
+        if missing:
+            raise MLLabelDatasetError(
+                f"{context_sidecar_path} bridge shadow-pilot sidecar row {idx} missing fields: {', '.join(missing)}"
+            )
+        work_id = _norm_ws(row.get("work_id"))
+        if not work_id:
+            raise MLLabelDatasetError(f"{context_sidecar_path} bridge shadow-pilot sidecar row {idx} has blank work_id")
+        if not paper_id_to_work_id(work_id):
+            raise MLLabelDatasetError(
+                f"{context_sidecar_path} bridge shadow-pilot sidecar row {idx} has non-OpenAlex work_id={work_id!r}"
+            )
+        if work_id in by_work_id:
+            raise MLLabelDatasetError(f"{context_sidecar_path} has duplicate work_id {work_id}")
+        if not isinstance(row.get("work_id_int"), int) or isinstance(row.get("work_id_int"), bool):
+            raise MLLabelDatasetError(f"{context_sidecar_path} bridge shadow-pilot sidecar row {idx} missing integer work_id_int")
+        by_work_id[work_id] = row
+    return payload, by_work_id
+
+
+def stable_bridge_shadow_pilot_row_id(*, worksheet_version: str, ranking_run_id: str, work_id: str) -> str:
+    return _sha256_text(f"{worksheet_version}|{ranking_run_id}|{work_id}")
+
+
+def _require_bridge_shadow_pilot_fields(fieldnames: list[str], *, path: Path) -> None:
+    required = {
+        "work_id",
+        "title",
+        "abstract_preview",
+        "current_family_rank",
+        "hybrid_rank",
+        "disagreement_bucket",
+        "bridge_like_label",
+        "relevance_label",
+        "notes",
+    }
+    missing = sorted(required - set(fieldnames))
+    if missing:
+        raise MLLabelDatasetError(f"{path} missing required bridge shadow-pilot columns: {', '.join(missing)}")
+
+
+def _validate_bridge_shadow_pilot_labeled_matches_blank(
+    *,
+    blank_path: Path,
+    blank_fieldnames: list[str],
+    blank_rows: list[dict[str, str]],
+    labeled_path: Path,
+    labeled_fieldnames: list[str],
+    labeled_rows: list[dict[str, str]],
+) -> None:
+    _require_bridge_shadow_pilot_fields(blank_fieldnames, path=blank_path)
+    _require_bridge_shadow_pilot_fields(labeled_fieldnames, path=labeled_path)
+
+    blank_by_work: dict[str, dict[str, str]] = {}
+    labeled_by_work: dict[str, dict[str, str]] = {}
+    for row in blank_rows:
+        work_id = _norm_ws(row.get("work_id"))
+        if not work_id:
+            raise MLLabelDatasetError(f"{blank_path} contains a row with blank work_id")
+        if work_id in blank_by_work:
+            raise MLLabelDatasetError(f"{blank_path} contains duplicate work_id {work_id}")
+        blank_by_work[work_id] = row
+    for row in labeled_rows:
+        work_id = _norm_ws(row.get("work_id"))
+        if not work_id:
+            raise MLLabelDatasetError(f"{labeled_path} contains a row with blank work_id")
+        if work_id in labeled_by_work:
+            raise MLLabelDatasetError(f"{labeled_path} contains duplicate work_id {work_id}")
+        labeled_by_work[work_id] = row
+
+    if set(blank_by_work) != set(labeled_by_work):
+        missing = sorted(set(blank_by_work) - set(labeled_by_work))
+        extra = sorted(set(labeled_by_work) - set(blank_by_work))
+        raise MLLabelDatasetError(
+            f"bridge shadow-pilot labeled CSV work_id set differs from blank template; "
+            f"missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    review_columns = {"bridge_like_label", "relevance_label", "notes"}
+    allowed_drift_columns = {"abstract_preview"}
+    comparable_fields = (set(blank_fieldnames) | set(labeled_fieldnames)) - review_columns - allowed_drift_columns
+    for work_id in sorted(labeled_by_work):
+        blank = blank_by_work[work_id]
+        labeled = labeled_by_work[work_id]
+        for field in sorted(comparable_fields):
+            blank_value = _norm_ws(blank.get(field))
+            labeled_value = _norm_ws(labeled.get(field))
+            if field == "title":
+                blank_value = blank_value.replace('"', "")
+                labeled_value = labeled_value.replace('"', "")
+            if blank_value != labeled_value:
+                raise MLLabelDatasetError(
+                    "bridge shadow-pilot labeled CSV changed stable template field "
+                    f"{field!r} for work_id={work_id}: blank={blank.get(field)!r}, labeled={labeled.get(field)!r}"
+                )
+
+
+def _validate_bridge_shadow_pilot_labels(row: dict[str, str], *, source_row_number: int) -> None:
+    relevance = _norm_label_token(row.get("relevance_label"))
+    bridge = _norm_label_token(row.get("bridge_like_label"))
+    if not relevance:
+        raise MLLabelDatasetError(f"bridge shadow-pilot labeled CSV row {source_row_number} has blank relevance_label")
+    if relevance not in ALLOWED_RELEVANCE_LABELS:
+        raise MLLabelDatasetError(
+            f"bridge shadow-pilot labeled CSV row {source_row_number} has unsupported relevance_label={row.get('relevance_label')!r}"
+        )
+    if not bridge:
+        raise MLLabelDatasetError(f"bridge shadow-pilot labeled CSV row {source_row_number} has blank bridge_like_label")
+    if bridge not in ALLOWED_BRIDGE_LIKE_LABELS:
+        raise MLLabelDatasetError(
+            f"bridge shadow-pilot labeled CSV row {source_row_number} has unsupported bridge_like_label={row.get('bridge_like_label')!r}"
+        )
+    if not _norm_ws(row.get("notes")):
+        raise MLLabelDatasetError(f"bridge shadow-pilot labeled CSV row {source_row_number} has blank notes")
+    if bridge in {"yes", "partial"} and relevance not in {"good", "acceptable"}:
+        raise MLLabelDatasetError(
+            "bridge shadow-pilot positive bridge label has miss/irrelevant relevance at "
+            f"CSV row {source_row_number}"
+        )
 
 
 def _require_labeled_v2_fields(fieldnames: list[str], *, path: Path) -> None:
@@ -3644,7 +3816,27 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
     v10_ingest = meta.get("fresh_hybrid_positive_topup_v1_ingest")
     v11_ingest = meta.get("shadow_generalization_second_surface_v1_ingest")
     v12_ingest = meta.get("bridge_negative_mining_v1_ingest")
-    if isinstance(v12_ingest, dict):
+    v13_ingest = meta.get("bridge_top_ranked_v1_ingest")
+    v14_ingest = meta.get("bridge_shadow_pilot_v1_ingest")
+    if isinstance(v14_ingest, dict):
+        regenerate_command = (
+            "Machine-readable export: regenerate via `python -m pipeline.cli "
+            "ml-label-dataset-v14-bridge-shadow-pilot-ingest "
+            f"--base-dataset {v14_ingest['previous_dataset_path']} "
+            f"--blank-worksheet {v14_ingest['blank_worksheet_path']} "
+            f"--labeled-worksheet {v14_ingest['labeled_worksheet_path']} "
+            f"--context-sidecar {v14_ingest['context_sidecar_path']} --output <path>.json`."
+        )
+    elif isinstance(v13_ingest, dict):
+        regenerate_command = (
+            "Machine-readable export: regenerate via `python -m pipeline.cli "
+            "ml-label-dataset-v13-bridge-top-ranked-ingest "
+            f"--base-dataset {v13_ingest['previous_dataset_path']} "
+            f"--blank-worksheet {v13_ingest['blank_worksheet_path']} "
+            f"--labeled-worksheet {v13_ingest['labeled_worksheet_path']} "
+            f"--context-sidecar {v13_ingest['context_sidecar_path']} --output <path>.json`."
+        )
+    elif isinstance(v12_ingest, dict):
         regenerate_command = (
             "Machine-readable export: regenerate via `python -m pipeline.cli "
             "ml-label-dataset-v12-bridge-negative-mining-ingest "
@@ -3868,6 +4060,36 @@ def markdown_from_ml_label_dataset(payload: dict[str, Any]) -> str:
         "Training should filter to `review_pool_variant == ml_bridge_negative_mining_audit` unless a later experiment "
         "defines another slice policy. This is **not validation, production readiness, or a serving change**.",
         "",
+        "## Bridge shadow-pilot context fields",
+        "",
+        "Rows from worksheets with `review_pool_variant=ml_bridge_shadow_pilot_audit` are bridge-family "
+        "shadow-pilot disagreement labels from `rank-5a7efa5ca3`. They preserve the full work-id keyed sidecar row "
+        "under nested `bridge_shadow_pilot_context`, including `current_family_rank`, `hybrid_rank`, "
+        "`disagreement_bucket`, `ml_probability`, `bridge_score`, `hybrid_score`, `ml_rank_pct`, and "
+        "`bridge_score_rank_pct`. These labels are audit-only evidence and do not authorize Bridge serving.",
+        "",
+        *(
+            [
+                "### Bridge shadow-pilot v1 ingest",
+                "",
+                f"- **Rows appended:** {v14_ingest['row_count_appended']}",
+                "- **Legacy rows:** copied from v13 with deterministic `bridge_recommendable` backfilled where needed.",
+                f"- **Final dataset rows:** {v14_ingest['output_row_count']}",
+                f"- **Ranking run / family:** `{v14_ingest['ranking_run_id']}` / `{v14_ingest['family']}`",
+                f"- **Review pool:** `{v14_ingest['review_pool_variant']}`",
+                f"- **Raw relevance distribution:** `{v14_ingest['label_distribution']['relevance_label']}`",
+                f"- **Raw bridge-like distribution:** `{v14_ingest['label_distribution']['bridge_like_label']}`",
+                f"- **bridge_recommendable positives / negatives:** {v14_ingest['bridge_recommendable_positive_count']} / {v14_ingest['bridge_recommendable_negative_count']}",
+                f"- **Disagreement buckets:** `{v14_ingest['disagreement_bucket_counts']}`",
+                f"- **Overlap count with v13:** {v14_ingest['overlap_count_with_v13']} appended observations; overlaps are reported, not deduped.",
+                "- **Near-duplicate companions:** recorded in `metadata.near_duplicate_companion_paper_notes`; distinct OpenAlex work IDs are preserved.",
+                "- **Scope:** label ingestion only; no model training, API/web serving, ranking-table write, or production authorization.",
+                f"- **Next step:** `{v14_ingest['recommended_next_stage']}`.",
+                "",
+            ]
+            if isinstance(v14_ingest, dict)
+            else []
+        ),
         *(
             [
                 "### Bridge negative-mining v1 ingest",
@@ -4671,6 +4893,431 @@ def write_ml_label_dataset_v13_bridge_top_ranked_ingest(
     dataset_version: str = "ml-label-dataset-v13",
 ) -> dict[str, Any]:
     payload = build_ml_label_dataset_v13_bridge_top_ranked_ingest(
+        repo_root=repo_root,
+        base_dataset_path=base_dataset_path,
+        blank_worksheet_path=blank_worksheet_path,
+        labeled_worksheet_path=labeled_worksheet_path,
+        context_sidecar_path=context_sidecar_path,
+        dataset_version=dataset_version,
+    )
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    if markdown_path is not None:
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(markdown_from_ml_label_dataset(payload), encoding="utf-8")
+    return payload
+
+
+def _bridge_shadow_pilot_near_duplicate_notes() -> list[dict[str, Any]]:
+    return [
+        {
+            "note": "Smartwatch violin companion papers; distinct OpenAlex work IDs, not deduped.",
+            "work_ids": ["W4413990340", "W7131735100"],
+        },
+        {
+            "note": "Spotify Currently Listening companion papers; distinct OpenAlex work IDs, not deduped.",
+            "work_ids": ["W7112868420", "W7125951231"],
+        },
+    ]
+
+
+def build_ml_label_dataset_v14_bridge_shadow_pilot_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    dataset_version: str = "ml-label-dataset-v14",
+) -> dict[str, Any]:
+    """Build v14 as v13 rows plus bridge shadow-pilot disagreement labels."""
+
+    root = repo_root.resolve()
+    base_path = base_dataset_path.resolve()
+    blank_path = blank_worksheet_path.resolve()
+    labeled_path = labeled_worksheet_path.resolve()
+    sidecar_path = context_sidecar_path.resolve()
+    input_paths = [base_path, blank_path, labeled_path, sidecar_path]
+    for path in input_paths:
+        if not path.is_file():
+            raise MLLabelDatasetError(f"required input not found: {path}")
+
+    base_payload = _load_json_object(base_path)
+    base_metadata = base_payload.get("metadata") if isinstance(base_payload.get("metadata"), dict) else {}
+    base_version = _norm_ws(base_payload.get("dataset_version") or base_metadata.get("dataset_version"))
+    if base_version != "ml-label-dataset-v13":
+        raise MLLabelDatasetError(f"{base_path} dataset_version={base_version!r}; expected 'ml-label-dataset-v13'")
+    base_rows_raw = base_payload.get("rows")
+    if not isinstance(base_rows_raw, list):
+        raise MLLabelDatasetError(f"{base_path} missing rows array")
+    base_rows: list[dict[str, Any]] = copy.deepcopy(base_rows_raw)
+    _backfill_bridge_recommendable(base_rows)
+
+    blank_fieldnames, blank_rows = _read_csv_rows(blank_path)
+    labeled_fieldnames, labeled_rows = _read_csv_rows(labeled_path)
+    if len(labeled_rows) != BRIDGE_SHADOW_PILOT_EXPECTED_ROWS:
+        raise MLLabelDatasetError(
+            f"{labeled_path} must contain exactly {BRIDGE_SHADOW_PILOT_EXPECTED_ROWS} "
+            f"bridge shadow-pilot labeled data rows"
+        )
+    _validate_bridge_shadow_pilot_labeled_matches_blank(
+        blank_path=blank_path,
+        blank_fieldnames=blank_fieldnames,
+        blank_rows=blank_rows,
+        labeled_path=labeled_path,
+        labeled_fieldnames=labeled_fieldnames,
+        labeled_rows=labeled_rows,
+    )
+
+    sidecar_payload, sidecar_by_work_id = _read_bridge_shadow_pilot_sidecar_rows(sidecar_path)
+    labeled_work_ids = {_norm_ws(row.get("work_id")) for row in labeled_rows}
+    if set(sidecar_by_work_id) != labeled_work_ids:
+        missing = sorted(labeled_work_ids - set(sidecar_by_work_id))
+        extra = sorted(set(sidecar_by_work_id) - labeled_work_ids)
+        raise MLLabelDatasetError(
+            f"bridge shadow-pilot context work_id set differs from labeled CSV; "
+            f"missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    source_rel = _repo_relative(labeled_path, repo_root=root)
+    source_sha = sha256_file(labeled_path)
+    shadow_rows: list[dict[str, Any]] = []
+    seen_row_ids: set[str] = set()
+    seen_work_tokens: set[str] = set()
+    for source_row_number, row in enumerate(labeled_rows, start=2):
+        _validate_bridge_shadow_pilot_labels(row, source_row_number=source_row_number)
+        work_id_url = _norm_ws(row.get("work_id"))
+        work_token = paper_id_to_work_id(work_id_url)
+        if not work_token:
+            raise MLLabelDatasetError(
+                f"bridge shadow-pilot labeled row {source_row_number} has non-OpenAlex work_id={work_id_url!r}"
+            )
+        row_id = stable_bridge_shadow_pilot_row_id(
+            worksheet_version=BRIDGE_SHADOW_PILOT_WORKSHEET_VERSION,
+            ranking_run_id=BRIDGE_SHADOW_PILOT_RANKING_RUN_ID,
+            work_id=work_id_url,
+        )
+        if row_id in seen_row_ids:
+            raise MLLabelDatasetError(f"duplicate bridge shadow-pilot generated row_id {row_id}")
+        seen_row_ids.add(row_id)
+        if work_token in seen_work_tokens:
+            raise MLLabelDatasetError(f"duplicate bridge shadow-pilot work_id {work_token}")
+        seen_work_tokens.add(work_token)
+
+        context_row = copy.deepcopy(sidecar_by_work_id[work_id_url])
+        if _norm_ws(context_row.get("work_id")) != work_id_url:
+            raise MLLabelDatasetError(f"bridge shadow-pilot sidecar work_id mismatch for work_id={work_id_url}")
+        context_title = _norm_ws(context_row.get("title")).replace('"', "")
+        csv_title = _norm_ws(row.get("title")).replace('"', "")
+        if context_title != csv_title:
+            raise MLLabelDatasetError(f"bridge shadow-pilot sidecar title mismatch for work_id={work_id_url}")
+        if _norm_ws(context_row.get("disagreement_bucket")) != _norm_ws(row.get("disagreement_bucket")):
+            raise MLLabelDatasetError(f"bridge shadow-pilot sidecar disagreement_bucket mismatch for work_id={work_id_url}")
+
+        rel_l = _raw_csv_or_none(row, "relevance_label")
+        br_l = _raw_csv_or_none(row, "bridge_like_label")
+        notes = _raw_csv_or_none(row, "notes")
+        goa = good_or_acceptable(rel_l)
+        blyop = bridge_like_yes_or_partial(br_l)
+        hybrid_rank = context_row.get("hybrid_rank")
+        current_family_rank = context_row.get("current_family_rank")
+        out: dict[str, Any] = {
+            "dataset_version": dataset_version,
+            "row_id": row_id,
+            "paper_id": work_id_url,
+            "work_id": work_token,
+            "title": _norm_ws(row.get("title")) or None,
+            "year": None,
+            "citation_count": None,
+            "source_slug": None,
+            "topics": None,
+            "abstract_preview": _norm_ws(row.get("abstract_preview")) or None,
+            "ranking_run_id": BRIDGE_SHADOW_PILOT_RANKING_RUN_ID,
+            "ranking_version": None,
+            "corpus_snapshot_version": None,
+            "embedding_version": sidecar_payload.get("embedding_version"),
+            "cluster_version": None,
+            "family": BRIDGE_SHADOW_PILOT_FAMILY,
+            "review_pool_variant": BRIDGE_SHADOW_PILOT_REVIEW_POOL_VARIANT,
+            "rank": hybrid_rank,
+            "rank_in_family": hybrid_rank,
+            "family_rank": hybrid_rank,
+            "current_family_rank": current_family_rank,
+            "hybrid_rank": hybrid_rank,
+            "experiment_rank": None,
+            "final_score": context_row.get("hybrid_score"),
+            "semantic_score": None,
+            "citation_velocity_score": None,
+            "topic_growth_score": None,
+            "bridge_score": context_row.get("bridge_score"),
+            "diversity_penalty": None,
+            "bridge_eligible": None,
+            "reason_short": context_row.get("disagreement_bucket"),
+            "sample_reason": context_row.get("disagreement_bucket"),
+            "disagreement_bucket": context_row.get("disagreement_bucket"),
+            "ml_probability": context_row.get("ml_probability"),
+            "hybrid_score": context_row.get("hybrid_score"),
+            "ml_rank_pct": context_row.get("ml_rank_pct"),
+            "bridge_score_rank_pct": context_row.get("bridge_score_rank_pct"),
+            "source_worksheet_path": source_rel,
+            "source_worksheet_sha256": source_sha,
+            "source_row_number": source_row_number,
+            "relevance_label": rel_l,
+            "novelty_label": None,
+            "bridge_like_label": br_l,
+            "reviewer_notes": notes,
+            "label_provenance": "manual_review_worksheet_csv",
+            "split": "audit_only",
+            "good_or_acceptable": goa,
+            "surprising_or_useful": None,
+            "bridge_like_yes_or_partial": blyop,
+            "bridge_recommendable": bridge_recommendable_from_derived(goa, blyop),
+            "worksheet_version": BRIDGE_SHADOW_PILOT_WORKSHEET_VERSION,
+            "openalex_work_id": work_token,
+            "internal_work_id": context_row.get("work_id_int"),
+            "bridge_shadow_pilot_context": context_row,
+        }
+        shadow_rows.append(out)
+
+    label_distribution = _appended_label_distribution(shadow_rows)
+    expected_bridge_like = {"yes": 19, "partial": 15, "no": 26}
+    expected_relevance = {"good": 48, "acceptable": 5, "miss": 3, "irrelevant": 4}
+    bridge_like_counts = label_distribution["bridge_like_label"]
+    relevance_counts = label_distribution["relevance_label"]
+    if {k: bridge_like_counts.get(k, 0) for k in expected_bridge_like} != expected_bridge_like:
+        raise MLLabelDatasetError(
+            "bridge shadow-pilot bridge_like_label counts mismatch; "
+            f"observed={bridge_like_counts}, expected={expected_bridge_like}"
+        )
+    if {k: relevance_counts.get(k, 0) for k in expected_relevance} != expected_relevance:
+        raise MLLabelDatasetError(
+            "bridge shadow-pilot relevance_label counts mismatch; "
+            f"observed={relevance_counts}, expected={expected_relevance}"
+        )
+
+    bridge_positive = sum(1 for row in shadow_rows if row.get("bridge_recommendable") is True)
+    bridge_negative = sum(1 for row in shadow_rows if row.get("bridge_recommendable") is False)
+    if bridge_positive != 34 or bridge_negative != 26:
+        raise MLLabelDatasetError(
+            "bridge shadow-pilot bridge_recommendable counts mismatch; "
+            f"observed={bridge_positive}/{bridge_negative}, expected=34/26"
+        )
+
+    disagreement_bucket_counts: Counter[str] = Counter()
+    disagreement_bucket_target_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    for row in shadow_rows:
+        bucket = str(row.get("disagreement_bucket") or "")
+        disagreement_bucket_counts[bucket] += 1
+        disagreement_bucket_target_counts[bucket]["positive" if row.get("bridge_recommendable") is True else "negative"] += 1
+    expected_bucket_counts = {
+        "promoted_by_hybrid": 20,
+        "demoted_by_hybrid": 20,
+        "high_ml_low_bridge_score": 10,
+        "high_bridge_score_low_ml": 10,
+    }
+    if dict(sorted(disagreement_bucket_counts.items())) != expected_bucket_counts:
+        raise MLLabelDatasetError(
+            "bridge shadow-pilot disagreement_bucket counts mismatch; "
+            f"observed={dict(sorted(disagreement_bucket_counts.items()))}, expected={expected_bucket_counts}"
+        )
+    expected_bucket_targets = {
+        "high_ml_low_bridge_score": {"positive": 10, "negative": 0},
+        "high_bridge_score_low_ml": {"positive": 2, "negative": 8},
+        "demoted_by_hybrid": {"positive": 8, "negative": 12},
+        "promoted_by_hybrid": {"positive": 14, "negative": 6},
+    }
+    observed_bucket_targets = {
+        bucket: {
+            "positive": disagreement_bucket_target_counts[bucket].get("positive", 0),
+            "negative": disagreement_bucket_target_counts[bucket].get("negative", 0),
+        }
+        for bucket in sorted(expected_bucket_targets)
+    }
+    if observed_bucket_targets != expected_bucket_targets:
+        raise MLLabelDatasetError(
+            "bridge shadow-pilot disagreement_bucket target counts mismatch; "
+            f"observed={observed_bucket_targets}, expected={expected_bucket_targets}"
+        )
+
+    positive_leak_count = sum(
+        1
+        for row in shadow_rows
+        if _norm_label_token(row.get("bridge_like_label")) in {"yes", "partial"}
+        and _norm_label_token(row.get("relevance_label")) not in {"good", "acceptable"}
+    )
+    if positive_leak_count != 0:
+        raise MLLabelDatasetError(f"bridge shadow-pilot positive bridge label relevance leakage={positive_leak_count}")
+
+    base_paper_ids = {str(row.get("paper_id") or "") for row in base_rows}
+    base_bridge_paper_ids = {
+        str(row.get("paper_id") or "")
+        for row in base_rows
+        if str(row.get("family") or "") == BRIDGE_SHADOW_PILOT_FAMILY
+    }
+    global_overlap_paper_ids = sorted(
+        str(row.get("paper_id") or "") for row in shadow_rows if row.get("paper_id") in base_paper_ids
+    )
+    bridge_overlap_paper_ids = sorted(
+        str(row.get("paper_id") or "") for row in shadow_rows if row.get("paper_id") in base_bridge_paper_ids
+    )
+    near_duplicate_notes = _bridge_shadow_pilot_near_duplicate_notes()
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    source_worksheets = list(base_payload.get("source_worksheets") or [])
+    source_worksheets.append(source_rel)
+    source_sha256 = dict(base_payload.get("source_worksheet_sha256") or {})
+    source_sha256[source_rel] = source_sha
+    row_counts_by_source = dict(base_metadata.get("row_counts_by_source") or {})
+    row_counts_by_source[source_rel] = len(labeled_rows)
+    included_by_source = dict(base_metadata.get("included_labeled_row_counts_by_source") or {})
+    included_by_source[source_rel] = len(shadow_rows)
+    blank_rows_by_source = dict(base_metadata.get("skipped_blank_row_counts_by_source") or {})
+    blank_rows_by_source[source_rel] = 0
+    skipped_blank_worksheets = list(base_metadata.get("skipped_blank_worksheets") or [])
+    skipped_malformed_rows = copy.deepcopy(base_metadata.get("skipped_malformed_rows") or [])
+    manual_review_dir_rel = str(base_metadata.get("manual_review_dir") or "docs/audit/manual-review")
+
+    previous_ingests = {
+        key: copy.deepcopy(value)
+        for key, value in base_metadata.items()
+        if key.endswith("_ingest") or key.startswith("previous_")
+    }
+    base_sha = sha256_file(base_path)
+    blank_sha = sha256_file(blank_path)
+    sidecar_sha = sha256_file(sidecar_path)
+    inputs = [
+        _input_record("base_dataset", base_path, repo_root=root),
+        _input_record("blank_worksheet", blank_path, repo_root=root),
+        _input_record("labeled_worksheet", labeled_path, repo_root=root),
+        _input_record("context_sidecar", sidecar_path, repo_root=root),
+    ]
+
+    extra_metadata = {
+        **previous_ingests,
+        "dataset_version": dataset_version,
+        "previous_dataset_version": base_version,
+        "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+        "previous_dataset_sha256": base_sha,
+        "inputs": inputs,
+        "near_duplicate_companion_paper_notes": near_duplicate_notes,
+        "bridge_shadow_pilot_v1_ingest": {
+            "row_count_appended": len(shadow_rows),
+            "base_row_count": len(base_rows),
+            "output_row_count": len(base_rows) + len(shadow_rows),
+            "worksheet_version": BRIDGE_SHADOW_PILOT_WORKSHEET_VERSION,
+            "review_pool_variant": BRIDGE_SHADOW_PILOT_REVIEW_POOL_VARIANT,
+            "context_artifact_type": BRIDGE_SHADOW_PILOT_CONTEXT_ARTIFACT_TYPE,
+            "ranking_run_id": BRIDGE_SHADOW_PILOT_RANKING_RUN_ID,
+            "family": BRIDGE_SHADOW_PILOT_FAMILY,
+            "label_distribution": label_distribution,
+            "bridge_recommendable_positive_count": bridge_positive,
+            "bridge_recommendable_negative_count": bridge_negative,
+            "disagreement_bucket_counts": dict(sorted(disagreement_bucket_counts.items())),
+            "disagreement_bucket_bridge_recommendable_counts": observed_bucket_targets,
+            "overlap_count_with_v13": len(bridge_overlap_paper_ids),
+            "overlap_scope": "v13 rows with family == bridge",
+            "overlap_paper_ids_with_v13_preview": bridge_overlap_paper_ids[:60],
+            "global_overlap_count_with_v13_any_family": len(global_overlap_paper_ids),
+            "near_duplicate_companion_paper_notes": near_duplicate_notes,
+            "context_preserved_field_name": "bridge_shadow_pilot_context",
+            "bridge_shadow_pilot_context_fields_preserved": (
+                "entire sidecar row object preserved verbatim under bridge_shadow_pilot_context"
+            ),
+            "copied_sidecar_context_fields": [
+                "current_family_rank",
+                "hybrid_rank",
+                "disagreement_bucket",
+                "work_id_int",
+                "ml_probability",
+                "bridge_score",
+                "hybrid_score",
+                "ml_rank_pct",
+                "bridge_score_rank_pct",
+            ],
+            "row_id_policy": {
+                "source": "generated during ingest from work_id-keyed worksheet/context rows",
+                "formula": "sha256(worksheet_version|ranking_run_id|work_id)",
+                "stable_row_id_formula_validated": True,
+                "csv_work_id_set_equals_sidecar_work_id_set": True,
+            },
+            "source_row_number_convention": "physical CSV line including header; first data row = 2",
+            "blank_worksheet_path": _repo_relative(blank_path, repo_root=root),
+            "blank_worksheet_sha256": blank_sha,
+            "labeled_worksheet_path": source_rel,
+            "labeled_worksheet_sha256": source_sha,
+            "context_sidecar_path": _repo_relative(sidecar_path, repo_root=root),
+            "context_sidecar_sha256": sidecar_sha,
+            "previous_dataset_version": base_version,
+            "previous_dataset_path": _repo_relative(base_path, repo_root=root),
+            "previous_dataset_sha256": base_sha,
+            "sidecar_provenance": {
+                "artifact_type": sidecar_payload.get("artifact_type"),
+                "worksheet_version": sidecar_payload.get("worksheet_version"),
+                "ranking_run_id": sidecar_payload.get("ranking_run_id"),
+                "embedding_version": sidecar_payload.get("embedding_version"),
+                "generated_at": sidecar_payload.get("generated_at"),
+                "blank_csv_sha256": sidecar_payload.get("blank_csv_sha256"),
+                "pilot_artifact_sha256": sidecar_payload.get("pilot_artifact_sha256"),
+            },
+            "validation_summary": {
+                "labeled_rows_found": len(labeled_rows),
+                "expected_labeled_rows": BRIDGE_SHADOW_PILOT_EXPECTED_ROWS,
+                "blank_and_labeled_work_id_sets_matched": True,
+                "stable_non_label_columns_unchanged": True,
+                "abstract_preview_drift_allowed": True,
+                "review_columns_required_non_empty": True,
+                "closed_label_sets_validated": True,
+                "novelty_label_required": False,
+                "novelty_label_written_null": True,
+                "positive_bridge_label_relevance_leak_count": positive_leak_count,
+                "sidecar_artifact_type_matched": True,
+                "sidecar_work_ids_matched": True,
+                "context_sidecar_root_provenance_matched": True,
+                "stable_row_id_formula_validated": True,
+                "duplicate_row_id_count": 0,
+                "duplicate_work_id_count": 0,
+                "overlaps_appended_not_deduped": True,
+                "post_ingest_conflict_report_location": "metadata.conflicting_label_report",
+            },
+            "caveat": "Shadow-pilot labels are audit-only and do not authorize Bridge serving.",
+            "recommended_next_stage": "refresh_bridge_shadow_pilot_readiness_matrix_v11",
+        },
+    }
+    extra_caveats = [
+        "Shadow-pilot labels are audit-only and do not authorize Bridge serving.",
+        "Bridge shadow-pilot labels are label ingestion only; no model training, serving, API, web, ranking, or database writes are authorized.",
+        "Overlapping v13 bridge evidence is appended and reported, not silently deduplicated.",
+        "Near-duplicate companion papers are preserved as distinct OpenAlex work IDs.",
+    ]
+    return _assemble_dataset_payload_from_rows(
+        dataset_version=dataset_version,
+        generated_at=generated_at,
+        source_worksheets=source_worksheets,
+        source_sha256=source_sha256,
+        all_rows=base_rows + shadow_rows,
+        manual_review_dir_rel=manual_review_dir_rel,
+        row_counts_by_source=row_counts_by_source,
+        included_by_source=included_by_source,
+        blank_rows_by_source=blank_rows_by_source,
+        skipped_blank_worksheets=skipped_blank_worksheets,
+        skipped_malformed_rows=skipped_malformed_rows,
+        extra_metadata=extra_metadata,
+        extra_caveats=extra_caveats,
+    )
+
+
+def write_ml_label_dataset_v14_bridge_shadow_pilot_ingest(
+    *,
+    repo_root: Path,
+    base_dataset_path: Path,
+    blank_worksheet_path: Path,
+    labeled_worksheet_path: Path,
+    context_sidecar_path: Path,
+    json_path: Path,
+    markdown_path: Path | None,
+    dataset_version: str = "ml-label-dataset-v14",
+) -> dict[str, Any]:
+    payload = build_ml_label_dataset_v14_bridge_shadow_pilot_ingest(
         repo_root=repo_root,
         base_dataset_path=base_dataset_path,
         blank_worksheet_path=blank_worksheet_path,

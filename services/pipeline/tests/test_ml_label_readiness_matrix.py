@@ -268,6 +268,67 @@ def test_bridge_recommendable_slice_is_offline_diagnostic_trainable(
     assert g["trainable_next_step"] == "train_offline_diagnostic_bridge_recommendable_scorer_only_not_production_readiness"
 
 
+def test_bridge_shadow_pilot_recommendable_slice_is_readiness_trainable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    rows = []
+    score_rows = []
+    for index in range(1, 61):
+        work_token = f"W950{index:04d}"
+        rows.append(
+            {
+                "split": "audit_only",
+                "row_id": f"shadow-pilot-{index}",
+                "ranking_run_id": "rank-5a7efa5ca3",
+                "family": "bridge",
+                "review_pool_variant": "ml_bridge_shadow_pilot_audit",
+                "work_id": work_token,
+                "paper_id": f"https://openalex.org/{work_token}",
+                "good_or_acceptable": index <= 53,
+                "surprising_or_useful": None,
+                "bridge_like_yes_or_partial": index <= 34,
+                "bridge_recommendable": index <= 34,
+            }
+        )
+        score_rows.append(
+            {
+                "work_id": index,
+                "recommendation_family": "bridge",
+                "semantic_score": 0.1,
+                "citation_velocity_score": 0.2,
+                "topic_growth_score": 0.3,
+                "bridge_score": 0.4,
+                "diversity_penalty": 0.0,
+                "final_score": 1.0 - index / 1000,
+                "openalex_id": f"https://openalex.org/{work_token}",
+                "_rank": index,
+            }
+        )
+    p = tmp_path / "labels.json"
+    p.write_text(json.dumps({"dataset_version": "ml-label-dataset-v14", "rows": rows}, indent=2), encoding="utf-8")
+
+    monkeypatch.setattr(
+        mlrm,
+        "fetch_run_db_snapshot",
+        lambda _c, *, ranking_run_id: _snap(exists=True, succeeded=True, n_scores=60),
+    )
+    monkeypatch.setattr(mlrm, "fetch_paper_scores_with_openalex", lambda *_a, **_k: score_rows)
+
+    payload = build_ml_label_readiness_matrix_payload(MagicMock(), label_dataset_path=p)
+    groups = {(g["ranking_run_id"], g["family"], g["target"]): g for g in payload["groups"]}
+    g = groups[("rank-5a7efa5ca3", "bridge", "bridge_recommendable")]
+
+    assert g["total_labeled_rows"] == 60
+    assert g["positive_count"] == 34
+    assert g["negative_count"] == 26
+    assert g["paper_scores_joinable_count"] == 60
+    assert g["readiness"]["has_both_classes"] is True
+    assert g["readiness"]["enough_for_diagnostic_auc"] is True
+    assert g["readiness"]["enough_for_tiny_baseline"] is True
+    assert g["trainable_next_step"] == "train_offline_diagnostic_bridge_recommendable_scorer_only_not_production_readiness"
+
+
 def test_markdown_includes_caveats(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     p = tmp_path / "x.json"
     p.write_text(json.dumps(_minimal_payload(), indent=2), encoding="utf-8")
