@@ -7796,6 +7796,49 @@ def main() -> None:
         help="Read-only Postgres URL (default: DATABASE_URL or PG* env)",
     )
 
+    ml_bridge_hybrid_eval_v3_parser = subparsers.add_parser(
+        "ml-offline-bridge-hybrid-eval-v3",
+        help=(
+            "Offline diagnostic: combine C=0.001 v3 OOF probabilities with bridge_score on "
+            "shadow-pilot rows (file-only, no DB writes)"
+        ),
+    )
+    ml_bridge_hybrid_eval_v3_parser.add_argument(
+        "--sensitivity-artifact",
+        required=True,
+        help="Path to ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json",
+    )
+    ml_bridge_hybrid_eval_v3_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v14.json",
+    )
+    ml_bridge_hybrid_eval_v3_parser.add_argument(
+        "--readiness-matrix",
+        required=True,
+        help="Path to docs/audit/ml-label-readiness-matrix-v11.json",
+    )
+    ml_bridge_hybrid_eval_v3_parser.add_argument(
+        "--embeddings-provenance",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json",
+    )
+    ml_bridge_hybrid_eval_v3_parser.add_argument(
+        "--v2-scorer",
+        default=None,
+        help="Optional path to v2 baseline scorer JSON for provenance",
+    )
+    ml_bridge_hybrid_eval_v3_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write hybrid eval v3 JSON",
+    )
+    ml_bridge_hybrid_eval_v3_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+
     ml_bridge_shadow_pilot_parser = subparsers.add_parser(
         "ml-bridge-shadow-pilot",
         help=(
@@ -8824,6 +8867,33 @@ def main() -> None:
             )
         except MLOfflineBridgeScoreHybridEvalError as e:
             print(f"ml-offline-bridge-score-hybrid-eval: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-bridge-hybrid-eval-v3":
+        from pipeline.ml_offline_bridge_hybrid_eval_v3 import (
+            MLOfflineBridgeHybridEvalV3Error,
+            run_ml_offline_bridge_hybrid_eval_v3_cli,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        v2_path = Path(args.v2_scorer) if args.v2_scorer else None
+        try:
+            run_ml_offline_bridge_hybrid_eval_v3_cli(
+                sensitivity_artifact_path=Path(args.sensitivity_artifact),
+                label_dataset_path=Path(args.label_dataset),
+                readiness_matrix_path=Path(args.readiness_matrix),
+                embeddings_provenance_path=Path(args.embeddings_provenance),
+                output_json=out_json,
+                markdown_output=out_md,
+                v2_scorer_path=v2_path,
+            )
+        except MLOfflineBridgeHybridEvalV3Error as e:
+            print(f"ml-offline-bridge-hybrid-eval-v3: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
