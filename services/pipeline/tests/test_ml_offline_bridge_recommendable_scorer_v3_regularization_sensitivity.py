@@ -117,9 +117,11 @@ def test_tiny_sweep_runs_and_reports_per_c_fields() -> None:
 
 def test_selection_logic_marks_ready_false_when_no_c_passes_gates() -> None:
     results = [
-        {"C": 1.0, "oof_roc_auc": 0.67, "in_sample_auc_minus_oof_auc": 0.1},
-        {"C": 0.1, "oof_roc_auc": 0.70, "in_sample_auc_minus_oof_auc": 0.2},
+        {"C": 1.0, "oof_roc_auc": 0.69, "in_sample_auc_minus_oof_auc": 0.1},
+        {"C": 0.1, "oof_roc_auc": 0.69, "in_sample_auc_minus_oof_auc": 0.2},
         {"C": 0.01, "oof_roc_auc": 0.65, "in_sample_auc_minus_oof_auc": 0.05},
+        {"C": 0.001, "oof_roc_auc": 0.64, "in_sample_auc_minus_oof_auc": 0.04},
+        {"C": 0.0001, "oof_roc_auc": 0.63, "in_sample_auc_minus_oof_auc": 0.03},
     ]
     _mark_too_strong_regularization(results)
     selection = _selection_from_sweep(results)
@@ -129,17 +131,19 @@ def test_selection_logic_marks_ready_false_when_no_c_passes_gates() -> None:
     assert all(item["acceptable_for_offline_hybrid_eval"] is False for item in results)
 
 
-def test_selection_logic_selects_acceptable_c_with_smallest_gap() -> None:
+def test_selection_logic_selects_acceptable_c_with_best_oof_auc() -> None:
     results = [
-        {"C": 1.0, "oof_roc_auc": 0.72, "in_sample_auc_minus_oof_auc": 0.12},
-        {"C": 0.1, "oof_roc_auc": 0.71, "in_sample_auc_minus_oof_auc": 0.08},
-        {"C": 0.01, "oof_roc_auc": 0.70, "in_sample_auc_minus_oof_auc": 0.1},
+        {"C": 1.0, "oof_roc_auc": 0.72, "in_sample_auc_minus_oof_auc": 0.28},
+        {"C": 0.1, "oof_roc_auc": 0.73, "in_sample_auc_minus_oof_auc": 0.27},
+        {"C": 0.01, "oof_roc_auc": 0.74, "in_sample_auc_minus_oof_auc": 0.26},
+        {"C": 0.001, "oof_roc_auc": 0.75, "in_sample_auc_minus_oof_auc": 0.25},
+        {"C": 0.0001, "oof_roc_auc": 0.70, "in_sample_auc_minus_oof_auc": 0.3},
     ]
     _mark_too_strong_regularization(results)
     selection = _selection_from_sweep(results)
 
     assert selection["ready_for_offline_hybrid_eval"] is True
-    assert selection["selected_frozen_coefficient_C"] == 0.1
+    assert selection["selected_frozen_coefficient_C"] == 0.001
 
 
 def test_baseline_reference_records_v3_path_and_sha256(tmp_path: Path) -> None:

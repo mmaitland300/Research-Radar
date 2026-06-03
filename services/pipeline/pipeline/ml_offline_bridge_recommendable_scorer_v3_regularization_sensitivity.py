@@ -69,9 +69,9 @@ ARTIFACT_TYPE = "ml_offline_bridge_recommendable_scorer_v3_regularization_sensit
 ARTIFACT_VERSION = "ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1"
 SENSITIVITY_FIT_MODE = f"{FIT_MODE}_regularization_sensitivity"
 DEFAULT_RANDOM_SEED = 20260602
-SWEEP_C_VALUES = (1.0, 0.1, 0.01)
-MIN_ACCEPTABLE_OOF_AUC = 0.68
-MAX_ACCEPTABLE_OVERFIT_GAP = 0.15
+SWEEP_C_VALUES = (1.0, 0.1, 0.01, 0.001, 0.0001)
+MIN_ACCEPTABLE_OOF_AUC = 0.70
+MAX_REGRESSION_VS_C_0_1_AUC = 0.01
 TOO_STRONG_MIN_OOF_AUC = 0.66
 TOO_STRONG_MAX_AUC_DROP_VS_C_0_1 = 0.03
 
@@ -387,12 +387,15 @@ def _mark_too_strong_regularization(results: list[dict[str, Any]]) -> None:
         )
         item["auc_drop_vs_C_0_1"] = auc_drop_vs_c_0_1
         item["too_strong_regularization"] = bool(too_strong)
-        gap = _as_float_metric(item.get("in_sample_auc_minus_oof_auc"))
         item["acceptable_for_offline_hybrid_eval"] = (
             oof_auc is not None
-            and gap is not None
             and oof_auc >= MIN_ACCEPTABLE_OOF_AUC
-            and gap <= MAX_ACCEPTABLE_OVERFIT_GAP
+            and not too_strong
+            and (
+                c_0_1_auc is None
+                or auc_drop_vs_c_0_1 is None
+                or auc_drop_vs_c_0_1 <= MAX_REGRESSION_VS_C_0_1_AUC
+            )
         )
 
 
@@ -463,12 +466,11 @@ def _selection_from_sweep(results: list[dict[str, Any]]) -> dict[str, Any]:
             "ready_for_offline_hybrid_eval": False,
             "selected_frozen_coefficient_C": None,
             "selected_result": None,
-            "selection_reason": "no_C_met_oof_auc_and_overfit_gap_gates",
+            "selection_reason": "no_C_met_oof_auc_trend_gate",
         }
     selected = min(
         acceptable,
         key=lambda item: (
-            _as_float_metric(item.get("in_sample_auc_minus_oof_auc")) or float("inf"),
             -(_as_float_metric(item.get("oof_roc_auc")) or float("-inf")),
             order.get(float(item["C"]), 999),
         ),
@@ -477,7 +479,7 @@ def _selection_from_sweep(results: list[dict[str, Any]]) -> dict[str, Any]:
         "ready_for_offline_hybrid_eval": True,
         "selected_frozen_coefficient_C": float(selected["C"]),
         "selected_result": selected,
-        "selection_reason": "acceptable_C_with_smallest_overfit_gap",
+        "selection_reason": "acceptable_C_with_best_oof_auc",
     }
 
 
@@ -588,13 +590,18 @@ def build_ml_offline_bridge_recommendable_scorer_v3_regularization_sensitivity_p
         "selection_rule": {
             "acceptable_for_offline_hybrid_eval_if": {
                 "oof_auc_gte": MIN_ACCEPTABLE_OOF_AUC,
-                "in_sample_auc_minus_oof_auc_lte": MAX_ACCEPTABLE_OVERFIT_GAP,
+                "too_strong_regularization": False,
+                "oof_auc_regression_vs_C_0_1_lte": MAX_REGRESSION_VS_C_0_1_AUC,
+                "note": (
+                    "The in-sample AUC minus OOF AUC gap remains reported, but is not used "
+                    "as the selection gate for this high-dimensional embedding classifier."
+                ),
             },
             "too_strong_regularization_if": {
                 "oof_auc_lt": TOO_STRONG_MIN_OOF_AUC,
                 "auc_drop_vs_C_0_1_gt": TOO_STRONG_MAX_AUC_DROP_VS_C_0_1,
             },
-            "selected_C_rule": "acceptable C with the smallest overfit gap",
+            "selected_C_rule": "acceptable C with the best OOF ROC AUC",
             "selection_reason": selection["selection_reason"],
         },
         "regularization_sweep": sweep,
