@@ -7662,6 +7662,64 @@ def main() -> None:
         default=20260602,
         help="Random seed for StratifiedKFold and LogisticRegression (default: 20260602)",
     )
+    ml_bridge_scorer_v3_regularization_parser = subparsers.add_parser(
+        "ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity",
+        help=(
+            "Offline diagnostic regularization sensitivity sweep for bridge_recommendable scorer v3 "
+            "(deduped 130 primary slice, SELECT-only embeddings, no writes)"
+        ),
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v14.json",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--readiness-matrix",
+        required=True,
+        help="Path to docs/audit/ml-label-readiness-matrix-v11.json",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--embeddings-provenance",
+        required=True,
+        help="Path to second snapshot embeddings provenance JSON",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--v3-baseline",
+        required=True,
+        help="Read-only path to docs/audit/ml-offline-bridge-recommendable-scorer-v3.json",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--v3-baseline-git-ref",
+        default=None,
+        help="Optional git ref for hashing the committed v3 baseline artifact instead of working-tree bytes",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--v2-baseline",
+        default=None,
+        help="Optional path to docs/audit/ml-offline-bridge-recommendable-scorer-v2.json for v2 work-id set check",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write regularization sensitivity JSON",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Read-only Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+    ml_bridge_scorer_v3_regularization_parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=20260602,
+        help="Random seed for StratifiedKFold and LogisticRegression (default: 20260602)",
+    )
     ml_bounded_hybrid_bridge_eval_parser = subparsers.add_parser(
         "ml-offline-bounded-hybrid-bridge-eval-v1",
         help=(
@@ -8678,6 +8736,40 @@ def main() -> None:
             )
         except MLOfflineBridgeRecommendableScorerV3Error as e:
             print(f"ml-offline-bridge-recommendable-scorer-v3: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_offline_bridge_recommendable_scorer_v3_regularization_sensitivity import (
+            MLOfflineBridgeRecommendableScorerV3RegularizationSensitivityError,
+            run_ml_offline_bridge_recommendable_scorer_v3_regularization_sensitivity_cli,
+        )
+
+        dsn = args.database_url or _bootstrap_loader.database_url_from_env()
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_offline_bridge_recommendable_scorer_v3_regularization_sensitivity_cli(
+                database_url=dsn,
+                label_dataset_path=Path(args.label_dataset),
+                readiness_matrix_path=Path(args.readiness_matrix),
+                embeddings_provenance_path=Path(args.embeddings_provenance),
+                v3_baseline_path=Path(args.v3_baseline),
+                v2_baseline_path=Path(args.v2_baseline) if args.v2_baseline else None,
+                output_json=out_json,
+                markdown_output=out_md,
+                v3_baseline_git_ref=args.v3_baseline_git_ref,
+                random_seed=int(args.random_seed),
+            )
+        except MLOfflineBridgeRecommendableScorerV3RegularizationSensitivityError as e:
+            print(
+                f"ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity: {e}",
+                file=sys.stderr,
+            )
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
