@@ -2073,6 +2073,27 @@
         "precision_at_10": 0.8,
         "precision_at_20": 0.7
       },
+      "v3_on_v2_work_id_set_label_counts": {
+        "positive_count": 52,
+        "negative_count": 48
+      },
+      "excluded_from_v2_work_id_set": {
+        "work_id_count": 30,
+        "label_counts": {
+          "positive_count": 23,
+          "negative_count": 7
+        },
+        "metrics_same_v3_deduped_oof": {
+          "status": "ok",
+          "roc_auc": 0.84472049689441,
+          "average_precision": 0.9481283583886095,
+          "pairwise_accuracy": 0.84472049689441,
+          "precision_at_5": 1.0,
+          "precision_at_10": 1.0,
+          "precision_at_20": 0.9
+        },
+        "note": "Shadow-pilot-only deduped works not present in the v2 100-work training slice; they are included in aggregate deduped-130 OOF AUC but excluded from v2 drift comparison."
+      },
       "major_regression_vs_v2_aggregate": false,
       "label_policy_drift_rows": [
         {

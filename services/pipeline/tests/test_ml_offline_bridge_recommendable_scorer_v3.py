@@ -205,6 +205,13 @@ def test_happy_path_real_v14_slice_counts_and_strata(tmp_path: Path) -> None:
     v2_delta = payload["evaluation"]["v2_baseline_delta"]
     assert v2_delta["v2_work_id_count"] == 100
     assert v2_delta["comparison_scope"] == "v3_deduped_oof_on_v2_work_id_set"
+    assert v2_delta["v3_on_v2_work_id_set_label_counts"] == {
+        "positive_count": 52,
+        "negative_count": 48,
+    }
+    excluded = v2_delta["excluded_from_v2_work_id_set"]
+    assert excluded["work_id_count"] == 30
+    assert excluded["label_counts"] == {"positive_count": 23, "negative_count": 7}
     assert "rank-83787b91ef_deduped_70_rows" not in str(v2_delta.get("comparison_scope", ""))
 
 
@@ -287,4 +294,5 @@ def test_markdown_contains_key_sections(tmp_path: Path) -> None:
     md = markdown_from_ml_offline_bridge_recommendable_scorer_v3(payload)
     assert "three-pool shadow audit" in md
     assert "deduped 130" in md.lower() or "Deduped primary rows: 130" in md
+    assert "Excluded shadow-only works (not in v2 set): 30 works" in md
     assert "not validation" in md.lower() or "not a serving" in md.lower()

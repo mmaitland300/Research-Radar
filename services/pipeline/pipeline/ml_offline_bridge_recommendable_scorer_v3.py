@@ -1096,6 +1096,11 @@ def _v2_baseline_delta(
                 }
             )
     metrics = _ranking_metrics(scores, labels)
+    excluded_work_ids = sorted(set(v3_by_work) - set(overlap_work_ids))
+    excluded_rows = [r for r in deduped_rows if str(r.get("work_id") or "") in excluded_work_ids]
+    excluded_scores = [v3_by_work[w] for w in excluded_work_ids if w in v3_by_work]
+    excluded_labels = [bool(r[TARGET]) for r in excluded_rows]
+    excluded_metrics = _ranking_metrics(excluded_scores, excluded_labels)
     v2_ref_auc = v2_payload.get("evaluation", {}).get("learned_cv", {}).get("aggregate_oof", {}).get("roc_auc")
     if not isinstance(v2_ref_auc, (int, float)):
         v2_ref_auc = V2_AGGREGATE_ROC_AUC_REFERENCE
@@ -1111,6 +1116,22 @@ def _v2_baseline_delta(
         "v3_scores_available_count": len(scores),
         "v2_reference_aggregate_roc_auc": float(v2_ref_auc),
         "v3_on_v2_work_id_set_metrics": metrics,
+        "v3_on_v2_work_id_set_label_counts": {
+            "positive_count": sum(labels),
+            "negative_count": len(labels) - sum(labels),
+        },
+        "excluded_from_v2_work_id_set": {
+            "work_id_count": len(excluded_work_ids),
+            "label_counts": {
+                "positive_count": sum(excluded_labels),
+                "negative_count": len(excluded_labels) - sum(excluded_labels),
+            },
+            "metrics_same_v3_deduped_oof": excluded_metrics,
+            "note": (
+                "Shadow-pilot-only deduped works not present in the v2 100-work training slice; "
+                "they are included in aggregate deduped-130 OOF AUC but excluded from v2 drift comparison."
+            ),
+        },
         "major_regression_vs_v2_aggregate": regression,
         "label_policy_drift_rows": label_drift,
         "label_policy_drift_count": len(label_drift),
@@ -1405,6 +1426,7 @@ def markdown_from_ml_offline_bridge_recommendable_scorer_v3(payload: dict[str, A
             f"| {s.get('stratum')} | {s.get('n')} | {s.get('positive_count')} | {s.get('negative_count')} | "
             f"{s.get('roc_auc')} | {s.get('average_precision')} | {s.get('precision_at_10')} |"
         )
+    excluded = v2_delta.get("excluded_from_v2_work_id_set") or {}
     lines += [
         "",
         "## Targeted shadow disagreement readouts",
@@ -1417,9 +1439,20 @@ def markdown_from_ml_offline_bridge_recommendable_scorer_v3(payload: dict[str, A
         "",
         "## v2 baseline delta (100 work_ids)",
         "",
-        f"- v3 ROC AUC on v2 work-id set: {v2_delta.get('v3_on_v2_work_id_set_metrics', {}).get('roc_auc')}",
-        f"- Major regression vs v2: {v2_delta.get('major_regression_vs_v2_aggregate')}",
-        f"- Label policy drift count: {v2_delta.get('label_policy_drift_count')}",
+        "Uses the **same v3 deduped OOF probabilities**, but only on the 100 work_ids from the v2 artifact "
+        "(not the full deduped-130 slice). The other **30 deduped works** are shadow-pilot-only labels "
+        "outside the v2 set; they are excluded here but included in aggregate deduped-130 AUC above.",
+        "",
+        f"- v3 ROC AUC on v2 work-id set (100 works): {v2_delta.get('v3_on_v2_work_id_set_metrics', {}).get('roc_auc')}",
+        f"- v2 overlap subset labels (v3 deduped targets): "
+        f"{v2_delta.get('v3_on_v2_work_id_set_label_counts', {}).get('positive_count')} pos / "
+        f"{v2_delta.get('v3_on_v2_work_id_set_label_counts', {}).get('negative_count')} neg",
+        f"- Excluded shadow-only works (not in v2 set): {excluded.get('work_id_count')} works; "
+        f"subset ROC AUC {excluded.get('metrics_same_v3_deduped_oof', {}).get('roc_auc')} "
+        f"({excluded.get('label_counts', {}).get('positive_count')} pos / "
+        f"{excluded.get('label_counts', {}).get('negative_count')} neg)",
+        f"- Major regression vs v2 aggregate (~0.65): {v2_delta.get('major_regression_vs_v2_aggregate')}",
+        f"- Label policy drift count (v2 label vs v3 deduped label): {v2_delta.get('label_policy_drift_count')}",
         "",
         "## Overfit sanity",
         "",

@@ -39,9 +39,13 @@ Offline diagnostic model for `bridge_recommendable` on the v14 bridge audit slic
 
 ## v2 baseline delta (100 work_ids)
 
-- v3 ROC AUC on v2 work-id set: 0.6670673076923076
-- Major regression vs v2: False
-- Label policy drift count: 1
+Uses the **same v3 deduped OOF probabilities**, but only on the 100 work_ids from the v2 artifact (not the full deduped-130 slice). The other **30 deduped works** are shadow-pilot-only labels outside the v2 set; they are excluded here but included in aggregate deduped-130 AUC above.
+
+- v3 ROC AUC on v2 work-id set (100 works): 0.6670673076923076
+- v2 overlap subset labels (v3 deduped targets): 52 pos / 48 neg
+- Excluded shadow-only works (not in v2 set): 30 works; subset ROC AUC 0.84472049689441 (23 pos / 7 neg)
+- Major regression vs v2 aggregate (~0.65): False
+- Label policy drift count (v2 label vs v3 deduped label): 1
 
 ## Overfit sanity
 
