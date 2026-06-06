@@ -7839,6 +7839,62 @@ def main() -> None:
         help="Optional path to write companion Markdown summary",
     )
 
+    ml_bridge_hybrid_rank_pct_eval_v3_parser = subparsers.add_parser(
+        "ml-offline-bridge-hybrid-rank-pct-eval-v3",
+        help=(
+            "Offline diagnostic: rank-percentile blend of C=0.001 v3 ML + bridge_score on "
+            "shadow-pilot rows (528-pool scope when shadow pilot + DB provided)"
+        ),
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--sensitivity-artifact",
+        required=True,
+        help="Path to ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json",
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v14.json",
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--readiness-matrix",
+        required=True,
+        help="Path to docs/audit/ml-label-readiness-matrix-v11.json",
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--embeddings-provenance",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json",
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--shadow-pilot-artifact",
+        default=None,
+        help=(
+            "Optional path to ml-bridge-shadow-pilot-v1.json for full 528-candidate "
+            "rank-percentile scope"
+        ),
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Read-only Postgres URL for full-pool v3 inference (default: DATABASE_URL or PG* env)",
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--linear-hybrid-eval-v3",
+        default=None,
+        help="Optional path to linear hybrid eval v3 JSON for provenance cross-reference",
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write rank-percentile hybrid eval v3 JSON",
+    )
+    ml_bridge_hybrid_rank_pct_eval_v3_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+
     ml_bridge_shadow_pilot_parser = subparsers.add_parser(
         "ml-bridge-shadow-pilot",
         help=(
@@ -8894,6 +8950,38 @@ def main() -> None:
             )
         except MLOfflineBridgeHybridEvalV3Error as e:
             print(f"ml-offline-bridge-hybrid-eval-v3: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-offline-bridge-hybrid-rank-pct-eval-v3":
+        from pipeline import bootstrap_loader as _bootstrap_loader
+        from pipeline.ml_offline_bridge_hybrid_rank_pct_eval_v3 import (
+            MLOfflineBridgeHybridRankPctEvalV3Error,
+            run_ml_offline_bridge_hybrid_rank_pct_eval_v3_cli,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        shadow_path = Path(args.shadow_pilot_artifact) if args.shadow_pilot_artifact else None
+        linear_path = Path(args.linear_hybrid_eval_v3) if args.linear_hybrid_eval_v3 else None
+        db_url = args.database_url or _bootstrap_loader.database_url_from_env()
+        try:
+            run_ml_offline_bridge_hybrid_rank_pct_eval_v3_cli(
+                sensitivity_artifact_path=Path(args.sensitivity_artifact),
+                label_dataset_path=Path(args.label_dataset),
+                readiness_matrix_path=Path(args.readiness_matrix),
+                embeddings_provenance_path=Path(args.embeddings_provenance),
+                shadow_pilot_artifact_path=shadow_path,
+                database_url=db_url,
+                linear_hybrid_eval_v3_path=linear_path,
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLOfflineBridgeHybridRankPctEvalV3Error as e:
+            print(f"ml-offline-bridge-hybrid-rank-pct-eval-v3: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
