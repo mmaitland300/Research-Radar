@@ -124,7 +124,10 @@ A second-surface confirmatory eval was run on the shadow-generalization snapshot
 
 Supporting file: [docs/audit/ml-shadow-scorer-v1-second-surface-generalization-audit-v1.md](docs/audit/ml-shadow-scorer-v1-second-surface-generalization-audit-v1.md)
 
-The label dataset behind these surfaces is `ml-label-dataset-v12` (807 labeled rows across families, including 70-row bridge negative-mining slice).
+The label dataset behind these Emerging-focused surfaces is `ml-label-dataset-v12`
+(807 labeled rows across families, including the first 70-row bridge
+negative-mining slice). Newer Bridge ML diagnostics use `ml-label-dataset-v14`,
+which adds top-ranked validation and shadow-pilot disagreement labels.
 
 How to read all of this:
 
@@ -166,27 +169,59 @@ Key boundary:
 - Persistent-overlap exclusion is corpus-snapshot-specific and must be
   rederived before any default behavior change.
 
-### Bridge ML Diagnostic State (as of 2026-06-01)
+### Bridge ML Diagnostic State (as of 2026-06-06)
 
-An offline diagnostic bridge scorer was trained and evaluated on the 70-row
-`ml_bridge_negative_mining_audit` slice (rank-83787b91ef, bridge family). Key
-findings:
+Bridge ML evidence has moved past the original negative-mining-only diagnostic.
+The current label artifact is `ml-label-dataset-v14`, with
+`ml-label-readiness-matrix-v11`. The Bridge audit pool now contains 160
+row-level labels across three review variants:
 
-- **Learned OOF ROC AUC: 0.6867** vs. `final_score` heuristic ROC AUC: 0.4609.
-- A 50/50 hybrid of ML OOF + `final_score` rank percentiles scored ROC AUC
-  0.6036, lower than learned-only. Blending `final_score` with ML signal
-  degraded performance on this slice.
-- **Critical gap:** `bridge_score` is NULL for all 528 bridge rows in
-  `rank-83787b91ef`. The ranking on this run is driven entirely by
-  `final_score`. A direct `bridge_score + ML hybrid` comparison requires a
-  run with populated `bridge_score`.
-- **Sampling bias:** The 70-row slice emphasized suppressed and lower-ranked
-  candidates (family_rank 26-528, none in the visible top-20). The model has
-  not been tested against the papers currently surfaced on the live Bridge feed.
+- `ml_bridge_negative_mining_audit`
+- `ml_bridge_top_ranked_validation_audit`
+- `ml_bridge_shadow_pilot_audit`
 
-The ML signal is promising but the evidence is incomplete. The next credible
-evaluation step is to label the actual top-ranked Bridge papers and rerun the
-diagnostic with the combined slice (top-ranked + negative-mining rows).
+After deduplication and source-priority rules, the Bridge v3 scorer trains and
+evaluates on 130 unique work ids. This keeps the negative-mining, top-ranked,
+and shadow-pilot disagreement evidence in one diagnostic slice without treating
+near-duplicate or conflicting rows as independent production validation.
+
+Current Bridge ML findings:
+
+- **Bridge scorer v3:** learned useful bridge-recommendable discrimination from
+  OpenAI embedding features, but the original `C=1.0` logistic-regression fit
+  overfit the 130-work-id slice. Its in-sample ROC AUC was 1.0 versus OOF ROC
+  AUC around 0.718, a gap of about 0.28.
+- **Regularization sensitivity:** selected `C=0.001` as the safer frozen
+  coefficient setting for offline hybrid evaluation. This frozen scorer is an
+  offline-eval artifact, not a production-serving authorization.
+- **Historical `rank-83787b91ef`:** `bridge_score` is NULL for all 528 Bridge
+  rows in that earlier run, so old bridge diagnostics could only compare ML
+  against `final_score`-driven ordering.
+- **Current hybrid-eval run `rank-5a7efa5ca3`:** `bridge_score` is populated on
+  all 528 Bridge rows, enabling a direct `bridge_score + ML` comparison.
+
+Two hybrid formulas were evaluated on the 60 labeled shadow-pilot rows:
+
+- **Linear min-max blend failed.** The primary `alpha=0.5` formula,
+  `alpha * ml_probability + (1-alpha) * normalized_bridge_score`, reduced P@20
+  from 0.95 for pure ML to 0.75 for the hybrid. It also failed to reliably
+  rescue the `high_bridge_score_low_ml` positives. This formula should not be
+  used for Bridge serving.
+- **Rank-percentile blend is promising.** The primary `alpha=0.5` formula,
+  `alpha * rank_pct(ml_probability) + (1-alpha) * rank_pct(bridge_score)`,
+  used full-pool rank percentiles over 528 Bridge candidates and matched pure
+  ML P@20 at 1.0 on the labeled shadow slice. Pure `bridge_score` P@20 was 0.5.
+  The rank-percentile hybrid also passed the `high_bridge_score_low_ml` targeted
+  check with pairwise 0.875.
+
+Important nuance: the rank-percentile hybrid did not beat pure ML on P@20; it
+matched it while avoiding the linear blend's precision drop. The same artifact
+shows exploratory `alpha=0.7` with stronger ROC AUC and AP than `alpha=0.5`,
+but `alpha=0.5` remains the fixed primary arm for that audit.
+
+The rank-percentile result supports a controlled offline rollout replay. It
+does not authorize Bridge serving, production default changes, API/web changes,
+or user-visible Bridge ranking changes.
 
 Supporting files:
 
@@ -194,7 +229,14 @@ Supporting files:
 - [docs/audit/ml-offline-bridge-recommendable-scorer-v1.md](docs/audit/ml-offline-bridge-recommendable-scorer-v1.md)
 - [docs/audit/ml-offline-bounded-hybrid-bridge-eval-v1.json](docs/audit/ml-offline-bounded-hybrid-bridge-eval-v1.json)
 - [docs/audit/ml-offline-bounded-hybrid-bridge-eval-v1.md](docs/audit/ml-offline-bounded-hybrid-bridge-eval-v1.md)
-- [docs/audit/manual-review/bridge_top_ranked_rank-83787b91ef_v1.csv](docs/audit/manual-review/bridge_top_ranked_rank-83787b91ef_v1.csv) (top-ranked validation worksheet, ready to label)
+- [docs/audit/ml-offline-bridge-recommendable-scorer-v3.json](docs/audit/ml-offline-bridge-recommendable-scorer-v3.json)
+- [docs/audit/ml-offline-bridge-recommendable-scorer-v3.md](docs/audit/ml-offline-bridge-recommendable-scorer-v3.md)
+- [docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json](docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json)
+- [docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.md](docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.md)
+- [docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.json](docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.json)
+- [docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.md](docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.md)
+- [docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.json](docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.json)
+- [docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.md](docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.md)
 
 ## What Is Not Claimed Yet
 
@@ -217,23 +259,20 @@ See the audit bundles for the full gate trail.
 
 The next credible evaluation work is:
 
-1. **Label top-ranked Bridge papers.** A top-ranked validation worksheet
-   (`rank-83787b91ef`, 30 rows: top-20 by final_score + 10 borderline rows in
-   ranks 21-40) is committed and ready to label. This tests whether the learned
-   bridge scorer agrees with the currently surfaced Bridge papers, which the
-   70-row negative-mining slice (ranks 26-528) could not test.
-2. **Rerun bridge hybrid eval with combined labels.** Once the top-ranked labels
-   are ingested, retrain and evaluate the bridge scorer on the combined slice
-   (negative-mining + top-ranked) and compare: `bridge_score` (requires a run
-   with populated `bridge_score`), learned ML probability, and their hybrid.
-3. **Investigate bridge_score availability.** `bridge_score` is NULL for all 528
-   bridge rows in `rank-83787b91ef`. Any meaningful `bridge_score + ML hybrid`
-   requires re-running the pipeline on a configuration that populates it.
-4. **Expand the corpus.** Add the next source policy rows after their OpenAlex
+1. **Run controlled offline Bridge rollout replay.** Use the v3 `C=0.001`
+   frozen scorer plus the rank-percentile hybrid formula on `rank-5a7efa5ca3`.
+   Compare current Bridge top-20 versus proposed hybrid top-20, including
+   promoted papers, demoted papers, stable papers, known labeled positives and
+   negatives, and unlabeled high-impact changes.
+2. **Review rollout churn before serving work.** If the controlled replay shows
+   reasonable top-20 churn and no obvious false-positive pattern, draft a
+   Bridge serving plan. If it is too unstable, collect another targeted
+   worksheet before production implementation.
+3. **Expand the corpus.** Add the next source policy rows after their OpenAlex
    source ids and inclusion boundaries are documented.
-5. **Improve labeling breadth.** Add multi-reviewer or adjudicated labels for the
+4. **Improve labeling breadth.** Add multi-reviewer or adjudicated labels for the
    main recommendation families to move past single-reviewer evidence.
-6. **Track Emerging scorer v2.** The current scorer was trained on ~125 labeled
+5. **Track Emerging scorer v2.** The current scorer was trained on ~125 labeled
    works (v8 dataset). v12 has additional Emerging rows at 54% positive. A
    retrain is available when warranted.
 
