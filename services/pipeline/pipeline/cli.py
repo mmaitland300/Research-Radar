@@ -7895,6 +7895,59 @@ def main() -> None:
         help="Optional path to write companion Markdown summary",
     )
 
+    ml_bridge_rank_pct_controlled_rollout_eval_parser = subparsers.add_parser(
+        "ml-bridge-rank-pct-hybrid-controlled-rollout-eval",
+        help=(
+            "Offline controlled rollout replay for replacing current Bridge top-20 with "
+            "rank-percentile hybrid top-20 (SELECT-only embeddings, no writes)"
+        ),
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--shadow-pilot-artifact",
+        required=True,
+        help="Path to docs/audit/ml-bridge-shadow-pilot-v1.json",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--sensitivity-artifact",
+        required=True,
+        help="Path to ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--rank-pct-eval-artifact",
+        required=True,
+        help="Path to docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.json",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v14.json",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--readiness-matrix",
+        required=True,
+        help="Path to docs/audit/ml-label-readiness-matrix-v11.json",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--embeddings-provenance",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Read-only Postgres URL for full-pool v3 inference (default: DATABASE_URL or PG* env)",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write controlled rollout eval JSON",
+    )
+    ml_bridge_rank_pct_controlled_rollout_eval_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+
     ml_bridge_shadow_pilot_parser = subparsers.add_parser(
         "ml-bridge-shadow-pilot",
         help=(
@@ -8983,6 +9036,42 @@ def main() -> None:
         except MLOfflineBridgeHybridRankPctEvalV3Error as e:
             print(f"ml-offline-bridge-hybrid-rank-pct-eval-v3: {e}", file=sys.stderr)
             raise SystemExit(e.code) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-bridge-rank-pct-hybrid-controlled-rollout-eval":
+        from pipeline.ml_bridge_rank_pct_hybrid_controlled_rollout_eval import (
+            MLBridgeRankPctHybridControlledRolloutEvalError,
+            run_ml_bridge_rank_pct_hybrid_controlled_rollout_eval_cli,
+        )
+        from pipeline.ml_offline_bridge_hybrid_eval_v3 import MLOfflineBridgeHybridEvalV3Error
+        from pipeline.ml_offline_bridge_hybrid_rank_pct_eval_v3 import (
+            MLOfflineBridgeHybridRankPctEvalV3Error,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_bridge_rank_pct_hybrid_controlled_rollout_eval_cli(
+                shadow_pilot_artifact_path=Path(args.shadow_pilot_artifact),
+                sensitivity_artifact_path=Path(args.sensitivity_artifact),
+                rank_pct_eval_artifact_path=Path(args.rank_pct_eval_artifact),
+                label_dataset_path=Path(args.label_dataset),
+                readiness_matrix_path=Path(args.readiness_matrix),
+                embeddings_provenance_path=Path(args.embeddings_provenance),
+                database_url=args.database_url,
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except (
+            MLBridgeRankPctHybridControlledRolloutEvalError,
+            MLOfflineBridgeHybridEvalV3Error,
+            MLOfflineBridgeHybridRankPctEvalV3Error,
+        ) as e:
+            print(f"ml-bridge-rank-pct-hybrid-controlled-rollout-eval: {e}", file=sys.stderr)
+            raise SystemExit(getattr(e, "code", 2)) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
             print(out_md.resolve(), file=sys.stderr)
