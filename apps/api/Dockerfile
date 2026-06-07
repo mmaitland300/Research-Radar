@@ -12,6 +12,9 @@ ENV RESEARCH_RADAR_REPO_ROOT=/app
 COPY services/pipeline ./services/pipeline
 COPY apps/api ./apps/api
 COPY docs/audit/ml-offline-audit-embedding-scorer-v2.json ./docs/audit/ml-offline-audit-embedding-scorer-v2.json
+COPY docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.json ./docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.json
+COPY docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json ./docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json
+COPY docs/audit/ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json ./docs/audit/ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json
 
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir ./services/pipeline \
