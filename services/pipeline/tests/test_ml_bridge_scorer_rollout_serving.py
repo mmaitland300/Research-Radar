@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -111,7 +112,7 @@ def test_serving_plan_artifact_sha256_is_enforced(tmp_path: Path) -> None:
 
     serving._validate_sha256(
         artifact,
-        serving.sha256_file(artifact),
+        hashlib.sha256(artifact.read_bytes()).hexdigest(),
         label="test artifact",
     )
     with pytest.raises(serving.MLBridgeScorerRolloutServingError, match="SHA256 mismatch"):
@@ -120,6 +121,18 @@ def test_serving_plan_artifact_sha256_is_enforced(tmp_path: Path) -> None:
             "0" * 64,
             label="test artifact",
         )
+
+
+def test_serving_plan_artifact_sha256_accepts_lf_normalized_text_hash(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact.json"
+    artifact.write_bytes(b'{\r\n  "ok": true\r\n}\r\n')
+    expected_lf_hash = hashlib.sha256(artifact.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+    serving._validate_sha256(
+        artifact,
+        expected_lf_hash,
+        label="test artifact",
+    )
 
 
 def test_historical_shadow_pilot_fields_are_ignored() -> None:

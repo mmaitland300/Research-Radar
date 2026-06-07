@@ -52,9 +52,9 @@ Future serving must fail closed on `ranking_run_id` mismatch. If `ranking_versio
 ## Frozen Scorer Load Contract
 
 - sensitivity artifact: `docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json`
-- sensitivity SHA256: `04a41f91cee1a2a78b7f1f8e9f99b1ef13679a8dacd1b404a848c82751d807d2`
+- sensitivity SHA256: `1c328224ff78e07c1080b737dd2e3f033903607f2e5898b536f086187e76d037`
 - embeddings provenance: `docs/audit/ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json`
-- embeddings SHA256: `c6b3293753df76e9db7c6440fe6f48b5d6eb1ead84b2b46bb39fe83090a8cbf8`
+- embeddings SHA256: `d43413d0846bbbf44bf4fac80cb984ab065720675807b0a175a52ec6e5eb5fa7`
 - scorer_probability_source: `full_pool_frozen_inference_not_oof`
 - Future serving uses full-pool frozen inference, not OOF probabilities.
 

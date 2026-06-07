@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -12,7 +13,6 @@ import psycopg
 from psycopg.rows import dict_row
 
 from pipeline.bootstrap_loader import database_url_from_env
-from pipeline.ml_offline_baseline_eval import sha256_file
 from pipeline.ml_offline_bridge_hybrid_eval_v3 import SELECTED_FROZEN_C, _as_float
 from pipeline.ml_offline_bridge_hybrid_rank_pct_eval_v3 import (
     _compute_rank_percentiles_from_pool,
@@ -60,10 +60,15 @@ def _resolve_repo_path(raw: str, *, root: Path) -> Path:
 def _validate_sha256(path: Path, expected: Any, *, label: str) -> None:
     if not isinstance(expected, str) or not expected.strip():
         raise MLBridgeScorerRolloutServingError(f"serving plan missing {label} SHA256")
-    actual = sha256_file(path)
-    if actual != expected:
+    raw = path.read_bytes()
+    raw_actual = hashlib.sha256(raw).hexdigest()
+    normalized_actual = raw_actual
+    if b"\r\n" in raw:
+        normalized_actual = hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
+    if expected not in {raw_actual, normalized_actual}:
         raise MLBridgeScorerRolloutServingError(
-            f"{label} SHA256 mismatch for {path}: expected {expected}, got {actual}"
+            f"{label} SHA256 mismatch for {path}: expected {expected}, "
+            f"got {raw_actual} (raw), {normalized_actual} (lf-normalized)"
         )
 
 
