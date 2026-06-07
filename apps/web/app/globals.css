@@ -591,6 +591,25 @@ pre {
   justify-content: flex-start;
 }
 
+.paper-dossier-hero-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.paper-dossier-hero-foot .action-row {
+  margin-top: 0;
+}
+
+.paper-dossier-hero-foot .meta-dossier .meta-paper-id {
+  flex: 1 1 100%;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
 .hero-lead {
   margin: 0;
   max-width: 48rem;

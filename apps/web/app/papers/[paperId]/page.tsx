@@ -304,6 +304,13 @@ function paperTitleSizeClass(title: string): string {
   return "";
 }
 
+function openAlexWorkToken(paperId: string): string {
+  const trimmed = paperId.trim();
+  const match = trimmed.match(/(?:^|\/)((?:W|A)\d+)\/?$/i);
+  if (match) return match[1].toUpperCase();
+  return trimmed;
+}
+
 function PaperWhySurfaced({ explanations }: { explanations: RankedSignalExplanation[] }) {
   return (
     <details className="ranking-why-details">
@@ -460,21 +467,25 @@ export default async function PaperDetailPage({
                     <p className="metric-value">{paper.topics.length}</p>
                   </article>
                 </div>
-                <div className="meta">
-                  <span>Paper ID: {canonicalPaperId}</span>
-                  <span>{paper.is_core_corpus ? "core corpus" : "edge slice"}</span>
-                  <span>{paper.source_slug ?? "unknown source slug"}</span>
-                </div>
-                <div className="action-row" aria-label="Paper workflow handoff">
-                  <Link className="action-link" href={emergingFocusHref}>
-                    Check emerging feed
-                  </Link>
-                  <Link className="action-link" href={bridgeFocusHref}>
-                    Check bridge preview
-                  </Link>
-                  <Link className="action-link" href="/trends">
-                    Inspect topic momentum
-                  </Link>
+                <div className="paper-dossier-hero-foot">
+                  <div className="meta meta-dossier">
+                    <span className="meta-paper-id" title={canonicalPaperId}>
+                      Paper ID: {openAlexWorkToken(canonicalPaperId)}
+                    </span>
+                    <span>{paper.is_core_corpus ? "core corpus" : "edge slice"}</span>
+                    <span>{paper.source_slug ?? "unknown source slug"}</span>
+                  </div>
+                  <div className="action-row" aria-label="Paper workflow handoff">
+                    <Link className="action-link" href={emergingFocusHref}>
+                      Check emerging feed
+                    </Link>
+                    <Link className="action-link" href={bridgeFocusHref}>
+                      Check bridge preview
+                    </Link>
+                    <Link className="action-link" href="/trends">
+                      Inspect topic momentum
+                    </Link>
+                  </div>
                 </div>
               </>
             ) : null}
