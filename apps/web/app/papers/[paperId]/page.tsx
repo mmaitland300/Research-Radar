@@ -85,8 +85,11 @@ const API_BASE_URL =
 
 const EMBEDDING_VERSION =
   process.env.NEXT_PUBLIC_EMBEDDING_VERSION?.trim() || undefined;
-const RANKING_VERSION =
-  process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
+const PRODUCT_RANKING_VERSION =
+  process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() ||
+  "shadow-generalization-product-candidate-ranking-v1";
+const BRIDGE_RANKING_RUN_ID =
+  process.env.NEXT_PUBLIC_BRIDGE_RANKING_RUN_ID?.trim() || "rank-5a7efa5ca3";
 
 type SimilarPapersState =
   | { kind: "disabled" }
@@ -223,8 +226,8 @@ async function fetchPaperRanking(
   });
   if (options?.rankingRunId) {
     params.set("ranking_run_id", options.rankingRunId);
-  } else if (RANKING_VERSION) {
-    params.set("ranking_version", RANKING_VERSION);
+  } else if (PRODUCT_RANKING_VERSION) {
+    params.set("ranking_version", PRODUCT_RANKING_VERSION);
   }
 
   try {
@@ -269,9 +272,23 @@ function buildRecommendedHref(args: {
   limit?: number;
 }): string {
   const params = new URLSearchParams({ family: args.family, paper: args.paperId });
-  if (args.rankingRunId) params.set("ranking_run_id", args.rankingRunId);
+  if (
+    args.rankingRunId &&
+    (args.family !== "bridge" || args.rankingRunId === BRIDGE_RANKING_RUN_ID)
+  ) {
+    params.set("ranking_run_id", args.rankingRunId);
+  }
   if (args.limit != null) params.set("limit", String(args.limit));
   return `/recommended?${params.toString()}`;
+}
+
+function recommendedLimitForFamily(
+  family: Family,
+  rank: number | null,
+  fallbackLimit: number
+): number {
+  if (family === "bridge") return 20;
+  return Math.max(15, rank ?? fallbackLimit);
 }
 
 function buildEvaluationHref(args: {
@@ -389,12 +406,7 @@ export default async function PaperDetailPage({
       ? buildRecommendedHref({
           family: "bridge",
           paperId: canonicalPaperId,
-          rankingRunId: ranking.data.ranking_run_id,
-          limit: Math.max(
-            15,
-            ranking.data.families.find((family) => family.family === "bridge")?.rank ??
-              ranking.data.top_n
-          )
+          limit: 20
         })
       : "/recommended?family=bridge";
   const undercitedFocusHref =
@@ -636,7 +648,11 @@ export default async function PaperDetailPage({
                           family: family.family,
                           paperId: canonicalPaperId,
                           rankingRunId: ranking.data.ranking_run_id,
-                          limit: Math.max(15, family.rank ?? ranking.data.top_n)
+                          limit: recommendedLimitForFamily(
+                            family.family,
+                            family.rank,
+                            ranking.data.top_n
+                          )
                         })}
                       >
                         Open {FAMILY_LABEL[family.family]} feed

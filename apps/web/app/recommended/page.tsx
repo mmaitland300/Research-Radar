@@ -261,8 +261,11 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:8000";
 
-const RANKING_VERSION =
-  process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
+const PRODUCT_RANKING_VERSION =
+  process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() ||
+  "shadow-generalization-product-candidate-ranking-v1";
+const BRIDGE_RANKING_RUN_ID =
+  process.env.NEXT_PUBLIC_BRIDGE_RANKING_RUN_ID?.trim() || "rank-5a7efa5ca3";
 
 function envFlagEnabled(raw: string | undefined): boolean {
   const value = raw?.trim().toLowerCase();
@@ -272,8 +275,6 @@ function envFlagEnabled(raw: string | undefined): boolean {
 const ENABLE_EXPERIMENTAL_BRIDGE_VIEW = envFlagEnabled(
   process.env.NEXT_PUBLIC_ENABLE_EXPERIMENTAL_BRIDGE_VIEW
 );
-
-const OBJECTIVE_BRIDGE_EXPERIMENT_RUN_ID = "rank-60910a47b4";
 
 function parseFamily(raw: string | string[] | undefined): Family {
   const v = Array.isArray(raw) ? raw[0] : raw;
@@ -483,8 +484,12 @@ async function fetchRanked(
     family,
     limit: String(options.limit)
   });
-  if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);
-  if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
+  if (family === "bridge") {
+    params.set("ranking_run_id", options.rankingRunId ?? BRIDGE_RANKING_RUN_ID);
+  } else {
+    if (PRODUCT_RANKING_VERSION) params.set("ranking_version", PRODUCT_RANKING_VERSION);
+    if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
+  }
   if (family === "bridge" && options.bridgeEligibleOnly) {
     params.set("bridge_eligible_only", "true");
   }
@@ -578,7 +583,9 @@ function buildRecommendedFamilyHref(
 ): string {
   const params = new URLSearchParams({ family });
   if (options.focusPaperId) params.set("paper", options.focusPaperId);
-  if (options.rankingRunId) params.set("ranking_run_id", options.rankingRunId);
+  if (family !== "bridge" && options.rankingRunId) {
+    params.set("ranking_run_id", options.rankingRunId);
+  }
   if (options.limit != null) params.set("limit", String(options.limit));
   if (family === "bridge" && options.bridgeEligibleOnly) {
     params.set("bridge_eligible_only", "true");
@@ -590,15 +597,24 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const family = parseFamily(resolvedSearchParams.family);
   const focusPaperId = parseSingleParam(resolvedSearchParams.paper);
-  const rankingRunId = parseSingleParam(resolvedSearchParams.ranking_run_id);
-  const defaultLimit = family === "emerging" ? 20 : 15;
+  const requestedRankingRunId = parseSingleParam(resolvedSearchParams.ranking_run_id);
+  const rankingRunId = family === "bridge" ? BRIDGE_RANKING_RUN_ID : requestedRankingRunId;
+  const defaultLimit = family === "emerging" || family === "bridge" ? 20 : 15;
   const limit = parseLimit(resolvedSearchParams.limit, defaultLimit, 100);
   const bridgeEligibleOnlyRequested =
     family === "bridge" && parseBooleanParam(resolvedSearchParams.bridge_eligible_only);
   const bridgeEligibleOnly = ENABLE_EXPERIMENTAL_BRIDGE_VIEW && bridgeEligibleOnlyRequested;
   const bridgeEligibleOnlyDisabledNotice =
     family === "bridge" && bridgeEligibleOnlyRequested && !ENABLE_EXPERIMENTAL_BRIDGE_VIEW;
-  const usingUnpinnedLatestRun = !rankingRunId && !RANKING_VERSION;
+  const bridgeRunOverrideIgnored =
+    family === "bridge" &&
+    Boolean(requestedRankingRunId) &&
+    requestedRankingRunId !== BRIDGE_RANKING_RUN_ID;
+  const nonBridgeRankingRunId = family === "bridge" ? undefined : requestedRankingRunId;
+  const runContextPinned =
+    family === "bridge" || Boolean(rankingRunId || PRODUCT_RANKING_VERSION);
+  const usingUnpinnedLatestRun =
+    family !== "bridge" && !rankingRunId && !PRODUCT_RANKING_VERSION;
   const { data, error, status } = await fetchRanked(family, {
     limit,
     rankingRunId,
@@ -643,9 +659,20 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             ) : null}
             {family === "bridge" ? (
               <p className="muted-inline">
-                Bridge evidence is experimental and run-specific. Use pinned runs to inspect how
-                the signal was measured and whether it affected ordering for that run.
+                Bridge evidence is experimental and run-specific. This page pins Bridge to{" "}
+                <code>{BRIDGE_RANKING_RUN_ID}</code>; canary ML serving requires{" "}
+                <code>limit=20</code>.
               </p>
+            ) : null}
+            {bridgeRunOverrideIgnored ? (
+              <div className="ranking-how-panel" role="status">
+                <h3>Bridge run pin applied</h3>
+                <p className="muted-inline">
+                  Ignoring URL run override <code>{requestedRankingRunId}</code>. Bridge
+                  recommendations use the pinned Bridge scorer diagnostic run{" "}
+                  <code>{BRIDGE_RANKING_RUN_ID}</code> on this page.
+                </p>
+              </div>
             ) : null}
             {bridgeEligibleOnlyDisabledNotice ? (
               <div className="ranking-how-panel" role="status">
@@ -665,15 +692,15 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   Single-reviewer, top-20, offline audit evidence only.
                 </p>
                 <p className="muted-inline">
-                  Current objective experiment: <code>{OBJECTIVE_BRIDGE_EXPERIMENT_RUN_ID}</code>. This is
-                  an experimental arm for this corpus snapshot, not validation or default readiness.
+                  Current Bridge scorer diagnostic run: <code>{BRIDGE_RANKING_RUN_ID}</code>. This is
+                  an experimental arm for this corpus snapshot, not proof or default readiness.
                 </p>
                 <p>
                   <Link
                     className="action-link"
                     href={buildRecommendedFamilyHref("bridge", {
                       focusPaperId,
-                      rankingRunId: OBJECTIVE_BRIDGE_EXPERIMENT_RUN_ID,
+                      limit: 20,
                       bridgeEligibleOnly: true
                     })}
                     scroll={false}
@@ -694,7 +721,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 </p>
                 <p className="muted-inline">
                   Eligible-only filtering is exposed only as an experimental review aid for the resolved
-                  run. It is not validation, not a superiority claim, and not default readiness.
+                  run. It is not proof, not a superiority claim, and not default readiness.
                 </p>
               </div>
             ) : null}
@@ -709,7 +736,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   key={f}
                   href={buildRecommendedFamilyHref(f, {
                     focusPaperId,
-                    rankingRunId,
+                    rankingRunId: nonBridgeRankingRunId,
                     limit,
                     bridgeEligibleOnly: f === "bridge" ? bridgeEligibleOnly : false
                   })}
@@ -725,7 +752,6 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 <Link
                   href={buildRecommendedFamilyHref("bridge", {
                     focusPaperId,
-                    rankingRunId,
                     limit,
                     bridgeEligibleOnly: false
                   })}
@@ -737,7 +763,6 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 <Link
                   href={buildRecommendedFamilyHref("bridge", {
                     focusPaperId,
-                    rankingRunId,
                     limit,
                     bridgeEligibleOnly: true
                   })}
@@ -752,7 +777,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <div className="hero-metrics" aria-label="Ranking run summary">
                 <article className="metric-card">
                   <p className="metric-label">Run context</p>
-                  <p className="metric-value">{rankingRunId || RANKING_VERSION ? "Pinned" : "Latest"}</p>
+                  <p className="metric-value">{runContextPinned ? "Pinned" : "Latest"}</p>
                 </article>
                 <article className="metric-card">
                   <p className="metric-label">Rows surfaced</p>
@@ -822,9 +847,14 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 </p>
               ) : null}
               <p className="result-breakdown">
-                {RANKING_VERSION ? (
+                {family === "bridge" ? (
                   <>
-                    Run label filter: <code>{RANKING_VERSION}</code>.
+                    Bridge run pin: <code>{BRIDGE_RANKING_RUN_ID}</code>. The global product run
+                    label is not sent for Bridge requests.
+                  </>
+                ) : PRODUCT_RANKING_VERSION ? (
+                  <>
+                    Run label filter: <code>{PRODUCT_RANKING_VERSION}</code>.
                   </>
                 ) : (
                   <>No run label filter is configured; the API resolves the latest succeeded run.</>

@@ -204,6 +204,35 @@ def test_default_env_missing_bridge_output_unchanged(monkeypatch: pytest.MonkeyP
     assert response.json()["ranking_mode"] == "materialized_heuristic"
 
 
+def test_bridge_pinned_request_without_canary_returns_materialized_fallback_not_404(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ctx = _pinned_bridge_ctx()
+    rows = _baseline_rows("bridge")
+    captured: dict[str, Any] = {}
+
+    def baseline(**kwargs):
+        captured.update(kwargs)
+        return ctx, rows, {}
+
+    monkeypatch.setattr(main, "list_ranked_recommendations", baseline)
+    monkeypatch.setattr(
+        bridge_rollout,
+        "_load_pipeline_serving_module",
+        lambda: (_ for _ in ()).throw(AssertionError("Bridge scorer must not load")),
+    )
+
+    response = client.get(
+        "/api/v1/recommendations/ranked?"
+        f"family=bridge&limit=20&ranking_run_id={PINNED_BRIDGE_RANKING_RUN_ID}"
+    )
+
+    assert response.status_code == 200
+    assert captured["ranking_run_id"] == PINNED_BRIDGE_RANKING_RUN_ID
+    assert response.json() == _expected_json(ctx, rows, "bridge")
+    assert response.json()["ranking_mode"] == "materialized_heuristic"
+
+
 def test_emerging_behavior_unchanged_with_bridge_env(monkeypatch: pytest.MonkeyPatch) -> None:
     _enable_bridge_gate(monkeypatch)
     ctx = _ctx()
