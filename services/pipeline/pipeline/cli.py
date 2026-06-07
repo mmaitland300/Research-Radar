@@ -7948,6 +7948,59 @@ def main() -> None:
         help="Optional path to write companion Markdown summary",
     )
 
+    ml_bridge_rank_pct_serving_plan_parser = subparsers.add_parser(
+        "ml-bridge-rank-pct-hybrid-serving-plan",
+        help=(
+            "File-only Bridge rank-percentile hybrid serving plan from the controlled rollout eval "
+            "(no serving/API/web changes)"
+        ),
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--controlled-rollout-eval",
+        required=True,
+        help="Path to docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.json",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--rank-pct-eval-artifact",
+        required=True,
+        help="Path to docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.json",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--linear-hybrid-eval-v3",
+        required=True,
+        help="Path to docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.json",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--sensitivity-artifact",
+        required=True,
+        help="Path to ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--label-dataset",
+        required=True,
+        help="Path to docs/audit/ml-label-dataset-v14.json",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--readiness-matrix",
+        required=True,
+        help="Path to docs/audit/ml-label-readiness-matrix-v11.json",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--embeddings-provenance",
+        required=True,
+        help="Path to ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to write Bridge serving plan JSON",
+    )
+    ml_bridge_rank_pct_serving_plan_parser.add_argument(
+        "--markdown-output",
+        default=None,
+        help="Optional path to write companion Markdown summary",
+    )
+
     ml_bridge_shadow_pilot_parser = subparsers.add_parser(
         "ml-bridge-shadow-pilot",
         help=(
@@ -9072,6 +9125,34 @@ def main() -> None:
         ) as e:
             print(f"ml-bridge-rank-pct-hybrid-controlled-rollout-eval: {e}", file=sys.stderr)
             raise SystemExit(getattr(e, "code", 2)) from e
+        print(out_json.resolve(), file=sys.stderr)
+        if out_md is not None:
+            print(out_md.resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ml-bridge-rank-pct-hybrid-serving-plan":
+        from pipeline.ml_bridge_rank_pct_hybrid_serving_plan import (
+            MLBridgeRankPctHybridServingPlanError,
+            run_ml_bridge_rank_pct_hybrid_serving_plan_cli,
+        )
+
+        out_json = Path(args.output)
+        out_md = Path(args.markdown_output) if args.markdown_output else None
+        try:
+            run_ml_bridge_rank_pct_hybrid_serving_plan_cli(
+                controlled_rollout_eval_path=Path(args.controlled_rollout_eval),
+                rank_pct_eval_artifact_path=Path(args.rank_pct_eval_artifact),
+                linear_hybrid_eval_v3_path=Path(args.linear_hybrid_eval_v3),
+                sensitivity_artifact_path=Path(args.sensitivity_artifact),
+                label_dataset_path=Path(args.label_dataset),
+                readiness_matrix_path=Path(args.readiness_matrix),
+                embeddings_provenance_path=Path(args.embeddings_provenance),
+                output_json=out_json,
+                markdown_output=out_md,
+            )
+        except MLBridgeRankPctHybridServingPlanError as e:
+            print(f"ml-bridge-rank-pct-hybrid-serving-plan: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         if out_md is not None:
             print(out_md.resolve(), file=sys.stderr)

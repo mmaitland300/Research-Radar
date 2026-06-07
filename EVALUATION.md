@@ -219,9 +219,22 @@ matched it while avoiding the linear blend's precision drop. The same artifact
 shows exploratory `alpha=0.7` with stronger ROC AUC and AP than `alpha=0.5`,
 but `alpha=0.5` remains the fixed primary arm for that audit.
 
-The rank-percentile result supports a controlled offline rollout replay. It
-does not authorize Bridge serving, production default changes, API/web changes,
-or user-visible Bridge ranking changes.
+A controlled offline rollout replay has now been completed on the current
+`rank-5a7efa5ca3` Bridge pool. The current Bridge top-20 and proposed
+rank-percentile hybrid top-20 had full churn (`20/20`). On labeled rows, current
+top-20 precision was 0.4, while the proposed hybrid top-20 precision was 1.0.
+The primary `alpha=0.5` risk gates passed: no promoted labeled negatives, no
+promoted unlabeled high-risk papers, and no demoted labeled-positive clear
+losses. The replay did demote 8 labeled positives, but all were classified as
+competitive demotions rather than clear losses.
+
+The proposed hybrid top-20 contains 13 labeled papers and 7 unlabeled papers,
+so this supports a bounded Bridge serving gate and reviewable next
+implementation step. It does not authorize broad Bridge production rollout,
+production default changes, or presenting Bridge as a validated recommender.
+The next implementation target is
+`implement_bridge_rank_pct_hybrid_serving_gate_v1`; a secondary follow-up is to
+label the 7 unlabeled proposed top-20 papers if churn review warrants.
 
 Supporting files:
 
@@ -237,6 +250,10 @@ Supporting files:
 - [docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.md](docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.md)
 - [docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.json](docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.json)
 - [docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.md](docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.md)
+- [docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.json](docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.json)
+- [docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.md](docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.md)
+- [docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.json](docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.json)
+- [docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.md](docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.md)
 
 ## What Is Not Claimed Yet
 
@@ -259,15 +276,14 @@ See the audit bundles for the full gate trail.
 
 The next credible evaluation work is:
 
-1. **Run controlled offline Bridge rollout replay.** Use the v3 `C=0.001`
-   frozen scorer plus the rank-percentile hybrid formula on `rank-5a7efa5ca3`.
-   Compare current Bridge top-20 versus proposed hybrid top-20, including
-   promoted papers, demoted papers, stable papers, known labeled positives and
-   negatives, and unlabeled high-impact changes.
-2. **Review rollout churn before serving work.** If the controlled replay shows
-   reasonable top-20 churn and no obvious false-positive pattern, draft a
-   Bridge serving plan. If it is too unstable, collect another targeted
-   worksheet before production implementation.
+1. **Implement the bounded Bridge serving gate.** The serving plan is drafted;
+   the next implementation step is
+   `implement_bridge_rank_pct_hybrid_serving_gate_v1`, with Bridge-only env
+   gates, pinned `rank-5a7efa5ca3` context, `limit=20`, and fail-closed
+   fallback to current materialized Bridge ranking.
+2. **Label the 7 unlabeled proposed top-20 Bridge papers if churn review
+   warrants.** The controlled replay supports a bounded gate, but the unlabeled
+   proposed rows remain the most useful targeted review follow-up.
 3. **Expand the corpus.** Add the next source policy rows after their OpenAlex
    source ids and inclusion boundaries are documented.
 4. **Improve labeling breadth.** Add multi-reviewer or adjudicated labels for the

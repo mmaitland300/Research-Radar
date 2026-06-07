@@ -1,0 +1,257 @@
+{
+  "artifact_type": "ml_bridge_rank_pct_hybrid_serving_plan",
+  "plan_version": "ml-bridge-rank-pct-hybrid-serving-plan-v1",
+  "generated_at": "2026-06-07T18:10:27Z",
+  "target_surface": "bridge",
+  "ranking_run_id": "rank-5a7efa5ca3",
+  "scorer": "bridge_recommendable_v3",
+  "target": "bridge_recommendable",
+  "selected_frozen_coefficient_C": 0.001,
+  "primary_alpha": 0.5,
+  "exploratory_alpha": 0.7,
+  "formula": "alpha * rank_pct(v3_ml_probability) + (1-alpha) * rank_pct(bridge_score)",
+  "rank_pct_formula": "1 - average_rank / n",
+  "rank_pct_scope": "full_bridge_candidate_pool",
+  "future_serving_algorithm_reference": [
+    "services/pipeline/pipeline/ml_bridge_rank_pct_hybrid_controlled_rollout_eval.py",
+    "services/pipeline/pipeline/ml_offline_bridge_hybrid_rank_pct_eval_v3.py"
+  ],
+  "inputs": [
+    {
+      "name": "controlled_rollout_eval",
+      "path": "docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.json",
+      "sha256": "6910a5019beb3e9b74b1ff5e68f6789170a3b4ba73d7acc9856124911c30cf45"
+    },
+    {
+      "name": "rank_pct_eval_artifact",
+      "path": "docs/audit/ml-offline-bridge-hybrid-rank-pct-eval-v3-v1.json",
+      "sha256": "359d78d82ebb82a200bf6260ebe4e6e5c5fdd2d43450825edaa7ccacfabab674"
+    },
+    {
+      "name": "linear_hybrid_eval_v3",
+      "path": "docs/audit/ml-offline-bridge-hybrid-eval-v3-v1.json",
+      "sha256": "379146079a43f6e1ae9197394eeb9bb7177ef36c167dfb044387d02ecf041ea5"
+    },
+    {
+      "name": "sensitivity_artifact",
+      "path": "docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json",
+      "sha256": "04a41f91cee1a2a78b7f1f8e9f99b1ef13679a8dacd1b404a848c82751d807d2"
+    },
+    {
+      "name": "label_dataset",
+      "path": "docs/audit/ml-label-dataset-v14.json",
+      "sha256": "4d4e6684af3d7d2a4c44ab5b5118a564c9f07d005b610408f510dd0c25ac0690"
+    },
+    {
+      "name": "readiness_matrix",
+      "path": "docs/audit/ml-label-readiness-matrix-v11.json",
+      "sha256": "1635d88110aa300d58222c6b6f0583a93947d90a02c0b53a7027a3e7984f6e0b"
+    },
+    {
+      "name": "embeddings_provenance",
+      "path": "docs/audit/ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json",
+      "sha256": "c6b3293753df76e9db7c6440fe6f48b5d6eb1ead84b2b46bb39fe83090a8cbf8"
+    }
+  ],
+  "preconditions": {
+    "controlled_rollout_eval_ready": true,
+    "controlled_rollout_recommended_next_stage": "draft_bridge_rank_pct_hybrid_serving_plan_v1",
+    "rank_pct_eval_recommended_next_stage": "authorize_bridge_hybrid_serving_controlled_rollout_eval",
+    "linear_hybrid_eval_recommended_next_stage": "do_not_authorize_bridge_hybrid_serving_recheck_alpha_or_formula",
+    "linear_hybrid_eval_included_as_negative_guardrail": true,
+    "regularization_sensitivity_ready_for_offline_hybrid_eval": true,
+    "selected_frozen_scorer_present": true,
+    "selected_frozen_coefficient_C": 0.001,
+    "bridge_score_coverage": {
+      "covered": 528,
+      "total": 528,
+      "as_text": "528/528"
+    },
+    "primary_alpha_source": "primary_alpha_0_5_summary",
+    "primary_alpha_is_0_5_not_0_7": true,
+    "risk_readouts": {
+      "promoted_labeled_negatives_count": 0,
+      "promoted_unlabeled_high_risk_count": 0,
+      "demoted_labeled_positive_clear_loss_count": 0,
+      "demoted_labeled_positive_competitive_count": 8
+    },
+    "top20_quality_delta_labeled_only": 0.6,
+    "top20_quality_delta_labeled_only_gte_0": true
+  },
+  "controlled_rollout_evidence": {
+    "full_top20_churn_count": 20,
+    "full_top20_churn_denominator": 20,
+    "full_top20_churn_fraction": 1.0,
+    "current_top20_labeled_precision": 0.4,
+    "proposed_top20_labeled_precision": 1.0,
+    "proposed_top20_labeled_count": 13,
+    "proposed_top20_unlabeled_count": 7,
+    "demoted_labeled_positive_competitive_count": 8
+  },
+  "pinned_run_context": {
+    "ranking_run_id": "rank-5a7efa5ca3",
+    "ranking_run_id_mismatch_behavior": "fail_closed",
+    "ranking_version": null,
+    "ranking_version_source": "not_present_in_file_artifacts",
+    "ranking_version_mismatch_behavior": "fail_closed_if_available",
+    "corpus_snapshot_version": null,
+    "corpus_snapshot_version_source": "not_present_in_file_artifacts",
+    "corpus_snapshot_version_mismatch_behavior": "fail_closed_if_available",
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "candidate_count": 528,
+    "bridge_score_coverage": {
+      "covered": 528,
+      "total": 528,
+      "as_text": "528/528"
+    }
+  },
+  "frozen_scorer_load_contract": {
+    "sensitivity_artifact_path": "docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json",
+    "sensitivity_artifact_sha256": "04a41f91cee1a2a78b7f1f8e9f99b1ef13679a8dacd1b404a848c82751d807d2",
+    "embeddings_provenance_path": "docs/audit/ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json",
+    "embeddings_provenance_sha256": "c6b3293753df76e9db7c6440fe6f48b5d6eb1ead84b2b46bb39fe83090a8cbf8",
+    "selected_frozen_scorer_present": true,
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "selected_frozen_coefficient_C": 0.001,
+    "primary_alpha": 0.5,
+    "scorer_probability_source": "full_pool_frozen_inference_not_oof",
+    "full_pool_frozen_inference_statement": "Future serving uses full-pool frozen inference, not OOF probabilities."
+  },
+  "serving_scope": {
+    "route": "/api/v1/recommendations/ranked",
+    "family": "bridge",
+    "ranking_run_id": "rank-5a7efa5ca3",
+    "limit": 20,
+    "limit_contract": "20 only for scorer-served Bridge response",
+    "no_emerging_changes": true,
+    "no_undercited_changes": true,
+    "no_broad_fleet_default_rollout": true,
+    "no_bridge_scorer_serving_when_flag_env_missing": true,
+    "scoring_scope": {
+      "load_all_bridge_candidates_for_pinned_run": true,
+      "current_pool_scale": 528,
+      "score_only_top20": false,
+      "recompute_ml_probabilities_over_full_bridge_candidate_pool": true,
+      "recompute_ml_rank_percentiles_over_full_bridge_candidate_pool": true,
+      "recompute_bridge_score_rank_percentiles_over_full_bridge_candidate_pool": true,
+      "return_top_limit_by_hybrid_rank": true,
+      "hybrid_reorder_only": true,
+      "final_score_and_existing_signal_fields_remain_materialized_metadata": true,
+      "ranking_mode_detail_explains_rank_pct_hybrid_ordering": true
+    }
+  },
+  "bridge_gate_contract": {
+    "requires_new_bridge_only_gate_module": true,
+    "proposed_gate_module": "apps/api/app/ml_bridge_scorer_rollout_gate.py",
+    "required_env_prefix": "ML_BRIDGE_SCORER_V1_",
+    "do_not_extend_env_prefix": "ML_SHADOW_SCORER_V1_",
+    "do_not_extend_modules": [
+      "apps/api/app/ml_scorer_rollout_gate.py",
+      "apps/api/app/ml_scorer_rollout.py"
+    ],
+    "current_emerging_gate_blocks_bridge_requests": true,
+    "preserve_current_emerging_gate_behavior": true
+  },
+  "required_future_env": {
+    "variables": {
+      "ML_BRIDGE_SCORER_V1_RUNTIME_ENABLED": "missing/false closes Bridge ML serving",
+      "ML_BRIDGE_SCORER_V1_PUBLIC_ROLLOUT_ENABLED": "missing/false closes public Bridge ML rollout",
+      "ML_BRIDGE_SCORER_V1_PUBLIC_ROLLOUT_PERCENT": "missing/zero closes public Bridge ML rollout",
+      "ML_BRIDGE_SCORER_V1_ROLLOUT_EXPOSURE_CAP": "missing/zero cap closes Bridge ML serving",
+      "ML_BRIDGE_SCORER_V1_ROLLOUT_COHORT_ALLOWLIST": "missing/empty means no cohort canary path",
+      "ML_BRIDGE_SCORER_V1_RANKING_RUN_ID": "must equal rank-5a7efa5ca3"
+    },
+    "example_pinned_ranking_run_env": "ML_BRIDGE_SCORER_V1_RANKING_RUN_ID=rank-5a7efa5ca3",
+    "defaults_summary": "All missing, false, zero, empty, or ranking-run-mismatched Bridge env values close the scorer path."
+  },
+  "api_response_contract": {
+    "RankedRankingMode_future_values": [
+      "materialized_heuristic",
+      "bounded_ml_scorer",
+      "bounded_bridge_ml_scorer"
+    ],
+    "bridge_ranking_mode": "bounded_bridge_ml_scorer",
+    "do_not_reuse_bounded_ml_scorer_for_bridge": true,
+    "required_response_fields": [
+      "ranking_mode",
+      "ranking_mode_detail",
+      "scorer_surface",
+      "bridge_recommendations_ml_served",
+      "bridge_rank_pct_hybrid_alpha",
+      "bridge_rank_pct_scope",
+      "emitted_to_public_users"
+    ]
+  },
+  "web_display_contract": {
+    "must_not_call_bridge_validated": true,
+    "allowed_wording": [
+      "Bridge order selected by bounded ML scorer rollout",
+      "Experimental Bridge ranking",
+      "Blends bridge_score with a frozen Bridge ML scorer",
+      "Still under evaluation"
+    ],
+    "display_behavior_matches_emerging": true,
+    "ordering_may_change": true,
+    "materialized_final_score_and_signal_fields_remain_metadata": true,
+    "ranking_mode_detail_explains_scorer_ordering": true
+  },
+  "failure_fallback_behavior": {
+    "fallback_to": "current_materialized_bridge_ranking",
+    "fail_closed_conditions": [
+      "Bridge env flag disabled",
+      "rollout cap reached",
+      "public rollout disabled",
+      "cohort/user not eligible",
+      "ranking_run_id mismatch",
+      "ranking_version mismatch, if available",
+      "corpus_snapshot_version mismatch, if available",
+      "family != bridge",
+      "limit != 20",
+      "bridge_score missing for any candidate needed in full-pool scoring",
+      "frozen scorer unavailable",
+      "embeddings unavailable",
+      "scoring raises",
+      "DB read fails"
+    ]
+  },
+  "observability": {
+    "metadata_only": true,
+    "log_fields": [
+      "ranking_mode",
+      "family",
+      "route",
+      "gate decision",
+      "reason closed",
+      "current_served",
+      "cap",
+      "ranking_run_id",
+      "public_rollout_enabled",
+      "public_rollout_percent"
+    ],
+    "do_not_log": [
+      "user IDs",
+      "full paper payloads"
+    ]
+  },
+  "known_caveats": [
+    "Controlled rollout eval is offline only.",
+    "Proposed top-20 has 7 unlabeled papers.",
+    "Full top-20 churn means user-visible Bridge behavior would change substantially.",
+    "There were 8 demoted labeled positives, all classified as competitive rather than clear losses.",
+    "Single-reviewer labels only.",
+    "No external validation.",
+    "No multi-reviewer agreement.",
+    "Serving plan does not itself authorize broad rollout.",
+    "Alpha=0.7 is exploratory only; serving v1 should use alpha=0.5 unless a later artifact explicitly changes that."
+  ],
+  "does_not_authorize": [
+    "Bridge ML serving",
+    "broad production rollout",
+    "production default changes",
+    "API behavior changes",
+    "web UI behavior changes",
+    "database writes"
+  ],
+  "recommended_next_stage": "implement_bridge_rank_pct_hybrid_serving_gate_v1",
+  "fallback_next_stage_if_preconditions_fail": "collect_bridge_rollout_review_labels_before_serving"
+}
