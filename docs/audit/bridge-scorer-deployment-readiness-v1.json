@@ -1,0 +1,262 @@
+{
+  "artifact_type": "bridge_scorer_deployment_readiness",
+  "artifact_version": "bridge-scorer-deployment-readiness-v1",
+  "generated_at": "2026-06-07T20:12:30Z",
+  "target_surface": "bridge",
+  "serving_gate_commit": "75d5f44",
+  "serving_gate_commit_subject": "feat(recommendations): add bounded Bridge scorer serving gate",
+  "verification_commit_base": {
+    "local_head": "4a52abbc2f6f49c97d96f116473d2a5d649ee688",
+    "local_head_subject": "fix(web): separate dossier meta and action rows",
+    "origin_main_head": "4a52abbc2f6f49c97d96f116473d2a5d649ee688",
+    "local_head_matches_origin_main": true,
+    "commit_75d5f44_on_origin_main": true,
+    "deployed_commit_available": false,
+    "deployed_commit": null,
+    "deployed_commit_matches_origin_main": null,
+    "deployed_commit_includes_bridge_gate": null,
+    "notes": [
+      "origin/main includes 75d5f44.",
+      "RESEARCH_RADAR_API_BASE was not set, so deployed API commit and deployed HTTP behavior were not verified."
+    ]
+  },
+  "environment_inputs": {
+    "database_url_present": true,
+    "database_url_source": "DATABASE_URL",
+    "prod_database_url_ignored": true,
+    "research_radar_api_base_present": false,
+    "research_radar_api_base_source": "RESEARCH_RADAR_API_BASE",
+    "live_env_mutation_performed": false,
+    "live_gate_open_not_verified": true,
+    "database_target": {
+      "scheme": "postgresql",
+      "hostname": "localhost",
+      "port": 5432,
+      "database": "research_radar",
+      "username_present": true,
+      "remote_production_target_confirmed": false,
+      "note": "Checks used the configured DATABASE_URL. The configured host was localhost, so this is recorded as production-like data readiness evidence, not independent proof of remote production DB state."
+    }
+  },
+  "pinned_serving_contract": {
+    "ranking_run_id": "rank-5a7efa5ca3",
+    "family": "bridge",
+    "limit": 20,
+    "primary_alpha": 0.5,
+    "rank_pct_scope": "full_bridge_candidate_pool",
+    "embedding_version": "shadow-generalization-text-embedding-v1",
+    "scorer_probability_source": "full_pool_frozen_inference_not_oof"
+  },
+  "database_readiness": {
+    "configured_database_readiness_passed": true,
+    "select_only": true,
+    "ranking_run": {
+      "ranking_run_id": "rank-5a7efa5ca3",
+      "ranking_version": "shadow-gen-bridge-score-diagnostic-v1",
+      "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+      "embedding_version": "shadow-generalization-text-embedding-v1",
+      "status": "succeeded",
+      "started_at": "2026-06-02 12:34:42.394949+00:00",
+      "finished_at": "2026-06-02 12:34:43.095919+00:00",
+      "created_at": "2026-06-02 12:32:18.691646+00:00"
+    },
+    "bridge_counts": {
+      "bridge_rows": 528,
+      "expected_bridge_rows": 528,
+      "distinct_work_ids": 528,
+      "bridge_score_nonnull": 528,
+      "bridge_score_null": 0
+    },
+    "embedding_counts": {
+      "embedding_version": "shadow-generalization-text-embedding-v1",
+      "bridge_rows": 528,
+      "embedding_rows": 528,
+      "missing_embeddings": 0
+    },
+    "current_live_default_bridge_run_from_configured_db": {
+      "ranking_run_id": "rank-5a7efa5ca3",
+      "ranking_version": "shadow-gen-bridge-score-diagnostic-v1",
+      "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+      "row_count": 20,
+      "matches_pinned_bridge_scorer_run": true
+    },
+    "latest_succeeded_bridge_runs": [
+      {
+        "ranking_run_id": "rank-5a7efa5ca3",
+        "ranking_version": "shadow-gen-bridge-score-diagnostic-v1",
+        "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+        "embedding_version": "shadow-generalization-text-embedding-v1",
+        "status": "succeeded",
+        "finished_at": "2026-06-02 12:34:43.095919+00:00",
+        "bridge_rows": 528
+      },
+      {
+        "ranking_run_id": "rank-83787b91ef",
+        "ranking_version": "shadow-generalization-product-candidate-ranking-v1",
+        "corpus_snapshot_version": "source-snapshot-shadow-generalization-v1-20260521",
+        "embedding_version": "shadow-generalization-text-embedding-v1",
+        "status": "succeeded",
+        "finished_at": "2026-05-22 15:45:25.997296+00:00",
+        "bridge_rows": 528
+      }
+    ]
+  },
+  "real_serving_helper_smoke": {
+    "passed": true,
+    "function": "rank_bridge_recommendations_with_scorer(database_url=DATABASE_URL, limit=20)",
+    "select_only": true,
+    "writes_performed": false,
+    "metadata": {
+      "ranking_run_id": "rank-5a7efa5ca3",
+      "family": "bridge",
+      "candidate_count": 528,
+      "scored_candidate_count": 528,
+      "returned_count": 20,
+      "limit": 20,
+      "primary_alpha": 0.5,
+      "rank_pct_scope": "full_bridge_candidate_pool",
+      "embedding_version": "shadow-generalization-text-embedding-v1",
+      "scorer_probability_source": "full_pool_frozen_inference_not_oof",
+      "writes_performed": false
+    },
+    "top_work_id_tokens": [
+      "W4417471638",
+      "W7126213550",
+      "W7128741623",
+      "W4415337516",
+      "W4401445948",
+      "W4413133017",
+      "W7155391647",
+      "W4411141659",
+      "W7150806375",
+      "W4404570638",
+      "W4414818544",
+      "W7131744631",
+      "W4414011891",
+      "W4414112292",
+      "W7116661261",
+      "W4409474100",
+      "W4410025358",
+      "W4401727628",
+      "W4412072230",
+      "W4414581097"
+    ]
+  },
+  "deployed_http_checks": {
+    "performed": false,
+    "reason": "RESEARCH_RADAR_API_BASE was not set.",
+    "deployed_default_fail_closed_verified": false,
+    "deployed_pinned_mismatched_run_verified": false,
+    "deployed_gate_open_verified": false,
+    "deployed_failure_cases_verified": false,
+    "deployed_emerging_undercited_unaffected_verified": false
+  },
+  "local_api_integration_checks": {
+    "performed": true,
+    "scope": "FastAPI TestClient in this process, using configured DATABASE_URL and process-local env vars only.",
+    "default_env_absent": {
+      "bridge_limit20": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "ranking_run_id": "rank-5a7efa5ca3",
+        "bridge_recommendations_ml_served": null,
+        "item_count": 20
+      },
+      "wrong_limit": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "item_count": 19
+      },
+      "bridge_eligible_only": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "item_count": 20
+      },
+      "wrong_ranking_run_id": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "ranking_run_id": "rank-83787b91ef",
+        "item_count": 20
+      }
+    },
+    "controlled_bridge_env": {
+      "env": {
+        "ML_BRIDGE_SCORER_V1_RUNTIME_ENABLED": "true",
+        "ML_BRIDGE_SCORER_V1_PUBLIC_ROLLOUT_ENABLED": "true",
+        "ML_BRIDGE_SCORER_V1_PUBLIC_ROLLOUT_PERCENT": "100",
+        "ML_BRIDGE_SCORER_V1_ROLLOUT_EXPOSURE_CAP": "1",
+        "ML_BRIDGE_SCORER_V1_RANKING_RUN_ID": "rank-5a7efa5ca3",
+        "ML_BRIDGE_SCORER_V1_ROLLOUT_COHORT_ALLOWLIST": ""
+      },
+      "gate_open_request": {
+        "status_code": 200,
+        "ranking_mode": "bounded_bridge_ml_scorer",
+        "ranking_run_id": "rank-5a7efa5ca3",
+        "scorer_surface": "bridge",
+        "bridge_recommendations_ml_served": true,
+        "bridge_rank_pct_hybrid_alpha": 0.5,
+        "bridge_rank_pct_scope": "full_bridge_candidate_pool",
+        "emitted_to_public_users": true,
+        "item_count": 20,
+        "top_paper_ids": [
+          "https://openalex.org/W4417471638",
+          "https://openalex.org/W7126213550",
+          "https://openalex.org/W7128741623",
+          "https://openalex.org/W4415337516",
+          "https://openalex.org/W4401445948"
+        ]
+      },
+      "cap_exhausted_second_request": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "bridge_recommendations_ml_served": null,
+        "item_count": 20
+      },
+      "wrong_limit": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "item_count": 19
+      },
+      "bridge_eligible_only": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "item_count": 20
+      },
+      "wrong_ranking_run_id": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "ranking_run_id": "rank-83787b91ef",
+        "item_count": 20
+      },
+      "emerging_unaffected": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "family": "emerging",
+        "item_count": 20
+      },
+      "undercited_unaffected": {
+        "status_code": 200,
+        "ranking_mode": "materialized_heuristic",
+        "family": "undercited",
+        "item_count": 20
+      }
+    },
+    "shadow_env_does_not_open_bridge": {
+      "status_code": 200,
+      "ranking_mode": "materialized_heuristic",
+      "ranking_run_id": "rank-5a7efa5ca3",
+      "bridge_recommendations_ml_served": null,
+      "item_count": 20
+    }
+  },
+  "readiness_limitations": [
+    "RESEARCH_RADAR_API_BASE was missing, so deployed API default fail-closed behavior was not verified.",
+    "Deployed API commit was not available.",
+    "Live deployed gate-open behavior was not verified.",
+    "No live production environment variables were mutated.",
+    "DATABASE_URL pointed at localhost; configured DB data checks passed, but remote production DB identity was not independently confirmed."
+  ],
+  "deployment_readiness_passed": false,
+  "recommended_next_stage": "fix_bridge_scorer_deployment_readiness",
+  "reason": "live_gate_open_not_verified"
+}

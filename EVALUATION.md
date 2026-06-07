@@ -232,9 +232,25 @@ The proposed hybrid top-20 contains 13 labeled papers and 7 unlabeled papers,
 so this supports a bounded Bridge serving gate and reviewable next
 implementation step. It does not authorize broad Bridge production rollout,
 production default changes, or presenting Bridge as a validated recommender.
-The next implementation target is
-`implement_bridge_rank_pct_hybrid_serving_gate_v1`; a secondary follow-up is to
-label the 7 unlabeled proposed top-20 papers if churn review warrants.
+
+The bounded Bridge serving gate has now been implemented. A deployment-readiness
+check was performed on 2026-06-07. The configured `DATABASE_URL` checks passed
+for `rank-5a7efa5ca3`: the run exists, is succeeded, has 528 Bridge rows, has
+`bridge_score` on all 528 rows, and has embeddings for all 528 candidates. The
+real serving helper also scored the full pool and returned 20 rows with
+`writes_performed=false`. A local API integration smoke verified the gate opens
+only with explicit `ML_BRIDGE_SCORER_V1_*` flags and the pinned run, while
+default, wrong-limit, eligible-only, wrong-run, cap-exhausted, Emerging, and
+Undercited paths fall closed.
+
+Deployment readiness did not pass yet because deployed HTTP checks were not
+available: `RESEARCH_RADAR_API_BASE` was not set, the deployed commit was not
+confirmed, and live deployed gate-open behavior was not verified. Production
+remains fail-closed by default. Bridge ML serving still requires explicit
+`ML_BRIDGE_SCORER_V1_*` env flags and pinned `rank-5a7efa5ca3`; controlled
+canary or public flag enablement is a next step only after deployed readiness
+passes. A secondary follow-up is to label the 7 unlabeled proposed top-20 papers
+if churn review warrants.
 
 Supporting files:
 
@@ -254,6 +270,8 @@ Supporting files:
 - [docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.md](docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.md)
 - [docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.json](docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.json)
 - [docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.md](docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.md)
+- [docs/audit/bridge-scorer-deployment-readiness-v1.json](docs/audit/bridge-scorer-deployment-readiness-v1.json)
+- [docs/audit/bridge-scorer-deployment-readiness-v1.md](docs/audit/bridge-scorer-deployment-readiness-v1.md)
 
 ## What Is Not Claimed Yet
 
@@ -276,11 +294,12 @@ See the audit bundles for the full gate trail.
 
 The next credible evaluation work is:
 
-1. **Implement the bounded Bridge serving gate.** The serving plan is drafted;
-   the next implementation step is
-   `implement_bridge_rank_pct_hybrid_serving_gate_v1`, with Bridge-only env
-   gates, pinned `rank-5a7efa5ca3` context, `limit=20`, and fail-closed
-   fallback to current materialized Bridge ranking.
+1. **Resolve Bridge deployment-readiness gaps.** Set
+   `RESEARCH_RADAR_API_BASE`, confirm the deployed API commit, and perform a
+   cap-1 or cap-2 deployed gate-open check for pinned `rank-5a7efa5ca3`. If the
+   deployed check passes, the next stage can move to
+   `enable_bridge_scorer_tiny_canary_v1`; until then the recorded next stage is
+   `fix_bridge_scorer_deployment_readiness`.
 2. **Label the 7 unlabeled proposed top-20 Bridge papers if churn review
    warrants.** The controlled replay supports a bounded gate, but the unlabeled
    proposed rows remain the most useful targeted review follow-up.
