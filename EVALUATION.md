@@ -252,6 +252,18 @@ canary or public flag enablement is a next step only after deployed readiness
 passes. A secondary follow-up is to label the 7 unlabeled proposed top-20 papers
 if churn review warrants.
 
+A deployed-readiness check was then run against the Railway API URL documented
+in prior audit notes. Deployed default Bridge behavior is fail-closed, and the
+deployed API response schema includes the Bridge scorer fields, but deployed
+readiness still failed: the Railway API database resolves Bridge defaults to
+`rank-83787b91ef` and returns `404` for the pinned scorer run
+`rank-5a7efa5ca3`. A deploy packaging bug was also found and fixed in the API
+Dockerfile: the image now copies the Bridge serving plan, sensitivity artifact,
+and embeddings provenance JSON needed by gate-open serving. The blocker remains
+deployment/data alignment plus a redeploy of that packaging fix. First
+enablement, once readiness passes, should be a tiny cohort canary with cap `1`
+or `2`, not a public `100%` rollout.
+
 Supporting files:
 
 - [docs/audit/ml-offline-bridge-recommendable-scorer-v1.json](docs/audit/ml-offline-bridge-recommendable-scorer-v1.json)
@@ -272,6 +284,8 @@ Supporting files:
 - [docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.md](docs/audit/ml-bridge-rank-pct-hybrid-serving-plan-v1.md)
 - [docs/audit/bridge-scorer-deployment-readiness-v1.json](docs/audit/bridge-scorer-deployment-readiness-v1.json)
 - [docs/audit/bridge-scorer-deployment-readiness-v1.md](docs/audit/bridge-scorer-deployment-readiness-v1.md)
+- [docs/audit/bridge-scorer-deployed-readiness-v1.json](docs/audit/bridge-scorer-deployed-readiness-v1.json)
+- [docs/audit/bridge-scorer-deployed-readiness-v1.md](docs/audit/bridge-scorer-deployed-readiness-v1.md)
 
 ## What Is Not Claimed Yet
 
@@ -296,10 +310,12 @@ The next credible evaluation work is:
 
 1. **Resolve Bridge deployment-readiness gaps.** Set
    `RESEARCH_RADAR_API_BASE`, confirm the deployed API commit, and perform a
-   cap-1 or cap-2 deployed gate-open check for pinned `rank-5a7efa5ca3`. If the
-   deployed check passes, the next stage can move to
+   cap-1 or cap-2 deployed gate-open check for pinned `rank-5a7efa5ca3`. The
+   current deployed blocker is that Railway does not expose `rank-5a7efa5ca3`;
+   also redeploy the API image after the Bridge artifact-copy Dockerfile fix. If
+   the deployed check passes, the next stage can move to
    `enable_bridge_scorer_tiny_canary_v1`; until then the recorded next stage is
-   `fix_bridge_scorer_deployment_readiness`.
+   `fix_bridge_scorer_deployed_readiness`.
 2. **Label the 7 unlabeled proposed top-20 Bridge papers if churn review
    warrants.** The controlled replay supports a bounded gate, but the unlabeled
    proposed rows remain the most useful targeted review follow-up.
