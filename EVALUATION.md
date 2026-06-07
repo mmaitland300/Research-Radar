@@ -264,6 +264,19 @@ deployment/data alignment plus a redeploy of that packaging fix. First
 enablement, once readiness passes, should be a tiny cohort canary with cap `1`
 or `2`, not a public `100%` rollout.
 
+The Railway database was then aligned with the pinned Bridge scorer run:
+`rank-5a7efa5ca3` now exists, has 528 Bridge rows, has `bridge_score` populated
+on all 528 Bridge rows, and the read-only Bridge serving helper can score the
+full pool from Railway Postgres. The deployed pinned request now returns HTTP
+`200`, so the missing-run blocker is resolved. Deployed canary serving is still
+not verified: the canary-header request currently returns
+`materialized_heuristic`, not `bounded_bridge_ml_scorer`. Because the diagnostic
+run is now visible in Railway, unfiltered API calls can resolve to
+`rank-5a7efa5ca3`; Emerging remains correct when callers pass
+`ranking_version=shadow-generalization-product-candidate-ranking-v1`, which is
+the expected Vercel page behavior. The next implementation should make Bridge
+pinning explicit without moving Emerging off its product run.
+
 Supporting files:
 
 - [docs/audit/ml-offline-bridge-recommendable-scorer-v1.json](docs/audit/ml-offline-bridge-recommendable-scorer-v1.json)
@@ -286,6 +299,8 @@ Supporting files:
 - [docs/audit/bridge-scorer-deployment-readiness-v1.md](docs/audit/bridge-scorer-deployment-readiness-v1.md)
 - [docs/audit/bridge-scorer-deployed-readiness-v1.json](docs/audit/bridge-scorer-deployed-readiness-v1.json)
 - [docs/audit/bridge-scorer-deployed-readiness-v1.md](docs/audit/bridge-scorer-deployed-readiness-v1.md)
+- [docs/audit/bridge-scorer-railway-data-alignment-v1.json](docs/audit/bridge-scorer-railway-data-alignment-v1.json)
+- [docs/audit/bridge-scorer-railway-data-alignment-v1.md](docs/audit/bridge-scorer-railway-data-alignment-v1.md)
 
 ## What Is Not Claimed Yet
 
@@ -308,14 +323,16 @@ See the audit bundles for the full gate trail.
 
 The next credible evaluation work is:
 
-1. **Resolve Bridge deployment-readiness gaps.** Set
-   `RESEARCH_RADAR_API_BASE`, confirm the deployed API commit, and perform a
-   cap-1 or cap-2 deployed gate-open check for pinned `rank-5a7efa5ca3`. The
-   current deployed blocker is that Railway does not expose `rank-5a7efa5ca3`;
-   also redeploy the API image after the Bridge artifact-copy Dockerfile fix. If
-   the deployed check passes, the next stage can move to
-   `enable_bridge_scorer_tiny_canary_v1`; until then the recorded next stage is
-   `fix_bridge_scorer_deployed_readiness`.
+1. **Resolve Bridge canary routing and env readiness.** The Railway DB now
+   exposes `rank-5a7efa5ca3`, so the remaining blocker is that deployed canary
+   requests still return `materialized_heuristic`. Confirm the Bridge cohort env
+   and Docker artifact-copy deploy, then add a web/API routing fix so Bridge can
+   request `rank-5a7efa5ca3` while Emerging remains pinned to
+   `shadow-generalization-product-candidate-ranking-v1`. If the next deployed
+   check returns `bounded_bridge_ml_scorer` for the canary request, the next
+   stage can move to `enable_bridge_scorer_tiny_canary_v1`; until then the
+   recorded next stage is
+   `fix_bridge_canary_env_and_web_bridge_pin_then_rerun_deployed_readiness`.
 2. **Label the 7 unlabeled proposed top-20 Bridge papers if churn review
    warrants.** The controlled replay supports a bounded gate, but the unlabeled
    proposed rows remain the most useful targeted review follow-up.
