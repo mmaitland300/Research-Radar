@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pytest
@@ -370,6 +371,34 @@ def test_bridge_scorer_missing_artifact_or_scorer_fails_closed(monkeypatch: pyte
     assert response.status_code == 200
     assert response.json() == _expected_json(ctx, rows, "bridge")
     assert get_bridge_rollout_served_count() == 0
+
+
+def test_bridge_canary_scorer_failure_emits_sanitized_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _enable_bridge_gate(monkeypatch, cap="1")
+    ctx = _pinned_bridge_ctx()
+    rows = _baseline_rows("bridge")
+    serving = _FakeServing([f"WBRIDGE{i:03d}" for i in range(20)], exc=RuntimeError("artifact missing\nline2"))
+
+    monkeypatch.setattr(bridge_rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(bridge_rollout, "_load_pipeline_serving_module", lambda: serving)
+
+    with caplog.at_level(logging.WARNING, logger=bridge_rollout.__name__):
+        response = client.get(
+            "/api/v1/recommendations/ranked?family=bridge&limit=20",
+            headers={"X-Research-Radar-Canary-Subject": "canary-a"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["ranking_mode"] == "materialized_heuristic"
+    assert "bridge_scorer_rollout gate_closed" in caplog.text
+    assert "reason_closed=scorer_failed" in caplog.text
+    assert "exception_type=RuntimeError" in caplog.text
+    assert "artifact missing line2" in caplog.text
+    assert "canary_subject_present=True" in caplog.text
 
 
 def test_bridge_scorer_metadata_must_report_no_db_writes(monkeypatch: pytest.MonkeyPatch) -> None:

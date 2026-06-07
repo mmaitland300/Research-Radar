@@ -136,7 +136,12 @@ def _log_gate_closed(
     public_rollout_enabled: bool | None,
     public_rollout_percent: int | None,
     exception_type: str | None = None,
+    exception_message: str | None = None,
+    canary_subject_present: bool = False,
 ) -> None:
+    safe_exception_message = None
+    if exception_message:
+        safe_exception_message = str(exception_message).replace("\n", " ")[:300]
     extra = {
         "ranking_mode": "materialized_heuristic",
         "family": family,
@@ -149,12 +154,16 @@ def _log_gate_closed(
         "public_rollout_enabled": public_rollout_enabled,
         "public_rollout_percent": public_rollout_percent,
         "exception_type": exception_type,
+        "exception_message": safe_exception_message,
+        "canary_subject_present": canary_subject_present,
     }
-    logger.info(
+    log_fn = logger.warning if canary_subject_present else logger.info
+    log_fn(
         (
             "bridge_scorer_rollout gate_closed family=%s route=%s reason_closed=%s "
             "current_served=%s cap=%s ranking_run_id=%s public_rollout_enabled=%s "
-            "public_rollout_percent=%s exception_type=%s"
+            "public_rollout_percent=%s exception_type=%s exception_message=%s "
+            "canary_subject_present=%s"
         ),
         family,
         route,
@@ -165,6 +174,8 @@ def _log_gate_closed(
         public_rollout_enabled,
         public_rollout_percent,
         exception_type,
+        safe_exception_message,
+        canary_subject_present,
         extra=extra,
     )
 
@@ -180,6 +191,7 @@ def maybe_build_bridge_scorer_ranked_response(
     bridge_eligible_only: bool,
     subject: str | None,
 ) -> RankedRecommendationsResponse | None:
+    canary_subject_present = bool((subject or "").strip())
     try:
         gate = build_bridge_gate_from_env()
     except Exception as exc:
@@ -193,6 +205,8 @@ def maybe_build_bridge_scorer_ranked_response(
             public_rollout_enabled=None,
             public_rollout_percent=None,
             exception_type=type(exc).__name__,
+            exception_message=str(exc),
+            canary_subject_present=canary_subject_present,
         )
         return None
 
@@ -217,6 +231,7 @@ def maybe_build_bridge_scorer_ranked_response(
             ranking_run_id=ranking_run_id,
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
+            canary_subject_present=canary_subject_present,
         )
         return None
 
@@ -240,6 +255,8 @@ def maybe_build_bridge_scorer_ranked_response(
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
             exception_type=type(exc).__name__,
+            exception_message=str(exc),
+            canary_subject_present=canary_subject_present,
         )
         return None
     if resolved is None:
@@ -252,6 +269,7 @@ def maybe_build_bridge_scorer_ranked_response(
             ranking_run_id=ranking_run_id,
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
+            canary_subject_present=canary_subject_present,
         )
         return None
 
@@ -273,6 +291,7 @@ def maybe_build_bridge_scorer_ranked_response(
             ranking_run_id=ctx.ranking_run_id,
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
+            canary_subject_present=canary_subject_present,
         )
         return None
 
@@ -286,6 +305,7 @@ def maybe_build_bridge_scorer_ranked_response(
             ranking_run_id=ctx.ranking_run_id,
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
+            canary_subject_present=canary_subject_present,
         )
         return None
 
@@ -304,6 +324,8 @@ def maybe_build_bridge_scorer_ranked_response(
                 public_rollout_enabled=gate.public_rollout_enabled,
                 public_rollout_percent=gate.public_rollout_percent,
                 exception_type=type(exc).__name__,
+                exception_message=str(exc),
+                canary_subject_present=canary_subject_present,
             )
             return None
 
@@ -319,6 +341,7 @@ def maybe_build_bridge_scorer_ranked_response(
                 ranking_run_id=ctx.ranking_run_id,
                 public_rollout_enabled=gate.public_rollout_enabled,
                 public_rollout_percent=gate.public_rollout_percent,
+                canary_subject_present=canary_subject_present,
             )
             return None
         if (
@@ -336,6 +359,7 @@ def maybe_build_bridge_scorer_ranked_response(
                 ranking_run_id=ctx.ranking_run_id,
                 public_rollout_enabled=gate.public_rollout_enabled,
                 public_rollout_percent=gate.public_rollout_percent,
+                canary_subject_present=canary_subject_present,
             )
             return None
         if metadata.get("writes_performed") is not False:
@@ -349,6 +373,7 @@ def maybe_build_bridge_scorer_ranked_response(
                 ranking_run_id=ctx.ranking_run_id,
                 public_rollout_enabled=gate.public_rollout_enabled,
                 public_rollout_percent=gate.public_rollout_percent,
+                canary_subject_present=canary_subject_present,
             )
             return None
         ordered_paper_ids = serving.map_bridge_scorer_rows_to_paper_ids(scored_rows, limit=limit)
@@ -363,6 +388,7 @@ def maybe_build_bridge_scorer_ranked_response(
                 ranking_run_id=ctx.ranking_run_id,
                 public_rollout_enabled=gate.public_rollout_enabled,
                 public_rollout_percent=gate.public_rollout_percent,
+                canary_subject_present=canary_subject_present,
             )
             return None
         hydrated_rows = hydrate_ranked_bridge_recommendation_rows_for_paper_ids(
@@ -380,6 +406,7 @@ def maybe_build_bridge_scorer_ranked_response(
                 ranking_run_id=ctx.ranking_run_id,
                 public_rollout_enabled=gate.public_rollout_enabled,
                 public_rollout_percent=gate.public_rollout_percent,
+                canary_subject_present=canary_subject_present,
             )
             return None
 
@@ -432,5 +459,7 @@ def maybe_build_bridge_scorer_ranked_response(
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
             exception_type=type(exc).__name__,
+            exception_message=str(exc),
+            canary_subject_present=canary_subject_present,
         )
         return None
