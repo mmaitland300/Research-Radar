@@ -74,6 +74,7 @@ from app.ml_scorer_rollout import (
     get_canary_subject,
     maybe_build_scorer_ranked_response,
 )
+from app.ml_bridge_scorer_rollout import maybe_build_bridge_scorer_ranked_response
 from app.papers_repo import database_url_from_env
 from app.papers_repo import get_paper_detail as get_paper_detail_row
 from app.papers_repo import list_papers
@@ -292,15 +293,26 @@ def get_recommendations_ranked(
         )
     try:
         subject = get_canary_subject(request)
-        scorer_response = maybe_build_scorer_ranked_response(
-            family=family,
-            limit=limit,
-            corpus_snapshot_version=corpus_snapshot_version,
-            ranking_run_id=ranking_run_id,
-            ranking_version=ranking_version,
-            bridge_eligible_only=bridge_eligible_only,
-            subject=subject,
-        )
+        if family == "bridge":
+            scorer_response = maybe_build_bridge_scorer_ranked_response(
+                family=family,
+                limit=limit,
+                corpus_snapshot_version=corpus_snapshot_version,
+                ranking_run_id=ranking_run_id,
+                ranking_version=ranking_version,
+                bridge_eligible_only=bridge_eligible_only,
+                subject=subject,
+            )
+        else:
+            scorer_response = maybe_build_scorer_ranked_response(
+                family=family,
+                limit=limit,
+                corpus_snapshot_version=corpus_snapshot_version,
+                ranking_run_id=ranking_run_id,
+                ranking_version=ranking_version,
+                bridge_eligible_only=bridge_eligible_only,
+                subject=subject,
+            )
         if scorer_response is not None:
             return scorer_response
 

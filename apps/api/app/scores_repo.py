@@ -346,6 +346,33 @@ def hydrate_ranked_recommendation_rows_for_paper_ids(
 ) -> list[RankedRecommendationRow] | None:
     if family != "emerging":
         raise ValueError("ML scorer hydration is only supported for emerging recommendations.")
+    return _hydrate_ranked_recommendation_rows_for_paper_ids(
+        ctx=ctx,
+        family=family,
+        ordered_openalex_ids=ordered_openalex_ids,
+    )
+
+
+def hydrate_ranked_bridge_recommendation_rows_for_paper_ids(
+    *,
+    ctx: RankedRunContext,
+    ordered_openalex_ids: list[str],
+) -> list[RankedRecommendationRow] | None:
+    return _hydrate_ranked_recommendation_rows_for_paper_ids(
+        ctx=ctx,
+        family="bridge",
+        ordered_openalex_ids=ordered_openalex_ids,
+    )
+
+
+def _hydrate_ranked_recommendation_rows_for_paper_ids(
+    *,
+    ctx: RankedRunContext,
+    family: str,
+    ordered_openalex_ids: list[str],
+) -> list[RankedRecommendationRow] | None:
+    if family not in VALID_FAMILIES:
+        raise ValueError(f"Invalid recommendation family: {family!r}")
     if len(set(ordered_openalex_ids)) != len(ordered_openalex_ids):
         return None
     if not ordered_openalex_ids:

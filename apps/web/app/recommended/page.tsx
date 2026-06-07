@@ -25,7 +25,7 @@ const FAMILY_NOTES: Record<Family, string[]> = {
   ],
   bridge: [
     "Bridge signal is visible for inspection and may be measured-only or experimental depending on the pinned run.",
-    "Use this page to inspect cross-cluster candidates; it is not a validated bridge recommender.",
+    "Use this page to inspect cross-cluster candidates; it is still under evaluation.",
     "Pinned runs matter because bridge evidence is run-specific."
   ],
   undercited: [
@@ -61,7 +61,7 @@ type RankedListExplanation = {
   experimental: string[];
 };
 
-type RankingMode = "materialized_heuristic" | "bounded_ml_scorer";
+type RankingMode = "materialized_heuristic" | "bounded_ml_scorer" | "bounded_bridge_ml_scorer";
 
 type RankedItem = {
   paper_id: string;
@@ -84,6 +84,11 @@ type RankedResponse = {
   family: string;
   ranking_mode: RankingMode;
   ranking_mode_detail: string | null;
+  scorer_surface: string | null;
+  bridge_recommendations_ml_served: boolean | null;
+  bridge_rank_pct_hybrid_alpha: number | null;
+  bridge_rank_pct_scope: string | null;
+  emitted_to_public_users: boolean | null;
   total: number;
   list_explanation: RankedListExplanation;
   items: RankedItem[];
@@ -105,8 +110,10 @@ const SIGNAL_ROLES: RankedSignalExplanation["role"][] = [
   "not_computed"
 ];
 
-const SCORER_RESPONSE_COPY =
+const EMERGING_SCORER_RESPONSE_COPY =
   "This response was ordered by the bounded ML scorer rollout. Displayed scores and signal explanations still come from the materialized ranking row.";
+const BRIDGE_SCORER_RESPONSE_COPY =
+  "Bridge order selected by bounded ML scorer rollout. Experimental Bridge ranking blends bridge_score with a frozen Bridge ML scorer and is still under evaluation.";
 
 function coerceSignalExplanation(e: Record<string, unknown>): RankedSignalExplanation {
   const roleRaw = e.role;
@@ -218,7 +225,9 @@ function normalizeRankedPayload(json: unknown, family: Family): RankedResponse |
 
   const modeRaw = raw.ranking_mode;
   const ranking_mode: RankingMode =
-    modeRaw === "bounded_ml_scorer" ? "bounded_ml_scorer" : "materialized_heuristic";
+    modeRaw === "bounded_ml_scorer" || modeRaw === "bounded_bridge_ml_scorer"
+      ? modeRaw
+      : "materialized_heuristic";
 
   return {
     ranking_run_id: String(raw.ranking_run_id ?? ""),
@@ -228,6 +237,19 @@ function normalizeRankedPayload(json: unknown, family: Family): RankedResponse |
     ranking_mode,
     ranking_mode_detail:
       typeof raw.ranking_mode_detail === "string" ? raw.ranking_mode_detail : null,
+    scorer_surface: typeof raw.scorer_surface === "string" ? raw.scorer_surface : null,
+    bridge_recommendations_ml_served:
+      typeof raw.bridge_recommendations_ml_served === "boolean"
+        ? raw.bridge_recommendations_ml_served
+        : null,
+    bridge_rank_pct_hybrid_alpha:
+      typeof raw.bridge_rank_pct_hybrid_alpha === "number"
+        ? raw.bridge_rank_pct_hybrid_alpha
+        : null,
+    bridge_rank_pct_scope:
+      typeof raw.bridge_rank_pct_scope === "string" ? raw.bridge_rank_pct_scope : null,
+    emitted_to_public_users:
+      typeof raw.emitted_to_public_users === "boolean" ? raw.emitted_to_public_users : null,
     total: typeof raw.total === "number" ? raw.total : items.length,
     list_explanation,
     items
@@ -307,21 +329,31 @@ function explanationSummary(explanations: RankedSignalExplanation[]): string {
   return parts.length > 0 ? parts.join(" | ") : "No signal breakdown";
 }
 
-function EmergingHowPanel({
+function RankingHowPanel({
   expl,
+  family,
   rankingMode
 }: {
   expl: RankedListExplanation;
+  family: Family;
   rankingMode: RankingMode;
 }) {
-  const scorerOrdered = rankingMode === "bounded_ml_scorer";
+  const emergingScorerOrdered = rankingMode === "bounded_ml_scorer";
+  const bridgeScorerOrdered = rankingMode === "bounded_bridge_ml_scorer";
+  const scorerOrdered = emergingScorerOrdered || bridgeScorerOrdered;
   return (
     <div className="ranking-how-panel">
       <h3>{expl.headline}</h3>
-      {scorerOrdered ? (
+      {emergingScorerOrdered ? (
         <p className="muted-inline">
           Order selected by bounded ML scorer rollout. The bullets below describe materialized row
           metadata from the ranking run, not the final visible order.
+        </p>
+      ) : null}
+      {bridgeScorerOrdered ? (
+        <p className="muted-inline">
+          Experimental Bridge ranking. The Bridge order blends bridge_score with a frozen Bridge ML
+          scorer; the bullets below describe materialized row metadata from the ranking run.
         </p>
       ) : null}
       <ul>
@@ -341,7 +373,10 @@ function EmergingHowPanel({
           </>
         ) : null}
         <br />
-        <span className="muted-inline">Full run details are available in Technical run metadata.</span>
+        <span className="muted-inline">
+          Full {family === "bridge" ? "Bridge" : FAMILY_LABEL[family]} run details are available in
+          Technical run metadata.
+        </span>
       </p>
     </div>
   );
@@ -624,7 +659,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <div className="ranking-how-panel">
                 <h3>Experimental bridge review guardrail</h3>
                 <p>
-                  <strong>Experimental bridge review view; not validated or default.</strong>
+                  <strong>Experimental bridge review view; still under evaluation and not default.</strong>
                 </p>
                 <p className="muted-inline">
                   Single-reviewer, top-20, offline audit evidence only.
@@ -652,7 +687,7 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <div className="ranking-how-panel">
                 <h3>Eligible-only bridge view</h3>
                 <p>
-                  <strong>Experimental bridge review view; not validated or default.</strong>
+                  <strong>Experimental bridge review view; still under evaluation and not default.</strong>
                 </p>
                 <p className="muted-inline">
                   Single-reviewer, top-20, offline audit evidence only.
@@ -740,6 +775,8 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                 Showing {data.total} {data.total === 1 ? "paper" : "papers"} from{" "}
                 {data.ranking_mode === "bounded_ml_scorer"
                   ? "bounded ML scorer order over materialized metadata"
+                  : data.ranking_mode === "bounded_bridge_ml_scorer"
+                    ? "experimental Bridge ranking over materialized metadata"
                   : `a materialized ${FAMILY_LABEL[family].toLowerCase()} ranking run`}
                 {"; "}
                 {surfacedWithTopics} include topic labels.
@@ -777,6 +814,13 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   <code>limit=20</code>; other limits use materialized heuristic order.
                 </p>
               ) : null}
+              {family === "bridge" ? (
+                <p className="result-breakdown">
+                  Bounded Bridge scorer serving is eligible only for Bridge requests with{" "}
+                  <code>limit=20</code> and the pinned Bridge run; otherwise the API uses
+                  materialized heuristic order.
+                </p>
+              ) : null}
               <p className="result-breakdown">
                 {RANKING_VERSION ? (
                   <>
@@ -799,6 +843,13 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
                   <>
                     {" "}
                     Result order was selected by the bounded ML scorer; displayed{" "}
+                    <code>final_score</code> and signal metadata still come from the materialized row.
+                  </>
+                ) : data?.ranking_mode === "bounded_bridge_ml_scorer" ? (
+                  <>
+                    {" "}
+                    Bridge order was selected by bounded ML scorer rollout. It blends{" "}
+                    <code>bridge_score</code> with a frozen Bridge ML scorer; displayed{" "}
                     <code>final_score</code> and signal metadata still come from the materialized row.
                   </>
                 ) : (
@@ -869,7 +920,9 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               {family === "bridge" && bridgeEligibleOnly ? (
                 <span className="stamp">Eligible only</span>
               ) : null}
-              {data.ranking_mode === "bounded_ml_scorer" ? (
+              {data.ranking_mode === "bounded_bridge_ml_scorer" ? (
+                <span className="stamp">Experimental Bridge ranking</span>
+              ) : data.ranking_mode === "bounded_ml_scorer" ? (
                 <span className="stamp">Bounded ML scorer order</span>
               ) : (
                 <span className="stamp">Order: score desc, stable tie-break</span>
@@ -877,8 +930,10 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
               <span className="stamp">Limit: {limit}</span>
             </div>
           </div>
-          {data.ranking_mode === "bounded_ml_scorer" ? (
-            <p className="muted-inline">{SCORER_RESPONSE_COPY}</p>
+          {data.ranking_mode === "bounded_bridge_ml_scorer" ? (
+            <p className="muted-inline">{BRIDGE_SCORER_RESPONSE_COPY}</p>
+          ) : data.ranking_mode === "bounded_ml_scorer" ? (
+            <p className="muted-inline">{EMERGING_SCORER_RESPONSE_COPY}</p>
           ) : null}
           {family === "bridge" ? (
             <p className="muted-inline">
@@ -887,7 +942,11 @@ export default async function RecommendedPage({ searchParams }: PageProps) {
             </p>
           ) : null}
           {family === "emerging" || family === "bridge" ? (
-            <EmergingHowPanel expl={data.list_explanation} rankingMode={data.ranking_mode} />
+            <RankingHowPanel
+              expl={data.list_explanation}
+              family={family}
+              rankingMode={data.ranking_mode}
+            />
           ) : null}
           {data.items.length === 0 ? (
             <p>No rows for this family in the selected run.</p>

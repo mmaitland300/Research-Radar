@@ -436,7 +436,11 @@ class RankedRecommendationItem(BaseModel):
     )
 
 
-RankedRankingMode = Literal["materialized_heuristic", "bounded_ml_scorer"]
+RankedRankingMode = Literal[
+    "materialized_heuristic",
+    "bounded_ml_scorer",
+    "bounded_bridge_ml_scorer",
+]
 
 
 class RankedRecommendationsResponse(BaseModel):
@@ -448,6 +452,11 @@ class RankedRecommendationsResponse(BaseModel):
     family: str
     ranking_mode: RankedRankingMode = "materialized_heuristic"
     ranking_mode_detail: str | None = None
+    scorer_surface: str | None = None
+    bridge_recommendations_ml_served: bool | None = None
+    bridge_rank_pct_hybrid_alpha: float | None = None
+    bridge_rank_pct_scope: str | None = None
+    emitted_to_public_users: bool | None = None
     total: int
     list_explanation: RankedListExplanation
     items: list[RankedRecommendationItem]
