@@ -1,0 +1,241 @@
+{
+  "artifact_type": "ml_bridge_live_canary_top20_review_context",
+  "worksheet_version": "ml-bridge-live-canary-top20-v1",
+  "review_pool_variant": "ml_bridge_live_canary_top20_audit",
+  "generated_at": "2026-06-08T13:58:08Z",
+  "ranking_run_id": "rank-5a7efa5ca3",
+  "family": "bridge",
+  "live_canary_proof_v2_path": "docs/audit/bridge-scorer-live-canary-proof-v2.json",
+  "live_canary_proof_v2_sha256": "7060730820cf974e4a13afa62cab57bb62e08691bb1a3faeb3d84b7052ecc6fd",
+  "controlled_rollout_eval_path": "docs/audit/ml-bridge-rank-pct-hybrid-controlled-rollout-eval-v1.json",
+  "controlled_rollout_eval_sha256": "6910a5019beb3e9b74b1ff5e68f6789170a3b4ba73d7acc9856124911c30cf45",
+  "rubric_path": "docs/recommendation-review-rubric.md",
+  "blank_csv_path": "docs/audit/manual-review/bridge_live_canary_top20_rank-5a7efa5ca3_v1_blank.csv",
+  "blank_csv_sha256": "7bcaa42f7ab63364078c92f73dbd5316a687ea850c3b8fc84f16efb4893dbbc7",
+  "row_id_formula": "sha256(worksheet_version + '|' + review_pool_variant + '|' + ranking_run_id + '|' + family + '|' + rank + '|' + paper_id)[:16]",
+  "live_canary_metadata": {
+    "ranking_mode": "bounded_bridge_ml_scorer",
+    "bridge_rank_pct_hybrid_alpha": 0.5,
+    "bridge_rank_pct_scope": "full_bridge_candidate_pool",
+    "emitted_to_public_users": false,
+    "canary_subject": "bridge-deploy-readiness-v1"
+  },
+  "validation": {
+    "row_count": 20,
+    "all_paper_ids_match_live_canary_top20": true,
+    "previously_unlabeled_proposed_top20_flag_count": 7,
+    "reviewer_columns_blank": true,
+    "db_writes_performed": false
+  },
+  "priority_review_paper_ids": [
+    "https://openalex.org/W7155391647",
+    "https://openalex.org/W7150806375",
+    "https://openalex.org/W7131744631",
+    "https://openalex.org/W4414112292",
+    "https://openalex.org/W7116661261",
+    "https://openalex.org/W4412072230",
+    "https://openalex.org/W4414581097"
+  ],
+  "rows": [
+    {
+      "row_id": "d641eb306edb9310",
+      "rank": 1,
+      "paper_id": "https://openalex.org/W4417471638",
+      "title": "Neural Audio Synthesis for Sound Effects: A Scope Review",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 505,
+      "hybrid_rank": 1
+    },
+    {
+      "row_id": "4ab546c2b31d57ed",
+      "rank": 2,
+      "paper_id": "https://openalex.org/W7126213550",
+      "title": "Potential and Pitfalls of Audio as Data for Political Research: Alignment, Features, and Classification Models",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 377,
+      "hybrid_rank": 2
+    },
+    {
+      "row_id": "6ca0e6ea9078cc5b",
+      "rank": 3,
+      "paper_id": "https://openalex.org/W7128741623",
+      "title": "Melodies of the forest: Nature as an improvisational space for shared creative embodiment",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 385,
+      "hybrid_rank": 3
+    },
+    {
+      "row_id": "9a9ddea156ca3d44",
+      "rank": 4,
+      "paper_id": "https://openalex.org/W4415337516",
+      "title": "Sparse Autoencoders Make Audio Foundation Models More Explainable",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 186,
+      "hybrid_rank": 4
+    },
+    {
+      "row_id": "c3ce663105117fc5",
+      "rank": 5,
+      "paper_id": "https://openalex.org/W4401445948",
+      "title": "The Games We Play: Exploring the Impact of ISMIR on Musicology",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 183,
+      "hybrid_rank": 5
+    },
+    {
+      "row_id": "c4804e5e614edf0b",
+      "rank": 6,
+      "paper_id": "https://openalex.org/W4413133017",
+      "title": "Music, humans, and machines: initial reflections for the development of research with collaboration between composers and artificial intelligence in the creative process of Brazilian music",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 453,
+      "hybrid_rank": 6
+    },
+    {
+      "row_id": "fb56d9935fe81140",
+      "rank": 7,
+      "paper_id": "https://openalex.org/W7155391647",
+      "title": "A Focused Survey of Generative AI-Based Music Therapy Systems: Recent Progress and Open Challenges",
+      "was_previously_unlabeled_proposed_top20": true,
+      "controlled_rollout_offline_label": null,
+      "current_family_rank": 242,
+      "hybrid_rank": 7
+    },
+    {
+      "row_id": "0118cf388961aa77",
+      "rank": 8,
+      "paper_id": "https://openalex.org/W4411141659",
+      "title": "Distilling DDSP: Exploring Real-Time Audio Generation on Embedded Systems",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 54,
+      "hybrid_rank": 8
+    },
+    {
+      "row_id": "b635c83b86e019bc",
+      "rank": 9,
+      "paper_id": "https://openalex.org/W7150806375",
+      "title": "Praat Audiotools: An offline analysis-resynthesis toolkit for experimental composition",
+      "was_previously_unlabeled_proposed_top20": true,
+      "controlled_rollout_offline_label": null,
+      "current_family_rank": 279,
+      "hybrid_rank": 9
+    },
+    {
+      "row_id": "9497bd1134ea0fd3",
+      "rank": 10,
+      "paper_id": "https://openalex.org/W4404570638",
+      "title": "The Sound of Water: Inferring Physical Properties from Pouring Liquids",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 311,
+      "hybrid_rank": 10
+    },
+    {
+      "row_id": "5c33caec9f1d0a13",
+      "rank": 11,
+      "paper_id": "https://openalex.org/W4414818544",
+      "title": "TalkPlay-Tools: Conversational Music Recommendation with LLM Tool Calling",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 321,
+      "hybrid_rank": 11
+    },
+    {
+      "row_id": "b4365e956c7366ab",
+      "rank": 12,
+      "paper_id": "https://openalex.org/W7131744631",
+      "title": "Audio-visual archiving project in Dagbon of Northern Ghana during the period 1999-2010",
+      "was_previously_unlabeled_proposed_top20": true,
+      "controlled_rollout_offline_label": null,
+      "current_family_rank": 292,
+      "hybrid_rank": 12
+    },
+    {
+      "row_id": "46bdae15ff0b0b3a",
+      "rank": 13,
+      "paper_id": "https://openalex.org/W4414011891",
+      "title": "Estimation and Restoration of Unknown Nonlinear Distortion Using Diffusion",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 32,
+      "hybrid_rank": 13
+    },
+    {
+      "row_id": "398620c3e4789995",
+      "rank": 14,
+      "paper_id": "https://openalex.org/W4414112292",
+      "title": "Science of music-based citizen science: How seeing influences hearing",
+      "was_previously_unlabeled_proposed_top20": true,
+      "controlled_rollout_offline_label": null,
+      "current_family_rank": 477,
+      "hybrid_rank": 14
+    },
+    {
+      "row_id": "fd603f72db3fda59",
+      "rank": 15,
+      "paper_id": "https://openalex.org/W7116661261",
+      "title": "A Journey through the Unity Atlantic Rhythm Map",
+      "was_previously_unlabeled_proposed_top20": true,
+      "controlled_rollout_offline_label": null,
+      "current_family_rank": 511,
+      "hybrid_rank": 15
+    },
+    {
+      "row_id": "1c35a72599209b63",
+      "rank": 16,
+      "paper_id": "https://openalex.org/W4409474100",
+      "title": "Analysis of Human Participants in the Journal of the Audio Engineering Society",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 91,
+      "hybrid_rank": 16
+    },
+    {
+      "row_id": "1cdc29deb371e600",
+      "rank": 17,
+      "paper_id": "https://openalex.org/W4410025358",
+      "title": "Designing Neural Synthesizers for Low-Latency Interaction",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 33,
+      "hybrid_rank": 17
+    },
+    {
+      "row_id": "5fcfb882aa396855",
+      "rank": 18,
+      "paper_id": "https://openalex.org/W4401727628",
+      "title": "Charting the Universe of Metal Music Lyrics and Analyzing Their Relation to Perceived Audio Hardness",
+      "was_previously_unlabeled_proposed_top20": false,
+      "controlled_rollout_offline_label": true,
+      "current_family_rank": 61,
+      "hybrid_rank": 18
+    },
+    {
+      "row_id": "42544265028276c5",
+      "rank": 19,
+      "paper_id": "https://openalex.org/W4412072230",
+      "title": "Audio Signal Processing in the Artificial Intelligence Era: Challenges and Directions",
+      "was_previously_unlabeled_proposed_top20": true,
+      "controlled_rollout_offline_label": null,
+      "current_family_rank": 65,
+      "hybrid_rank": 19
+    },
+    {
+      "row_id": "f73d18f79ca46379",
+      "rank": 20,
+      "paper_id": "https://openalex.org/W4414581097",
+      "title": "Spotify Audio Features and Exercise Tolerance in Cycling: An Exploratory Analysis",
+      "was_previously_unlabeled_proposed_top20": true,
+      "controlled_rollout_offline_label": null,
+      "current_family_rank": 315,
+      "hybrid_rank": 20
+    }
+  ]
+}

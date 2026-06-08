@@ -325,6 +325,9 @@ Supporting files:
 - [docs/audit/bridge-scorer-live-canary-proof-v1.md](docs/audit/bridge-scorer-live-canary-proof-v1.md)
 - [docs/audit/bridge-scorer-live-canary-proof-v2.json](docs/audit/bridge-scorer-live-canary-proof-v2.json)
 - [docs/audit/bridge-scorer-live-canary-proof-v2.md](docs/audit/bridge-scorer-live-canary-proof-v2.md)
+- [docs/audit/manual-review/bridge_live_canary_top20_rank-5a7efa5ca3_v1_blank.csv](docs/audit/manual-review/bridge_live_canary_top20_rank-5a7efa5ca3_v1_blank.csv)
+- [docs/audit/manual-review/bridge_live_canary_top20_rank-5a7efa5ca3_v1_context.json](docs/audit/manual-review/bridge_live_canary_top20_rank-5a7efa5ca3_v1_context.json)
+- [docs/audit/manual-review/bridge_live_canary_top20_rank-5a7efa5ca3_v1.md](docs/audit/manual-review/bridge_live_canary_top20_rank-5a7efa5ca3_v1.md)
 
 ## What Is Not Claimed Yet
 
