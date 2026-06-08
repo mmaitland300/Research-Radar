@@ -274,8 +274,31 @@ not verified: the canary-header request currently returns
 run is now visible in Railway, unfiltered API calls can resolve to
 `rank-5a7efa5ca3`; Emerging remains correct when callers pass
 `ranking_version=shadow-generalization-product-candidate-ranking-v1`, which is
-the expected Vercel page behavior. The next implementation should make Bridge
-pinning explicit without moving Emerging off its product run.
+the expected Vercel page behavior. A subsequent routing fix made Bridge pinning
+explicit without moving Emerging off its product run.
+
+#### Live Bridge Canary (as of 2026-06-08)
+
+The web/API routing fix is now on `origin/main`: Emerging remains product-pinned
+to `shadow-generalization-product-candidate-ranking-v1`, while Bridge requests
+use the pinned diagnostic run `rank-5a7efa5ca3` with `limit=20`.
+
+A live Railway API canary proof was attempted against the pinned Bridge run. The
+public/default Bridge request returned HTTP `200`, stayed
+`materialized_heuristic`, resolved `rank-5a7efa5ca3`, returned 20 items, and did
+not emit Bridge ML serving fields. The Emerging regression request with the
+product ranking version returned HTTP `200`, resolved `rank-83787b91ef`, and
+kept `ranking_mode=bounded_ml_scorer`.
+
+The cohort canary request with
+`X-Research-Radar-Canary-Subject: bridge-deploy-readiness-v1` also returned HTTP
+`200`, but it stayed `materialized_heuristic` instead of
+`bounded_bridge_ml_scorer`. Therefore the live canary proof failed. Railway
+CLI/token access was unavailable in this session, so deployed env values and
+gate-closure logs could not be inspected directly. The next step is to fix the
+live canary proof blocker by checking Railway Bridge scorer env, exposure cap,
+deploy metadata, and scorer runtime logs, then rerun the proof. This is not a
+broad rollout or human-review-ready scorer canary yet.
 
 Supporting files:
 
@@ -301,6 +324,8 @@ Supporting files:
 - [docs/audit/bridge-scorer-deployed-readiness-v1.md](docs/audit/bridge-scorer-deployed-readiness-v1.md)
 - [docs/audit/bridge-scorer-railway-data-alignment-v1.json](docs/audit/bridge-scorer-railway-data-alignment-v1.json)
 - [docs/audit/bridge-scorer-railway-data-alignment-v1.md](docs/audit/bridge-scorer-railway-data-alignment-v1.md)
+- [docs/audit/bridge-scorer-live-canary-proof-v1.json](docs/audit/bridge-scorer-live-canary-proof-v1.json)
+- [docs/audit/bridge-scorer-live-canary-proof-v1.md](docs/audit/bridge-scorer-live-canary-proof-v1.md)
 
 ## What Is Not Claimed Yet
 
@@ -323,16 +348,14 @@ See the audit bundles for the full gate trail.
 
 The next credible evaluation work is:
 
-1. **Resolve Bridge canary routing and env readiness.** The Railway DB now
-   exposes `rank-5a7efa5ca3`, so the remaining blocker is that deployed canary
-   requests still return `materialized_heuristic`. Confirm the Bridge cohort env
-   and Docker artifact-copy deploy, then add a web/API routing fix so Bridge can
-   request `rank-5a7efa5ca3` while Emerging remains pinned to
-   `shadow-generalization-product-candidate-ranking-v1`. If the next deployed
-   check returns `bounded_bridge_ml_scorer` for the canary request, the next
-   stage can move to `enable_bridge_scorer_tiny_canary_v1`; until then the
-   recorded next stage is
-   `fix_bridge_canary_env_and_web_bridge_pin_then_rerun_deployed_readiness`.
+1. **Fix the live Bridge canary proof blocker.** Bridge web/API routing is now
+   pinned correctly, and the Railway DB exposes `rank-5a7efa5ca3`, but the live
+   cohort canary request still returned `materialized_heuristic`. Inspect
+   Railway Bridge scorer env, exposure cap, deployed build metadata, and
+   gate/scorer logs, then rerun
+   `docs/audit/bridge-scorer-live-canary-proof-v1.json`. The recorded next
+   stage remains `fix_bridge_live_canary_proof` until the canary response
+   returns `bounded_bridge_ml_scorer`.
 2. **Label the 7 unlabeled proposed top-20 Bridge papers if churn review
    warrants.** The controlled replay supports a bounded gate, but the unlabeled
    proposed rows remain the most useful targeted review follow-up.

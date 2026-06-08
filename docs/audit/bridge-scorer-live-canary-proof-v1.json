@@ -1,0 +1,534 @@
+{
+  "artifact_type": "bridge_scorer_live_canary_proof",
+  "artifact_version": "bridge-scorer-live-canary-proof-v1",
+  "generated_at": "2026-06-08T12:43:56.8107561Z",
+  "target_surface": "bridge",
+  "route": "/api/v1/recommendations/ranked",
+  "constants": {
+    "pinned_run": "rank-5a7efa5ca3",
+    "canary_subject": "bridge-deploy-readiness-v1",
+    "product_version": "shadow-generalization-product-candidate-ranking-v1",
+    "api_base": "https://capable-light-production.up.railway.app",
+    "api_base_source": "docs/audit/bridge-scorer-deployed-readiness-v1.json because RESEARCH_RADAR_API_BASE was not set in this shell"
+  },
+  "deploy_baseline": {
+    "local_head": "75d146442f04c643705474d22e006370cbdb8d69",
+    "origin_main_head": "75d146442f04c643705474d22e006370cbdb8d69",
+    "required_commits_present_on_origin_main": {
+      "2bc7a98": true,
+      "9775bf5": true,
+      "75d1464": true
+    },
+    "deployed_commit_or_build_id": null,
+    "deployed_commit_source": "not_available_railway_cli_and_token_missing",
+    "deployed_commit_includes_hash_stability_fix": false,
+    "deployed_commit_includes_hash_stability_fix_note": "False means not directly confirmed from Railway metadata. Local HEAD and origin/main include 75d1464, but deployed build metadata was unavailable."
+  },
+  "railway_env_snapshot": {
+    "source": "not_directly_observable_from_this_operator_session",
+    "railway_cli_available": false,
+    "railway_token_available": false,
+    "runtime_enabled": null,
+    "configured_ranking_run_id": null,
+    "exposure_cap": null,
+    "public_rollout_enabled": null,
+    "public_rollout_percent": null,
+    "cohort_subject_used_for_this_proof": "bridge-deploy-readiness-v1",
+    "secret_values_recorded": false
+  },
+  "requests": {
+    "public_bridge_default": {
+      "requested_at_utc": "2026-06-08T12:41:49+00:00",
+      "method": "GET",
+      "url": "https://capable-light-production.up.railway.app/api/v1/recommendations/ranked?family=bridge&limit=20&ranking_run_id=rank-5a7efa5ca3",
+      "headers": {},
+      "elapsed_ms": 527,
+      "http_status": 200,
+      "ranking_run_id": "rank-5a7efa5ca3",
+      "ranking_version": "shadow-gen-bridge-score-diagnostic-v1",
+      "family": "bridge",
+      "ranking_mode": "materialized_heuristic",
+      "ranking_mode_detail": null,
+      "scorer_surface": null,
+      "bridge_recommendations_ml_served": null,
+      "bridge_rank_pct_hybrid_alpha": null,
+      "bridge_rank_pct_scope": null,
+      "emitted_to_public_users": null,
+      "total": 20,
+      "item_count": 20,
+      "item_schema_keys_first": [
+        "bridge_eligible",
+        "citation_count",
+        "final_score",
+        "paper_id",
+        "reason_short",
+        "signal_explanations",
+        "signals",
+        "source_slug",
+        "title",
+        "topics",
+        "year"
+      ],
+      "top_5": [
+        {
+          "rank": 1,
+          "paper_id": "https://openalex.org/W4411141874",
+          "title": "Physical Modeling of a Spring Reverb Tank Incorporating Helix Angle, Damping, and Magnetic Bead Coupling",
+          "final_score": 0.671,
+          "bridge_eligible": true
+        },
+        {
+          "rank": 2,
+          "paper_id": "https://openalex.org/W4408772031",
+          "title": "CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research",
+          "final_score": 0.663265,
+          "bridge_eligible": true
+        },
+        {
+          "rank": 3,
+          "paper_id": "https://openalex.org/W4409215217",
+          "title": "Modeling Time-Variant Responses of Optical Compressors With Selective State Space Models",
+          "final_score": 0.646333,
+          "bridge_eligible": true
+        },
+        {
+          "rank": 4,
+          "paper_id": "https://openalex.org/W4409215261",
+          "title": "Toward an Improved Auditory Model for Predicting Binaural Coloration",
+          "final_score": 0.642667,
+          "bridge_eligible": true
+        },
+        {
+          "rank": 5,
+          "paper_id": "https://openalex.org/W4410091503",
+          "title": "Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data",
+          "final_score": 0.630245,
+          "bridge_eligible": true
+        }
+      ],
+      "verified": true
+    },
+    "cohort_canary_bridge": {
+      "requested_at_utc": "2026-06-08T12:41:50+00:00",
+      "method": "GET",
+      "url": "https://capable-light-production.up.railway.app/api/v1/recommendations/ranked?family=bridge&limit=20&ranking_run_id=rank-5a7efa5ca3",
+      "headers": {
+        "X-Research-Radar-Canary-Subject": "bridge-deploy-readiness-v1"
+      },
+      "elapsed_ms": 478,
+      "http_status": 200,
+      "ranking_run_id": "rank-5a7efa5ca3",
+      "ranking_version": "shadow-gen-bridge-score-diagnostic-v1",
+      "family": "bridge",
+      "ranking_mode": "materialized_heuristic",
+      "ranking_mode_detail": null,
+      "scorer_surface": null,
+      "bridge_recommendations_ml_served": null,
+      "bridge_rank_pct_hybrid_alpha": null,
+      "bridge_rank_pct_scope": null,
+      "emitted_to_public_users": null,
+      "total": 20,
+      "item_count": 20,
+      "item_schema_keys_first": [
+        "bridge_eligible",
+        "citation_count",
+        "final_score",
+        "paper_id",
+        "reason_short",
+        "signal_explanations",
+        "signals",
+        "source_slug",
+        "title",
+        "topics",
+        "year"
+      ],
+      "top_20_items": [
+        {
+          "rank": 1,
+          "paper_id": "https://openalex.org/W4411141874",
+          "title": "Physical Modeling of a Spring Reverb Tank Incorporating Helix Angle, Damping, and Magnetic Bead Coupling",
+          "final_score": 0.671
+        },
+        {
+          "rank": 2,
+          "paper_id": "https://openalex.org/W4408772031",
+          "title": "CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research",
+          "final_score": 0.663265
+        },
+        {
+          "rank": 3,
+          "paper_id": "https://openalex.org/W4409215217",
+          "title": "Modeling Time-Variant Responses of Optical Compressors With Selective State Space Models",
+          "final_score": 0.646333
+        },
+        {
+          "rank": 4,
+          "paper_id": "https://openalex.org/W4409215261",
+          "title": "Toward an Improved Auditory Model for Predicting Binaural Coloration",
+          "final_score": 0.642667
+        },
+        {
+          "rank": 5,
+          "paper_id": "https://openalex.org/W4410091503",
+          "title": "Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data",
+          "final_score": 0.630245
+        },
+        {
+          "rank": 6,
+          "paper_id": "https://openalex.org/W4409967775",
+          "title": "ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research",
+          "final_score": 0.624339
+        },
+        {
+          "rank": 7,
+          "paper_id": "https://openalex.org/W7131681001",
+          "title": "Inferring Communities of Medieval Music Manuscripts Using Stochastic Block Models",
+          "final_score": 0.612319
+        },
+        {
+          "rank": 8,
+          "paper_id": "https://openalex.org/W4415947443",
+          "title": "Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship",
+          "final_score": 0.609245
+        },
+        {
+          "rank": 9,
+          "paper_id": "https://openalex.org/W4409474070",
+          "title": "Analysis of Various 3D Acquisition Techniques and Mesh Differences for Head-related Transfer Functions Calculation",
+          "final_score": 0.604333
+        },
+        {
+          "rank": 10,
+          "paper_id": "https://openalex.org/W4411649085",
+          "title": "The AI Music Arms Race: On the Detection of AI-Generated Music",
+          "final_score": 0.603339
+        },
+        {
+          "rank": 11,
+          "paper_id": "https://openalex.org/W4402645135",
+          "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas",
+          "final_score": 0.600386
+        },
+        {
+          "rank": 12,
+          "paper_id": "https://openalex.org/W4412900768",
+          "title": "STAR Drums: A Dataset for Automatic Drum Transcription",
+          "final_score": 0.600265
+        },
+        {
+          "rank": 13,
+          "paper_id": "https://openalex.org/W4411141958",
+          "title": "Reverse Engineering of Music Mixing Graphs With Differentiable Processors and Iterative Pruning",
+          "final_score": 0.59902
+        },
+        {
+          "rank": 14,
+          "paper_id": "https://openalex.org/W4409215215",
+          "title": "Issues and Challenges of Audio Technologies for the Musical Metaverse",
+          "final_score": 0.594725
+        },
+        {
+          "rank": 15,
+          "paper_id": "https://openalex.org/W7128595024",
+          "title": "High-Resolution Directivity Measurements of an Artificial Head and Mouth Shaped to Three Vowels",
+          "final_score": 0.585
+        },
+        {
+          "rank": 16,
+          "paper_id": "https://openalex.org/W4414799687",
+          "title": "Improved Real-Time Six-Degrees-of-Freedom Dynamic Auralization Through Nonuniformly Partitioned Convolution",
+          "final_score": 0.583333
+        },
+        {
+          "rank": 17,
+          "paper_id": "https://openalex.org/W4407236737",
+          "title": "The GigaMIDI Dataset with Features for Expressive Music Performance Detection",
+          "final_score": 0.572386
+        },
+        {
+          "rank": 18,
+          "paper_id": "https://openalex.org/W7116976483",
+          "title": "Multimodal Datasets for Studying Expert Performances of Musical Scores",
+          "final_score": 0.572386
+        },
+        {
+          "rank": 19,
+          "paper_id": "https://openalex.org/W4414199528",
+          "title": "PESTO: Real-Time Pitch Estimation with Self-Supervised Transposition-Equivariant Objective",
+          "final_score": 0.571547
+        },
+        {
+          "rank": 20,
+          "paper_id": "https://openalex.org/W4416267785",
+          "title": "ImproVision Equilibrium: Toward Multimodal Musical Human-Machine Interaction",
+          "final_score": 0.568068
+        }
+      ],
+      "verified": false,
+      "failure_reason": "expected bounded_bridge_ml_scorer but response ranking_mode was materialized_heuristic",
+      "gate_log_evidence": {
+        "available": false,
+        "reason_closed": null,
+        "exception_type": null,
+        "exception_message": null,
+        "limitation": "Railway CLI/token was unavailable; deployed response did not expose gate closure diagnostics."
+      },
+      "may_have_consumed_exposure_cap_slot": null,
+      "may_have_consumed_exposure_cap_slot_note": "The captured canary response did not serve scorer mode. A prior attempted script made the same request but failed before printing output, so cap-slot consumption cannot be proven from this session."
+    },
+    "emerging_product_regression": {
+      "requested_at_utc": "2026-06-08T12:41:50+00:00",
+      "method": "GET",
+      "url": "https://capable-light-production.up.railway.app/api/v1/recommendations/ranked?family=emerging&limit=20&ranking_version=shadow-generalization-product-candidate-ranking-v1",
+      "headers": {},
+      "elapsed_ms": 890,
+      "http_status": 200,
+      "ranking_run_id": "rank-83787b91ef",
+      "ranking_version": "shadow-generalization-product-candidate-ranking-v1",
+      "family": "emerging",
+      "ranking_mode": "bounded_ml_scorer",
+      "ranking_mode_detail": "Order selected by bounded ML scorer; displayed scores/signals are materialized ranking metadata.",
+      "total": 20,
+      "item_count": 20,
+      "top_5": [
+        {
+          "rank": 1,
+          "paper_id": "https://openalex.org/W4408772031",
+          "title": "CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research",
+          "final_score": 0.59465
+        },
+        {
+          "rank": 2,
+          "paper_id": "https://openalex.org/W4402645135",
+          "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas",
+          "final_score": 0.508696
+        },
+        {
+          "rank": 3,
+          "paper_id": "https://openalex.org/W4410091503",
+          "title": "Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data",
+          "final_score": 0.50178
+        },
+        {
+          "rank": 4,
+          "paper_id": "https://openalex.org/W4401909510",
+          "title": "Jazz Trio Database: Automated Annotation of Jazz Piano Trio Recordings Processed Using Audio Source Separation",
+          "final_score": 0.459916
+        },
+        {
+          "rank": 5,
+          "paper_id": "https://openalex.org/W7119099299",
+          "title": "Supervised Contrastive Models for Music Information Retrieval in Classical Persian Music",
+          "final_score": 0.431143
+        }
+      ],
+      "verified": true
+    }
+  },
+  "public_request_verified": true,
+  "canary_request_verified": false,
+  "live_canary_proof_passed": false,
+  "emerging_regression_verified": true,
+  "public_rollout_disabled_confirmed": false,
+  "public_rollout_disabled_confirmed_note": "Public Bridge request remained materialized, but Railway env vars were not directly observable, so public rollout disabled is not marked confirmed.",
+  "emitted_to_public_users_false_confirmed": false,
+  "emitted_to_public_users_false_confirmed_note": "The captured canary response did not serve bounded_bridge_ml_scorer, so the expected served-response emitted_to_public_users=false marker was not confirmed.",
+  "railway_database_inferred_ready_from_public_pinned_request": true,
+  "top_20_canary_items": [
+    {
+      "rank": 1,
+      "paper_id": "https://openalex.org/W4411141874",
+      "title": "Physical Modeling of a Spring Reverb Tank Incorporating Helix Angle, Damping, and Magnetic Bead Coupling",
+      "final_score": 0.671
+    },
+    {
+      "rank": 2,
+      "paper_id": "https://openalex.org/W4408772031",
+      "title": "CCMusic: An Open and Diverse Database for Chinese Music Information Retrieval Research",
+      "final_score": 0.663265
+    },
+    {
+      "rank": 3,
+      "paper_id": "https://openalex.org/W4409215217",
+      "title": "Modeling Time-Variant Responses of Optical Compressors With Selective State Space Models",
+      "final_score": 0.646333
+    },
+    {
+      "rank": 4,
+      "paper_id": "https://openalex.org/W4409215261",
+      "title": "Toward an Improved Auditory Model for Predicting Binaural Coloration",
+      "final_score": 0.642667
+    },
+    {
+      "rank": 5,
+      "paper_id": "https://openalex.org/W4410091503",
+      "title": "Towards an 'Everything Corpus': A Framework and Guidelines for the Curation of More Comprehensive Multimodal Music Data",
+      "final_score": 0.630245
+    },
+    {
+      "rank": 6,
+      "paper_id": "https://openalex.org/W4409967775",
+      "title": "ChoraleBricks: A Modular Multitrack Dataset for Wind Music Research",
+      "final_score": 0.624339
+    },
+    {
+      "rank": 7,
+      "paper_id": "https://openalex.org/W7131681001",
+      "title": "Inferring Communities of Medieval Music Manuscripts Using Stochastic Block Models",
+      "final_score": 0.612319
+    },
+    {
+      "rank": 8,
+      "paper_id": "https://openalex.org/W4415947443",
+      "title": "Beyond a Western Center of Music Information Retrieval: A Bibliometric Analysis of the First 25 Years of ISMIR Authorship",
+      "final_score": 0.609245
+    },
+    {
+      "rank": 9,
+      "paper_id": "https://openalex.org/W4409474070",
+      "title": "Analysis of Various 3D Acquisition Techniques and Mesh Differences for Head-related Transfer Functions Calculation",
+      "final_score": 0.604333
+    },
+    {
+      "rank": 10,
+      "paper_id": "https://openalex.org/W4411649085",
+      "title": "The AI Music Arms Race: On the Detection of AI-Generated Music",
+      "final_score": 0.603339
+    },
+    {
+      "rank": 11,
+      "paper_id": "https://openalex.org/W4402645135",
+      "title": "BPSD: A Coherent Multi-Version Dataset for Analyzing the First Movements of Beethoven's Piano Sonatas",
+      "final_score": 0.600386
+    },
+    {
+      "rank": 12,
+      "paper_id": "https://openalex.org/W4412900768",
+      "title": "STAR Drums: A Dataset for Automatic Drum Transcription",
+      "final_score": 0.600265
+    },
+    {
+      "rank": 13,
+      "paper_id": "https://openalex.org/W4411141958",
+      "title": "Reverse Engineering of Music Mixing Graphs With Differentiable Processors and Iterative Pruning",
+      "final_score": 0.59902
+    },
+    {
+      "rank": 14,
+      "paper_id": "https://openalex.org/W4409215215",
+      "title": "Issues and Challenges of Audio Technologies for the Musical Metaverse",
+      "final_score": 0.594725
+    },
+    {
+      "rank": 15,
+      "paper_id": "https://openalex.org/W7128595024",
+      "title": "High-Resolution Directivity Measurements of an Artificial Head and Mouth Shaped to Three Vowels",
+      "final_score": 0.585
+    },
+    {
+      "rank": 16,
+      "paper_id": "https://openalex.org/W4414799687",
+      "title": "Improved Real-Time Six-Degrees-of-Freedom Dynamic Auralization Through Nonuniformly Partitioned Convolution",
+      "final_score": 0.583333
+    },
+    {
+      "rank": 17,
+      "paper_id": "https://openalex.org/W4407236737",
+      "title": "The GigaMIDI Dataset with Features for Expressive Music Performance Detection",
+      "final_score": 0.572386
+    },
+    {
+      "rank": 18,
+      "paper_id": "https://openalex.org/W7116976483",
+      "title": "Multimodal Datasets for Studying Expert Performances of Musical Scores",
+      "final_score": 0.572386
+    },
+    {
+      "rank": 19,
+      "paper_id": "https://openalex.org/W4414199528",
+      "title": "PESTO: Real-Time Pitch Estimation with Self-Supervised Transposition-Equivariant Objective",
+      "final_score": 0.571547
+    },
+    {
+      "rank": 20,
+      "paper_id": "https://openalex.org/W4416267785",
+      "title": "ImproVision Equilibrium: Toward Multimodal Musical Human-Machine Interaction",
+      "final_score": 0.568068
+    }
+  ],
+  "sanity_cross_checks": {
+    "live_canary_top_5_paper_ids": [
+      "https://openalex.org/W4411141874",
+      "https://openalex.org/W4408772031",
+      "https://openalex.org/W4409215217",
+      "https://openalex.org/W4409215261",
+      "https://openalex.org/W4410091503"
+    ],
+    "railway_data_alignment_serving_helper_top_5_paper_ids": [
+      "https://openalex.org/W4417471638",
+      "https://openalex.org/W7126213550",
+      "https://openalex.org/W7128741623",
+      "https://openalex.org/W4415337516",
+      "https://openalex.org/W4401445948"
+    ],
+    "matches_railway_data_alignment_serving_helper": false,
+    "deployment_readiness_local_gate_open_top_5_paper_ids": [
+      "https://openalex.org/W4417471638",
+      "https://openalex.org/W7126213550",
+      "https://openalex.org/W7128741623",
+      "https://openalex.org/W4415337516",
+      "https://openalex.org/W4401445948"
+    ],
+    "matches_deployment_readiness_local_gate_open": false,
+    "deployed_readiness_gate_open_top_5_available": false,
+    "deployed_readiness_gate_open_top_5_match": null,
+    "explanation": "The live canary response returned materialized_heuristic, so its top 5 matched the deployed materialized Bridge path rather than the expected scorer-served top 5."
+  },
+  "previously_unlabeled_proposed_top20_items_appearing_in_live_canary_top20": [],
+  "previously_unlabeled_proposed_top20_reference": [
+    {
+      "proposed_hybrid_rank": 7,
+      "paper_id": "https://openalex.org/W7155391647",
+      "title": "A Focused Survey of Generative AI-Based Music Therapy Systems: Recent Progress and Open Challenges"
+    },
+    {
+      "proposed_hybrid_rank": 9,
+      "paper_id": "https://openalex.org/W7150806375",
+      "title": "Praat Audiotools: An offline analysis-resynthesis toolkit for experimental composition"
+    },
+    {
+      "proposed_hybrid_rank": 12,
+      "paper_id": "https://openalex.org/W7131744631",
+      "title": "Audio-visual archiving project in Dagbon of Northern Ghana during the period 1999-2010"
+    },
+    {
+      "proposed_hybrid_rank": 14,
+      "paper_id": "https://openalex.org/W4414112292",
+      "title": "Science of music-based citizen science: How seeing influences hearing"
+    },
+    {
+      "proposed_hybrid_rank": 15,
+      "paper_id": "https://openalex.org/W7116661261",
+      "title": "A Journey through the Unity Atlantic Rhythm Map"
+    },
+    {
+      "proposed_hybrid_rank": 19,
+      "paper_id": "https://openalex.org/W4412072230",
+      "title": "Audio Signal Processing in the Artificial Intelligence Era: Challenges and Directions"
+    },
+    {
+      "proposed_hybrid_rank": 20,
+      "paper_id": "https://openalex.org/W4414581097",
+      "title": "Spotify Audio Features and Exercise Tolerance in Cycling: An Exploratory Analysis"
+    }
+  ],
+  "limitations": [
+    "RESEARCH_RADAR_API_BASE was not set in this shell; the Railway API base was taken from prior deployed readiness documentation.",
+    "The first attempted live HTTP script made requests but failed while printing Unicode to the Windows console; the captured UTF-8 rerun still returned materialized_heuristic for the cohort canary.",
+    "Railway CLI/token was unavailable, so deployed build metadata, env values, and gate logs could not be inspected directly.",
+    "Because the canary response did not serve bounded_bridge_ml_scorer, this artifact is not proof of a successful live Bridge scorer canary.",
+    "The response did not expose a gate-closure reason; likely causes remain operator env, cap, deployment, or scorer runtime conditions.",
+    "Web Recommended does not send canary headers; this check is API-operator evidence only."
+  ],
+  "recommended_next_stage": "fix_bridge_live_canary_proof"
+}
