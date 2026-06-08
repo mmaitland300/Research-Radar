@@ -268,37 +268,34 @@ The Railway database was then aligned with the pinned Bridge scorer run:
 `rank-5a7efa5ca3` now exists, has 528 Bridge rows, has `bridge_score` populated
 on all 528 Bridge rows, and the read-only Bridge serving helper can score the
 full pool from Railway Postgres. The deployed pinned request now returns HTTP
-`200`, so the missing-run blocker is resolved. Deployed canary serving is still
-not verified: the canary-header request currently returns
-`materialized_heuristic`, not `bounded_bridge_ml_scorer`. Because the diagnostic
-run is now visible in Railway, unfiltered API calls can resolve to
+`200`, so the missing-run blocker is resolved. Because the diagnostic run is now
+visible in Railway, unfiltered API calls can resolve to
 `rank-5a7efa5ca3`; Emerging remains correct when callers pass
 `ranking_version=shadow-generalization-product-candidate-ranking-v1`, which is
-the expected Vercel page behavior. A subsequent routing fix made Bridge pinning
-explicit without moving Emerging off its product run.
+the expected Vercel page behavior. A subsequent web/API routing fix made Bridge
+pinning explicit without moving Emerging off its product run.
 
 #### Live Bridge Canary (as of 2026-06-08)
 
-The web/API routing fix is now on `origin/main`: Emerging remains product-pinned
-to `shadow-generalization-product-candidate-ranking-v1`, while Bridge requests
-use the pinned diagnostic run `rank-5a7efa5ca3` with `limit=20`.
+The first live Bridge canary proof attempt was intentionally recorded as a
+failed artifact: the public/default Bridge request stayed
+`materialized_heuristic`, and the cohort canary request also stayed
+`materialized_heuristic`. The failure was traced to bounded canary exposure
+state rather than a model or data blocker.
 
-A live Railway API canary proof was attempted against the pinned Bridge run. The
-public/default Bridge request returned HTTP `200`, stayed
-`materialized_heuristic`, resolved `rank-5a7efa5ca3`, returned 20 items, and did
-not emit Bridge ML serving fields. The Emerging regression request with the
-product ranking version returned HTTP `200`, resolved `rank-83787b91ef`, and
-kept `ranking_mode=bounded_ml_scorer`.
+After redeploying Railway with a higher internal canary cap, the live cohort
+canary request with
+`X-Research-Radar-Canary-Subject: bridge-deploy-readiness-v1` returned HTTP
+`200` with `ranking_mode=bounded_bridge_ml_scorer`,
+`bridge_recommendations_ml_served=true`, `scorer_surface=bridge`,
+`bridge_rank_pct_hybrid_alpha=0.5`, and
+`bridge_rank_pct_scope=full_bridge_candidate_pool`. The response resolved
+`rank-5a7efa5ca3`, returned 20 items, and kept
+`emitted_to_public_users=false`.
 
-The cohort canary request with
-`X-Research-Radar-Canary-Subject: bridge-deploy-readiness-v1` also returned HTTP
-`200`, but it stayed `materialized_heuristic` instead of
-`bounded_bridge_ml_scorer`. Therefore the live canary proof failed. Railway
-CLI/token access was unavailable in this session, so deployed env values and
-gate-closure logs could not be inspected directly. The next step is to fix the
-live canary proof blocker by checking Railway Bridge scorer env, exposure cap,
-deploy metadata, and scorer runtime logs, then rerun the proof. This is not a
-broad rollout or human-review-ready scorer canary yet.
+Public/default Bridge requests without the canary header still return
+`materialized_heuristic`, so public rollout remains disabled. The next step is
+human review of the live canary top 20, not broad rollout.
 
 Supporting files:
 
@@ -326,6 +323,8 @@ Supporting files:
 - [docs/audit/bridge-scorer-railway-data-alignment-v1.md](docs/audit/bridge-scorer-railway-data-alignment-v1.md)
 - [docs/audit/bridge-scorer-live-canary-proof-v1.json](docs/audit/bridge-scorer-live-canary-proof-v1.json)
 - [docs/audit/bridge-scorer-live-canary-proof-v1.md](docs/audit/bridge-scorer-live-canary-proof-v1.md)
+- [docs/audit/bridge-scorer-live-canary-proof-v2.json](docs/audit/bridge-scorer-live-canary-proof-v2.json)
+- [docs/audit/bridge-scorer-live-canary-proof-v2.md](docs/audit/bridge-scorer-live-canary-proof-v2.md)
 
 ## What Is Not Claimed Yet
 
@@ -348,14 +347,10 @@ See the audit bundles for the full gate trail.
 
 The next credible evaluation work is:
 
-1. **Fix the live Bridge canary proof blocker.** Bridge web/API routing is now
-   pinned correctly, and the Railway DB exposes `rank-5a7efa5ca3`, but the live
-   cohort canary request still returned `materialized_heuristic`. Inspect
-   Railway Bridge scorer env, exposure cap, deployed build metadata, and
-   gate/scorer logs, then rerun
-   `docs/audit/bridge-scorer-live-canary-proof-v1.json`. The recorded next
-   stage remains `fix_bridge_live_canary_proof` until the canary response
-   returns `bounded_bridge_ml_scorer`.
+1. **Human-review the live Bridge canary top 20.** The canary path now returns
+   `bounded_bridge_ml_scorer`, but the result is still internal API-operator
+   evidence. Review the top 20 for quality, off-topic papers, and misleading
+   Bridge matches before widening exposure.
 2. **Label the 7 unlabeled proposed top-20 Bridge papers if churn review
    warrants.** The controlled replay supports a bounded gate, but the unlabeled
    proposed rows remain the most useful targeted review follow-up.
