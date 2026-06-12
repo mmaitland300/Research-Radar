@@ -26,6 +26,44 @@ def test_evaluate_work_includes_core_source_with_topic_signal() -> None:
     assert decision.is_core_corpus is True
 
 
+def test_evaluate_work_includes_ismir_source_by_id() -> None:
+    policy = CorpusPolicy()
+    work = {
+        "publication_year": 2018,
+        "language": "en",
+        "type": "article",
+        "is_retracted": False,
+        "title": "End-to-end learning for music audio tagging at scale",
+        "abstract": "We study music tagging with end-to-end audio embeddings.",
+        "primary_location": {
+            "source": {
+                "id": "https://openalex.org/S4306420076",
+                "display_name": "International Symposium/Conference on Music Information Retrieval",
+            }
+        },
+    }
+
+    decision = policy.evaluate_work(work)
+
+    assert decision.included is True
+    assert decision.reason == "core_source_topic_match"
+    assert decision.venue_class == "core"
+    assert decision.is_core_corpus is True
+
+
+def test_classify_source_resolves_ismir_aliases_without_id() -> None:
+    # OpenAlex indexes many ISMIR papers under repository sources, so the
+    # policy must also resolve the venue from display-name variants.
+    policy = CorpusPolicy()
+    for name in (
+        "ISMIR",
+        "Proceedings of the International Society for Music Information Retrieval Conference",
+    ):
+        source = policy.classify_source(source_id=None, source_name=name)
+        assert source is not None, name
+        assert source.slug == "ismir"
+
+
 def test_evaluate_work_blocks_explicit_exclusion_terms() -> None:
     policy = CorpusPolicy()
     work = {

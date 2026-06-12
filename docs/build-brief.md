@@ -55,7 +55,7 @@ Excluded:
 - JAES
 - ICASSP papers that also pass the topic gate
 
-**Implemented in repo (bootstrap today):** The live OpenAlex `bootstrap-run` path only includes sources defined in `services/pipeline/pipeline/policy.py`. As of this writing that is **TISMIR** and **JAES**. The list above remains the **V1 product intent**; add each venue to `CorpusPolicy.source_policies` (with `openalex_source_id`) when expanding ingest.
+**Implemented in repo (bootstrap today):** The live OpenAlex `bootstrap-run` path only includes sources defined in `services/pipeline/pipeline/policy.py`. As of this writing that is **TISMIR**, **JAES**, and **ISMIR** (proceedings; OpenAlex coverage under the dedicated source id is partial, so realized yield is below the venue's true output). The list above remains the **V1 product intent**; add each remaining venue to `CorpusPolicy.source_policies` (with `openalex_source_id`) when expanding ingest.
 
 ### Topic gate
 
