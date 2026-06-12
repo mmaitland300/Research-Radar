@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -98,6 +99,15 @@ from pipeline.jobs import (
 from pipeline.openalex import build_bootstrap_work_plans, build_source_resolution_plans
 from pipeline.policy import CorpusPolicy, corpus_policy_with_openalex_source_ids
 from pipeline.source_resolution import resolve_all_sources, slug_to_openalex_id_map
+
+
+def _print_artifact_values(path: Path, *key_paths: tuple[str, ...]) -> None:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for key_path in key_paths:
+        value = payload
+        for key in key_path:
+            value = value[key]
+        print(value)
 
 
 def main() -> None:
@@ -7404,9 +7414,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
-        print(payload["validation_scope"]["candidate_pool_work_count"])
-        print(payload["validation_scope"]["confirmatory_metric_work_count"])
-        print(payload["recommended_next_stage"])
+        _print_artifact_values(
+            out_json,
+            ("validation_scope", "candidate_pool_work_count"),
+            ("validation_scope", "confirmatory_metric_work_count"),
+            ("recommended_next_stage",),
+        )
         return
 
     if args.command == "ml-hybrid-validation-metric-gates":
@@ -7538,9 +7551,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
-        print(payload["discovery_summary"]["status"])
-        print(payload["readiness_for_generalization_audit"]["ready_for_generalization_audit_execution"])
-        print(payload["recommended_next_stage"])
+        _print_artifact_values(
+            out_json,
+            ("discovery_summary", "status"),
+            ("readiness_for_generalization_audit", "ready_for_generalization_audit_execution"),
+            ("recommended_next_stage",),
+        )
         return
 
     if args.command == "ml-shadow-scorer-second-surface-labeling-worksheet":
@@ -7574,8 +7590,11 @@ def main() -> None:
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.context_output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
-        print(payload["selection_summary"]["selected_row_count"])
-        print(payload["recommended_next_stage"])
+        _print_artifact_values(
+            Path(args.context_output),
+            ("selection_summary", "selected_row_count"),
+            ("recommended_next_stage",),
+        )
         return
 
     if args.command == "ml-shadow-scorer-second-candidate-source-expansion-plan":
@@ -7669,8 +7688,11 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
-        print(payload["execution_summary"]["learned_probability_coverage_count"])
-        print(payload["recommended_next_stage"])
+        _print_artifact_values(
+            out_json,
+            ("execution_summary", "learned_probability_coverage_count"),
+            ("recommended_next_stage",),
+        )
         return
 
     if args.command == "ml-shadow-scorer-second-surface-generalization-audit":
@@ -7799,9 +7821,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(out_json.resolve(), file=sys.stderr)
         print(out_md.resolve(), file=sys.stderr)
-        print(payload["ingest_result"]["status"])
-        print(payload["ingest_result"]["snapshot_work_count"])
-        print(payload["recommended_next_stage"])
+        _print_artifact_values(
+            out_json,
+            ("ingest_result", "status"),
+            ("ingest_result", "snapshot_work_count"),
+            ("recommended_next_stage",),
+        )
         return
 
     if args.command == "ml-fresh-eval-labeling-plan-hybrid":
@@ -8640,8 +8665,11 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
-        print(payload["metadata"]["snapshot_version"])
-        print(payload["hydration_result"]["recommended_next_stage"])
+        _print_artifact_values(
+            Path(args.output),
+            ("metadata", "snapshot_version"),
+            ("hydration_result", "recommended_next_stage"),
+        )
         return
 
     if args.command == "ml-shadow-scorer-second-snapshot-hydration":
@@ -8672,9 +8700,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
-        print(payload["metadata"]["snapshot_version"])
-        print(payload["hydration_result"]["snapshot_embedding_ready"])
-        print(payload["recommended_next_stage"])
+        _print_artifact_values(
+            Path(args.output),
+            ("metadata", "snapshot_version"),
+            ("hydration_result", "snapshot_embedding_ready"),
+            ("recommended_next_stage",),
+        )
         return
 
     if args.command == "corpus-v2-embed":
@@ -8729,9 +8760,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
-        print(payload["metadata"]["snapshot_version"])
-        print(payload["metadata"]["embedding_version"])
-        print(payload["embedding_result"]["recommended_next_stage"])
+        _print_artifact_values(
+            Path(args.output),
+            ("metadata", "snapshot_version"),
+            ("metadata", "embedding_version"),
+            ("embedding_result", "recommended_next_stage"),
+        )
         return
 
     if args.command == "ml-shadow-scorer-second-snapshot-embeddings":
@@ -8764,9 +8798,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
-        print(payload["metadata"]["snapshot_version"])
-        print(payload["metadata"]["embedding_version"])
-        print(payload["embedding_result"]["recommended_next_stage"])
+        _print_artifact_values(
+            Path(args.output),
+            ("metadata", "snapshot_version"),
+            ("metadata", "embedding_version"),
+            ("embedding_result", "recommended_next_stage"),
+        )
         return
 
     if args.command == "ml-shadow-scorer-second-product-candidate-ranking":
@@ -8799,9 +8836,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
-        print(payload["ranking_result"]["ranking_run_id"])
-        print(payload["ranking_result"]["paper_scores_written_count"])
-        print(payload["ranking_result"]["recommended_next_stage"])
+        _print_artifact_values(
+            Path(args.output),
+            ("ranking_result", "ranking_run_id"),
+            ("ranking_result", "paper_scores_written_count"),
+            ("ranking_result", "recommended_next_stage"),
+        )
         return
 
     if args.command == "ml-fresh-hybrid-product-candidate-ranking":
@@ -8833,9 +8873,12 @@ def main() -> None:
             raise SystemExit(e.code) from e
         print(Path(args.output).resolve(), file=sys.stderr)
         print(Path(args.markdown_output).resolve(), file=sys.stderr)
-        print(payload["ranking_result"]["ranking_run_id"])
-        print(payload["ranking_result"]["paper_scores_written_count"])
-        print(payload["ranking_result"]["recommended_next_stage"])
+        _print_artifact_values(
+            Path(args.output),
+            ("ranking_result", "ranking_run_id"),
+            ("ranking_result", "paper_scores_written_count"),
+            ("ranking_result", "recommended_next_stage"),
+        )
         return
 
     if args.command == "cluster-inspection":
