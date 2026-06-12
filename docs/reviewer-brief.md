@@ -44,7 +44,9 @@ The current bridge objective experiment uses:
 - Baseline bridge run: `rank-ee2ba6c816`
 - Objective experiment run: `rank-60910a47b4`
 - Eligibility mode: `top50_cross040_exclude_persistent_shared_v1`
-- Evidence index: `docs/audit/bridge-evidence-summary.md`
+- Evidence index: `docs/audit/bridge-evidence-summary.md` on the
+  `archive/ml-governance-audit` branch (the full experiment record is archived
+  there; `main` keeps only pinned model artifacts under `docs/audit/`)
 
 Eligible-only bridge remains experimental because the supporting evidence is single-reviewer, top-20, offline audit material only. It is not validation, not a superiority claim, and not default readiness.
 

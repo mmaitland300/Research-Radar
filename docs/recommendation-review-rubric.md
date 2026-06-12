@@ -18,10 +18,10 @@ python -m pipeline.cli recommendation-review-worksheet \
   --family <emerging|bridge|undercited> \
   [--bridge-eligible-only] \
   --limit 20 \
-  --output docs/audit/manual-review/<name>.csv
+  --output artifacts/manual-review/<name>.csv
 ```
 
-Optional: `--database-url` to override the DSN. The run must be **`succeeded`**; failed or missing runs are rejected. See `docs/audit/manual-review/.gitkeep` for where checked-in examples may live (optional; paths are your choice).
+Optional: `--database-url` to override the DSN. The run must be **`succeeded`**; failed or missing runs are rejected. Output paths are your choice; completed worksheets are working data and do not need to be committed (historical examples live on the `archive/ml-governance-audit` branch).
 `--bridge-eligible-only` is valid only with `--family bridge` and filters rows to `bridge_eligible IS TRUE`.
 
 ## Summarizing a completed worksheet (labels only)
@@ -31,8 +31,8 @@ After every data row has valid `relevance_label`, `novelty_label`, and `bridge_l
 ```bash
 cd services/pipeline
 python -m pipeline.cli recommendation-review-summary \
-  --input docs/audit/manual-review/bridge_RUN.csv \
-  --output docs/audit/manual-review/bridge_RUN_summary.json
+  --input artifacts/manual-review/bridge_RUN.csv \
+  --output artifacts/manual-review/bridge_RUN_summary.json
 ```
 
 - **Default behavior:** if any label is blank or not in the allowed set, the command prints which **data row** (1-based, after the header), **`paper_id`**, and **column** failed, and exits with code **2**. No output JSON is written.

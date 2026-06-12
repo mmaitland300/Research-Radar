@@ -14,6 +14,7 @@ and the project is not presented as a validated recommender system.
 - Try the live app: [radar.mmaitland.dev](https://radar.mmaitland.dev).
 - Run the no-key demo with `npm run demo:local` after installing the API and web
   dependencies.
+- See [ARCHITECTURE.md](ARCHITECTURE.md) for the system shape in one page.
 - Inspect the current evaluation boundary in [EVALUATION.md](EVALUATION.md).
 - Read the [public roadmap](docs/public-roadmap.md) and
   [v0.1.0 public baseline notes](docs/releases/v0.1.0-public-baseline.md).
@@ -160,7 +161,12 @@ unredacted provider payloads in issues or PRs. See [SECURITY.md](SECURITY.md).
 - `apps/api` - FastAPI service for metadata, rankings, and explanation endpoints
 - `services/pipeline` - Python ETL, bootstrap ingest planning, and ranking jobs
 - `infra/db` - PostgreSQL + pgvector schema
-- `docs` - build brief, roadmap, evaluation notes, and implementation notes
+- `docs` - reviewer brief, operator guides, and internal planning notes; see
+  the [documentation map](docs/README.md)
+
+The full ML experiment and rollout-review record is preserved on the
+`archive/ml-governance-audit` branch; `main` keeps only the pinned model
+artifacts the deployed scorers load.
 
 ## Quickstart Details
 

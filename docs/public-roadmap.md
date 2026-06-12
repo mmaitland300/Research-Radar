@@ -1,6 +1,6 @@
 # Public Roadmap
 
-Last updated: 2026-05-31
+Last updated: 2026-06-12
 
 Research Radar is a working prototype for explainable MIR/audio-ML paper
 ranking. This roadmap tracks the next public improvements that make the project
@@ -23,9 +23,10 @@ easier to evaluate without overstating the recommender quality.
 Goal: make the public repo safer and easier to review.
 
 - Keep CI required before merging to `main`.
-- Add dependency-update automation and CodeQL code scanning.
-- Publish a public baseline release with notes, smoke-check evidence, and known
-  limitations.
+- Done: dependency-update automation (Dependabot) and CodeQL code scanning.
+- Done: public baseline release `v0.1.0-public-baseline` with notes,
+  smoke-check evidence, and known limitations
+  ([release notes](releases/v0.1.0-public-baseline.md)).
 
 ### 2. Evaluation Credibility
 

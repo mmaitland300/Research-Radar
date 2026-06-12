@@ -26,18 +26,6 @@ jobs:
       - name: Run Python unit tests
         run: pytest services/pipeline/tests apps/api/tests -q
 
-      - name: Verify Phase 2 bundle (post-review)
-        run: python -m pipeline.cli ml-shadow-scorer-phase-bundle-verify --bundle ../../docs/audit/bundles/phase2-v1/bundle.json --expect-pilot-reviewed
-        working-directory: services/pipeline
-
-      - name: Verify production-readiness bundle (post-grant)
-        run: python -m pipeline.cli ml-shadow-scorer-production-readiness-bundle-verify --bundle ../../docs/audit/bundles/production-readiness-v1/bundle.json --expect-grant-filed
-        working-directory: services/pipeline
-
-      - name: Verify production-scoped-shadow bundle (post-limited-production-recommendation-rollout-grant)
-        run: python -m pipeline.cli ml-shadow-scorer-production-scoped-shadow-bundle-verify --bundle ../../docs/audit/bundles/production-scoped-shadow-v1/bundle.json --expect-limited-production-recommendation-rollout-grant-filed
-        working-directory: services/pipeline
-
   web-build:
     runs-on: ubuntu-latest
     steps:
