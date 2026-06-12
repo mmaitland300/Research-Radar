@@ -89,11 +89,15 @@ order, `ranking_mode=bounded_bridge_ml_scorer`):
 Reading: the canary surfaces a real bridge signal - the strongest rows are
 genuine method-transfer papers (diffusion-based audio restoration,
 interpretability on audio foundation models, neural synthesis on embedded
-hardware). But the list also includes several isolated or off-domain papers
-(humanities essays, an archiving report, a sports-science application) whose
-high bridge scores reflect embedding-space isolation rather than connection
-between research areas. Verdict: not clean enough for public rollout;
-promising enough to continue the canary/private review arm.
+hardware). But the list also includes several off-domain papers (humanities
+essays, an archiving report, a sports-science application). A follow-up check
+against the labeled rows located the cause: every false positive comes from
+the unpoliced portion of the candidate pool (407 of 528 works have no
+source-policy row), while all six rows from policy-covered venues were labeled
+good or acceptable. Embedding-space isolation measures (centroid distance,
+margin, nearest neighbor) do not separate the false positives. Verdict: not
+clean enough for public rollout; promising enough to continue the
+canary/private review arm.
 
 ### ML scorer confirmatory surface (`rank-83787b91ef`)
 
@@ -143,8 +147,8 @@ Summary of the Bridge ML work (full record on the archive branch):
 
 Key boundary: single-reviewer, top-20 offline audit material is not a launch
 decision. The live canary top 20 was human-reviewed on `2026-06-12` (see
-Human Review above): P@20 good-or-acceptable 0.65, with isolated/off-domain
-papers still ranking high on raw bridge score. Public Bridge rollout remains
+Human Review above): P@20 good-or-acceptable 0.65, with all false positives
+traced to works outside the source policy. Public Bridge rollout remains
 disabled; the canary/private review arm continues.
 
 ## What Is Not Claimed Yet
@@ -166,10 +170,11 @@ checks only.
 
 ## Next Evaluation Steps
 
-1. **Reduce isolation-driven false positives in Bridge.** The canary review
-   showed papers that are isolated in embedding space (not connecting two
-   areas) still rank high on raw bridge score; address before widening
-   exposure.
+1. **Expand source-policy coverage to fix Bridge false positives.** All
+   canary false positives come from the 77% of the candidate pool that has no
+   source-policy row; a hard venue filter is wrong (it would also drop the
+   best off-venue bridge finds), so the fix is policy rows for more venues
+   (ISMIR next).
 2. **Label the 7 unlabeled proposed top-20 Bridge papers** if churn review
    warrants.
 3. **Expand the corpus** once the next source policy rows are documented.
