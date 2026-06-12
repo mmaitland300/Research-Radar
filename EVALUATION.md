@@ -77,6 +77,24 @@ A complete top-20 single-reviewer pass exists for the April 2026 baseline.
 | `bridge` | 20 | 0.900 | 1.000 | 1.000 | 1.000 |
 | `undercited` | 20 | 0.700 | 1.000 | n/a | 1.000 |
 
+### Bridge live canary top 20 (`rank-5a7efa5ca3`, reviewed 2026-06-12)
+
+A complete single-reviewer pass over the live canary Bridge top 20 (served
+order, `ranking_mode=bounded_bridge_ml_scorer`):
+
+| Rows | P@20 good-only | P@20 good/acceptable | Bridge-like yes/partial | Surprising/useful |
+| ---: | ---: | ---: | ---: | ---: |
+| 20 | 0.40 | 0.65 | 0.70 | 0.60 |
+
+Reading: the canary surfaces a real bridge signal - the strongest rows are
+genuine method-transfer papers (diffusion-based audio restoration,
+interpretability on audio foundation models, neural synthesis on embedded
+hardware). But the list also includes several isolated or off-domain papers
+(humanities essays, an archiving report, a sports-science application) whose
+high bridge scores reflect embedding-space isolation rather than connection
+between research areas. Verdict: not clean enough for public rollout;
+promising enough to continue the canary/private review arm.
+
 ### ML scorer confirmatory surface (`rank-83787b91ef`)
 
 A second-surface confirmatory eval (143 labeled rows, ~38% positive) assessed
@@ -124,8 +142,10 @@ Summary of the Bridge ML work (full record on the archive branch):
   Bridge requests still return `materialized_heuristic`.
 
 Key boundary: single-reviewer, top-20 offline audit material is not a launch
-decision. Public Bridge rollout remains disabled pending human review of the
-live canary top 20.
+decision. The live canary top 20 was human-reviewed on `2026-06-12` (see
+Human Review above): P@20 good-or-acceptable 0.65, with isolated/off-domain
+papers still ranking high on raw bridge score. Public Bridge rollout remains
+disabled; the canary/private review arm continues.
 
 ## What Is Not Claimed Yet
 
@@ -146,7 +166,10 @@ checks only.
 
 ## Next Evaluation Steps
 
-1. **Human-review the live Bridge canary top 20** before widening exposure.
+1. **Reduce isolation-driven false positives in Bridge.** The canary review
+   showed papers that are isolated in embedding space (not connecting two
+   areas) still rank high on raw bridge score; address before widening
+   exposure.
 2. **Label the 7 unlabeled proposed top-20 Bridge papers** if churn review
    warrants.
 3. **Expand the corpus** once the next source policy rows are documented.
