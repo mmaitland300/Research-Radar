@@ -1,7 +1,10 @@
 # ML "r2" data execution plan
 
+> Internal operator checklist, kept for provenance. Some `docs/audit/...`
+> paths referenced below now live on the `archive/ml-governance-audit` branch.
+
 Operational sequence: **repair stored title/abstract text** -> **new embedding artifact** -> **full embed** -> **verify no gaps** -> **cluster** -> **verify assignments** -> **inspect via API** -> (optional) **new ranking run** -> (optional) **bridge-v2 API validation (Phase H)**.  
-Implements the handoff described in `docs/roadmap.md` (clean text -> new `embedding_version` -> `cluster-works` -> inspect; bridge weight stays **0** until a separate ML2-5b decision). Phase H compares full vs **eligible-only** bridge lists after neighbor_mix_v1 is persisted.
+Implements the handoff described in `docs/internal/roadmap.md` (clean text -> new `embedding_version` -> `cluster-works` -> inspect; bridge weight stays **0** until a separate ML2-5b decision). Phase H compares full vs **eligible-only** bridge lists after neighbor_mix_v1 is persisted.
 
 ---
 
@@ -58,7 +61,7 @@ ALTER TABLE paper_scores ADD COLUMN IF NOT EXISTS bridge_signal_json JSONB NULL;
 6. **Recorded values**  
    Open a log (ticket, PR, or scratch file) and copy **stdout/stderr** lines after each phase for `rows_changed`, `rows_written`, `missing_embedding`, `missing_cluster_assignment`, and printed IDs.
 
-   **One place for production repair / re-embed:** Copy `docs/ops-repair-record.template.md` to **`ops-repair-last-run.md`** in the repo root and fill the table after each run. Keep that file **out of git** in your clone (e.g. list `ops-repair-last-run.md` in **`.git/info/exclude`** alongside any recurring local logs such as `rr-3001.log`). Use a shared ticket instead if your team standardizes there.
+   **One place for production repair / re-embed:** Copy `docs/internal/ops-repair-record.template.md` to **`ops-repair-last-run.md`** in the repo root and fill the table after each run. Keep that file **out of git** in your clone (e.g. list `ops-repair-last-run.md` in **`.git/info/exclude`** alongside any recurring local logs such as `rr-3001.log`). Use a shared ticket instead if your team standardizes there.
 
    **Minimum fields to jot down for a repair / re-embed cycle:**
 
@@ -200,7 +203,7 @@ Invoke-RestMethod "$API_BASE/api/v1/clusters/CLUSTER_VER/inspect?sample_per_clus
 
 (Bash: `curl -s "$API_BASE/api/v1/clusters/$CLUSTER_VER/inspect?sample_per_cluster=5"`)
 
-**Record** qualitative notes (cluster coherence, junk cluster, obvious mis-assignments) in your log or `docs/roadmap.md` / review doc per team practice.
+**Record** qualitative notes (cluster coherence, junk cluster, obvious mis-assignments) in your log or `docs/internal/roadmap.md` / review doc per team practice.
 
 ---
 

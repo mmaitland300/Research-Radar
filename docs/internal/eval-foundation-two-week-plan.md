@@ -1,5 +1,8 @@
 # Two-Week Execution Plan (Evaluation-First)
 
+> Internal planning note, kept for provenance. The `docs/audit/...` evidence
+> paths referenced below now live on the `archive/ml-governance-audit` branch.
+
 Purpose: move from a working prototype to an ML project with measurable outcomes, reproducible artifacts, and a safe path to bridge/semantic/trained-model experiments.
 
 ## Current Known-Good Stack

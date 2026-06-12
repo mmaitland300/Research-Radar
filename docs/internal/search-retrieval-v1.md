@@ -1,7 +1,7 @@
 # Search Retrieval v1
 
-**Branch:** `codex/search-retrieval-v1`  
-**Baseline commit from `main`:** `5052b2c` (`fix(api): honest Emerging list copy and stable ranking tie-breaks`)
+> Internal milestone note, kept for provenance. The feature branch described
+> here (`codex/search-retrieval-v1`) was merged in April 2026.
 
 ## Milestone goal
 

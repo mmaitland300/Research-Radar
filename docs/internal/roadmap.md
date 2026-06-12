@@ -1,4 +1,7 @@
-# Roadmap
+# Roadmap (internal implementation log)
+
+> Internal working document using milestone shorthand (ML1d, ML2-5a, ...).
+> For the public plan, see [public-roadmap.md](../public-roadmap.md).
 
 This document is the implementation sequence for V1: foundation -> ranking infrastructure -> ranked product -> trends and evaluation -> semantic refinement. It separates ranking plumbing (durable, honest) from signal quality (evolves over time).
 
@@ -9,7 +12,7 @@ This document is the implementation sequence for V1: foundation -> ranking infra
 - Live product slice: DB-backed search and paper detail; topic metadata flows through normalize + `work_topics`; list/detail IDs support full OpenAlex URLs where needed.
 - **Milestone 1 (low-cite pool):** The undercited recommendation family is gated on the frozen definition in `docs/candidate-pool-low-cite.md` (implemented in `in_low_cite_candidate_pool` / `build_step3_heuristic_score_rows`). Emerging and bridge still score every included work; semantic and bridge scores stay null; `reason_short` states the pool doc and that those signals are not modeled. CLI: `ranking-run --low-cite-min-year` / `--low-cite-max-citations` (defaults 2019 / 30).
 - **Shipped prototype surfaces:** `/search`, recommended families, paper detail, `/trends` (corpus-scoped topic movement), and `/evaluation` (proxy compare vs baselines) are live in the app; these are still “prototype” in product terms, not a finished quality bar. **Still evolving / not yet the long-term product baseline:** clustering and non-placeholder bridge and semantic scores in ranking (where model notes say placeholder), full bridge weighting into `final_score`, and richer evaluation than v0 baselines. Similar-papers UI is gated on `NEXT_PUBLIC_EMBEDDING_VERSION` and stored `embeddings` rows.
-- **Bridge-v2 (neighbor_mix_v1):** Clustered ranking runs persist `bridge_eligible` and `bridge_signal_json` on **bridge-family** `paper_scores` rows only (emerging/undercited stay null in those columns). When neighbor_mix is computed for the run, bridge eligibility is **always boolean** (true = passed gate, false = ineligible or no mix support for that work); **null** on bridge rows means the run did not include neighbor_mix (legacy materializations). `ranking_runs.config_json.clustering_artifact.neighbor_mix_v1` records `{ signal_version, k }`. **API:** `GET /api/v1/recommendations/ranked` includes `bridge_eligible` per item; `bridge_eligible_only=true` applies **`ps.bridge_eligible IS TRUE`** for `family=bridge` only and makes `total` the filtered count. `bridge_signal_json` is not exposed on the public API. First operational validation checklist: `docs/ml-r2-execution-plan.md` Phase H.
+- **Bridge-v2 (neighbor_mix_v1):** Clustered ranking runs persist `bridge_eligible` and `bridge_signal_json` on **bridge-family** `paper_scores` rows only (emerging/undercited stay null in those columns). When neighbor_mix is computed for the run, bridge eligibility is **always boolean** (true = passed gate, false = ineligible or no mix support for that work); **null** on bridge rows means the run did not include neighbor_mix (legacy materializations). `ranking_runs.config_json.clustering_artifact.neighbor_mix_v1` records `{ signal_version, k }`. **API:** `GET /api/v1/recommendations/ranked` includes `bridge_eligible` per item; `bridge_eligible_only=true` applies **`ps.bridge_eligible IS TRUE`** for `family=bridge` only and makes `total` the filtered count. `bridge_signal_json` is not exposed on the public API. First operational validation checklist: `docs/internal/ml-r2-execution-plan.md` Phase H.
 
 ---
 
@@ -291,7 +294,7 @@ These milestones make the project legible as a machine-learning portfolio piece 
 
 #### ML2 prototype execution scaffold (lean docs)
 
-Use `docs/roadmap.md` for planning/tickets/gate criteria. **Executable operator checklist (repair -> re-embed -> cluster -> inspect):** `docs/ml-r2-execution-plan.md`. Create `docs/ml2-bridge-review.md` only when there are real cluster/bridge outputs to review (not for planning prose).
+Use `docs/internal/roadmap.md` for planning/tickets/gate criteria. **Executable operator checklist (repair -> re-embed -> cluster -> inspect):** `docs/internal/ml-r2-execution-plan.md`. Create `docs/ml2-bridge-review.md` only when there are real cluster/bridge outputs to review (not for planning prose).
 
 **Hard constraints**
 
@@ -304,7 +307,7 @@ Use `docs/roadmap.md` for planning/tickets/gate criteria. **Executable operator 
 - **Modern clustered runs:** If neighbor_mix is part of the ranking build (`neighbor_mix_by_work` supplied), every bridge row gets **true or false**, never null for “missing support” (missing-from-map ⇒ false + minimal JSON payload).
 - **Legacy:** Runs that never wrote neighbor_mix eligibility keep **null** on bridge rows for those columns.
 - **Product read path:** Ranked API exposes `bridge_eligible` only; optional `bridge_eligible_only` for bridge lists. Do not conflate null (legacy) with false (computed ineligible).
-- **Commit 5 (ops):** After a **zero bridge-weight** clustered ranking, validate in the API: full bridge list vs `bridge_eligible_only=true`, overlap of bridge **top-k** vs emerging **top-k**, and only revisit **positive bridge weight** (ML2-5b) if the eligible-gated head is **materially different** from the ungated bridge head **and** other ML2-5b guardrails still pass. Step-by-step: `docs/ml-r2-execution-plan.md` Phase H.
+- **Commit 5 (ops):** After a **zero bridge-weight** clustered ranking, validate in the API: full bridge list vs `bridge_eligible_only=true`, overlap of bridge **top-k** vs emerging **top-k**, and only revisit **positive bridge weight** (ML2-5b) if the eligible-gated head is **materially different** from the ungated bridge head **and** other ML2-5b guardrails still pass. Step-by-step: `docs/internal/ml-r2-execution-plan.md` Phase H.
 
 **Ticket order**
 
