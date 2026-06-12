@@ -160,7 +160,7 @@ unredacted provider payloads in issues or PRs. See [SECURITY.md](SECURITY.md).
   evaluation
 - `apps/api` - FastAPI service for metadata, rankings, and explanation endpoints
 - `services/pipeline` - Python ETL, bootstrap ingest planning, and ranking jobs
-- `infra/db` - PostgreSQL + pgvector schema
+- `infra/db` - PostgreSQL + pgvector schema and Alembic migrations
 - `docs` - reviewer brief, operator guides, and internal planning notes; see
   the [documentation map](docs/README.md)
 
@@ -209,9 +209,9 @@ From the repo root, with Node and the same Python interpreter CI uses:
 - `ingest_runs` in Postgres
 - API startup logs for DB connection errors
 
-If you change ranking tables in `infra/db/schema.sql` after the DB was first
-initialized, recreate the Postgres volume or apply the DDL manually so
-`ranking_runs` and `paper_scores` stay in sync.
+Schema changes after the first init are applied with Alembic migrations
+(`alembic upgrade head` from `infra/db/`); see
+[infra/db/README.md](infra/db/README.md).
 
 For more detailed bootstrap failure checkpoints, see [docs/bootstrap-run-tutorial.md](docs/bootstrap-run-tutorial.md).
 
