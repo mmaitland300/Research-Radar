@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from pipeline.ml_shadow_scorer_generalization_second_surface import _database_url_from_env
+from pipeline.bootstrap_loader import database_url_from_env as _database_url_from_env
 from pipeline.ml_shadow_scorer_online_shadow_runtime import (
     CORPUS_SNAPSHOT_VERSION,
     EMBEDDING_VERSION,
@@ -15,16 +15,16 @@ from pipeline.ml_shadow_scorer_online_shadow_runtime import (
     RANKING_RUN_ID,
     run_ml_shadow_scorer_v1_online_shadow_runtime,
 )
-from pipeline.ml_shadow_scorer_production_scoped_shadow_live_read_only_pilot import (
-    EXPECTED_LIVE_READ_ONLY_PILOT_ROW_COUNT,
-    _build_runtime_rows_from_live_reads,
-    _connect_readonly,
-    _load_frozen_audit_embedding_scorer,
-    _query_candidate_inputs,
-    _query_ranking_run,
-    _validate_ranking_run_row,
-)
 from pipeline.repo_paths import default_repo_root
+from pipeline.scorer_serving_io import (
+    EXPECTED_CANDIDATE_ROW_COUNT,
+    build_runtime_rows_from_live_reads as _build_runtime_rows_from_live_reads,
+    connect_readonly as _connect_readonly,
+    load_frozen_audit_embedding_scorer as _load_frozen_audit_embedding_scorer,
+    query_candidate_inputs as _query_candidate_inputs,
+    query_ranking_run as _query_ranking_run,
+    validate_ranking_run_row as _validate_ranking_run_row,
+)
 
 PINNED_RANKING_VERSION = "shadow-generalization-product-candidate-ranking-v1"
 OPENALEX_WORK_URL_PREFIX = "https://openalex.org/"
@@ -84,7 +84,7 @@ def rank_emerging_recommendations_with_scorer(
     )
     if result.get("status") != "succeeded_test_only":
         raise MLScorerRolloutServingError("scorer runtime did not succeed")
-    if result.get("shadow_row_count") != EXPECTED_LIVE_READ_ONLY_PILOT_ROW_COUNT:
+    if result.get("shadow_row_count") != EXPECTED_CANDIDATE_ROW_COUNT:
         raise MLScorerRolloutServingError("scorer runtime did not return the expected 528 rows")
     if result.get("writes_performed") is not False or result.get("write_count") != 0:
         raise MLScorerRolloutServingError("scorer runtime reported writes")
@@ -92,7 +92,7 @@ def rank_emerging_recommendations_with_scorer(
     shadow_rows = [
         row for row in (result.get("shadow_rows") or []) if isinstance(row, Mapping)
     ]
-    if len(shadow_rows) != EXPECTED_LIVE_READ_ONLY_PILOT_ROW_COUNT:
+    if len(shadow_rows) != EXPECTED_CANDIDATE_ROW_COUNT:
         raise MLScorerRolloutServingError("scorer shadow rows are incomplete")
 
     metadata = {
