@@ -54,6 +54,10 @@ class _FakeConn:
         self.sql.append(compact)
         if compact.startswith("SELECT 1 FROM source_snapshot_versions"):
             return _Result(one=(1,) if str(params[0]) in self.snapshots else None)
+        if compact.startswith("SELECT COUNT(*) FROM work_source_snapshot_memberships"):
+            return _Result(one=(self.snapshot_work_count,))
+        if compact.startswith("SELECT COUNT(*) FROM works w JOIN work_source_snapshot_memberships wssm"):
+            return _Result(one=(self.missing_embedding_count,))
         if compact.startswith("SELECT COUNT(*) FROM works w WHERE w.inclusion_status = 'included'"):
             return _Result(one=(self.snapshot_work_count,))
         if compact.startswith("SELECT COUNT(*) FROM works w LEFT JOIN embeddings e"):

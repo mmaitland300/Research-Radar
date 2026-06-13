@@ -61,9 +61,11 @@ def list_ranking_candidates(
                 '{}'::bigint[]
             ) AS topic_ids
         FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         LEFT JOIN work_topics wt ON wt.work_id = w.id
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
         GROUP BY w.id, w.year, w.citation_count, w.is_core_corpus, w.title, w.abstract
         ORDER BY w.id ASC
         """,

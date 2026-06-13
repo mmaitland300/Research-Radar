@@ -254,13 +254,15 @@ def _embedding_coverage(conn: Any, *, snapshot_version: str, embedding_version: 
         """
         SELECT COUNT(*), COUNT(e.work_id)
         FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         LEFT JOIN embeddings e
           ON e.work_id = w.id
          AND e.embedding_version = %s
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
         """,
-        (embedding_version, snapshot_version),
+        (snapshot_version, embedding_version),
     ).fetchone()
     snapshot_count = int(row[0] or 0) if row is not None else 0
     embedded = int(row[1] or 0) if row is not None else 0

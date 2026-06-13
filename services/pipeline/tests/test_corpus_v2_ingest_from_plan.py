@@ -185,6 +185,7 @@ class _FakeConn:
         self.source_snapshot_versions: dict[str, dict] = {}
         self.ingest_runs: dict[str, dict] = {}
         self.works: dict[int, dict] = {}
+        self.memberships: list[dict] = []
         self.raw_openalex_works: list[dict] = []
         self.next_work_id = 1
         self.sql: list[str] = []
@@ -200,6 +201,7 @@ class _FakeConn:
     def snapshot_state(self) -> dict:
         return {
             "works": copy.deepcopy(self.works),
+            "memberships": copy.deepcopy(self.memberships),
             "raw_openalex_works": copy.deepcopy(self.raw_openalex_works),
             "next_work_id": self.next_work_id,
             "ingest_runs": copy.deepcopy(self.ingest_runs),
@@ -207,6 +209,7 @@ class _FakeConn:
 
     def restore_state(self, state: dict) -> None:
         self.works = state["works"]
+        self.memberships = state["memberships"]
         self.raw_openalex_works = state["raw_openalex_works"]
         self.next_work_id = state["next_work_id"]
         self.ingest_runs = state["ingest_runs"]
@@ -286,6 +289,17 @@ class _FakeConn:
                 "corpus_snapshot_version": params[13],
             }
             return _Result(one=(work_id,))
+        if compact.startswith("INSERT INTO work_source_snapshot_memberships"):
+            self.memberships.append(
+                {
+                    "work_id": int(params[0]),
+                    "source_snapshot_version": params[1],
+                    "inclusion_status": params[2],
+                    "source_slug": params[3],
+                    "added_by_ingest_run_id": params[4],
+                }
+            )
+            return _Result()
         if compact.startswith("UPDATE works"):
             work_id = int(params[-1])
             self.works[work_id].update(
@@ -414,6 +428,10 @@ def test_existing_work_is_preserved_not_reassigned_or_overwritten(tmp_path: Path
     assert summary["unknown_type_count"] == 1
     assert summary["embedding_blocked_count"] == 1
     assert conn.works[existing_work_id] == before
+    assert any(
+        m["work_id"] == existing_work_id and m["source_snapshot_version"] == "source-snapshot-test"
+        for m in conn.memberships
+    )
     assert len(conn.raw_openalex_works) == 2
     assert all(not sql.startswith("UPDATE works") for sql in conn.sql)
     markdown = (tmp_path / "summary.md").read_text(encoding="utf-8")

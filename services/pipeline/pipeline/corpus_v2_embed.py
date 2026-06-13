@@ -250,11 +250,13 @@ def _assert_snapshot_exists(conn: psycopg.Connection, snapshot_version: str) -> 
 def _load_target_works(conn: psycopg.Connection, *, snapshot_version: str) -> list[_WorkRow]:
     rows = conn.execute(
         """
-        SELECT id, title, abstract, type, language
-        FROM works
-        WHERE corpus_snapshot_version = %s
-          AND inclusion_status = 'included'
-        ORDER BY id
+        SELECT w.id, w.title, w.abstract, w.type, w.language
+        FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
+        ORDER BY w.id
         """,
         (snapshot_version,),
     ).fetchall()
@@ -308,11 +310,13 @@ def _count_target_embedding_version_rows(
         """
         SELECT COUNT(*)
         FROM embeddings e
-        JOIN works w ON w.id = e.work_id
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = e.work_id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         WHERE e.embedding_version = %s
-          AND w.corpus_snapshot_version = %s
         """,
-        (embedding_version, snapshot_version),
+        (snapshot_version, embedding_version),
     ).fetchone()
     return int(row[0] or 0) if row is not None else 0
 
@@ -326,12 +330,13 @@ def _delete_target_embeddings(
     conn.execute(
         """
         DELETE FROM embeddings e
-        USING works w
-        WHERE e.work_id = w.id
+        USING work_source_snapshot_memberships wssm
+        WHERE e.work_id = wssm.work_id
+          AND wssm.source_snapshot_version = %s
+          AND wssm.inclusion_status = 'included'
           AND e.embedding_version = %s
-          AND w.corpus_snapshot_version = %s
         """,
-        (embedding_version, snapshot_version),
+        (snapshot_version, embedding_version),
     )
 
 

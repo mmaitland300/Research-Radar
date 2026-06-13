@@ -887,6 +887,44 @@ def main() -> None:
         default=None,
         help="Postgres URL (default: DATABASE_URL or PG* env)",
     )
+
+    corpus_v2_compose_parser = subparsers.add_parser(
+        "corpus-v2-compose-snapshot",
+        help="Create a composed snapshot by copying membership rows from source snapshots (no work row moves)",
+    )
+    corpus_v2_compose_parser.add_argument(
+        "--snapshot-version",
+        required=True,
+        help="New source_snapshot_versions.source_snapshot_version to create",
+    )
+    corpus_v2_compose_parser.add_argument(
+        "--from-snapshot",
+        action="append",
+        required=True,
+        dest="from_snapshots",
+        help="Source snapshot to copy included memberships from (repeatable)",
+    )
+    corpus_v2_compose_parser.add_argument(
+        "--output",
+        required=True,
+        help="JSON summary output path (e.g. artifacts/snapshot-compose-YYYYMMDD.json)",
+    )
+    corpus_v2_compose_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Markdown summary output path",
+    )
+    corpus_v2_compose_parser.add_argument(
+        "--note",
+        default=None,
+        help="Optional note stored on the new source_snapshot_versions row",
+    )
+    corpus_v2_compose_parser.add_argument(
+        "--database-url",
+        default=None,
+        help="Postgres URL (default: DATABASE_URL or PG* env)",
+    )
+
     ml_fresh_hybrid_snapshot_embed_parser = subparsers.add_parser(
         "ml-fresh-hybrid-snapshot-embed",
         help="Generate embeddings for a fresh hybrid eval-only source snapshot with audit provenance",
@@ -8796,6 +8834,27 @@ def main() -> None:
         print(summary["snapshot_version"])
         print(summary["embedding_version"])
         print(summary["embedded_count"])
+        return
+
+    if args.command == "corpus-v2-compose-snapshot":
+        from pipeline.snapshot_membership import SnapshotMembershipError, run_compose_snapshot_from_cli
+
+        try:
+            summary = run_compose_snapshot_from_cli(
+                snapshot_version=args.snapshot_version,
+                from_snapshots=list(args.from_snapshots or []),
+                output_path=Path(args.output),
+                markdown_output_path=Path(args.markdown_output),
+                database_url=args.database_url,
+                note=args.note,
+            )
+        except SnapshotMembershipError as e:
+            print(f"corpus-v2-compose-snapshot: {e}", file=sys.stderr)
+            raise SystemExit(e.code) from e
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        print(summary["snapshot_version"])
+        print(summary["membership_count"])
         return
 
     if args.command == "ml-fresh-hybrid-snapshot-embed":

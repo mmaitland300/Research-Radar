@@ -16,6 +16,7 @@ from pipeline.bootstrap_loader import database_url_from_env
 from pipeline.config import IngestRun, SourceSnapshotVersion
 from pipeline.normalize import clean_openalex_text
 from pipeline.policy import CorpusPolicy
+from pipeline.snapshot_membership import upsert_work_snapshot_membership
 
 NEXT_STEP = (
     "metadata/text hydration for this snapshot, or an explicit title-only embedding version; "
@@ -372,7 +373,7 @@ def _upsert_candidate(
 
     existing = _find_existing_work(conn, openalex_id=work["openalex_id"], doi=work["doi"])
     if existing is None:
-        _insert_work(
+        work_id = _insert_work(
             conn,
             work=work,
             source_slug=source_slug,
@@ -380,11 +381,25 @@ def _upsert_candidate(
             snapshot_version=snapshot.source_snapshot_version,
             ingest_run_id=ingest_run.ingest_run_id,
         )
+        upsert_work_snapshot_membership(
+            conn,
+            work_id=work_id,
+            source_snapshot_version=snapshot.source_snapshot_version,
+            source_slug=source_slug,
+            added_by_ingest_run_id=ingest_run.ingest_run_id,
+        )
         action = "inserted"
     else:
         # Candidate-plan imports are append-only snapshot expansions. If a work
         # already exists in another snapshot, keep the canonical work row
         # untouched so pinned snapshots and serving artifacts remain stable.
+        upsert_work_snapshot_membership(
+            conn,
+            work_id=existing,
+            source_snapshot_version=snapshot.source_snapshot_version,
+            source_slug=source_slug,
+            added_by_ingest_run_id=ingest_run.ingest_run_id,
+        )
         action = "preserved_existing"
 
     return CandidateImportResult(

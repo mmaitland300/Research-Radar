@@ -74,7 +74,7 @@ jobs:
                       "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
                   )
               }
-              expected = {"works", "embeddings", "ranking_runs", "paper_scores", "alembic_version"}
+              expected = {"works", "embeddings", "ranking_runs", "paper_scores", "alembic_version", "work_source_snapshot_memberships"}
               missing = expected - tables
               assert not missing, f"missing tables after migration: {missing}"
               vector = conn.execute(
