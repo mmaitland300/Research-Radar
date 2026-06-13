@@ -65,6 +65,24 @@ class CorpusPolicy:
             openalex_source_id="https://openalex.org/S62507282",
             aliases=("JAES", "AES Journal"),
         ),
+        SourcePolicy(
+            slug="ismir",
+            display_name="International Symposium/Conference on Music Information Retrieval",
+            venue_class="core",
+            rationale=(
+                "Flagship MIR conference; first proceedings venue in the corpus. OpenAlex "
+                "coverage under this source id is partial (many ISMIR papers are indexed via "
+                "repository sources such as Zenodo or arXiv), so name-based alias resolution "
+                "matters and realized yield is expected to be below the venue's true output."
+            ),
+            openalex_source_id="https://openalex.org/S4306420076",
+            aliases=(
+                "ISMIR",
+                "International Society for Music Information Retrieval Conference",
+                "Proceedings of the International Society for Music Information Retrieval Conference",
+                "International Conference on Music Information Retrieval",
+            ),
+        ),
     )
     strong_topic_signals: tuple[str, ...] = (
         "music information retrieval",
