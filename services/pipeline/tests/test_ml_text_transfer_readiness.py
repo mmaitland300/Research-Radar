@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_text_transfer_readiness import (
     CAVEATS,
     NO_REEMBED_NEEDED_CONCLUSION,
@@ -311,7 +312,7 @@ def test_no_database_network_or_embedding_imports_and_cli_has_no_database_url() 
     assert "from sklearn" not in module_source
     assert "import sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-text-transfer-readiness"')
     end = cli_source.index("ml_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_hybrid_validation_on_fresh_surface import (
     PRIMARY_CONFIRMATORY_ARM,
     VALIDATION_VERSION,
@@ -400,7 +401,7 @@ def test_rejects_hosted_database_url(tmp_path: Path) -> None:
 
 
 def test_cli_parser_registers_command() -> None:
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     assert "ml-hybrid-validation-on-fresh-surface" in cli_source
 
 

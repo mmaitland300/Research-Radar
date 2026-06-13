@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_shadow_scorer_second_surface_labeling_worksheet as worksheet_mod
 from pipeline.ml_shadow_scorer_second_surface_labeling_worksheet import (
     DEFAULT_REVIEW_POOL_VARIANT,
@@ -381,4 +382,4 @@ def test_no_forbidden_imports_or_db_writes() -> None:
     assert "insert into" not in lower_source
     assert "update " not in lower_source
     assert "delete from" not in lower_source
-    assert "--database-url" in (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    assert "--database-url" in read_cli_parser_source(PACKAGE_ROOT)

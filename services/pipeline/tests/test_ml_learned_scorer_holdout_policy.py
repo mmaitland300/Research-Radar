@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.ml_learned_scorer_holdout_policy import (
     MLLearnedScorerHoldoutPolicyError,
@@ -362,7 +363,7 @@ def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:
     assert "openalex_client" not in module_source
     assert "fetch_openalex" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-learned-scorer-holdout-policy"')
     end = cli_source.index("ml_transfer_gap_review_parser", start)
     parser_block = cli_source[start:end]

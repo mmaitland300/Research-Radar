@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_offline_metric_gates import (
     GATES_VERSION,
     build_ml_offline_metric_gates_payload,
@@ -243,7 +244,7 @@ def test_no_db_network_ml_imports_and_cli_has_no_database_url() -> None:
     assert "from sklearn" not in module_source
     assert "import sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-offline-metric-gates"')
     end = cli_source.index("ml_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]

@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_fresh_eval_labeling_worksheet_hybrid import stable_row_id as fresh_hybrid_row_id
 from pipeline.ml_label_dataset import (
     MLLabelDatasetError,
@@ -380,7 +381,7 @@ def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:
     assert "from sklearn" not in module_source
     assert "import sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-label-dataset-v9-fresh-hybrid-ingest"')
     end = cli_source.index("ml_offline_baseline_parser", start)
     parser_block = cli_source[start:end]

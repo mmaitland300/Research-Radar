@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_fresh_eval_surface_hybrid_materialize import (
     MLFreshEvalSurfaceHybridMaterializeError,
     SURFACE_VERSION,
@@ -478,7 +479,7 @@ def test_module_imports_no_openai_openalex_or_sklearn_and_cli_flags_are_scoped()
     assert "import sklearn" not in module_source
     assert "from sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-fresh-eval-surface-hybrid-materialize"')
     end = cli_source.index("ml_source_split_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]

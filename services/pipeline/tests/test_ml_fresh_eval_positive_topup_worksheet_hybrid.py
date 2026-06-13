@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_fresh_eval_positive_topup_worksheet_hybrid import (
     MLFreshEvalPositiveTopupWorksheetHybridError,
     WORKSHEET_VERSION,
@@ -329,7 +330,7 @@ def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:
     ):
         assert forbidden not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-fresh-eval-positive-topup-worksheet-hybrid"')
     end = cli_source.index("ml_fresh_candidate_source_expansion_plan_parser", start)
     parser_block = cli_source[start:end]

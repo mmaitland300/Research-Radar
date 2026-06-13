@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from urllib.parse import urlparse
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_labeled_text_corpus import (
     CAVEATS,
     MLLabeledTextCorpusError,
@@ -256,7 +257,7 @@ def test_markdown_caveats_and_no_database_parser_flag(tmp_path: Path) -> None:
     package_root = Path(__file__).resolve().parents[1]
     module_source = (package_root / "pipeline" / "ml_labeled_text_corpus.py").read_text(encoding="utf-8").lower()
     assert "psycopg" not in module_source
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-labeled-text-corpus"')
     end = cli_source.index("ml_external_text_embeddings_parser", start)
     parser_block = cli_source[start:end]

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_fresh_product_candidate_ranking_source as source_mod
 from pipeline.ml_fresh_product_candidate_ranking_source import (
     MLFreshProductCandidateRankingSourceError,
@@ -307,7 +308,7 @@ def test_no_forbidden_imports_and_cli_has_no_scoring_training_or_label_import_fl
     assert "from sklearn" not in module_source
     assert "import sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-fresh-product-candidate-ranking-source"')
     end = cli_source.index("ml_tiny_baseline_rollup_parser", start)
     parser_block = cli_source[start:end]
