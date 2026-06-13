@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -19,7 +19,6 @@ from pipeline.ml_shadow_scorer_second_surface_generalization_audit import (
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = PACKAGE_ROOT.parents[1]
 
 
 def _candidate_rows() -> list[dict]:
@@ -423,39 +422,47 @@ def test_blockers_and_shadow_prod_runtime_flags_remain_false(tmp_path: Path, mon
     assert blockers["production_default_allowed"] is False
 
 
-def test_cli_smoke_writes_json_and_markdown(tmp_path: Path) -> None:
+def test_cli_smoke_writes_json_and_markdown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    paths = _paths(tmp_path, monkeypatch)
     out_json = tmp_path / "audit.json"
     out_md = tmp_path / "audit.md"
-    cmd = [
-        sys.executable,
-        "-m",
+    import pipeline.cli as cli_main
+
+    argv = [
         "pipeline.cli",
         "ml-shadow-scorer-second-surface-generalization-audit",
         "--generalization-second-surface",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-generalization-second-surface-v1.json"),
+        str(paths["generalization_second_surface_path"]),
         "--learned-probability-artifact",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-second-surface-learned-probability-v1.json"),
+        str(paths["learned_probability_artifact_path"]),
         "--label-dataset",
-        str(REPO_ROOT / "docs/audit/ml-label-dataset-v11.json"),
+        str(paths["label_dataset_path"]),
         "--shadow-scorer-spec",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-spec.json"),
+        str(paths["shadow_scorer_spec_path"]),
         "--generalization-audit-plan",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-generalization-audit-v1.json"),
+        str(paths["generalization_audit_plan_path"]),
         "--fresh-surface-policy",
-        str(REPO_ROOT / "docs/audit/ml-fresh-eval-surface-policy-hybrid-v1.json"),
+        str(paths["fresh_surface_policy_path"]),
         "--online-shadow-policy",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json"),
+        str(paths["online_shadow_policy_path"]),
         "--output",
         str(out_json),
         "--markdown-output",
         str(out_md),
+        "--repo-root",
+        str(tmp_path),
     ]
-    result = subprocess.run(cmd, cwd=PACKAGE_ROOT, check=True, text=True, capture_output=True)
+    with patch.object(sys, "argv", argv):
+        cli_main.main()
+
+    result = capsys.readouterr()
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["metadata"]["artifact_type"] == "ml_shadow_scorer_second_surface_generalization_audit"
-    assert payload["audit_scope"]["confirmatory_metric_work_count"] == 168
+    assert payload["audit_scope"]["confirmatory_metric_work_count"] == 3
     assert "Second-Surface ml-shadow-scorer-v1 Generalization Audit" in out_md.read_text(encoding="utf-8")
-    assert "run_ml_shadow_scorer_v1_generalization_audit_gates_v1" in result.stdout
+    assert "run_ml_shadow_scorer_v1_generalization_audit_gates_v1" in result.out
 
 
 def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:

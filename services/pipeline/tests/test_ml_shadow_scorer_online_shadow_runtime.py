@@ -22,7 +22,6 @@ from pipeline.ml_shadow_scorer_v1 import compute_shadow_score_rows
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = PACKAGE_ROOT.parents[1]
 
 
 def _candidate_rows() -> list[dict]:
@@ -266,6 +265,7 @@ def test_artifact_writer_records_disabled_run_and_blockers(tmp_path: Path) -> No
 
 
 def test_cli_smoke_writes_json_and_markdown(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
     out_json = tmp_path / "runtime.json"
     out_md = tmp_path / "runtime.md"
     cmd = [
@@ -274,19 +274,21 @@ def test_cli_smoke_writes_json_and_markdown(tmp_path: Path) -> None:
         "pipeline.cli",
         "ml-shadow-scorer-online-shadow-runtime-disabled",
         "--generalization-audit-gates",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-generalization-audit-gates-v1.json"),
+        str(paths["generalization_audit_gates_path"]),
         "--second-surface-generalization-audit",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-second-surface-generalization-audit-v1.json"),
+        str(paths["second_surface_generalization_audit_path"]),
         "--online-shadow-policy",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-online-shadow-policy.json"),
+        str(paths["online_shadow_policy_path"]),
         "--shadow-scorer-spec",
-        str(REPO_ROOT / "docs/audit/ml-shadow-scorer-v1-spec.json"),
+        str(paths["shadow_scorer_spec_path"]),
         "--production-readiness-plan",
-        str(REPO_ROOT / "docs/audit/ml-production-readiness-plan-v1.json"),
+        str(paths["production_readiness_plan_path"]),
         "--output",
         str(out_json),
         "--markdown-output",
         str(out_md),
+        "--repo-root",
+        str(tmp_path),
     ]
     result = subprocess.run(cmd, cwd=PACKAGE_ROOT, text=True, capture_output=True, check=True)
     payload = json.loads(out_json.read_text(encoding="utf-8"))

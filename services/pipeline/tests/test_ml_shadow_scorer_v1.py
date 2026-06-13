@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+import pipeline.ml_shadow_scorer_v1 as shadow_module
 from pipeline.ml_shadow_scorer_v1 import (
     IMPLEMENTATION_VERSION,
     MLShadowScorerV1Error,
@@ -23,15 +24,74 @@ from pipeline.ml_shadow_scorer_v1 import (
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 
-FRESH_SHA = "927df6837513753bcb025a5443adf35993ea323cfc0b11cac1395b0839f3f3a6"
+VALIDATION_WORK_IDS = ["W1", "W2", "W3"]
+FRESH_SHA = shadow_module._work_set_sha256(VALIDATION_WORK_IDS)
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+@pytest.fixture(autouse=True)
+def _small_replay_constants(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_validate = shadow_module._validate_validation
+
+    def validate_small_fixture(payload: dict, *, expected_count: int | None = len(VALIDATION_WORK_IDS)):
+        return original_validate(payload, expected_count=expected_count)
+
+    monkeypatch.setattr(shadow_module, "EXPECTED_REPLAY_ROW_COUNT", len(VALIDATION_WORK_IDS))
+    monkeypatch.setattr(shadow_module, "EXPECTED_CANDIDATE_POOL_SHA", FRESH_SHA)
+    monkeypatch.setattr(shadow_module, "_validate_validation", validate_small_fixture)
 
 
-def _real_validation_payload() -> dict:
-    return json.loads((_repo_root() / "docs/audit/ml-hybrid-validation-on-fresh-surface-v1.json").read_text(encoding="utf-8"))
+def _validation_rows() -> list[dict]:
+    return [
+        {
+            "canonical_openalex_work_id": "W1",
+            "title": "Fixture one",
+            "final_score": 3.0,
+            "audit_embedding_probability_work": 1.0,
+            "heuristic_rank": 1,
+            "final_score_rank_pct": 1.0,
+            "audit_embedding_probability_rank_pct": 0.0,
+            "arm_scores": {"hybrid_rank_mean_50_50": 0.5},
+        },
+        {
+            "canonical_openalex_work_id": "W2",
+            "title": "Fixture two",
+            "final_score": 2.0,
+            "audit_embedding_probability_work": 3.0,
+            "heuristic_rank": 2,
+            "final_score_rank_pct": 0.5,
+            "audit_embedding_probability_rank_pct": 1.0,
+            "arm_scores": {"hybrid_rank_mean_50_50": 0.75},
+        },
+        {
+            "canonical_openalex_work_id": "W3",
+            "title": "Fixture three",
+            "final_score": 1.0,
+            "audit_embedding_probability_work": 2.0,
+            "heuristic_rank": 3,
+            "final_score_rank_pct": 0.0,
+            "audit_embedding_probability_rank_pct": 0.5,
+            "arm_scores": {"hybrid_rank_mean_50_50": 0.25},
+        },
+    ]
+
+
+def _validation_payload() -> dict:
+    scope = {
+        "ranking_run_id": "rank-9f4b2a2084",
+        "family": "emerging",
+        "corpus_snapshot_version": "source-snapshot-fresh-hybrid-v1-20260518",
+        "embedding_version": "fresh-hybrid-text-embedding-v1",
+    }
+    return {
+        "metadata": {
+            "artifact_type": "ml_hybrid_validation_on_fresh_surface",
+            "validation_version": "ml-hybrid-validation-on-fresh-surface-v1",
+            "candidate_pool_work_set_sha256": FRESH_SHA,
+            **scope,
+        },
+        "validation_scope": scope,
+        "candidate_work_scores": _validation_rows(),
+    }
 
 
 def _spec_payload() -> dict:
@@ -101,7 +161,7 @@ def _paths(
     return {
         "shadow_scorer_spec_path": _write_json(tmp_path, "spec.json", spec or _spec_payload()),
         "hybrid_validation_on_fresh_surface_path": _write_json(
-            tmp_path, "validation.json", validation or _real_validation_payload()
+            tmp_path, "validation.json", validation or _validation_payload()
         ),
         "fresh_eval_surface_path": _write_json(tmp_path, "surface.json", surface or _surface_payload()),
     }
@@ -184,7 +244,7 @@ def test_rejects_spec_formula_mismatch(tmp_path: Path) -> None:
 
 
 def test_cross_artifact_provenance_mismatch_fails(tmp_path: Path) -> None:
-    validation = _real_validation_payload()
+    validation = _validation_payload()
     validation["metadata"]["family"] = "undercited"
     validation["validation_scope"]["family"] = "undercited"
 
@@ -203,7 +263,7 @@ def test_audit_replay_fixture_matches_validation_arm_score_within_tolerance(tmp_
 
 
 def test_mismatch_in_validation_arm_score_marks_replay_false(tmp_path: Path) -> None:
-    validation = _real_validation_payload()
+    validation = _validation_payload()
     validation["candidate_work_scores"][0]["arm_scores"]["hybrid_rank_mean_50_50"] += 0.01
 
     payload = _build(tmp_path, validation=validation)
