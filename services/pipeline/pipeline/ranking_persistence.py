@@ -10,6 +10,7 @@ from psycopg.rows import dict_row
 
 from pipeline.config import RankingCounts, RankingRun
 from pipeline.ranking import PaperScoreRow, RankingCandidate
+from pipeline.snapshot_membership import latest_snapshot_with_included_memberships
 
 
 def _topic_ids_tuple(value: Any) -> tuple[int, ...]:
@@ -21,27 +22,8 @@ def _topic_ids_tuple(value: Any) -> tuple[int, ...]:
 
 
 def latest_corpus_snapshot_version_with_works(conn: psycopg.Connection) -> str | None:
-    """
-    Latest source_snapshot_version (by snapshot created_at) that has at least one
-    included work referencing that corpus_snapshot_version on works.
-    """
-    row = conn.execute(
-        """
-        SELECT ssv.source_snapshot_version
-        FROM source_snapshot_versions ssv
-        WHERE EXISTS (
-            SELECT 1
-            FROM works w
-            WHERE w.corpus_snapshot_version = ssv.source_snapshot_version
-              AND w.inclusion_status = 'included'
-        )
-        ORDER BY ssv.created_at DESC
-        LIMIT 1
-        """
-    ).fetchone()
-    if row is None:
-        return None
-    return str(row[0])
+    """Backward-compatible alias; resolves via snapshot membership rows."""
+    return latest_snapshot_with_included_memberships(conn)
 
 
 def list_ranking_candidates(
