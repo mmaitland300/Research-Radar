@@ -1,29 +1,20 @@
 # Pinned model artifacts
 
-This directory contains only the frozen artifacts that the deployed scorers
-load at runtime or that pin their provenance. The runtime files are copied
-into the API Docker image (see `apps/api/Dockerfile`):
+This directory is intentionally small. It keeps only artifacts that deployed
+scorer paths load directly or validate by hash. The API image copies each file
+listed below; see `apps/api/Dockerfile`.
 
-- `ml-offline-audit-embedding-scorer-v2.json` - frozen audit-embedding scorer
-  used by the bounded Emerging scorer rollout
-  (`pipeline/ml_scorer_rollout_serving.py`).
-- `ml-bridge-rank-pct-hybrid-serving-plan-v1.json` - serving plan for the
-  bounded Bridge rank-pct hybrid scorer
-  (`pipeline/ml_bridge_scorer_rollout_serving.py`).
-- `ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json` -
-  frozen Bridge scorer coefficients referenced by the serving plan
-  (SHA-256 pinned).
-- `ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json` - embeddings
-  provenance referenced by the serving plan (SHA-256 pinned).
+| artifact | why it remains on main | runtime or hash-pin reference |
+| --- | --- | --- |
+| `ml-offline-audit-embedding-scorer-v2.json` | Frozen Emerging scorer coefficients loaded at serving time. | `services/pipeline/pipeline/scorer_serving_io.py` loads `FROZEN_AUDIT_EMBEDDING_SCORER_PATH`. |
+| `ml-bridge-rank-pct-hybrid-serving-plan-v1.json` | Bridge rollout plan that selects the bounded rank-percentile scorer and its inputs. | `services/pipeline/pipeline/ml_bridge_scorer_rollout_serving.py` loads `DEFAULT_SERVING_PLAN_PATH`. |
+| `ml-offline-bridge-recommendable-scorer-v3-regularization-sensitivity-v1.json` | Frozen Bridge scorer coefficients used by the serving plan. | The Bridge serving plan pins this file by SHA-256 and `ml_bridge_scorer_rollout_serving.py` validates it before loading. |
+| `ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json` | Embedding provenance for the frozen Bridge scorer. | The Bridge serving plan pins this file by SHA-256 and `ml_bridge_scorer_rollout_serving.py` validates it before scoring. |
 
-The remaining `ml-*.json` files are the provenance chain for the deployed
-`ml-shadow-scorer-v1` (spec, validation, audit outputs, policy, and label
-dataset pins); the scorer modules and their tests validate against them.
+Do not edit these files in place. Export a new artifact version and update the
+serving plan instead.
 
-Do not edit these files in place; the serving plan and scorer audits validate
-their hashes. Train and export a new artifact version instead.
-
-The full experiment and evaluation record that used to live in this directory
-(labeling worksheets, offline eval reports, rollout review notes) is preserved
-on the `archive/ml-governance-audit` branch and in git history before this
-directory was slimmed down.
+Historical labels, offline eval reports, rollout notes, and other non-runtime
+audit JSON are working records, not product assets on `main`. The archived
+experiment record lives on the `archive/ml-governance-audit` branch and in git
+history before this directory was slimmed down.

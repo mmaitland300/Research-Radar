@@ -31,7 +31,9 @@ how to run it, [ARCHITECTURE](../ARCHITECTURE.md) for system shape, and
 [internal/](internal) holds the working planning documents (implementation
 roadmap, execution plans, retrieval review worksheets). They are kept for
 provenance, use milestone shorthand, and are not maintained as public
-documentation.
+documentation. For background on the archived ML governance experiment, see
+[internal/ml-governance-retrospective.md](internal/ml-governance-retrospective.md);
+it is internal context, not part of the reviewer path.
 
 ## Pinned model artifacts
 
