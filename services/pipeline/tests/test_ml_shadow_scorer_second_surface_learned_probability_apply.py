@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_shadow_scorer_second_surface_learned_probability_apply as apply_module
 from pipeline.ml_shadow_scorer_second_surface_learned_probability_apply import (
     DEFAULT_CORPUS_SNAPSHOT_VERSION,
@@ -419,7 +420,7 @@ def test_no_direct_forbidden_imports_and_cli_has_expected_database_url() -> None
     assert "fit(" not in module_source
     assert "logisticregression" not in module_source
 
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     start = cli_source.index('"ml-shadow-scorer-second-surface-learned-probability-apply"')
     end = cli_source.index("ml_shadow_scorer_second_candidate_plan_ingest_parser", start)
     parser_block = cli_source[start:end]

@@ -9,6 +9,7 @@ from typing import Sequence
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_external_text_embeddings import (
     CAVEATS,
     EMBEDDING_ARTIFACT_VERSION,
@@ -191,7 +192,7 @@ def test_no_database_flag_or_psycopg_dependency() -> None:
     ).read_text(encoding="utf-8")
     assert "psycopg" not in module_source.lower()
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-external-text-embeddings"')
     end = cli_source.index("ml_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]

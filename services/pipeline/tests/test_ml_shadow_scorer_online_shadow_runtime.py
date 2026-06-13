@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_shadow_scorer_online_shadow_runtime as runtime_module
 from pipeline.ml_shadow_scorer_online_shadow_runtime import (
     FEATURE_FLAG,
@@ -307,7 +308,7 @@ def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:
     for forbidden in ("psycopg", "openai", "openalex", "sklearn"):
         assert forbidden not in import_lines
 
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     start = cli_source.index('"ml-shadow-scorer-online-shadow-runtime-disabled"')
     end = cli_source.index('"ml-shadow-scorer-second-candidate-plan-ingest"', start)
     assert "--database-url" not in cli_source[start:end]

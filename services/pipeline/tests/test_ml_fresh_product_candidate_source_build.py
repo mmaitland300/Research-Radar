@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_fresh_product_candidate_source_build as build_mod
 from pipeline.ml_fresh_product_candidate_source_build import (
     BUILD_VERSION,
@@ -398,7 +399,7 @@ def test_no_forbidden_imports_and_cli_flags_are_scoped() -> None:
     assert "from sklearn" not in module_source
     assert "import sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-fresh-product-candidate-source-build"')
     end = cli_source.index("ml_tiny_baseline_rollup_parser", start)
     parser_block = cli_source[start:end]

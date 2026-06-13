@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_shadow_scorer_second_snapshot_hydration as hydration_mod
 from pipeline.ml_shadow_scorer_second_candidate_plan_ingest import (
     EXPECTED_PLANNED_CANDIDATE_WORK_SET_SHA256,
@@ -446,7 +447,7 @@ def test_no_forbidden_imports_and_cli_shape() -> None:
         for line in module_source.splitlines()
         if line.lstrip().startswith(("import ", "from "))
     )
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli_app" / "product_parsers.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     start = cli_source.index('"ml-shadow-scorer-second-snapshot-hydration"')
     end = cli_source.index('"corpus-v2-embed"', start)
     cli_block = cli_source[start:end]

@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_offline_baseline_eval import sha256_file
 from pipeline.ml_offline_audit_embedding_scorer_export import score_audit_embedding_probability
 from pipeline.ml_offline_production_candidate_scoring import (
@@ -844,7 +845,7 @@ def test_database_url_must_be_local() -> None:
 
 def test_cli_parser_includes_database_url_and_command_is_read_only(tmp_path: Path) -> None:
     package_root = Path(__file__).resolve().parents[1]
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-offline-production-candidate-scoring"')
     end = cli_source.index("ml_transfer_gap_review_parser", start)
     parser_block = cli_source[start:end]

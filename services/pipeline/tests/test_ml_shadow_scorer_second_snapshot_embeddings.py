@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.corpus_v2_embed as corpus_embed
 import pipeline.ml_shadow_scorer_second_snapshot_embeddings as embed_mod
 from pipeline.corpus_v2_embed import OPENAI_API_KEY_ENV
@@ -496,7 +497,7 @@ def test_no_forbidden_imports_and_cli_shape() -> None:
         for line in module_source.splitlines()
         if line.lstrip().startswith(("import ", "from "))
     )
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli_app" / "product_parsers.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     start = cli_source.index('"ml-shadow-scorer-second-snapshot-embeddings"')
     end = cli_source.index('"ml-fresh-hybrid-product-candidate-ranking"', start)
     cli_block = cli_source[start:end]

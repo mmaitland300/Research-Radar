@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_shadow_scorer_second_candidate_source_expansion_plan import (
     DISALLOWED_CANDIDATE_SHA,
     DISALLOWED_RANKING_RUN_ID,
@@ -263,7 +264,7 @@ def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:
     for forbidden in ("psycopg", "postgres", "openai", "openalex", "sklearn"):
         assert forbidden not in import_lines
 
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     start = cli_source.index('"ml-shadow-scorer-second-candidate-source-expansion-plan"')
     end = cli_source.index("ml_fresh_product_candidate_ranking_source_parser", start)
     parser_block = cli_source[start:end]

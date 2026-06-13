@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_shadow_scorer_v1 as shadow_module
 from pipeline.ml_shadow_scorer_v1 import (
     IMPLEMENTATION_VERSION,
@@ -327,7 +328,7 @@ def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url(
     assert "openai" not in import_lines
     assert "openalex" not in import_lines
 
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     start = cli_source.index('"ml-shadow-scorer-v1-audit"')
     end = cli_source.index("ml_fresh_eval_labeling_plan_hybrid_parser", start)
     parser_block = cli_source[start:end]

@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_fresh_hybrid_corpus_candidate_plan as plan_mod
 from pipeline.ml_fresh_hybrid_corpus_candidate_plan import (
     MLFreshHybridCorpusCandidatePlanError,
@@ -286,7 +287,7 @@ def test_no_forbidden_imports_and_cli_has_no_database_url() -> None:
     assert "from sklearn" not in module_source
     assert "import sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-fresh-hybrid-corpus-candidate-plan"')
     end = cli_source.index("ml_source_split_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]

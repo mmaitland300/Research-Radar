@@ -15,6 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.ml_offline_audit_embedding_scorer_export import (
     FIT_MODE_HOLDOUT,
@@ -664,7 +665,7 @@ def test_module_may_import_sklearn_but_not_db_or_external_clients_and_cli_has_no
     assert "openalex_client" not in module_source
     assert "fetch_openalex" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-offline-audit-embedding-scorer-export"')
     end = cli_source.index("ml_transfer_gap_review_parser", start)
     parser_block = cli_source[start:end]

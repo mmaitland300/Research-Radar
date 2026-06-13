@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_shadow_scorer_second_candidate_plan_ingest as ingest_mod
 from pipeline.ml_shadow_scorer_second_candidate_plan_ingest import (
     EXPECTED_PLANNED_CANDIDATE_WORK_SET_SHA256,
@@ -440,7 +441,7 @@ def test_no_openalex_client_openai_sklearn_imports_and_cli_flags() -> None:
     module_source = (PACKAGE_ROOT / "pipeline" / "ml_shadow_scorer_second_candidate_plan_ingest.py").read_text(
         encoding="utf-8"
     ).lower()
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(PACKAGE_ROOT)
     start = cli_source.index('"ml-shadow-scorer-second-candidate-plan-ingest"')
     end = cli_source.index('"ml-fresh-product-candidate-source-build"', start)
     cli_block = cli_source[start:end]

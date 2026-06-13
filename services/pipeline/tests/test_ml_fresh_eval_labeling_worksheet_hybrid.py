@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 import pipeline.ml_fresh_eval_labeling_worksheet_hybrid as worksheet_mod
 from pipeline.ml_fresh_eval_labeling_worksheet_hybrid import (
     MLFreshEvalLabelingWorksheetHybridError,
@@ -409,7 +410,7 @@ def test_no_forbidden_imports_and_cli_has_no_scoring_training_label_import_flags
     assert "from sklearn" not in module_source
     assert "import sklearn" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-fresh-eval-labeling-worksheet-hybrid"')
     end = cli_source.index("ml_fresh_candidate_source_expansion_plan_parser", start)
     parser_block = cli_source[start:end]

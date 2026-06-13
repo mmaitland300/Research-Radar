@@ -25,7 +25,7 @@ def test_bootstrap_plan_resolve_openalex_uses_source_resolution(
     )
 
     with (
-        patch("pipeline.cli_app.dispatch.resolve_all_sources", return_value=outcomes) as mock_resolve,
+        patch("pipeline.cli_app.core_dispatch.resolve_all_sources", return_value=outcomes) as mock_resolve,
         patch.object(
             cli_main.sys,
             "argv",

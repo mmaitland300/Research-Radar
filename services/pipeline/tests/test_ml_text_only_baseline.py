@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_text_only_baseline import (
     CAVEATS,
     MLTextOnlyBaselineError,
@@ -229,7 +230,7 @@ def test_no_database_or_network_usage_and_cli_has_no_database_url() -> None:
     assert "urllib" not in module_source
     assert "requests" not in module_source
 
-    cli_source = (package_root / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = read_cli_parser_source(package_root)
     start = cli_source.index('"ml-text-only-baseline"')
     end = cli_source.index("ml_tiny_baseline_parser", start)
     parser_block = cli_source[start:end]

@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from cli_parser_source import read_cli_parser_source
 from pipeline.ml_shadow_scorer_v1 import (
     AUDIT_OUTPUT_ARTIFACT_VERSION,
     MLShadowScorerV1Error,
@@ -366,7 +367,7 @@ def test_module_imports_no_db_network_or_ml_clients_and_cli_has_no_database_url(
     for forbidden in ("psycopg", "postgres", "openai", "openalex", "sklearn"):
         assert forbidden not in import_lines
 
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8").lower()
+    cli_source = read_cli_parser_source(PACKAGE_ROOT).lower()
     command_index = cli_source.index("ml-shadow-scorer-v1-audit-output")
     next_command_index = cli_source.index("ml-fresh-eval-labeling-plan-hybrid", command_index)
     command_block = cli_source[command_index:next_command_index]
