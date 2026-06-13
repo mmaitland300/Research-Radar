@@ -368,6 +368,58 @@ def test_success_creates_snapshot_ingest_run_and_counts_by_bucket(tmp_path: Path
     assert (tmp_path / "summary.md").is_file()
 
 
+def test_existing_work_is_preserved_not_reassigned_or_overwritten(tmp_path: Path) -> None:
+    conn = _FakeConn()
+    existing_work_id = 42
+    conn.works[existing_work_id] = {
+        "openalex_id": "https://openalex.org/WExisting",
+        "title": "Existing hydrated work",
+        "abstract": "Original abstract that must not be lost.",
+        "year": 2025,
+        "doi": "10.1234/existing",
+        "type": "article",
+        "language": "en",
+        "publication_date": "2025-01-01",
+        "updated_date": "2025-01-02",
+        "source_slug": "tismir",
+        "citation_count": 99,
+        "is_core_corpus": True,
+        "inclusion_status": "included",
+        "exclusion_reason": None,
+        "raw_content_hash": "original-hash",
+        "corpus_snapshot_version": "source-snapshot-pinned",
+        "last_ingest_run_id": "ingest-original",
+    }
+    before = copy.deepcopy(conn.works[existing_work_id])
+    plan = _plan(
+        [
+            _candidate(
+                "https://openalex.org/WExisting",
+                doi="10.1234/existing",
+                title="Candidate-plan title with missing metadata",
+                bucket_id="ismir_title_abstract_search",
+            ),
+            _candidate("https://openalex.org/WNew", doi="10.1234/new", title="New ISMIR work"),
+        ]
+    )
+
+    summary = _run_with_fake_db(tmp_path, conn, plan)
+
+    assert summary["inserted_count"] == 1
+    assert summary["updated_count"] == 0
+    assert summary["preserved_existing_count"] == 1
+    assert summary["skipped_existing_count"] == 0
+    assert summary["missing_abstract_count"] == 1
+    assert summary["defaulted_language_count"] == 1
+    assert summary["unknown_type_count"] == 1
+    assert summary["embedding_blocked_count"] == 1
+    assert conn.works[existing_work_id] == before
+    assert len(conn.raw_openalex_works) == 2
+    assert all(not sql.startswith("UPDATE works") for sql in conn.sql)
+    markdown = (tmp_path / "summary.md").read_text(encoding="utf-8")
+    assert "preserved_existing_count" in markdown
+
+
 def test_deduplicates_by_doi_before_writes(tmp_path: Path) -> None:
     conn = _FakeConn()
     plan = _plan(

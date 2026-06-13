@@ -194,6 +194,7 @@ def render_ingest_summary_markdown(summary: Mapping[str, Any]) -> str:
         f"- **selected_total:** `{summary.get('selected_total')}`",
         f"- **inserted_count:** `{summary.get('inserted_count')}`",
         f"- **updated_count:** `{summary.get('updated_count')}`",
+        f"- **preserved_existing_count:** `{summary.get('preserved_existing_count')}`",
         f"- **skipped_existing_count:** `{summary.get('skipped_existing_count')}`",
         f"- **failed_count:** `{summary.get('failed_count')}`",
         f"- **missing_abstract_count:** `{summary.get('missing_abstract_count')}`",
@@ -306,6 +307,7 @@ def _ingest_plan_candidates(
 
     inserted_count = sum(1 for r in results if r.action == "inserted")
     updated_count = sum(1 for r in results if r.action == "updated")
+    preserved_existing_count = sum(1 for r in results if r.action == "preserved_existing")
     embedding_ready_count = sum(1 for r in results if r.embedding_ready)
     embedding_blocked_count = len(results) - embedding_ready_count
     counts_by_bucket: dict[str, int] = {}
@@ -321,6 +323,7 @@ def _ingest_plan_candidates(
         "selected_total": int(plan_doc.payload["selected_total"]),
         "inserted_count": inserted_count,
         "updated_count": updated_count,
+        "preserved_existing_count": preserved_existing_count,
         "skipped_existing_count": skipped_existing_count,
         "failed_count": 0,
         "counts_by_bucket": counts_by_bucket,
@@ -379,25 +382,19 @@ def _upsert_candidate(
         )
         action = "inserted"
     else:
-        _update_work(
-            conn,
-            work_id=existing,
-            work=work,
-            source_slug=source_slug,
-            raw_content_hash=content_hash,
-            snapshot_version=snapshot.source_snapshot_version,
-            ingest_run_id=ingest_run.ingest_run_id,
-        )
-        action = "updated"
+        # Candidate-plan imports are append-only snapshot expansions. If a work
+        # already exists in another snapshot, keep the canonical work row
+        # untouched so pinned snapshots and serving artifacts remain stable.
+        action = "preserved_existing"
 
     return CandidateImportResult(
         action=action,
         bucket_id=str(candidate.get("bucket_id") or "") or None,
-        missing_abstract=not bool(work["abstract"]),
-        missing_doi=not bool(work["doi"]),
-        defaulted_language=bool(work["language_defaulted"]),
-        unknown_type=bool(work["type_unknown"]),
-        embedding_ready=bool(work["embedding_ready"]),
+        missing_abstract=False if existing is not None else not bool(work["abstract"]),
+        missing_doi=False if existing is not None else not bool(work["doi"]),
+        defaulted_language=False if existing is not None else bool(work["language_defaulted"]),
+        unknown_type=False if existing is not None else bool(work["type_unknown"]),
+        embedding_ready=True if existing is not None else bool(work["embedding_ready"]),
     )
 
 
@@ -470,60 +467,6 @@ def _insert_work(
     ).fetchone()
     assert row is not None
     return int(row[0])
-
-
-def _update_work(
-    conn: psycopg.Connection,
-    *,
-    work_id: int,
-    work: Mapping[str, Any],
-    source_slug: str | None,
-    raw_content_hash: str,
-    snapshot_version: str,
-    ingest_run_id: str,
-) -> None:
-    conn.execute(
-        """
-        UPDATE works
-        SET openalex_id = %s,
-            title = %s,
-            abstract = %s,
-            year = %s,
-            doi = %s,
-            type = %s,
-            language = %s,
-            publication_date = %s,
-            updated_date = %s,
-            source_slug = %s,
-            citation_count = %s,
-            is_core_corpus = %s,
-            inclusion_status = 'included',
-            exclusion_reason = NULL,
-            raw_content_hash = %s,
-            corpus_snapshot_version = %s,
-            last_ingest_run_id = %s,
-            updated_at = NOW()
-        WHERE id = %s
-        """,
-        (
-            work["openalex_id"],
-            work["title"],
-            work["abstract"],
-            work["year"],
-            work["doi"],
-            work["type"],
-            work["language"],
-            work["publication_date"],
-            work["updated_date"],
-            source_slug,
-            work["citation_count"],
-            work["is_core_corpus"],
-            raw_content_hash,
-            snapshot_version,
-            ingest_run_id,
-            work_id,
-        ),
-    )
 
 
 def _insert_raw_candidate_payload(
