@@ -446,7 +446,7 @@ def test_no_forbidden_imports_and_cli_shape() -> None:
         for line in module_source.splitlines()
         if line.lstrip().startswith(("import ", "from "))
     )
-    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    cli_source = (PACKAGE_ROOT / "pipeline" / "cli_app" / "product_parsers.py").read_text(encoding="utf-8")
     start = cli_source.index('"ml-shadow-scorer-second-snapshot-hydration"')
     end = cli_source.index('"corpus-v2-embed"', start)
     cli_block = cli_source[start:end]
