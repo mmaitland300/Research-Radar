@@ -7,6 +7,8 @@ from typing import Sequence
 
 import psycopg
 
+from pipeline.snapshot_membership import count_included_memberships, latest_snapshot_with_included_memberships
+
 
 @dataclass(frozen=True)
 class EmbeddingCandidate:
@@ -16,36 +18,12 @@ class EmbeddingCandidate:
 
 
 def latest_corpus_snapshot_version_with_works(conn: psycopg.Connection) -> str | None:
-    row = conn.execute(
-        """
-        SELECT ssv.source_snapshot_version
-        FROM source_snapshot_versions ssv
-        WHERE EXISTS (
-            SELECT 1
-            FROM works w
-            WHERE w.corpus_snapshot_version = ssv.source_snapshot_version
-              AND w.inclusion_status = 'included'
-        )
-        ORDER BY ssv.created_at DESC
-        LIMIT 1
-        """
-    ).fetchone()
-    if row is None:
-        return None
-    return str(row[0])
+    """Backward-compatible alias; resolves via snapshot membership rows."""
+    return latest_snapshot_with_included_memberships(conn)
 
 
 def count_included_works_for_snapshot(conn: psycopg.Connection, corpus_snapshot_version: str) -> int:
-    row = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM works w
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
-        """,
-        (corpus_snapshot_version,),
-    ).fetchone()
-    return int(row[0] or 0) if row is not None else 0
+    return count_included_memberships(conn, snapshot_version=corpus_snapshot_version)
 
 
 def count_missing_embedding_candidates(
@@ -58,14 +36,16 @@ def count_missing_embedding_candidates(
         """
         SELECT COUNT(*)
         FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         LEFT JOIN embeddings e
           ON e.work_id = w.id
          AND e.embedding_version = %s
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
-          AND e.work_id IS NULL
+        WHERE e.work_id IS NULL
         """,
-        (embedding_version, corpus_snapshot_version),
+        (corpus_snapshot_version, embedding_version),
     ).fetchone()
     return int(row[0] or 0) if row is not None else 0
 
@@ -80,18 +60,20 @@ def list_embedding_candidates(
     sql = """
         SELECT w.id, w.title, w.abstract
         FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         LEFT JOIN embeddings e
           ON e.work_id = w.id
          AND e.embedding_version = %s
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
-          AND e.work_id IS NULL
+        WHERE e.work_id IS NULL
         ORDER BY w.id ASC
     """
-    params: tuple[object, ...] = (embedding_version, corpus_snapshot_version)
+    params: tuple[object, ...] = (corpus_snapshot_version, embedding_version)
     if limit is not None:
         sql += "\n        LIMIT %s"
-        params = (embedding_version, corpus_snapshot_version, limit)
+        params = (corpus_snapshot_version, embedding_version, limit)
 
     rows = conn.execute(sql, params).fetchall()
     return [

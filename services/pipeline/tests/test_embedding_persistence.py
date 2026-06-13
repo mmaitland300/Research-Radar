@@ -27,7 +27,8 @@ def test_list_embedding_candidates_filters_missing_embeddings_only() -> None:
     params = conn.execute.call_args[0][1]
     assert "LEFT JOIN embeddings" in sql
     assert "e.work_id IS NULL" in sql
-    assert params == ("v1", "snap-1", 5)
+    assert "work_source_snapshot_memberships" in sql
+    assert params == ("snap-1", "v1", 5)
 
 
 def test_count_missing_embedding_candidates_reads_scalar_count() -> None:

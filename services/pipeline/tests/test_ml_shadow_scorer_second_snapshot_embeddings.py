@@ -22,6 +22,14 @@ from pipeline.ml_shadow_scorer_second_snapshot_embeddings import (
     MLShadowScorerSecondSnapshotEmbeddingsError,
     build_ml_shadow_scorer_second_snapshot_embeddings_payload,
 )
+from tests.snapshot_membership_fake_sql import (
+    build_memberships_from_works,
+    count_embeddings_for_snapshot,
+    delete_embeddings_for_snapshot,
+    embedding_coverage_counts,
+    included_work_ids,
+    is_membership_included_work_select,
+)
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 FRESH_EMBEDDING_VERSION = "fresh-hybrid-text-embedding-v1"
@@ -64,6 +72,7 @@ class _FakeConn:
         self.embeddings: dict[tuple[int, str], str] = {
             (idx, FRESH_EMBEDDING_VERSION): "[0.1,0.2]" for idx in range(1, min(work_count, 5) + 1)
         }
+        self.memberships = build_memberships_from_works(self.works)
         self.sql: list[str] = []
         self.commit_count = 0
         self.rollback_count = 0
@@ -86,6 +95,13 @@ class _FakeConn:
         self.sql.append(compact)
         if compact.startswith("SELECT 1 FROM source_snapshot_versions"):
             return _Result(one=(1,) if str(params[0]) in self.snapshots else None)
+        if is_membership_included_work_select(compact):
+            snapshot = str(params[0])
+            rows = []
+            for work_id in included_work_ids(self.works, self.memberships, snapshot):
+                work = self.works[work_id]
+                rows.append((work_id, work["title"], work["abstract"], work["type"], work["language"]))
+            return _Result(all_rows=rows)
         if compact.startswith("SELECT id, title, abstract, type, language FROM works"):
             snapshot = str(params[0])
             rows = []
@@ -97,6 +113,40 @@ class _FakeConn:
         if compact == "SELECT COUNT(*) FROM embeddings WHERE embedding_version = %s":
             version = str(params[0])
             return _Result(one=(sum(1 for (_work_id, ev) in self.embeddings if ev == version),))
+        if compact.startswith("SELECT COUNT(*) FROM embeddings e JOIN work_source_snapshot_memberships wssm"):
+            snapshot = str(params[0])
+            version = str(params[1])
+            return _Result(
+                one=(
+                    count_embeddings_for_snapshot(
+                        self.embeddings,
+                        self.memberships,
+                        snapshot=snapshot,
+                        version=version,
+                    ),
+                )
+            )
+        if compact.startswith("DELETE FROM embeddings e USING work_source_snapshot_memberships wssm"):
+            snapshot = str(params[0])
+            version = str(params[1])
+            delete_embeddings_for_snapshot(
+                self.embeddings,
+                self.memberships,
+                snapshot=snapshot,
+                version=version,
+            )
+            return _Result()
+        if compact.startswith("SELECT COUNT(*), COUNT(e.work_id) FROM works w JOIN work_source_snapshot_memberships wssm"):
+            snapshot = str(params[0])
+            version = str(params[1])
+            total, embedded = embedding_coverage_counts(
+                self.works,
+                self.memberships,
+                self.embeddings,
+                snapshot=snapshot,
+                version=version,
+            )
+            return _Result(one=(total, embedded))
         if compact.startswith("SELECT COUNT(*) FROM embeddings e JOIN works w ON w.id = e.work_id"):
             version = str(params[0])
             snapshot = str(params[1])

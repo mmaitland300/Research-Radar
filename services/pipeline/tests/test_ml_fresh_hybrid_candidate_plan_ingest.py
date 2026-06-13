@@ -17,6 +17,7 @@ from pipeline.ml_fresh_hybrid_candidate_plan_ingest import (
     assert_local_database_url,
     build_ml_fresh_hybrid_candidate_plan_ingest_payload,
 )
+from tests.snapshot_membership_fake_sql import apply_membership_upsert
 
 
 class _Result:
@@ -57,6 +58,7 @@ class _FakeConn:
         self.works: dict[int, dict] = {}
         self.raw_openalex_works: list[dict] = []
         self.next_work_id = 1
+        self.memberships: set[tuple[int, str]] = set()
         self.sql: list[str] = []
         self.commit_count = 0
         self.rollback_count = 0
@@ -177,6 +179,9 @@ class _FakeConn:
                     "corpus_snapshot_version": params[13],
                 }
             )
+            return _Result()
+        if compact.startswith("INSERT INTO work_source_snapshot_memberships"):
+            apply_membership_upsert(self.memberships, params)
             return _Result()
         raise AssertionError(f"unhandled SQL: {compact}")
 

@@ -13,6 +13,13 @@ from pipeline.corpus_v2_hydrate_openalex import (
     run_corpus_v2_hydrate_openalex,
 )
 from pipeline.openalex_client import OPENALEX_API_KEY_ENV
+from tests.snapshot_membership_fake_sql import (
+    apply_hydrate_work_update,
+    build_memberships_from_works,
+    included_work_ids,
+    is_hydrate_work_update,
+    is_membership_included_work_select,
+)
 
 
 class _Result:
@@ -95,6 +102,7 @@ class _FakeConn:
                 "last_ingest_run_id": "ingest-other",
             },
         }
+        self.memberships = build_memberships_from_works(self.works)
 
     def __enter__(self) -> "_FakeConn":
         return self
@@ -118,6 +126,27 @@ class _FakeConn:
         if compact.startswith("SELECT 1 FROM source_snapshot_versions"):
             snapshot = str(params[0])
             return _Result(one=(1,) if snapshot in self.snapshots else None)
+        if is_membership_included_work_select(compact):
+            snapshot = str(params[0])
+            rows = []
+            for work_id in included_work_ids(self.works, self.memberships, snapshot):
+                work = self.works[work_id]
+                rows.append(
+                    (
+                        work["id"],
+                        work["openalex_id"],
+                        work["title"],
+                        work["abstract"],
+                        work["type"],
+                        work["language"],
+                        work["doi"],
+                        work["citation_count"],
+                        work["year"],
+                        work["publication_date"],
+                        work["source_slug"],
+                    )
+                )
+            return _Result(all_rows=rows)
         if compact.startswith("SELECT id, openalex_id, title, abstract, type, language, doi, citation_count, year, publication_date, source_slug FROM works"):
             snapshot = str(params[0])
             rows = []
@@ -168,6 +197,9 @@ class _FakeConn:
                     "payload": json.loads(params[6]),
                 }
             )
+            return _Result()
+        if is_hydrate_work_update(compact):
+            apply_hydrate_work_update(self.works, params)
             return _Result()
         if compact.startswith("UPDATE works SET title = %s, abstract = %s, type = %s, language = %s, doi = %s, citation_count = %s, publication_date = %s, year = %s, updated_date = %s, last_ingest_run_id = %s, updated_at = NOW() WHERE id = %s AND corpus_snapshot_version = %s"):
             work_id = int(params[10])

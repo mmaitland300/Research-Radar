@@ -9,8 +9,18 @@ A real bootstrap run needs all of the following:
 1. **Postgres running and reachable**  
    For example, start the stack in `docker-compose.yml` (uses `pgvector/pgvector` and applies `infra/db/schema.sql` on first init).
 
-2. **`schema.sql` already applied** on that database  
-   If the data directory was created earlier without the schema, apply `infra/db/schema.sql` manually (for example with `psql`) before ingesting.
+2. **Schema at the latest Alembic revision**  
+   Docker Compose applies `infra/db/schema.sql` on first init, but that baseline alone is not enough for current pipeline commands. Run migrations before ingest or any corpus-v2 work:
+
+   ```bash
+   pip install -r infra/db/requirements.txt
+   cd infra/db
+   alembic upgrade head
+   ```
+
+   Revision `0002` adds `work_source_snapshot_memberships`, which bootstrap-run and corpus-v2 commands use to resolve snapshot pools without moving canonical work rows.
+
+   If the data directory was created earlier without the schema, apply `infra/db/schema.sql` manually (for example with `psql`), then run `alembic upgrade head`.
 
 3. **Connection settings**  
    Set `DATABASE_URL`, or set the usual `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, and `PGDATABASE` variables to match your instance (defaults in the loader align with `docker-compose.yml`: user/db/password `research_radar` on `localhost:5432`).

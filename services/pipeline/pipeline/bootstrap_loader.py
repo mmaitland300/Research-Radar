@@ -304,7 +304,6 @@ def _upsert_work(
             inclusion_status = EXCLUDED.inclusion_status,
             exclusion_reason = EXCLUDED.exclusion_reason,
             raw_content_hash = EXCLUDED.raw_content_hash,
-            corpus_snapshot_version = EXCLUDED.corpus_snapshot_version,
             last_ingest_run_id = EXCLUDED.last_ingest_run_id,
             updated_at = NOW()
         RETURNING id
@@ -376,6 +375,8 @@ def persist_work(
     author_ids_seen: set[str],
     topic_ids_seen: set[str],
 ) -> None:
+    from pipeline.snapshot_membership import upsert_work_snapshot_membership
+
     hydrated = hydrate_work_record(work, policy)
     decisions.append(hydrated.policy_decision)
 
@@ -420,7 +421,7 @@ def persist_work(
     for tlink in hydrated.topics:
         topic_ids_seen.add(tlink.topic_openalex_id)
 
-    _upsert_work(
+    work_id = _upsert_work(
         conn,
         nw=hydrated.work,
         venue_id=venue_id,
@@ -429,9 +430,14 @@ def persist_work(
         corpus_snapshot_version=snapshot.source_snapshot_version,
         last_ingest_run_id=ingest_run.ingest_run_id,
     )
-    row = conn.execute("SELECT id FROM works WHERE openalex_id = %s", (oa_id,)).fetchone()
-    assert row is not None
-    work_id = int(row[0])
+    upsert_work_snapshot_membership(
+        conn,
+        work_id=work_id,
+        source_snapshot_version=snapshot.source_snapshot_version,
+        inclusion_status=hydrated.work.inclusion_status,
+        source_slug=work_source_slug,
+        added_by_ingest_run_id=ingest_run.ingest_run_id,
+    )
     _rewrite_work_edges(conn, work_id, hydrated)
 
     citing = oa_id

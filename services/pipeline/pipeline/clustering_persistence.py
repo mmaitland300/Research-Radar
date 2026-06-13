@@ -9,7 +9,7 @@ import psycopg
 
 from pipeline.clustering import ClusterAssignment, ClusteringInput
 from pipeline.config import ClusteringCounts, ClusteringRun
-from pipeline.embedding_persistence import latest_corpus_snapshot_version_with_works
+from pipeline.snapshot_membership import latest_snapshot_with_included_memberships
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,7 @@ def list_clustering_inputs(
     embedding_version: str,
     corpus_snapshot_version: str | None = None,
 ) -> ClusterInputSummary:
-    snapshot = corpus_snapshot_version or latest_corpus_snapshot_version_with_works(conn)
+    snapshot = corpus_snapshot_version or latest_snapshot_with_included_memberships(conn)
     if snapshot is None:
         raise RuntimeError(
             "No corpus_snapshot_version with included works found. "
@@ -45,14 +45,16 @@ def list_clustering_inputs(
         """
         SELECT w.id, e.vector
         FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         JOIN embeddings e
           ON e.work_id = w.id
          AND e.embedding_version = %s
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
         ORDER BY w.id ASC
         """,
-        (embedding_version, snapshot),
+        (snapshot, embedding_version),
     ).fetchall()
 
     parsed = [ClusteringInput(work_id=int(row[0]), vector=_parse_vector(row[1])) for row in rows]
@@ -158,14 +160,16 @@ def count_included_missing_cluster_assignment(
         """
         SELECT COUNT(*)
         FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         LEFT JOIN clusters c
           ON c.work_id = w.id
          AND c.cluster_version = %s
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
-          AND c.work_id IS NULL
+        WHERE c.work_id IS NULL
         """,
-        (cluster_version, corpus_snapshot_version),
+        (corpus_snapshot_version, cluster_version),
     ).fetchone()
     return int(row[0] or 0) if row is not None else 0
 

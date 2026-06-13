@@ -103,6 +103,11 @@ inspect Search, Recommended, Trends, and Evaluation backed by Postgres.
 docker compose up -d
 # schema is auto-applied from infra/db/schema.sql on first init
 
+pip install -r infra/db/requirements.txt
+cd infra/db && alembic upgrade head && cd ../..
+# Required before corpus-v2 compose/embed/cluster/rank commands: revision 0002
+# adds work_source_snapshot_memberships.
+
 pip install -e ./services/pipeline
 pip install -e ./apps/api
 npm install

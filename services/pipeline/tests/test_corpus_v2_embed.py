@@ -68,6 +68,11 @@ class _FakeConn:
             },
         }
         self.embeddings: dict[tuple[int, str], str] = {}
+        self.memberships: set[tuple[int, str]] = {
+            (work_id, work["corpus_snapshot_version"])
+            for work_id, work in self.works.items()
+            if work["inclusion_status"] == "included"
+        }
         self.sql: list[str] = []
         self.commit_count = 0
         self.rollback_count = 0
@@ -90,6 +95,27 @@ class _FakeConn:
         self.sql.append(compact)
         if compact.startswith("SELECT 1 FROM source_snapshot_versions"):
             return _Result(one=(1,) if str(params[0]) in self.snapshots else None)
+        if compact.startswith(
+            "SELECT w.id, w.title, w.abstract, w.type, w.language FROM works w JOIN work_source_snapshot_memberships wssm"
+        ):
+            snapshot = str(params[0])
+            rows = []
+            for work_id, work in self.works.items():
+                if (
+                    (work_id, snapshot) in self.memberships
+                    and work["inclusion_status"] == "included"
+                ):
+                    rows.append(
+                        (
+                            work_id,
+                            work["title"],
+                            work["abstract"],
+                            work["type"],
+                            work["language"],
+                        )
+                    )
+            rows.sort(key=lambda row: row[0])
+            return _Result(all_rows=rows)
         if compact.startswith("SELECT id, title, abstract, type, language FROM works"):
             snapshot = str(params[0])
             rows = []
@@ -112,6 +138,23 @@ class _FakeConn:
         if compact == "SELECT COUNT(*) FROM embeddings WHERE embedding_version = %s":
             version = str(params[0])
             return _Result(one=(sum(1 for (_work_id, ev) in self.embeddings if ev == version),))
+        if compact.startswith("SELECT COUNT(*) FROM embeddings e JOIN work_source_snapshot_memberships wssm"):
+            version = str(params[1])
+            snapshot = str(params[0])
+            count = sum(
+                1
+                for (work_id, ev) in self.embeddings
+                if ev == version and (work_id, snapshot) in self.memberships
+            )
+            return _Result(one=(count,))
+        if compact.startswith("DELETE FROM embeddings e USING work_source_snapshot_memberships wssm"):
+            version = str(params[1])
+            snapshot = str(params[0])
+            for key in list(self.embeddings):
+                work_id, ev = key
+                if ev == version and (work_id, snapshot) in self.memberships:
+                    del self.embeddings[key]
+            return _Result()
         if compact.startswith("SELECT COUNT(*) FROM embeddings e JOIN works w ON w.id = e.work_id"):
             version = str(params[0])
             snapshot = str(params[1])

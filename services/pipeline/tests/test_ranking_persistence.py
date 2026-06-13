@@ -1,6 +1,20 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-from pipeline.ranking_persistence import latest_successful_ranking_run_id
+from pipeline.ranking_persistence import (
+    latest_corpus_snapshot_version_with_works,
+    latest_successful_ranking_run_id,
+)
+
+
+def test_latest_corpus_snapshot_version_with_works_uses_memberships() -> None:
+    conn = MagicMock()
+    with patch(
+        "pipeline.ranking_persistence.latest_snapshot_with_included_memberships",
+        return_value="composed-snapshot",
+    ) as latest:
+        assert latest_corpus_snapshot_version_with_works(conn) == "composed-snapshot"
+    latest.assert_called_once_with(conn)
+    conn.execute.assert_not_called()
 
 
 def test_latest_successful_ranking_run_id_without_version_filter() -> None:

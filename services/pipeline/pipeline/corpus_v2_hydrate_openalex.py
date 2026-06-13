@@ -206,10 +206,13 @@ def _assert_snapshot_exists(conn: psycopg.Connection, snapshot_version: str) -> 
 def _load_snapshot_works(conn: psycopg.Connection, *, snapshot_version: str) -> list[_WorkRow]:
     rows = conn.execute(
         """
-        SELECT id, openalex_id, title, abstract, type, language, doi, citation_count, year, publication_date, source_slug
-        FROM works
-        WHERE corpus_snapshot_version = %s
-        ORDER BY id
+        SELECT w.id, w.openalex_id, w.title, w.abstract, w.type, w.language, w.doi, w.citation_count, w.year, w.publication_date, w.source_slug
+        FROM works w
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
+        ORDER BY w.id
         """,
         (snapshot_version,),
     ).fetchall()
@@ -438,7 +441,6 @@ def _hydrate_work_row(
             last_ingest_run_id = %s,
             updated_at = NOW()
         WHERE id = %s
-          AND corpus_snapshot_version = %s
         """,
         (
             title or row.title,
@@ -452,7 +454,6 @@ def _hydrate_work_row(
             updated_date,
             hydration_run_id,
             row.work_id,
-            snapshot_version,
         ),
     )
     return True, doi_was_added
