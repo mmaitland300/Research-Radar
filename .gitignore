@@ -17,5 +17,6 @@ docs/audit/out/
 docs/audit/shadow-runs/
 services/pipeline/tests/_sim_artifacts/
 
-# Cursor workspace rules (keep locally; not published on GitHub)
+# Cursor / agent guardrails (keep locally; not published on GitHub)
+AGENTS.md
 .cursor/rules/*.mdc

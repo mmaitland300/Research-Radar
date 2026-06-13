@@ -17,7 +17,9 @@ and the project is not presented as a validated recommender system.
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for the system shape in one page.
 - Inspect the current evaluation boundary in [EVALUATION.md](EVALUATION.md).
 - Read the [public roadmap](docs/public-roadmap.md) and
-  [v0.1.0 public baseline notes](docs/releases/v0.1.0-public-baseline.md).
+  release notes:
+  [v0.1.0 public baseline](docs/releases/v0.1.0-public-baseline.md) and
+  [v0.2.0 curated surface](docs/releases/v0.2.0.md).
 - Check the ranked API and fixture-mode tests if you want to see the core
   behavior under test.
 - Main limitation: the corpus is intentionally narrow, and evaluation is still
@@ -33,10 +35,12 @@ and the project is not presented as a validated recommender system.
 
 ## Status
 
-Current status: deployed working prototype.
+Current status: deployed working prototype with a curated public surface.
 
-Public baseline: `v0.1.0-public-baseline` documents the current review surface,
-release smoke path, and known limits.
+Current curated-surface milestone: `v0.2.0` documents the June 2026 cleanup of
+the public repo surface, route/CLI structure, and release story. Public
+baseline: `v0.1.0-public-baseline` remains the archived review surface, release
+smoke path, and known limits from the first public baseline.
 
 Implemented public surfaces:
 
@@ -171,7 +175,9 @@ unredacted provider payloads in issues or PRs. See [SECURITY.md](SECURITY.md).
 
 The full ML experiment and rollout-review record is preserved on the
 `archive/ml-governance-audit` branch; `main` keeps only the pinned model
-artifacts the deployed scorers load.
+artifacts the deployed scorers load. See
+[docs/releases/v0.2.0.md](docs/releases/v0.2.0.md) for the curated-surface
+milestone.
 
 ## Quickstart Details
 
