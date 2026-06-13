@@ -1,18 +1,22 @@
 # Public Roadmap
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 Research Radar is a working prototype for explainable MIR/audio-ML paper
 ranking. This roadmap tracks the next public improvements that make the project
-easier to evaluate without overstating the recommender quality.
+easier to evaluate without overstating the recommender quality. Detailed
+planning remains in [internal/roadmap.md](internal/roadmap.md); this file is the
+public-facing version.
 
 ## Current Baseline
 
 - Live app: search, recommended feeds, paper detail, trends, and evaluation.
 - Local no-key demo: fixture-mode API and web app through `npm run demo:local`.
 - Full local path: Postgres, pgvector, OpenAlex ingest, pipeline, API, and web.
-- Evidence: CI, fixture/API tests, evaluation docs, audit artifacts, and release
-  smoke checklist.
+- Evidence: CI, fixture/API tests, evaluation docs, slim runtime audit
+  artifacts, and release notes.
+- Current curated-surface marker: `v0.2.0`
+  ([release notes](releases/v0.2.0.md)).
 - Emerging may be ordered by the bounded ML scorer when the live gate is
   configured; evaluation is still not a validation claim.
 
@@ -27,6 +31,19 @@ Goal: make the public repo safer and easier to review.
 - Done: public baseline release `v0.1.0-public-baseline` with notes,
   smoke-check evidence, and known limitations
   ([release notes](releases/v0.1.0-public-baseline.md)).
+- Done: audit boundary cleanup moved historical governance/process artifacts to
+  `archive/ml-governance-audit`; `docs/audit/` now keeps only runtime-required
+  frozen artifacts.
+- Done: pipeline CLI split into family-scoped modules while preserving command
+  names and arguments.
+- Done: FastAPI route handlers split into domain routers while preserving the
+  route method/path surface.
+- Done: `v0.2.0` release marker for the curated public surface
+  ([release notes](releases/v0.2.0.md)).
+- Future: slim `EVALUATION.md` into a shorter conclusions-only status guide.
+- Future: split `apps/web/app/recommended/page.tsx` and add lightweight
+  frontend tests.
+- Future: clarify Python dependency locking and reproducibility workflow.
 
 ### 2. Evaluation Credibility
 

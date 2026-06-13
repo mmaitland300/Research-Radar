@@ -10,6 +10,8 @@ how to run it, [ARCHITECTURE](../ARCHITECTURE.md) for system shape, and
   review session.
 - [release-smoke-checklist.md](release-smoke-checklist.md) - manual smoke
   steps used for the public baseline.
+- [releases/v0.2.0.md](releases/v0.2.0.md) - current curated-surface release
+  marker and known limits.
 - [releases/v0.1.0-public-baseline.md](releases/v0.1.0-public-baseline.md) -
   the pinned public baseline and its known limits.
 - [public-roadmap.md](public-roadmap.md) - high-level plan.
