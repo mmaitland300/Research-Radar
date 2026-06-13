@@ -605,6 +605,52 @@ def main() -> None:
         help="Offline: no live OpenAlex calls; empty plan (tests/CI)",
     )
 
+    ismir_preview_parser = subparsers.add_parser(
+        "ismir-ingest-preview",
+        help="OpenAlex dry-run for the ISMIR tranche: source-id vs search coverage, overlap, attribution, approved ingest set (no DB)",
+    )
+    ismir_preview_parser.add_argument(
+        "--output",
+        required=True,
+        help="JSON output path (e.g. artifacts/ismir-ingest-preview-YYYYMMDD.json)",
+    )
+    ismir_preview_parser.add_argument(
+        "--markdown-output",
+        required=True,
+        help="Markdown output path (e.g. artifacts/ismir-ingest-preview-YYYYMMDD.md)",
+    )
+    ismir_preview_parser.add_argument(
+        "--mailto",
+        default=None,
+        help=(
+            "Optional contact for User-Agent metadata (never stored in artifacts). Live mode: set OPENALEX_API_KEY "
+            "(preferred) and/or pass this or OPENALEX_MAILTO."
+        ),
+    )
+    ismir_preview_parser.add_argument(
+        "--max-works-per-bucket",
+        type=int,
+        default=400,
+        help="Max raw works fetched per bucket (source-id and search; default 400)",
+    )
+    ismir_preview_parser.add_argument(
+        "--target-min",
+        type=int,
+        default=1,
+        help="Soft minimum approved candidates (caveat if below; default 1)",
+    )
+    ismir_preview_parser.add_argument(
+        "--target-max",
+        type=int,
+        default=500,
+        help="Hard cap on approved candidates after dedup (default 500)",
+    )
+    ismir_preview_parser.add_argument(
+        "--mock-openalex",
+        action="store_true",
+        help="Offline: no live OpenAlex calls; empty plan (tests/CI)",
+    )
+
     corpus_v2_ingest_parser = subparsers.add_parser(
         "corpus-v2-ingest-from-plan",
         help="Postgres import: approved corpus-v2 candidate plan to explicit source snapshot",
@@ -8590,6 +8636,26 @@ def main() -> None:
             markdown_output=Path(args.markdown_output),
             mailto=(args.mailto or "").strip(),
             per_bucket_limit=int(args.per_bucket_limit),
+            target_min=int(args.target_min),
+            target_max=int(args.target_max),
+            mock_openalex=bool(args.mock_openalex),
+        )
+        print(Path(args.output).resolve(), file=sys.stderr)
+        print(Path(args.markdown_output).resolve(), file=sys.stderr)
+        return
+
+    if args.command == "ismir-ingest-preview":
+        from pipeline.ismir_ingest_preview import run_ismir_ingest_preview_from_cli
+
+        if args.target_max < args.target_min:
+            parser.error("--target-max must be >= --target-min")
+        if args.max_works_per_bucket < 1 or args.max_works_per_bucket > 2000:
+            parser.error("--max-works-per-bucket must be between 1 and 2000")
+        run_ismir_ingest_preview_from_cli(
+            output=Path(args.output),
+            markdown_output=Path(args.markdown_output),
+            mailto=(args.mailto or "").strip(),
+            max_works_per_bucket=int(args.max_works_per_bucket),
             target_min=int(args.target_min),
             target_max=int(args.target_max),
             mock_openalex=bool(args.mock_openalex),
