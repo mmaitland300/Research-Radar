@@ -96,6 +96,8 @@ from pipeline.jobs import (
 )
 from pipeline.openalex import build_bootstrap_work_plans, build_source_resolution_plans
 from pipeline.policy import CorpusPolicy, corpus_policy_with_openalex_source_ids
+from pipeline.source_resolution import resolve_all_sources, slug_to_openalex_id_map
+
 
 def _print_artifact_values(path: Path, *key_paths: tuple[str, ...]) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
