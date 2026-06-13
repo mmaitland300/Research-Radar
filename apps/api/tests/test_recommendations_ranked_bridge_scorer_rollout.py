@@ -20,6 +20,7 @@ from app.ml_scorer_rollout_gate import (
     reset_rollout_served_count,
 )
 from app.scores_repo import RankedRecommendationRow, RankedRunContext
+from app.routers import recommendations as recommendations_router
 
 client = TestClient(main.app)
 
@@ -173,7 +174,7 @@ def _patch_bridge_open(
         lambda **_kwargs: (resolved_ctx, rows, {}),
     )
     monkeypatch.setattr(
-        main,
+        recommendations_router,
         "list_ranked_recommendations",
         lambda **_kwargs: (_ for _ in ()).throw(AssertionError("fallback should not run")),
     )
@@ -191,7 +192,7 @@ def _patch_bridge_open(
 def test_default_env_missing_bridge_output_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
     ctx = _ctx()
     rows = _baseline_rows("bridge")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
         bridge_rollout,
         "_load_pipeline_serving_module",
@@ -216,7 +217,7 @@ def test_bridge_pinned_request_without_canary_returns_materialized_fallback_not_
         captured.update(kwargs)
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", baseline)
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", baseline)
     monkeypatch.setattr(
         bridge_rollout,
         "_load_pipeline_serving_module",
@@ -238,9 +239,9 @@ def test_emerging_behavior_unchanged_with_bridge_env(monkeypatch: pytest.MonkeyP
     _enable_bridge_gate(monkeypatch)
     ctx = _ctx()
     rows = _baseline_rows("emerging")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
-        main,
+        recommendations_router,
         "maybe_build_bridge_scorer_ranked_response",
         lambda **_kwargs: (_ for _ in ()).throw(AssertionError("Emerging must not call Bridge gate")),
     )
@@ -255,9 +256,9 @@ def test_undercited_behavior_unchanged_with_bridge_env(monkeypatch: pytest.Monke
     _enable_bridge_gate(monkeypatch)
     ctx = _ctx()
     rows = _baseline_rows("undercited")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
-        main,
+        recommendations_router,
         "maybe_build_bridge_scorer_ranked_response",
         lambda **_kwargs: (_ for _ in ()).throw(AssertionError("Undercited must not call Bridge gate")),
     )
@@ -280,7 +281,7 @@ def test_bridge_gate_preconditions_fail_closed(query: str, monkeypatch: pytest.M
     _enable_bridge_gate(monkeypatch)
     ctx = _ctx()
     rows = _baseline_rows("bridge")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
         bridge_rollout,
         "_load_pipeline_serving_module",
@@ -297,7 +298,7 @@ def test_bridge_scorer_env_enabled_but_cap_zero_fails_closed(monkeypatch: pytest
     _enable_bridge_gate(monkeypatch, cap="0")
     ctx = _pinned_bridge_ctx()
     rows = _baseline_rows("bridge")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
         bridge_rollout,
         "_load_pipeline_serving_module",
@@ -318,7 +319,7 @@ def test_bridge_configured_ranking_run_mismatch_fails_closed(monkeypatch: pytest
     monkeypatch.setenv("ML_BRIDGE_SCORER_V1_RANKING_RUN_ID", "rank-other")
     ctx = _pinned_bridge_ctx()
     rows = _baseline_rows("bridge")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
         bridge_rollout,
         "_load_pipeline_serving_module",
@@ -340,7 +341,7 @@ def test_bridge_public_rollout_partial_percent_without_subject_fails_closed(
     _enable_bridge_public_gate(monkeypatch, percent="50")
     ctx = _pinned_bridge_ctx()
     rows = _baseline_rows("bridge")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
         bridge_rollout,
         "_load_pipeline_serving_module",
@@ -360,7 +361,7 @@ def test_bridge_scorer_missing_artifact_or_scorer_fails_closed(monkeypatch: pyte
     serving = _FakeServing([f"WBRIDGE{i:03d}" for i in range(20)], exc=RuntimeError("artifact missing"))
 
     monkeypatch.setattr(bridge_rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(bridge_rollout, "_load_pipeline_serving_module", lambda: serving)
 
     response = client.get(
@@ -383,7 +384,7 @@ def test_bridge_canary_scorer_failure_emits_sanitized_warning(
     serving = _FakeServing([f"WBRIDGE{i:03d}" for i in range(20)], exc=RuntimeError("artifact missing\nline2"))
 
     monkeypatch.setattr(bridge_rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(bridge_rollout, "_load_pipeline_serving_module", lambda: serving)
 
     with caplog.at_level(logging.WARNING, logger=bridge_rollout.__name__):
@@ -411,7 +412,7 @@ def test_bridge_scorer_metadata_must_report_no_db_writes(monkeypatch: pytest.Mon
     )
 
     monkeypatch.setattr(bridge_rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(bridge_rollout, "_load_pipeline_serving_module", lambda: serving)
     monkeypatch.setattr(
         bridge_rollout,
@@ -439,7 +440,7 @@ def test_bridge_scorer_metadata_contract_mismatch_fails_closed(monkeypatch: pyte
     )
 
     monkeypatch.setattr(bridge_rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(bridge_rollout, "_load_pipeline_serving_module", lambda: serving)
     monkeypatch.setattr(
         bridge_rollout,
@@ -533,7 +534,7 @@ def test_bridge_does_not_use_ml_shadow_scorer_env_vars(monkeypatch: pytest.Monke
     monkeypatch.setenv("ML_SHADOW_SCORER_V1_ROLLOUT_EXPOSURE_CAP", "5")
     ctx = _ctx()
     rows = _baseline_rows("bridge")
-    monkeypatch.setattr(main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(
         bridge_rollout,
         "_load_pipeline_serving_module",

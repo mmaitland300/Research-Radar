@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import main
+from app.routers import evaluation as evaluation_router
 from app.bridge_distinctness_repo import (
     BridgeDistinctnessPayload,
     _top_family_ids,
@@ -154,7 +155,7 @@ def test_bridge_distinctness_k_bounded_like_evaluation_compare() -> None:
 
 def test_bridge_distinctness_404_when_no_payload(monkeypatch) -> None:
     monkeypatch.setattr(
-        main,
+        evaluation_router,
         "load_bridge_distinctness_report",
         MagicMock(return_value=None),
     )
@@ -191,7 +192,7 @@ def test_bridge_distinctness_smoke_no_raw_signal_json(monkeypatch) -> None:
         eligible_head_less_emerging_like_than_full=False,
         suggested_next_step="inspect_cluster_quality_first",
     )
-    monkeypatch.setattr(main, "load_bridge_distinctness_report", MagicMock(return_value=payload))
+    monkeypatch.setattr(evaluation_router, "load_bridge_distinctness_report", MagicMock(return_value=payload))
     r = client.get("/api/v1/evaluation/bridge-distinctness?ranking_run_id=run-pin&k=3")
     assert r.status_code == 200
     body = r.json()
@@ -206,8 +207,8 @@ def test_bridge_distinctness_smoke_no_raw_signal_json(monkeypatch) -> None:
     assert body["bridge_signal_json_missing_count"] == 5
     assert "bridge_signal_json" not in body
     assert body["decision_support"]["suggested_next_step"] == "inspect_cluster_quality_first"
-    main.load_bridge_distinctness_report.assert_called_once()
-    call_kw = main.load_bridge_distinctness_report.call_args.kwargs
+    evaluation_router.load_bridge_distinctness_report.assert_called_once()
+    call_kw = evaluation_router.load_bridge_distinctness_report.call_args.kwargs
     assert call_kw["ranking_run_id"] == "run-pin"
     assert call_kw["k"] == 3
 
@@ -242,7 +243,7 @@ def test_bridge_distinctness_strips_ranking_run_id(monkeypatch) -> None:
         suggested_next_step="eligible_filter_not_distinct_enough",
     )
     mock_load = MagicMock(return_value=payload)
-    monkeypatch.setattr(main, "load_bridge_distinctness_report", mock_load)
+    monkeypatch.setattr(evaluation_router, "load_bridge_distinctness_report", mock_load)
     client.get("/api/v1/evaluation/bridge-distinctness?ranking_run_id=%20r1%20")
     assert mock_load.call_args.kwargs["ranking_run_id"] == "r1"
 

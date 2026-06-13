@@ -4,6 +4,8 @@ from dataclasses import replace
 from fastapi.testclient import TestClient
 
 from app import main
+from app.routers import evaluation as evaluation_router
+from app.routers import health as health_router
 from app.evaluation_repo import (
     EvalCitationProxy,
     EvalComparePayload,
@@ -159,7 +161,7 @@ def test_select_from_pool_undercited_keeps_low_cite_params_before_ordering() -> 
 
 
 def test_evaluation_compare_smoke(monkeypatch) -> None:
-    monkeypatch.setattr(main, "load_evaluation_compare", MagicMock(return_value=_fake_payload()))
+    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", MagicMock(return_value=_fake_payload()))
     response = client.get("/api/v1/evaluation/compare?family=emerging&limit=5")
 
     assert response.status_code == 200
@@ -186,7 +188,7 @@ def test_evaluation_compare_undercited_pool_contract_fields(monkeypatch) -> None
         low_cite_max_citations=30,
         candidate_pool_doc_revision="v0",
     )
-    monkeypatch.setattr(main, "load_evaluation_compare", MagicMock(return_value=payload))
+    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", MagicMock(return_value=payload))
 
     response = client.get("/api/v1/evaluation/compare?family=undercited&limit=5")
     assert response.status_code == 200
@@ -207,7 +209,7 @@ def test_evaluation_compare_emerging_does_not_emit_low_cite_gate_fields(monkeypa
         low_cite_max_citations=None,
         candidate_pool_doc_revision=None,
     )
-    monkeypatch.setattr(main, "load_evaluation_compare", MagicMock(return_value=payload))
+    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", MagicMock(return_value=payload))
 
     response = client.get("/api/v1/evaluation/compare?family=emerging&limit=5")
     assert response.status_code == 200
@@ -219,7 +221,7 @@ def test_evaluation_compare_emerging_does_not_emit_low_cite_gate_fields(monkeypa
 
 
 def test_evaluation_compare_not_found(monkeypatch) -> None:
-    monkeypatch.setattr(main, "load_evaluation_compare", MagicMock(return_value=None))
+    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", MagicMock(return_value=None))
     response = client.get("/api/v1/evaluation/compare?family=bridge")
 
     assert response.status_code == 404
@@ -245,7 +247,7 @@ def test_readiness_ok(monkeypatch) -> None:
         def __exit__(self, *_exc):
             return False
 
-    monkeypatch.setattr(main.psycopg, "connect", lambda *_a, **_k: FakeConn())
+    monkeypatch.setattr(health_router.psycopg, "connect", lambda *_a, **_k: FakeConn())
     response = client.get("/readyz")
 
     assert response.status_code == 200
@@ -256,7 +258,7 @@ def test_readiness_db_down(monkeypatch) -> None:
     def boom(*_a, **_k):
         raise RuntimeError("no db")
 
-    monkeypatch.setattr(main.psycopg, "connect", boom)
+    monkeypatch.setattr(health_router.psycopg, "connect", boom)
     response = client.get("/readyz")
 
     assert response.status_code == 503

@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app import main
 from app.papers_repo import UndercitedHeuristicRow
+from app.routers import recommendations as recommendations_router
 
 
 client = TestClient(main.app)
@@ -35,7 +36,7 @@ def test_get_recommendations_undercited_smoke(monkeypatch) -> None:
             )
         ]
 
-    monkeypatch.setattr(main, "list_undercited_heuristic_v0", fake_list_undercited_heuristic_v0)
+    monkeypatch.setattr(recommendations_router, "list_undercited_heuristic_v0", fake_list_undercited_heuristic_v0)
     response = client.get(
         "/api/v1/recommendations/undercited?limit=5&min_year=2020&max_citations=10"
     )

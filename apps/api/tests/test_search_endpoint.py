@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app import main
+from app.routers import search as search_router
 from app.search_repo import (
     SearchResolvedFiltersRow,
     SearchResponseRow,
@@ -75,7 +76,7 @@ def test_get_search_smoke(monkeypatch) -> None:
             resolved_corpus_snapshot_version="snapshot-20260423",
         )
 
-    monkeypatch.setattr(main, "search_papers", fake_search_papers)
+    monkeypatch.setattr(search_router, "search_papers", fake_search_papers)
     response = client.get(
         "/api/v1/search?q=music%20retrieval&limit=5&offset=10&year_from=2020&year_to=2024&included_scope=core&source_slug=ismir&topic=music%20information%20retrieval&family_hint=emerging&ranking_version=semantic-v1"
     )
@@ -134,7 +135,7 @@ def test_get_search_lexical_only_omits_ranking_context(monkeypatch) -> None:
             items=[],
         )
 
-    monkeypatch.setattr(main, "search_papers", fake_search_papers)
+    monkeypatch.setattr(search_router, "search_papers", fake_search_papers)
     response = client.get("/api/v1/search?q=audio")
 
     assert response.status_code == 200
@@ -180,7 +181,7 @@ def test_get_search_with_exact_ranking_run_id(monkeypatch) -> None:
             resolved_corpus_snapshot_version="snapshot-a",
         )
 
-    monkeypatch.setattr(main, "search_papers", fake_search_papers)
+    monkeypatch.setattr(search_router, "search_papers", fake_search_papers)
     response = client.get("/api/v1/search?q=bridge&family_hint=bridge&ranking_run_id=rank-explicit")
 
     assert response.status_code == 200
@@ -223,7 +224,7 @@ def test_get_search_family_hint_uses_default_run_when_unpinned(monkeypatch) -> N
             resolved_corpus_snapshot_version="snapshot-default",
         )
 
-    monkeypatch.setattr(main, "search_papers", fake_search_papers)
+    monkeypatch.setattr(search_router, "search_papers", fake_search_papers)
     response = client.get("/api/v1/search?q=signals&family_hint=undercited")
 
     assert response.status_code == 200
@@ -237,7 +238,7 @@ def test_get_search_invalid_year_range(monkeypatch) -> None:
     def fake_search_papers(**_kwargs) -> SearchResponseRow:
         raise ValueError("year_from must be less than or equal to year_to.")
 
-    monkeypatch.setattr(main, "search_papers", fake_search_papers)
+    monkeypatch.setattr(search_router, "search_papers", fake_search_papers)
     response = client.get("/api/v1/search?q=audio&year_from=2025&year_to=2020")
 
     assert response.status_code == 422
@@ -248,7 +249,7 @@ def test_get_search_missing_ranking_context_returns_404(monkeypatch) -> None:
     def fake_search_papers(**_kwargs) -> SearchResponseRow:
         raise SearchRunContextNotFoundError("No succeeded ranking run found for the given search filters.")
 
-    monkeypatch.setattr(main, "search_papers", fake_search_papers)
+    monkeypatch.setattr(search_router, "search_papers", fake_search_papers)
     response = client.get("/api/v1/search?q=audio&family_hint=emerging&ranking_version=missing-run")
 
     assert response.status_code == 404

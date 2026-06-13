@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app import main
 from app.similarity_repo import SimilarPaperRow, SimilarPapersResult
+from app.routers import papers as papers_router
 
 
 client = TestClient(main.app)
@@ -28,7 +29,7 @@ def test_get_paper_similar_smoke(monkeypatch) -> None:
             ],
         )
 
-    monkeypatch.setattr(main, "list_similar_papers", fake_list_similar)
+    monkeypatch.setattr(papers_router, "list_similar_papers", fake_list_similar)
     response = client.get(
         "/api/v1/papers/https%3A%2F%2Fopenalex.org%2FW1/similar"
         "?embedding_version=v1-title-abstract-1536&limit=10"
@@ -45,7 +46,7 @@ def test_get_paper_similar_smoke(monkeypatch) -> None:
 
 
 def test_get_paper_similar_404(monkeypatch) -> None:
-    monkeypatch.setattr(main, "list_similar_papers", lambda **kwargs: None)
+    monkeypatch.setattr(papers_router, "list_similar_papers", lambda **kwargs: None)
     response = client.get(
         "/api/v1/papers/https%3A%2F%2Fopenalex.org%2FW404/similar"
         "?embedding_version=v1-title-abstract-1536"
@@ -58,7 +59,7 @@ def test_get_paper_similar_503(monkeypatch) -> None:
     def fake_raises(**kwargs):
         raise RuntimeError("db down")
 
-    monkeypatch.setattr(main, "list_similar_papers", fake_raises)
+    monkeypatch.setattr(papers_router, "list_similar_papers", fake_raises)
     response = client.get(
         "/api/v1/papers/https%3A%2F%2Fopenalex.org%2FW1/similar"
         "?embedding_version=v1-title-abstract-1536"

@@ -26,7 +26,7 @@ def test_get_cluster_inspection_smoke(monkeypatch) -> None:
             )
         ],
     )
-    monkeypatch.setattr("app.main.load_cluster_inspection", lambda **kwargs: payload)
+    monkeypatch.setattr("app.routers.clusters.load_cluster_inspection", lambda **kwargs: payload)
     client = TestClient(app)
     response = client.get("/api/v1/clusters/cluster-v0/inspect?sample_per_cluster=3")
     assert response.status_code == 200
@@ -40,7 +40,7 @@ def test_get_cluster_inspection_smoke(monkeypatch) -> None:
 
 
 def test_get_cluster_inspection_404(monkeypatch) -> None:
-    monkeypatch.setattr("app.main.load_cluster_inspection", lambda **kwargs: None)
+    monkeypatch.setattr("app.routers.clusters.load_cluster_inspection", lambda **kwargs: None)
     client = TestClient(app)
     response = client.get("/api/v1/clusters/missing/inspect")
     assert response.status_code == 404
@@ -50,7 +50,7 @@ def test_get_cluster_inspection_503(monkeypatch) -> None:
     def _boom(**kwargs):
         raise RuntimeError("db down")
 
-    monkeypatch.setattr("app.main.load_cluster_inspection", _boom)
+    monkeypatch.setattr("app.routers.clusters.load_cluster_inspection", _boom)
     client = TestClient(app)
     response = client.get("/api/v1/clusters/x/inspect")
     assert response.status_code == 503
