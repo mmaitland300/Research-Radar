@@ -15,6 +15,7 @@ from app.ml_scorer_rollout_gate import (
     reset_rollout_served_count,
 )
 from app.scores_repo import RankedRecommendationRow, RankedRunContext
+from app.routers import recommendations as recommendations_router
 
 client = TestClient(main.app)
 
@@ -141,7 +142,7 @@ def test_default_env_absent_scorer_helper_not_called_and_baseline_called(
         seen["baseline_calls"] += 1
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", baseline)
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", baseline)
     monkeypatch.setattr(
         rollout,
         "_load_pipeline_serving_module",
@@ -164,7 +165,7 @@ def test_runtime_on_public_rollout_disabled_no_header_returns_baseline(
     rows = _baseline_rows()
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -186,7 +187,7 @@ def test_bridge_flag_on_scorer_not_called(monkeypatch: pytest.MonkeyPatch) -> No
     rows = [_row("WBRIDGE001", bridge_eligible=True)]
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -211,7 +212,7 @@ def test_bridge_public_rollout_enabled_still_returns_materialized_baseline(
     rows = [_row("WBRIDGE001", bridge_eligible=True)]
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -234,7 +235,7 @@ def test_undercited_public_rollout_enabled_still_returns_materialized_baseline(
     rows = [_row("WUNDER001")]
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -261,7 +262,7 @@ def test_resolved_identity_mismatch_scorer_not_called_and_baseline_json_unchange
     def baseline(**_kwargs):
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", baseline)
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", baseline)
     monkeypatch.setattr(rollout, "list_ranked_recommendations", baseline)
     monkeypatch.setattr(
         rollout,
@@ -293,7 +294,7 @@ def test_scorer_gate_db_read_failure_falls_back_to_baseline(
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("db down")),
     )
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -320,7 +321,7 @@ def test_wildcard_allowlist_env_fails_closed_to_baseline(
     rows = _baseline_rows()
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -358,7 +359,7 @@ def test_gate_open_pinned_context_scorer_order_hydrated_outside_baseline_top20(
         lambda **_kwargs: (_pinned_ctx(), baseline_rows, {}),
     )
     monkeypatch.setattr(
-        main,
+        recommendations_router,
         "list_ranked_recommendations",
         lambda **_kwargs: (_ for _ in ()).throw(
             AssertionError("baseline fallback should not run")
@@ -405,7 +406,7 @@ def test_public_rollout_percent_100_pinned_context_returns_scorer_mode_without_h
         lambda **_kwargs: (_pinned_ctx(), baseline_rows, {}),
     )
     monkeypatch.setattr(
-        main,
+        recommendations_router,
         "list_ranked_recommendations",
         lambda **_kwargs: (_ for _ in ()).throw(
             AssertionError("baseline fallback should not run")
@@ -442,7 +443,7 @@ def test_public_rollout_cap_zero_returns_baseline(
         rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -467,7 +468,7 @@ def test_public_rollout_partial_percent_without_subject_returns_baseline(
         rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
         rollout,
@@ -495,7 +496,7 @@ def test_hydration_incomplete_falls_back_to_baseline(
         rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
     monkeypatch.setattr(
@@ -529,7 +530,7 @@ def test_scorer_helper_raises_falls_back_to_exact_baseline_json(
         rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
     monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
 
@@ -559,7 +560,7 @@ def test_exposure_counter_increments_once_and_stops_at_cap(
         lambda **_kwargs: (ctx, baseline_rows, {}),
     )
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, baseline_rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, baseline_rows, {})
     )
     monkeypatch.setattr(rollout, "_load_pipeline_serving_module", lambda: serving)
     monkeypatch.setattr(
@@ -596,7 +597,7 @@ def test_subject_value_is_not_logged(
     sensitive_subject = "secret-canary-subject"
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
+        recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {})
     )
 
     with caplog.at_level(logging.INFO, logger=rollout.__name__):
@@ -626,7 +627,7 @@ def test_gate_open_log_omits_subject_value_and_includes_public_rollout_fields(
         lambda **_kwargs: (ctx, _baseline_rows(), {}),
     )
     monkeypatch.setattr(
-        main,
+        recommendations_router,
         "list_ranked_recommendations",
         lambda **_kwargs: (ctx, _baseline_rows(), {}),
     )

@@ -1,6 +1,14 @@
 from fastapi.testclient import TestClient
 
 from app import main
+from app.routers import meta as meta_router
+from app.routers import search as search_router
+from app.routers import recommendations as recommendations_router
+from app.routers import evaluation as evaluation_router
+from app.routers import trends as trends_router
+from app.routers import clusters as clusters_router
+from app.routers import papers as papers_router
+from app.routers import health as health_router
 
 client = TestClient(main.app)
 
@@ -11,19 +19,19 @@ def _explode(*_args, **_kwargs):
 
 def test_fixture_mode_serves_core_surfaces_without_database(monkeypatch) -> None:
     monkeypatch.setenv("RESEARCH_RADAR_DATA_MODE", "fixture")
-    monkeypatch.setattr(main.psycopg, "connect", _explode)
-    monkeypatch.setattr(main, "fetch_latest_materialized_ranking_for_meta", _explode)
-    monkeypatch.setattr(main, "search_papers", _explode)
-    monkeypatch.setattr(main, "list_ranked_recommendations", _explode)
-    monkeypatch.setattr(main, "list_undercited_heuristic_v0", _explode)
-    monkeypatch.setattr(main, "load_evaluation_compare", _explode)
-    monkeypatch.setattr(main, "load_bridge_distinctness_report", _explode)
-    monkeypatch.setattr(main, "list_topic_trends", _explode)
-    monkeypatch.setattr(main, "load_cluster_inspection", _explode)
-    monkeypatch.setattr(main, "get_paper_detail_row", _explode)
-    monkeypatch.setattr(main, "get_paper_family_rankings", _explode)
-    monkeypatch.setattr(main, "list_similar_papers", _explode)
-    monkeypatch.setattr(main, "list_papers", _explode)
+    monkeypatch.setattr(health_router.psycopg, "connect", _explode)
+    monkeypatch.setattr(meta_router, "fetch_latest_materialized_ranking_for_meta", _explode)
+    monkeypatch.setattr(search_router, "search_papers", _explode)
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", _explode)
+    monkeypatch.setattr(recommendations_router, "list_undercited_heuristic_v0", _explode)
+    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", _explode)
+    monkeypatch.setattr(evaluation_router, "load_bridge_distinctness_report", _explode)
+    monkeypatch.setattr(trends_router, "list_topic_trends", _explode)
+    monkeypatch.setattr(clusters_router, "load_cluster_inspection", _explode)
+    monkeypatch.setattr(papers_router, "get_paper_detail_row", _explode)
+    monkeypatch.setattr(papers_router, "get_paper_family_rankings", _explode)
+    monkeypatch.setattr(papers_router, "list_similar_papers", _explode)
+    monkeypatch.setattr(papers_router, "list_papers", _explode)
 
     ready = client.get("/readyz")
     assert ready.status_code == 200

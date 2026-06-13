@@ -15,7 +15,7 @@ def test_product_meta_includes_note_and_materialized_when_present(monkeypatch) -
         config_json={"default_weights": {"semantic": 0.3}, "family_weights": {}},
     )
     monkeypatch.setattr(
-        "app.main.fetch_latest_materialized_ranking_for_meta",
+        "app.routers.meta.fetch_latest_materialized_ranking_for_meta",
         lambda: sample,
     )
 
@@ -37,7 +37,7 @@ def test_product_meta_omits_materialized_when_fetch_fails(monkeypatch) -> None:
         raise RuntimeError("no db")
 
     monkeypatch.setattr(
-        "app.main.fetch_latest_materialized_ranking_for_meta",
+        "app.routers.meta.fetch_latest_materialized_ranking_for_meta",
         _boom,
     )
 

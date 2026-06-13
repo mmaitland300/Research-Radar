@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from app import main
 from app.papers_repo import PaperDetailRow, PaperRow
 from app.scores_repo import PaperRankingFamilyRow, RankedRunContext
+from app.routers import papers as papers_router
 
 
 client = TestClient(main.app)
@@ -25,7 +26,7 @@ def test_get_papers_smoke(monkeypatch) -> None:
             )
         ]
 
-    monkeypatch.setattr(main, "list_papers", fake_list_papers)
+    monkeypatch.setattr(papers_router, "list_papers", fake_list_papers)
     response = client.get("/api/v1/papers?limit=5&q=audio")
 
     assert response.status_code == 200
@@ -55,7 +56,7 @@ def test_get_papers_list_topic_ordering_preserved(monkeypatch) -> None:
             )
         ]
 
-    monkeypatch.setattr(main, "list_papers", fake_list_papers)
+    monkeypatch.setattr(papers_router, "list_papers", fake_list_papers)
     response = client.get("/api/v1/papers?limit=5")
     assert response.status_code == 200
     assert response.json()["items"][0]["topics"] == ["Zebra Topic", "Alpha Topic"]
@@ -77,7 +78,7 @@ def test_get_paper_detail_smoke(monkeypatch) -> None:
             topics=["music information retrieval", "audio embeddings"],
         )
 
-    monkeypatch.setattr(main, "get_paper_detail_row", fake_get_paper_detail)
+    monkeypatch.setattr(papers_router, "get_paper_detail_row", fake_get_paper_detail)
     response = client.get("/api/v1/papers/W456")
 
     assert response.status_code == 200
@@ -88,7 +89,7 @@ def test_get_paper_detail_smoke(monkeypatch) -> None:
 
 
 def test_get_paper_detail_not_found(monkeypatch) -> None:
-    monkeypatch.setattr(main, "get_paper_detail_row", lambda _paper_id: None)
+    monkeypatch.setattr(papers_router, "get_paper_detail_row", lambda _paper_id: None)
     response = client.get("/api/v1/papers/W999")
     assert response.status_code == 404
 
@@ -111,7 +112,7 @@ def test_get_paper_detail_accepts_openalex_url_id(monkeypatch) -> None:
             topics=["music information retrieval", "audio embeddings"],
         )
 
-    monkeypatch.setattr(main, "get_paper_detail_row", fake_get_paper_detail)
+    monkeypatch.setattr(papers_router, "get_paper_detail_row", fake_get_paper_detail)
     response = client.get("/api/v1/papers/https%3A%2F%2Fopenalex.org%2FW456")
 
     assert response.status_code == 200
@@ -191,8 +192,8 @@ def test_get_paper_ranking_smoke(monkeypatch) -> None:
         ]
         return ctx, rows, {}
 
-    monkeypatch.setattr(main, "get_paper_detail_row", fake_get_paper_detail)
-    monkeypatch.setattr(main, "get_paper_family_rankings", fake_get_paper_family_rankings)
+    monkeypatch.setattr(papers_router, "get_paper_detail_row", fake_get_paper_detail)
+    monkeypatch.setattr(papers_router, "get_paper_family_rankings", fake_get_paper_family_rankings)
 
     response = client.get(
         "/api/v1/papers/W456/ranking?top_n=50&corpus_snapshot_version=snap-1&ranking_version=v0-test"
@@ -225,7 +226,7 @@ def test_get_paper_ranking_smoke(monkeypatch) -> None:
 
 
 def test_get_paper_ranking_not_found(monkeypatch) -> None:
-    monkeypatch.setattr(main, "get_paper_detail_row", lambda _paper_id: None)
+    monkeypatch.setattr(papers_router, "get_paper_detail_row", lambda _paper_id: None)
     response = client.get("/api/v1/papers/W999/ranking")
     assert response.status_code == 404
     assert response.json()["detail"] == "Paper not found."
@@ -246,8 +247,8 @@ def test_get_paper_ranking_no_succeeded_run(monkeypatch) -> None:
             topics=["music information retrieval", "audio embeddings"],
         )
 
-    monkeypatch.setattr(main, "get_paper_detail_row", fake_get_paper_detail)
-    monkeypatch.setattr(main, "get_paper_family_rankings", lambda **_kwargs: None)
+    monkeypatch.setattr(papers_router, "get_paper_detail_row", fake_get_paper_detail)
+    monkeypatch.setattr(papers_router, "get_paper_family_rankings", lambda **_kwargs: None)
 
     response = client.get("/api/v1/papers/W456/ranking")
 

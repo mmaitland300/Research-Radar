@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app import main
 from app.scores_repo import RankedRecommendationRow, RankedRunContext
+from app.routers import recommendations as recommendations_router
 
 client = TestClient(main.app)
 
@@ -48,7 +49,7 @@ def test_get_recommendations_ranked_smoke(monkeypatch) -> None:
         return ctx, rows, {}
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+        recommendations_router, "list_ranked_recommendations", fake_list_ranked_recommendations
     )
     response = client.get(
         "/api/v1/recommendations/ranked?family=undercited&limit=10"
@@ -133,7 +134,7 @@ def test_get_recommendations_ranked_bridge_eligible_on_bridge_family(
         return ctx, rows, {}
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+        recommendations_router, "list_ranked_recommendations", fake_list_ranked_recommendations
     )
     response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=20")
 
@@ -167,7 +168,7 @@ def test_get_recommendations_ranked_bridge_eligible_only_forwarded_for_bridge(
         return ctx, [], {}
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+        recommendations_router, "list_ranked_recommendations", fake_list_ranked_recommendations
     )
     response = client.get(
         "/api/v1/recommendations/ranked?family=bridge&bridge_eligible_only=true"
@@ -222,7 +223,7 @@ def test_get_recommendations_ranked_bridge_eligible_only_forwarded_but_ignored_f
         return ctx, rows, {}
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+        recommendations_router, "list_ranked_recommendations", fake_list_ranked_recommendations
     )
     response = client.get(
         "/api/v1/recommendations/ranked?family=emerging&bridge_eligible_only=true&limit=5"
@@ -266,7 +267,7 @@ def test_get_recommendations_ranked_legacy_bridge_row_null_eligibility(
         return ctx, rows, {}
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+        recommendations_router, "list_ranked_recommendations", fake_list_ranked_recommendations
     )
     response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=5")
     assert response.status_code == 200
@@ -305,7 +306,7 @@ def test_get_recommendations_ranked_bridge_false_encodes_neighbor_mix_not_legacy
         return ctx, rows, {}
 
     monkeypatch.setattr(
-        main, "list_ranked_recommendations", fake_list_ranked_recommendations
+        recommendations_router, "list_ranked_recommendations", fake_list_ranked_recommendations
     )
     response = client.get("/api/v1/recommendations/ranked?family=bridge&limit=5")
     assert response.status_code == 200
@@ -316,7 +317,7 @@ def test_get_recommendations_ranked_not_found(monkeypatch) -> None:
     def fake_returns_none(**_kwargs):
         return None
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_returns_none)
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", fake_returns_none)
     response = client.get("/api/v1/recommendations/ranked?family=emerging")
 
     assert response.status_code == 404
@@ -326,7 +327,7 @@ def test_get_recommendations_ranked_db_error(monkeypatch) -> None:
     def fake_raises(**_kwargs):
         raise RuntimeError("db down")
 
-    monkeypatch.setattr(main, "list_ranked_recommendations", fake_raises)
+    monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", fake_raises)
     response = client.get("/api/v1/recommendations/ranked?family=bridge")
 
     assert response.status_code == 503
