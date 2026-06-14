@@ -1,12 +1,11 @@
 # Evaluation Status
 
-This page is the short status guide for Research Radar. It explains what has
-been checked, what is still proxy-only, and what the project does not yet
-support as a model-quality claim.
+This public status guide keeps the review path short: what has been checked,
+what is still proxy-only, and what the project does not claim.
 
-The full experiment record (labeling worksheets, offline eval reports, rollout
-review notes) lives on the `archive/ml-governance-audit` branch; this document
-keeps only the conclusions.
+For the June 2026 curation marker, see
+[docs/releases/v0.2.0.md](docs/releases/v0.2.0.md). The full historical
+experiment record lives on the `archive/ml-governance-audit` branch. Internal Bridge canary notes: [docs/internal/bridge-canary-review.md](docs/internal/bridge-canary-review.md).
 
 ## Short Version
 
@@ -14,170 +13,77 @@ keeps only the conclusions.
   evaluation surfaces backed by versioned ranking runs.
 - The public evaluation page compares ranked output against citation/date
   baselines. Those are useful proxy checks, not human relevance validation.
-- A complete single-reviewer top-20 labeling pass exists for one pinned baseline
-  run across `emerging`, `bridge`, and `undercited`.
-- A bounded ML scorer orders the live Emerging feed when its deployment gate is
-  enabled; a bounded Bridge hybrid scorer is canary-only.
-- Bridge diagnostics are useful for analysis, but bridge is still experimental
-  and not default-ready.
-- The corpus is small and narrow (TISMIR + JAES), so strong ML benchmark claims
-  are deferred until corpus expansion and a larger review protocol.
+- One complete single-reviewer top-20 labeling pass exists for the April 2026
+  pinned baseline across `emerging`, `bridge`, and `undercited`.
+- The live Emerging feed can use a bounded ML scorer when gated; this is
+  internal evidence, not external validation.
+- Bridge is experimental: single-reviewer evidence only, canary/private review
+  arm only, and not default-ready.
+- The corpus is intentionally narrow, so broad benchmark claims are deferred.
 
-## Current Live Run vs Archived Baseline
+## Current Evidence Boundary
 
-| Reference | What it means | How to use it |
+| Evidence | Use it for | Boundary |
 | --- | --- | --- |
-| Live app | Current deployed UI and API behavior | Good for interactive review; read the visible run metadata before comparing results |
-| Pinned baseline | Frozen `2026-04-25` run stack recorded below | Use for documented claims and stable comparisons |
-| URL-pinned run | A specific `ranking_run_id` supplied in the URL or API request | Use when checking one materialized run |
-| Fixture mode | Checked-in toy data behind `npm run demo:local` | Setup and route-shape checks only; not ranking validation |
+| Live app | Interactive review of the current UI/API and visible run metadata | Moving surface; capture run ids before comparing |
+| Pinned baseline | Stable April 2026 review reference | Single-reviewer evidence on one narrow corpus slice |
+| URL-pinned run | Inspecting one materialized `ranking_run_id` | Run-specific, not a general benchmark |
+| Fixture mode | Local setup and route-shape checks | Toy data; not ranking validation |
+| Archived experiment record | Historical worksheets, offline evals, and rollout notes | Stored on `archive/ml-governance-audit`, not the public review path |
 
-If the live app and the archived baseline differ, treat that as expected.
-Record the visible `ranking_run_id`, `ranking_version`,
-`corpus_snapshot_version`, and `embedding_version` before drawing conclusions.
+## Pinned Baseline And Live Reference
 
-## Current Pinned Baseline
-
-The original baseline freeze is dated `2026-04-25`. A second surface was added
-in May 2026, and the live Emerging feed now uses a bounded ML scorer on that
-surface when the deployment gate is enabled.
-
-| Field | Baseline (2026-04-25) | Live Emerging (2026-05-31) |
+| Field | Pinned baseline | Live Emerging reference |
 | --- | --- | --- |
+| Date | 2026-04-25 | 2026-05-31 |
 | `corpus_snapshot_version` | `source-snapshot-20260425-044015` | `source-snapshot-shadow-generalization-v1-20260521` |
 | `embedding_version` | `v1-title-abstract-1536-cleantext-r3` | `shadow-generalization-text-embedding-v1` |
 | `ranking_version` | `bridge-v2-nm1-zero-r3-k6-20260424` | `shadow-generalization-product-candidate-ranking-v1` |
 | `ranking_run_id` | `rank-3904fec89d` | `rank-83787b91ef` |
-| Included works | `59` | `528` |
+| Included works | 59 | 528 |
 | Source scope | TISMIR + JAES | TISMIR + JAES |
-| Emerging scorer | heuristic rank fusion | bounded ML scorer (`ranking_mode=bounded_ml_scorer` in API) |
+| Emerging mode | heuristic rank fusion | bounded ML scorer when gated |
 
-## What Has Been Checked
+## Human Review Summary
 
-- **Product and API wiring.** Live routes, production version pins, and
-  `/readyz` were verified against the deployed app on `2026-04-25`.
-- **Automated checks.** CI runs the web lint/build and the Python/API test
-  suite through `npm run validate`. Useful starting points:
-  [apps/api/tests/test_recommendations_ranked.py](apps/api/tests/test_recommendations_ranked.py),
-  [apps/api/tests/test_evaluation_compare.py](apps/api/tests/test_evaluation_compare.py),
-  [apps/api/tests/test_demo_fixture_mode.py](apps/api/tests/test_demo_fixture_mode.py),
-  [services/pipeline/tests/test_ranking_run.py](services/pipeline/tests/test_ranking_run.py).
-- **No-key demo path.** `npm run demo:local` runs the web and API apps against
-  checked-in fixture data; it verifies setup and route shape only.
+All rows below are single-reviewer checks. They are useful directional evidence
+for specific runs and corpus slices, not a broad relevance benchmark.
 
-## Human Review
-
-### Baseline run (`rank-3904fec89d`)
-
-A complete top-20 single-reviewer pass exists for the April 2026 baseline.
-
-| Family | Rows | P@k good-only | P@k good/acceptable | Bridge-like yes/partial | Surprising/useful |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `emerging` | 20 | 1.000 | 1.000 | n/a | 1.000 |
-| `bridge` | 20 | 0.900 | 1.000 | 1.000 | 1.000 |
-| `undercited` | 20 | 0.700 | 1.000 | n/a | 1.000 |
-
-### Bridge live canary top 20 (`rank-5a7efa5ca3`, reviewed 2026-06-12)
-
-A complete single-reviewer pass over the live canary Bridge top 20 (served
-order, `ranking_mode=bounded_bridge_ml_scorer`):
-
-| Rows | P@20 good-only | P@20 good/acceptable | Bridge-like yes/partial | Surprising/useful |
-| ---: | ---: | ---: | ---: | ---: |
-| 20 | 0.40 | 0.65 | 0.70 | 0.60 |
-
-Reading: the canary surfaces a real bridge signal - the strongest rows are
-genuine method-transfer papers (diffusion-based audio restoration,
-interpretability on audio foundation models, neural synthesis on embedded
-hardware). But the list also includes several off-domain papers (humanities
-essays, an archiving report, a sports-science application). A follow-up check
-against the labeled rows located the cause: every false positive comes from
-the unpoliced portion of the candidate pool (407 of 528 works have no
-source-policy row), while all six rows from policy-covered venues were labeled
-good or acceptable. Embedding-space isolation measures (centroid distance,
-margin, nearest neighbor) do not separate the false positives. Verdict: not
-clean enough for public rollout; promising enough to continue the
-canary/private review arm.
-
-### ML scorer confirmatory surface (`rank-83787b91ef`)
-
-A second-surface confirmatory eval (143 labeled rows, ~38% positive) assessed
-the bounded Emerging ML scorer: P@10 improved from 0.50 (heuristic) to 1.00
-(scorer); average precision improved from 0.65 to 0.86. This is a
-single-reviewer offline confirmatory pass, not external validation.
-
-How to read all of this:
-
-- Labels are useful directional evidence for specific runs and corpus slices.
-- They are not a broad relevance benchmark or multi-reviewer agreement
-  evidence, and should not be merged across runs without a protocol.
+| Surface | Run | Rows | Good-only P@k | Good/acceptable P@k | Notes |
+| --- | --- | ---: | ---: | ---: | --- |
+| Emerging baseline | `rank-3904fec89d` | 20 | 1.00 | 1.00 | April 2026 pinned baseline |
+| Bridge baseline | `rank-3904fec89d` | 20 | 0.90 | 1.00 | Diagnostic bridge evidence only |
+| Undercited baseline | `rank-3904fec89d` | 20 | 0.70 | 1.00 | Low-cite candidate slice |
+| Bridge canary | `rank-5a7efa5ca3` | 20 | 0.40 | 0.65 | Private/canary review arm; not default-ready |
+| Emerging ML scorer | `rank-83787b91ef` | 143 labeled rows | P@10 1.00 | n/a | Offline confirmatory pass; not external validation |
 
 ## Proxy-Only Evaluation
 
 The Evaluation page compares ranked output to citation/date baselines and
-reports distributional checks. That helps catch obvious ranking regressions and
-keeps the product inspectable, but it is not judged relevance.
+reports distributional checks. That helps catch obvious regressions and keeps
+ranking behavior inspectable.
 
 - Good for: smoke checks, provenance checks, baseline comparison, and
   regression detection.
 - Not enough for: precision/recall claims, semantic-ranking quality claims, or
   production recommender claims.
 
-## Bridge Status
-
-Bridge is experimental. Current artifacts support analysis of bridge
-candidates and an experimental review arm, not default behavior changes.
-
-Summary of the Bridge ML work (full record on the archive branch):
-
-- A frozen logistic-regression Bridge scorer (`v3`, regularized at `C=0.001`
-  after an overfitting check: in-sample ROC AUC 1.0 vs out-of-fold ~0.718) was
-  trained on 130 deduplicated labeled work ids.
-- A rank-percentile hybrid (`0.5 * rank_pct(ml_probability) +
-  0.5 * rank_pct(bridge_score)` over the full 528-candidate pool) matched pure
-  ML P@20 of 1.0 on the labeled shadow slice, while a linear min-max blend
-  degraded precision and was rejected.
-- A controlled offline replay on `rank-5a7efa5ca3` passed its risk gates
-  (current top-20 precision 0.4 vs proposed hybrid 1.0 on labeled rows).
-- A bounded serving gate is implemented and verified end to end: Bridge ML
-  serving requires explicit `ML_BRIDGE_SCORER_V1_*` env flags, the pinned run
-  `rank-5a7efa5ca3`, and a canary header. As of `2026-06-08` the live cohort
-  canary returns `ranking_mode=bounded_bridge_ml_scorer`; public/default
-  Bridge requests still return `materialized_heuristic`.
-
-Key boundary: single-reviewer, top-20 offline audit material is not a launch
-decision. The live canary top 20 was human-reviewed on `2026-06-12` (see
-Human Review above): P@20 good-or-acceptable 0.65, with all false positives
-traced to works outside the source policy. Public Bridge rollout remains
-disabled; the canary/private review arm continues.
-
-## What Is Not Claimed Yet
+## What Is Not Claimed
 
 Research Radar does not currently claim:
 
 - A validated recommender system.
 - A broad MIR/audio-ML benchmark.
 - Multi-reviewer relevance agreement.
-- Production-ready bridge weighting.
+- Default-ready Bridge ranking.
 - General semantic search quality.
 - External validation of the live ML scorer.
 
-A bounded hybrid scorer (frozen logistic regression on OpenAI embeddings plus
-heuristic rank signal) is deployed and orders the live Emerging feed when the
-gate is enabled. That is not the same as an independently validated
-recommender; it passed internal holdout and single-reviewer confirmatory
-checks only.
-
 ## Next Evaluation Steps
 
-1. **Expand source-policy coverage to fix Bridge false positives.** All
-   canary false positives come from the 77% of the candidate pool that has no
-   source-policy row; a hard venue filter is wrong (it would also drop the
-   best off-venue bridge finds), so the fix is policy rows for more venues
-   (ISMIR next).
-2. **Label the 7 unlabeled proposed top-20 Bridge papers** if churn review
-   warrants.
-3. **Expand the corpus** once the next source policy rows are documented.
-4. **Improve labeling breadth** with multi-reviewer or adjudicated labels.
-5. **Track Emerging scorer v2.** The current scorer was trained on ~125 labeled
-   works; newer label datasets support a retrain when warranted.
+1. Expand source-policy coverage before treating Bridge results as product
+   evidence.
+2. Label the remaining proposed Bridge top-20 papers if churn review warrants.
+3. Expand the corpus after source policy rows are documented.
+4. Improve labeling breadth with multi-reviewer or adjudicated labels.
+5. Revisit the Emerging scorer when the newer label datasets justify a retrain.
