@@ -18,6 +18,9 @@ export function ThemeToggle() {
   useEffect(() => {
     const activeTheme =
       document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+    // Hydration sync: the initial UI is a server-safe placeholder until React reads the
+    // theme applied on <html>.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(activeTheme);
     setMounted(true);
   }, []);
