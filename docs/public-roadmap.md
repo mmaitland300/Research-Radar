@@ -1,6 +1,6 @@
 # Public Roadmap
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14
 
 Research Radar is a working prototype for explainable MIR/audio-ML paper
 ranking. This roadmap tracks the next public improvements that make the project
@@ -40,17 +40,19 @@ Goal: make the public repo safer and easier to review.
   route method/path surface.
 - Done: `v0.2.0` release marker for the curated public surface
   ([release notes](releases/v0.2.0.md)).
-- Future: slim `EVALUATION.md` into a shorter conclusions-only status guide.
-- Future: split `apps/web/app/recommended/page.tsx` and add lightweight
-  frontend tests.
+- Done: `EVALUATION.md` slimmed into a shorter conclusions-only status guide.
+- Done: `apps/web/app/recommended/page.tsx` split into route-local
+  components and modules.
+- Done: frontend dependency alignment and ESLint flat-config cleanup.
+- Future: add lightweight frontend tests.
 - Future: clarify Python dependency locking and reproducibility workflow.
 
 ### 2. Evaluation Credibility
 
 Goal: improve evidence quality beyond proxy and single-reviewer checks.
 
-- Freeze a small labeled review set for recommendation families.
-- Report precision-at-k or a similarly simple labeled metric where coverage is
+- Future: freeze a small labeled review set for recommendation families.
+- Future: report precision-at-k or a similarly simple labeled metric where coverage is
   sufficient.
 - Keep proxy metrics clearly labeled as iteration signals, not validation.
 
@@ -58,7 +60,7 @@ Goal: improve evidence quality beyond proxy and single-reviewer checks.
 
 Goal: broaden the useful research surface while preserving provenance.
 
-- Add the next source policy rows only after their OpenAlex source ids and
+- Future: add the next source policy rows only after their OpenAlex source ids and
   inclusion boundaries are documented.
 - Preserve snapshot identifiers and ingest manifests for repeatability.
 - Keep TISMIR + JAES as the narrow baseline while expansion work is reviewed.
