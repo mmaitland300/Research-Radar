@@ -1,0 +1,8 @@
+# Canonical runtime dependency declarations stay in:
+# - apps/api/pyproject.toml
+# - services/pipeline/pyproject.toml
+# - infra/db/requirements.txt
+#
+# This file lists only CI/dev dependencies installed directly by CI.
+pytest
+httpx

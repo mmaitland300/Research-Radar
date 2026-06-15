@@ -1,6 +1,6 @@
 # Public Roadmap
 
-Last updated: 2026-06-14
+Last updated: 2026-06-15
 
 Research Radar is a working prototype for explainable MIR/audio-ML paper
 ranking. This roadmap tracks the next public improvements that make the project
@@ -44,8 +44,8 @@ Goal: make the public repo safer and easier to review.
 - Done: `apps/web/app/recommended/page.tsx` split into route-local
   components and modules.
 - Done: frontend dependency alignment and ESLint flat-config cleanup.
+- Done: Python 3.12 constraints-lock workflow for CI/dev installs.
 - Future: add lightweight frontend tests.
-- Future: clarify Python dependency locking and reproducibility workflow.
 
 ### 2. Evaluation Credibility
 

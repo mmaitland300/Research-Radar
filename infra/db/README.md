@@ -34,7 +34,7 @@ Install the tooling (separate from the pipeline package - it is operational,
 not a runtime dependency):
 
 ```bash
-pip install -r infra/db/requirements.txt
+pip install -c requirements/python-3.12.lock -r infra/db/requirements.txt
 ```
 
 Alembic reads the database URL from `DATABASE_URL`, falling back to the
