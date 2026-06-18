@@ -588,7 +588,7 @@ def fixture_undercited_recommendations(
         heuristic_version="fixture-v0",
         description=(
             "Fixture low-cite listing for no-key local demos. This is not live ranking data "
-            "or a human-labeled benchmark."
+            "or a reviewer-labeled benchmark."
         ),
         total=len(rows[:limit]),
         items=rows[:limit],
@@ -702,7 +702,7 @@ def fixture_evaluation_compare(
     return EvaluationCompareResponse(
         disclaimer=EvaluationDisclaimer(
             headline=(
-                "Fixture outputs are local demo aids, not human relevance judgments "
+                "Fixture outputs are local demo aids, not evidence of paper usefulness "
                 "or live Research Radar ranking results."
             ),
             bullets=[

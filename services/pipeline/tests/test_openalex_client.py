@@ -105,5 +105,6 @@ def test_compute_contact_provenance_api_key_only(monkeypatch: pytest.MonkeyPatch
 
 
 def test_compute_contact_provenance_mock_ignores_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
     monkeypatch.setenv(OPENALEX_API_KEY_ENV, "x")
     assert compute_contact_provenance(mailto_cli="", mock_openalex=True) == ("mock", False)

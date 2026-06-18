@@ -90,4 +90,4 @@ Goal: advance learned scoring only through explicit gates.
 - The corpus is intentionally narrow until expansion is documented and reviewed.
 - Bridge diagnostics remain experimental.
 - Proxy metrics are useful for iteration, but they are not a substitute for
-  labeled relevance evaluation.
+  reviewer-labeled usefulness evaluation.

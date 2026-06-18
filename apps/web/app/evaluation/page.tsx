@@ -442,8 +442,8 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
         <p className="hero-lead">
           This page calls <code>GET /api/v1/evaluation/compare</code> so you can inspect the same
           candidate pool under three orderings: materialized ranking, citation-sorted, and
-          date-sorted. Nothing here claims human relevance - only distributional checks on short
-          lists.
+          date-sorted. Nothing here measures whether researchers would find the papers useful; it
+          only shows distributional checks on short lists.
           {family === "emerging" ? (
             <>
               {" "}
@@ -594,7 +594,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                 <li>
                   <strong>Diagnostic only.</strong>
                 </li>
-                <li>Not a human relevance benchmark.</li>
+                <li>Not a researcher-reviewed usefulness benchmark.</li>
                 <li>Used to inspect whether this bridge review arm is worth further evaluation.</li>
                 <li>
                   Use these diagnostics to decide whether the bridge experiment deserves further evaluation.
@@ -621,7 +621,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
                 <>
                   <p className="muted-inline">
                     Pinned to the same ranking run as the compare response above. Overlap and
-                    coverage are structural checks on short heads, not relevance judgments.
+                    coverage are structural checks on short heads, not measures of paper usefulness.
                   </p>
                   <h3 className="eval-proxy-title">Head overlap (Jaccard)</h3>
                   <dl className="eval-dl">

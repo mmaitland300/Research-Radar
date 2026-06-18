@@ -198,7 +198,8 @@ def test_markdown_scientific_validation_disclaimer() -> None:
     assert "benchmark result" in md  # disclaimed, not claimed
 
 
-def test_resolve_mailto_mock_allows_placeholder() -> None:
+def test_resolve_mailto_mock_allows_placeholder(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
     assert resolve_corpus_expansion_preview_mailto(mailto="", mock_openalex=True) == "research-radar-dev@local.invalid"
 
 

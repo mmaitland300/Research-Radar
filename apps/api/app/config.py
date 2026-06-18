@@ -24,7 +24,7 @@ class ProductConfig:
         "evaluation",
     )
     evaluation_checks: tuple[str, ...] = (
-        "hand-reviewed relevance benchmark",
+        "reviewer-labeled usefulness benchmark",
         "novelty/diversity vs citation baseline",
         "freeze-at-T temporal backtest",
     )

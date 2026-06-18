@@ -126,7 +126,7 @@ Initial weights:
 
 MVP is incomplete without all three:
 
-1. Hand-reviewed relevance benchmark
+1. Reviewer-labeled usefulness benchmark
 2. Novelty and diversity comparison against citation-only baselines
 3. Temporal backtest with a freeze-at-T evaluation
 

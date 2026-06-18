@@ -144,7 +144,7 @@ Current status: the repo is strong on the data/systems asset, has an initial pro
 - Early metrics: proxy metrics (diversity, recency mix, citation percentiles) are acceptable if labeled as proxies in the UI copy.
 - Later: frozen benchmark labels, precision@k where labeled, freeze-at-T temporal backtest.
 
-**Important:** Proxy metrics help with iteration but are not substitutes for labeled relevance evaluation.
+**Important:** Proxy metrics help with iteration but are not substitutes for reviewer-labeled usefulness evaluation.
 
 ---
 

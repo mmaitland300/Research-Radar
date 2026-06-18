@@ -11,7 +11,7 @@
 ## Current limits
 
 - Corpus is intentionally narrow and currently wired to TISMIR + JAES
-- Evaluation is proxy/distributional and not a human-labeled relevance benchmark
+- Evaluation is proxy/distributional and not a reviewer-labeled benchmark of paper usefulness
 - Bridge remains experimental; treat `/recommended?family=bridge` as diagnostic evidence, not a validated bridge recommender. Default readiness and stronger product claims require more review, not bridge weighting alone (`ready_for_default=false` in audit artifacts).
 - General query-semantic search is not yet shipped; some pinned **emerging** runs may use embedding **slice-fit** as one bounded feature when labeled in the UI
 

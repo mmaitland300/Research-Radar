@@ -6,7 +6,7 @@ This is a **human-review scaffold** for one **pinned** materialized `ranking_run
 
 - Labels are only meaningful **for the worksheet’s run and corpus snapshot**; do not merge ad hoc with other runs without a documented plan.
 - **Precision@k** (or similar) comparisons should be added **only after** at least one full labeled pass exists for a defined review protocol.
-- The Evaluation page’s **proxy/distributional** checks remain **not** human-relevance tests; this rubric is **independent** of those guards.
+- The Evaluation page’s **proxy/distributional** checks remain **not** reviewer-labeled usefulness tests; this rubric is **independent** of those guards.
 
 ## Generating a worksheet (pipeline)
 
