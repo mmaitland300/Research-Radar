@@ -167,7 +167,7 @@ class EvaluationSummary(BaseModel):
         ...,
         description=(
             "What the product reports today: proxy / corpus metrics vs baselines, "
-            "not a human-judged relevance P@k benchmark."
+            "not a reviewer-labeled paper-usefulness P@k benchmark."
         ),
     )
     is_human_labeled_benchmark_current: bool = Field(
@@ -194,7 +194,7 @@ class EvaluationSummary(BaseModel):
     primary_metrics: list[str] = Field(
         ...,
         description=(
-            "Planned metrics for a future human-labeled evaluation (legacy key; not current reported P@k). "
+            "Planned metrics for a future reviewer-labeled usefulness evaluation (legacy key; not current reported P@k). "
             "Use is_human_labeled_benchmark_current to interpret. Values in JSON are suffixed to stay self-explanatory in raw clients."
         ),
     )

@@ -145,7 +145,7 @@ Open `http://localhost:3000/search`.
 ## Limits
 
 - The corpus is intentionally narrow and currently wired to TISMIR + JAES.
-- Evaluation is proxy-only, not a human-labeled relevance benchmark.
+- Evaluation is proxy-only, not a reviewer-labeled benchmark of paper usefulness.
 - Bridge remains experimental; diagnostics should not be read as
   default-readiness claims.
 - Embedding-backed similar papers require stored vectors and a matching

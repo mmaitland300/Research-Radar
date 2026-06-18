@@ -364,6 +364,7 @@ def test_cli_corpus_v2_mock(tmp_path: Path) -> None:
 
 def test_compute_contact_provenance_cli_env_mock(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(OPENALEX_API_KEY_ENV, raising=False)
+    monkeypatch.delenv("OPENALEX_MAILTO", raising=False)
     assert compute_contact_provenance(mailto_cli="  u@v.w  ", mock_openalex=False) == ("cli", True)
     with patch.dict("os.environ", {"OPENALEX_MAILTO": "env@x.z", OPENALEX_API_KEY_ENV: ""}, clear=False):
         assert compute_contact_provenance(mailto_cli="", mock_openalex=False) == ("env", True)

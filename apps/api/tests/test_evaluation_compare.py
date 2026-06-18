@@ -175,7 +175,7 @@ def test_evaluation_compare_smoke(monkeypatch) -> None:
     assert body["citation_baseline"]["items"][0]["paper_id"] == "https://openalex.org/W1"
     assert body["topic_overlap"]["jaccard_ranked_vs_citation_baseline"] == 1.0
     assert "topic_overlap_note" in body
-    assert "not human relevance judgments" in body["disclaimer"]["headline"].lower()
+    assert "not expert-reviewed evidence" in body["disclaimer"]["headline"].lower()
     assert "same candidate pool" in " ".join(body["disclaimer"]["bullets"]).lower()
 
 

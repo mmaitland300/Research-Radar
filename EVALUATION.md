@@ -12,7 +12,8 @@ experiment record lives on the `archive/ml-governance-audit` branch. Internal Br
 - Research Radar has working search, recommendations, paper detail, trends, and
   evaluation surfaces backed by versioned ranking runs.
 - The public evaluation page compares ranked output against citation/date
-  baselines. Those are useful proxy checks, not human relevance validation.
+  baselines. Those are useful proxy checks, not reviewer-labeled validation of
+  paper usefulness.
 - One complete single-reviewer top-20 labeling pass exists for the April 2026
   pinned baseline across `emerging`, `bridge`, and `undercited`.
 - The live Emerging feed can use a bounded ML scorer when gated; this is
@@ -47,7 +48,8 @@ experiment record lives on the `archive/ml-governance-audit` branch. Internal Br
 ## Human Review Summary
 
 All rows below are single-reviewer checks. They are useful directional evidence
-for specific runs and corpus slices, not a broad relevance benchmark.
+for specific runs and corpus slices, not a broad benchmark of researcher
+usefulness.
 
 | Surface | Run | Rows | Good-only P@k | Good/acceptable P@k | Notes |
 | --- | --- | ---: | ---: | ---: | --- |

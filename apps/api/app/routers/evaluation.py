@@ -33,10 +33,13 @@ router = APIRouter()
 
 
 EVALUATION_V0_DISCLAIMER = EvaluationDisclaimer(
-    headline="These outputs are comparison aids for engineering and transparency, not human relevance judgments.",
+    headline=(
+        "These outputs help compare ranking behavior and expose drift; "
+        "they are not expert-reviewed evidence that papers are useful to researchers."
+    ),
     bullets=[
         "Side-by-side lists share the same candidate pool for the selected recommendation family and corpus snapshot.",
-        "Recency, citation, and topic summaries are coarse proxies over the short lists shown — they do not measure usefulness to a researcher.",
+        "Recency, citation, and topic summaries are coarse proxies over the short lists shown; they do not measure whether a researcher would find a paper useful.",
         "Topic overlap uses Jaccard similarity on topic labels attached to papers in this corpus, not semantic similarity of full text.",
         "Use ranked outputs for product behavior; use this endpoint to sanity-check drift against naive orderings.",
     ],
