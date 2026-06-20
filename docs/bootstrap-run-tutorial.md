@@ -13,7 +13,7 @@ A real bootstrap run needs all of the following:
    Docker Compose applies `infra/db/schema.sql` on first init, but that baseline alone is not enough for current pipeline commands. Run migrations before ingest or any corpus-v2 work:
 
    ```bash
-   pip install -r infra/db/requirements.txt
+   pip install -c requirements/python-3.12.lock -r infra/db/requirements.txt
    cd infra/db
    alembic upgrade head
    ```
@@ -30,7 +30,7 @@ A real bootstrap run needs all of the following:
 
 ## Run the loader
 
-From `services/pipeline` (after `pip install -e .`):
+From the repo root (after `pip install -c requirements/python-3.12.lock -e ./services/pipeline`):
 
 ```bash
 python -m pipeline.cli bootstrap-run

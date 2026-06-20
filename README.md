@@ -85,7 +85,7 @@ apps, but sets `RESEARCH_RADAR_DATA_MODE=fixture` so API responses come from a
 tiny checked-in fixture corpus.
 
 ```bash
-pip install -e ./apps/api
+pip install -c requirements/python-3.12.lock -e ./apps/api
 npm install
 npm run demo:local
 ```
@@ -107,13 +107,13 @@ inspect Search, Recommended, Trends, and Evaluation backed by Postgres.
 docker compose up -d
 # schema is auto-applied from infra/db/schema.sql on first init
 
-pip install -r infra/db/requirements.txt
+pip install -c requirements/python-3.12.lock -r infra/db/requirements.txt
 cd infra/db && alembic upgrade head && cd ../..
 # Required before corpus-v2 compose/embed/cluster/rank commands: revision 0002
 # adds work_source_snapshot_memberships.
 
-pip install -e ./services/pipeline
-pip install -e ./apps/api
+pip install -c requirements/python-3.12.lock -e ./services/pipeline
+pip install -c requirements/python-3.12.lock -e ./apps/api
 npm install
 
 python -m pipeline.cli bootstrap-run --max-pages-per-source 1 --mailto "$OPENALEX_MAILTO"
@@ -122,6 +122,9 @@ npm run dev:web
 ```
 
 Open `http://localhost:3000/search`.
+
+The Python lock is for Python 3.12 CI/dev reproducibility. Regenerate
+`requirements/python-3.12.lock` when Python dependency declarations change.
 
 ### Required env vars for the full Postgres path
 
