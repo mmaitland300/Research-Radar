@@ -6,21 +6,24 @@ type Fixtures = {
 };
 
 const test = base.extend<Fixtures>({
-  consoleErrors: async ({ page }, run) => {
-    const errors: string[] = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") {
-        errors.push(message.text());
-      }
-    });
-    page.on("pageerror", (error) => {
-      errors.push(error.message);
-    });
+  consoleErrors: [
+    async ({ page }, run) => {
+      const errors: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "error") {
+          errors.push(message.text());
+        }
+      });
+      page.on("pageerror", (error) => {
+        errors.push(error.message);
+      });
 
-    await run(errors);
+      await run(errors);
 
-    expect(errors, "page should not emit browser console errors").toEqual([]);
-  },
+      expect(errors, "page should not emit browser console errors").toEqual([]);
+    },
+    { auto: true },
+  ],
 });
 
 async function expectPrimaryNavigation(page: Page) {

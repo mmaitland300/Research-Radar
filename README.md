@@ -217,7 +217,7 @@ From the repo root, with Node and the same Python interpreter CI uses:
 - `npm run validate:web` - `lint:web` and `build:web`
 - `npm run test:web` - Playwright smoke tests for the fixture-mode API and web app
 - `npm run validate:py` - `python -m pytest services/pipeline/tests apps/api/tests -q`
-- `npm run validate` - both of the above
+- `npm run validate` - web lint/build plus pipeline/API tests
 
 ### If it fails, check
 
