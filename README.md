@@ -142,8 +142,10 @@ The Python lock is for Python 3.12 CI/dev reproducibility. Regenerate
 - Ranked recommendation API tests: [apps/api/tests/test_recommendations_ranked.py](apps/api/tests/test_recommendations_ranked.py)
 - Evaluation API tests: [apps/api/tests/test_evaluation_compare.py](apps/api/tests/test_evaluation_compare.py)
 - No-key fixture demo tests: [apps/api/tests/test_demo_fixture_mode.py](apps/api/tests/test_demo_fixture_mode.py)
+- Fixture-mode frontend smoke tests: `npm run test:web`
 - Ranked explanation surface: [apps/web/app/recommended/page.tsx](apps/web/app/recommended/page.tsx)
-- CI validates the web build and pipeline/API tests through `npm run validate`.
+- CI validates the web build, fixture-mode frontend smoke tests, and
+  pipeline/API tests.
 
 ## Limits
 
@@ -213,6 +215,7 @@ experiment so vector sets remain side by side in Postgres.
 From the repo root, with Node and the same Python interpreter CI uses:
 
 - `npm run validate:web` - `lint:web` and `build:web`
+- `npm run test:web` - Playwright smoke tests for the fixture-mode API and web app
 - `npm run validate:py` - `python -m pytest services/pipeline/tests apps/api/tests -q`
 - `npm run validate` - both of the above
 

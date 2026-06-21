@@ -14,9 +14,12 @@
     "demo:local": "node scripts/demo-local.mjs",
     "build:web": "npm --workspace apps/web run build",
     "lint:web": "npm --workspace apps/web run lint",
+    "test:web": "playwright test",
     "validate:web": "npm run lint:web && npm run build:web",
     "validate:py": "python -m pytest services/pipeline/tests apps/api/tests -q",
     "validate": "npm run validate:web && npm run validate:py"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0"
   }
 }
-

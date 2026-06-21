@@ -1,6 +1,6 @@
 # Public Roadmap
 
-Last updated: 2026-06-15
+Last updated: 2026-06-21
 
 Research Radar is a working prototype for explainable MIR/audio-ML paper
 ranking. This roadmap tracks the next public improvements that make the project
@@ -14,7 +14,7 @@ public-facing version.
 - Local no-key demo: fixture-mode API and web app through `npm run demo:local`.
 - Full local path: Postgres, pgvector, OpenAlex ingest, pipeline, API, and web.
 - Evidence: CI, fixture/API tests, evaluation docs, slim runtime audit
-  artifacts, and release notes.
+  artifacts, fixture-mode frontend smoke tests, and release notes.
 - Current curated-surface marker: `v0.2.0`
   ([release notes](releases/v0.2.0.md)).
 - Emerging may be ordered by the bounded ML scorer when the live gate is
@@ -45,7 +45,8 @@ Goal: make the public repo safer and easier to review.
   components and modules.
 - Done: frontend dependency alignment and ESLint flat-config cleanup.
 - Done: Python 3.12 constraints-lock workflow for CI/dev installs.
-- Future: add lightweight frontend tests.
+- Done: lightweight fixture-mode frontend smoke tests for Search,
+  Recommended, Evaluation, and Trends.
 
 ### 2. Evaluation Credibility
 
