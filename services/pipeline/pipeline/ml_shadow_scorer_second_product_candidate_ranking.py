@@ -19,6 +19,7 @@ import psycopg
 
 from pipeline.config import RankingRun
 from pipeline.embedding_persistence import count_included_works_for_snapshot, count_missing_embedding_candidates
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.ml_shadow_scorer_second_candidate_plan_ingest import (
     EXPECTED_SELECTED_TOTAL,
@@ -520,7 +521,8 @@ def build_ml_shadow_scorer_second_product_candidate_ranking_payload(
             )
         except Exception as exc:
             raise MLShadowScorerSecondProductCandidateRankingError(
-                f"second shadow-generalization product-candidate ranking failed: {exc}",
+                "second shadow-generalization product-candidate ranking failed: "
+                f"{safe_exception_summary(exc)}",
                 code=1,
             ) from exc
         with psycopg.connect(dsn, autocommit=False) as conn:

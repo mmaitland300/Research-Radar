@@ -23,6 +23,7 @@ from typing import Any, Mapping, Sequence
 import psycopg
 from psycopg.rows import dict_row
 
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.ml_offline_audit_embedding_scorer_export import (
     MLOfflineAuditEmbeddingScorerExportError,
@@ -936,8 +937,10 @@ def write_ml_shadow_scorer_second_surface_learned_probability_apply(
         conn = _connect_readonly(db_url)
     except Exception as exc:  # pragma: no cover - exact driver exception varies by environment
         if explicit_database_url:
-            raise MLShadowScorerSecondSurfaceLearnedProbabilityApplyError(f"local database unavailable: {exc}") from exc
-        database_unavailable_error = f"{type(exc).__name__}: {exc}"
+            raise MLShadowScorerSecondSurfaceLearnedProbabilityApplyError(
+                f"local database unavailable: {safe_exception_summary(exc)}"
+            ) from exc
+        database_unavailable_error = safe_exception_summary(exc)
     try:
         payload = build_ml_shadow_scorer_second_surface_learned_probability_apply_payload(
             conn,

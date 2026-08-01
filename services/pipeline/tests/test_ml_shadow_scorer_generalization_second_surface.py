@@ -435,7 +435,13 @@ def test_blocked_no_candidate_source_meets_minimum(tmp_path: Path, monkeypatch: 
 
 
 def test_blocked_database_unavailable_without_local_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(second_surface, "_connect_readonly", lambda database_url: (_ for _ in ()).throw(OSError("refused")))
+    secret_dsn = "postgresql://admin:super-secret@localhost:5432/research"
+    monkeypatch.setattr(second_surface, "_database_url_from_env", lambda: secret_dsn)
+    monkeypatch.setattr(
+        second_surface,
+        "_connect_readonly",
+        lambda database_url: (_ for _ in ()).throw(OSError(f"refused {database_url}")),
+    )
     monkeypatch.setattr(second_surface, "_old_eval_ids_from_v3", lambda payload: {"WOLD001"})
     out_json = tmp_path / "out.json"
     out_md = tmp_path / "out.md"
@@ -449,6 +455,13 @@ def test_blocked_database_unavailable_without_local_db(tmp_path: Path, monkeypat
 
     assert payload["discovery_summary"]["status"] == "blocked_database_unavailable"
     assert payload["recommended_next_stage"] == "retry_local_database_discovery_for_shadow_generalization_v1"
+    assert payload["metadata"]["database_unavailable_error"] == "OSError: details redacted"
+    assert payload["metadata"]["database_target_redacted"] == (
+        "postgresql://admin:***@localhost:5432/research"
+    )
+    assert secret_dsn not in json.dumps(payload)
+    assert secret_dsn not in out_json.read_text(encoding="utf-8")
+    assert secret_dsn not in out_md.read_text(encoding="utf-8")
     assert out_json.exists()
     assert out_md.exists()
 

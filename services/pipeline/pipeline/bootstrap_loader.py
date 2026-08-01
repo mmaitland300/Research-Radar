@@ -11,6 +11,7 @@ from typing import Any, Mapping
 import psycopg
 
 from pipeline.config import IngestRun, SnapshotCounts, SourceSnapshotVersion
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.jobs import (
     create_bootstrap_bundle,
     fail_ingest_run,
@@ -619,13 +620,20 @@ def run_bootstrap_ingest(
         return finalized
 
     except Exception as exc:
+        error_summary = safe_exception_summary(exc)
         if snapshot is None:
-            write_bootstrap_preflight_failure(output_dir, stage=stage, message=str(exc))
+            write_bootstrap_preflight_failure(output_dir, stage=stage, message=error_summary)
         elif ingest_run is not None:
-            fail_ingest_run(output_dir, snapshot, ingest_run, str(exc))
+            fail_ingest_run(output_dir, snapshot, ingest_run, error_summary)
             try:
                 with psycopg.connect(dsn, autocommit=True) as conn:
-                    update_ingest_run_final(conn, ingest_run.ingest_run_id, "failed", None, str(exc))
+                    update_ingest_run_final(
+                        conn,
+                        ingest_run.ingest_run_id,
+                        "failed",
+                        None,
+                        error_summary,
+                    )
             except Exception:
                 pass
         raise

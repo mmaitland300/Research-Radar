@@ -18,6 +18,7 @@ import psycopg
 
 from pipeline.config import RankingRun
 from pipeline.embedding_persistence import count_included_works_for_snapshot, count_missing_embedding_candidates
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_fresh_hybrid_candidate_plan_ingest import (
     MLFreshHybridCandidatePlanIngestError,
     _database_url_from_env,
@@ -443,7 +444,8 @@ def build_ml_fresh_hybrid_product_candidate_ranking_payload(
             )
         except Exception as exc:
             raise MLFreshHybridProductCandidateRankingError(
-                f"fresh hybrid product-candidate ranking failed: {exc}",
+                "fresh hybrid product-candidate ranking failed: "
+                f"{safe_exception_summary(exc)}",
                 code=1,
             ) from exc
         with psycopg.connect(dsn, autocommit=False) as conn:
