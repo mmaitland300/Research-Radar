@@ -10,8 +10,9 @@ import sys
 import psycopg
 
 from pipeline.bootstrap_loader import database_url_from_env
-from pipeline.embedding_persistence import count_missing_embedding_candidates
 from pipeline.config import RankingCounts, RankingRun
+from pipeline.embedding_persistence import count_missing_embedding_candidates
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ranking import (
     DEFAULT_LOW_CITE_MAX_CITATIONS,
     DEFAULT_LOW_CITE_MIN_YEAR,
@@ -753,6 +754,12 @@ def execute_ranking_run(
         return run.complete(counts)
     except Exception as exc:
         with psycopg.connect(dsn, autocommit=False) as conn2:
-            update_ranking_run_final(conn2, run.ranking_run_id, "failed", None, str(exc))
+            update_ranking_run_final(
+                conn2,
+                run.ranking_run_id,
+                "failed",
+                None,
+                safe_exception_summary(exc),
+            )
             conn2.commit()
         raise
