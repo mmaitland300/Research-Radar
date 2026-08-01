@@ -31,6 +31,7 @@ from pipeline.corpus_v2_ingest_from_plan import (
     _update_ingest_run_final,
     validate_candidate_plan,
 )
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.repo_paths import default_repo_root, portable_repo_path
 
@@ -367,7 +368,7 @@ def _run_ingest_with_conn(
             )
         conn.commit()
     except Exception as exc:
-        _mark_ingest_failed(conn, ingest_run.ingest_run_id, str(exc))
+        _mark_ingest_failed(conn, ingest_run.ingest_run_id, safe_exception_summary(exc))
         raise
     return summary
 
@@ -511,7 +512,10 @@ def build_ml_fresh_hybrid_candidate_plan_ingest_payload(
     except MLFreshHybridCandidatePlanIngestError:
         raise
     except Exception as exc:
-        raise MLFreshHybridCandidatePlanIngestError(f"fresh hybrid candidate plan ingest failed: {exc}", code=1) from exc
+        raise MLFreshHybridCandidatePlanIngestError(
+            f"fresh hybrid candidate plan ingest failed: {safe_exception_summary(exc)}",
+            code=1,
+        ) from exc
     return _artifact_from_summary(
         plan_doc=plan_doc,
         policy_metadata=policy_metadata,

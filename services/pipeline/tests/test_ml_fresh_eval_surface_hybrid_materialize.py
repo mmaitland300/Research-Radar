@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import psycopg
 import pytest
 
 from cli_parser_source import read_cli_parser_source
@@ -16,6 +17,7 @@ from pipeline.ml_fresh_eval_surface_hybrid_materialize import (
     SURFACE_VERSION,
     _work_set_sha256,
     build_ml_fresh_eval_surface_hybrid_materialize_payload,
+    write_ml_fresh_eval_surface_hybrid_materialize,
 )
 from pipeline.ml_label_dataset import sha256_file
 
@@ -465,6 +467,40 @@ def test_cli_writes_json_and_markdown_with_mocked_db(tmp_path: Path) -> None:
     assert payload["metadata"]["expected_label_dataset_version"] == "ml-label-dataset-v9"
     assert payload["metadata"]["label_dataset_version"] == "ml-label-dataset-v9"
     assert "Ready for hybrid validation scoring" in out_md.read_text(encoding="utf-8")
+
+
+def test_connection_failure_artifacts_omit_exception_details_and_database_dsn(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _fixture_paths(tmp_path)
+    out_json = tmp_path / "blocked.json"
+    out_md = tmp_path / "blocked.md"
+    secret_dsn = "postgresql://admin:super-secret@localhost:5432/research"
+
+    def fail_connect(*args: object, **kwargs: object) -> None:
+        raise psycopg.OperationalError(f"connection refused for {secret_dsn}")
+
+    monkeypatch.setattr(
+        "pipeline.ml_fresh_eval_surface_hybrid_materialize.psycopg.connect",
+        fail_connect,
+    )
+
+    payload = write_ml_fresh_eval_surface_hybrid_materialize(
+        **paths,
+        output_path=out_json,
+        markdown_output_path=out_md,
+        database_url=secret_dsn,
+        repo_root=tmp_path,
+    )
+
+    assert payload["metadata"]["status"] == "blocked_no_fresh_candidate_source"
+    assert payload["candidate_source"]["connection_error"] == (
+        "OperationalError: details redacted"
+    )
+    assert secret_dsn not in json.dumps(payload)
+    assert secret_dsn not in out_json.read_text(encoding="utf-8")
+    assert secret_dsn not in out_md.read_text(encoding="utf-8")
 
 
 def test_module_imports_no_openai_openalex_or_sklearn_and_cli_flags_are_scoped() -> None:
