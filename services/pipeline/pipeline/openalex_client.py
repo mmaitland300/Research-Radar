@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 import json
 import os
 import time
@@ -13,6 +12,16 @@ DEFAULT_BACKOFF_SEC = 2.0
 MAX_RETRIES = 4
 
 OPENALEX_API_KEY_ENV = "OPENALEX_API_KEY"
+
+
+class OpenAlexRequestError(RuntimeError):
+    """An OpenAlex request failure with provider-controlled details removed."""
+
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        # Preserve the numeric status for existing artifact provenance without
+        # retaining the request URL, response body, or provider reason.
+        self.code = status_code
 
 
 def _default_mailto() -> str:
@@ -81,7 +90,6 @@ def fetch_openalex_json(
         "Accept": "application/json",
     }
     req_url = append_openalex_api_key_query(url) if apply_api_key else url
-    last_error: BaseException | None = None
     for attempt in range(MAX_RETRIES):
         req = urllib.request.Request(req_url, headers=headers, method="GET")
         try:
@@ -89,29 +97,19 @@ def fetch_openalex_json(
                 raw = resp.read()
             return json.loads(raw.decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            last_error = exc
             if exc.code in (429, 500, 502, 503) and attempt < MAX_RETRIES - 1:
                 time.sleep(DEFAULT_BACKOFF_SEC * (attempt + 1))
                 continue
-            if exc.code == 400:
-                try:
-                    detail = exc.read().decode("utf-8", errors="replace")[:2000]
-                except Exception:
-                    detail = ""
-                if detail:
-                    raise urllib.error.HTTPError(
-                        exc.url,
-                        exc.code,
-                        f"{exc.msg} — {detail}",
-                        exc.hdrs,
-                        io.BytesIO(detail.encode("utf-8")),
-                    ) from exc
-            raise
-        except urllib.error.URLError as exc:
-            last_error = exc
+            status = exc.code if isinstance(exc.code, int) else "unknown"
+            raise OpenAlexRequestError(
+                f"OpenAlex request failed with HTTP status {status}.",
+                status_code=exc.code if isinstance(exc.code, int) else None,
+            ) from None
+        except urllib.error.URLError:
             if attempt < MAX_RETRIES - 1:
                 time.sleep(DEFAULT_BACKOFF_SEC * (attempt + 1))
                 continue
-            raise
-    assert last_error is not None
-    raise last_error
+            raise OpenAlexRequestError(
+                "OpenAlex request failed: transport details redacted."
+            ) from None
+    raise OpenAlexRequestError("OpenAlex request failed after retries.")

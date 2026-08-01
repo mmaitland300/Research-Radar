@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import traceback
 from pathlib import Path
 from unittest.mock import patch
 
@@ -191,6 +192,12 @@ class _FakeProvider:
         return [[float(index), float(index) + 0.1, float(index) + 0.2] for index, _ in enumerate(texts)]
 
 
+class _FailingProvider(_FakeProvider):
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        self.calls.append(list(texts))
+        raise RuntimeError("provider-message-secret")
+
+
 def _run(tmp_path: Path, conn: _FakeConn, provider: _FakeProvider | None = None, *, replace: bool = False) -> dict:
     active_provider = provider or _FakeProvider()
     with patch("pipeline.corpus_v2_embed.psycopg.connect", return_value=conn):
@@ -355,3 +362,21 @@ def test_no_clustering_ranking_or_paper_scores_writes(tmp_path: Path) -> None:
     assert "insert into clusters" not in executed
     assert "ranking_runs" not in executed
     assert "paper_scores" not in executed
+
+
+def test_provider_exception_is_redacted_at_public_wrapper(tmp_path: Path) -> None:
+    conn = _FakeConn()
+
+    with pytest.raises(CorpusV2EmbedError) as raised:
+        _run(tmp_path, conn, _FailingProvider())
+
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert str(raised.value) == (
+        "corpus-v2 embedding failed: RuntimeError: details redacted"
+    )
+    assert "provider-message-secret" not in rendered
+    assert conn.rollback_count == 1

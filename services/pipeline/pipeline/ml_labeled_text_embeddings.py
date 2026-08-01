@@ -22,6 +22,7 @@ from pipeline.embedding_provider import (
     EmbeddingProvider,
     openai_embedding_provider_from_env,
 )
+from pipeline.error_reporting import safe_exception_summary, safe_url_for_artifact
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.repo_paths import portable_repo_path
 
@@ -203,14 +204,18 @@ def build_ml_labeled_text_embeddings_payload(
                 expected_dimensions=expected_dimensions,
             )
         except Exception as exc:
-            raise MLLabeledTextEmbeddingsError(f"embedding provider initialization failed: {exc}") from exc
+            raise MLLabeledTextEmbeddingsError(
+                f"embedding provider initialization failed: {safe_exception_summary(exc)}"
+            ) from None
         vectors = []
         statuses = []
         for chunk in _batch(row_inputs, batch_size):
             try:
                 chunk_vectors = active_provider.embed_texts([str(item["text"]) for item in chunk])
             except Exception as exc:
-                raise MLLabeledTextEmbeddingsError(f"embedding provider failed: {exc}") from exc
+                raise MLLabeledTextEmbeddingsError(
+                    f"embedding provider failed: {safe_exception_summary(exc)}"
+                ) from None
             if len(chunk_vectors) != len(chunk):
                 raise MLLabeledTextEmbeddingsError(
                     f"embedding provider returned {len(chunk_vectors)} vectors for batch of {len(chunk)}"
@@ -263,7 +268,9 @@ def build_ml_labeled_text_embeddings_payload(
         "embedding_model": embedding_model,
         "embedding_dimensions": expected_dimensions,
         "embedding_provider": "openai",
-        "openai_base_url": os.environ.get("OPENAI_BASE_URL", DEFAULT_OPENAI_BASE_URL),
+        "openai_base_url": safe_url_for_artifact(
+            os.environ.get("OPENAI_BASE_URL", DEFAULT_OPENAI_BASE_URL)
+        ),
         "openai_auth_artifact_fields": _openai_auth_artifact_fields(mock_embeddings=mock_embeddings),
         "aggregate_input_text_sha256": aggregate_input_text_sha256,
         "row_count": len(output_rows),
