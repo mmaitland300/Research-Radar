@@ -19,6 +19,7 @@ from pipeline.embedding_provider import (
     EmbeddingProvider,
     openai_embedding_provider_from_env,
 )
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.openalex_text import clean_openalex_text
 
 OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
@@ -140,7 +141,10 @@ def run_corpus_v2_embed(
                 conn.rollback()
             except Exception:
                 pass
-            raise CorpusV2EmbedError(f"corpus-v2 embedding failed: {exc}", code=1) from exc
+            raise CorpusV2EmbedError(
+                f"corpus-v2 embedding failed: {safe_exception_summary(exc)}",
+                code=1,
+            ) from None
 
     summary = {
         "snapshot_version": snapshot_version,

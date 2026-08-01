@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import io
 import json
+import traceback
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 import pytest
 
 from pipeline.openalex_client import (
     OPENALEX_API_KEY_ENV,
+    OpenAlexRequestError,
     append_openalex_api_key_query,
     compute_contact_provenance,
     compute_openalex_auth_artifact_fields,
@@ -88,6 +92,44 @@ def test_fetch_openalex_json_apply_api_key_false_skips_query(monkeypatch: pytest
             apply_api_key=False,
         )
     assert "api_key" not in captured[0]
+
+
+def test_fetch_openalex_json_redacts_http_url_query_reason_and_body(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sentinels = (
+        "url-secret",
+        "query-secret",
+        "api-key-secret",
+        "reason-secret",
+        "body-secret",
+    )
+    monkeypatch.setenv(OPENALEX_API_KEY_ENV, "api-key-secret")
+
+    def fake_urlopen(req: object, timeout: float | None = None) -> None:
+        raise HTTPError(
+            getattr(req, "full_url", ""),
+            400,
+            "reason-secret",
+            hdrs=None,
+            fp=io.BytesIO(b'{"error":"body-secret"}'),
+        )
+
+    with patch("urllib.request.urlopen", fake_urlopen):
+        with pytest.raises(OpenAlexRequestError) as raised:
+            fetch_openalex_json(
+                "https://url-secret.example.test/works?filter=query-secret"
+            )
+
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert str(raised.value) == "OpenAlex request failed with HTTP status 400."
+    assert raised.value.code == 400
+    for sentinel in sentinels:
+        assert sentinel not in rendered
 
 
 def test_compute_openalex_auth_artifact_fields_live(monkeypatch: pytest.MonkeyPatch) -> None:

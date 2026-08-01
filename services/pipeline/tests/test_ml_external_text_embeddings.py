@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import traceback
 from pathlib import Path
 from typing import Sequence
 
@@ -32,6 +33,12 @@ class _FakeProvider:
         self.calls.append(list(texts))
         dim = self.dimensions + 1 if self.wrong_dimensions else self.dimensions
         return [[float(len(text)), float(index), 0.5][:dim] + [0.0] * max(0, dim - 3) for index, text in enumerate(texts)]
+
+
+class _FailingProvider(_FakeProvider):
+    def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
+        self.calls.append(list(texts))
+        raise RuntimeError("external-provider-message-secret")
 
 
 def _row(index: int, *, row_id: str | None = None, text: str | None = None) -> dict:
@@ -118,6 +125,83 @@ def test_mock_vectors_are_deterministic(tmp_path: Path) -> None:
     assert len(left["rows"][0]["embedding"]) == 5
     assert left["metadata"]["openai_auth_artifact_fields"]["auth_mode"] == "mock"
     assert left["metadata"]["n_mock"] == 60
+
+
+def test_metadata_redacts_openai_base_url_secrets(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv(
+        "OPENAI_BASE_URL",
+        "https://userinfo-secret:password-secret@api.example.test:8443/v1/custom"
+        "?query-secret=value#fragment-secret",
+    )
+
+    payload = build_external_text_embeddings_payload(
+        text_corpus_path=_write_corpus(tmp_path),
+        expected_dimensions=3,
+        mock_embeddings=True,
+    )
+
+    stored_url = payload["metadata"]["openai_base_url"]
+    assert stored_url == "https://api.example.test:8443/v1/custom"
+    for secret in (
+        "userinfo-secret",
+        "password-secret",
+        "query-secret",
+        "fragment-secret",
+    ):
+        assert secret not in json.dumps(payload["metadata"])
+
+
+def test_provider_failure_redacts_arbitrary_exception(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(MLExternalTextEmbeddingsError) as raised:
+        build_external_text_embeddings_payload(
+            text_corpus_path=_write_corpus(tmp_path),
+            expected_dimensions=3,
+            provider=_FailingProvider(),
+        )
+
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert str(raised.value) == (
+        "embedding provider failed: RuntimeError: details redacted"
+    )
+    assert "external-provider-message-secret" not in rendered
+
+
+def test_provider_initialization_failure_is_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def fail_provider_initialization(**_kwargs: object) -> None:
+        raise RuntimeError("external-provider-init-secret")
+
+    monkeypatch.setattr(
+        "pipeline.ml_external_text_embeddings.openai_embedding_provider_from_env",
+        fail_provider_initialization,
+    )
+
+    with pytest.raises(MLExternalTextEmbeddingsError) as raised:
+        build_external_text_embeddings_payload(
+            text_corpus_path=_write_corpus(tmp_path),
+            expected_dimensions=3,
+        )
+
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert str(raised.value) == (
+        "embedding provider initialization failed: RuntimeError: details redacted"
+    )
+    assert "external-provider-init-secret" not in rendered
 
 
 def test_rejects_wrong_shape_version_pool_or_count(tmp_path: Path) -> None:

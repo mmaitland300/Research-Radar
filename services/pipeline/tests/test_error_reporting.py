@@ -1,4 +1,4 @@
-from pipeline.error_reporting import safe_exception_summary
+from pipeline.error_reporting import safe_exception_summary, safe_url_for_artifact
 
 
 def test_safe_exception_summary_omits_exception_details() -> None:
@@ -23,3 +23,19 @@ def test_safe_exception_summary_never_stringifies_exception() -> None:
     assert safe_exception_summary(UnstringifiableError()) == (
         "UnstringifiableError: details redacted"
     )
+
+
+def test_safe_url_for_artifact_removes_credentials_query_and_fragment() -> None:
+    value = safe_url_for_artifact(
+        "https://userinfo-secret:password-secret@api.example.test:8443/v1/models"
+        "?query-secret=value#fragment-secret"
+    )
+
+    assert value == "https://api.example.test:8443/v1/models"
+    for secret in (
+        "userinfo-secret",
+        "password-secret",
+        "query-secret",
+        "fragment-secret",
+    ):
+        assert secret not in value
