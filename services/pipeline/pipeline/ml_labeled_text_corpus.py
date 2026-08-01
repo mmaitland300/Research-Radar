@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlencode
 
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_label_dataset import row_has_explicit_label, sha256_file
 from pipeline.openalex_ids import normalize_w_token
 from pipeline.openalex import OPENALEX_WORKS_URL, build_work_select_clause
@@ -270,7 +271,7 @@ def _build_fetch_row(
                     "openalex_api_url_used": url,
                     "retrieved_at": retrieved_at,
                     "fetch_error_class": type(exc).__name__,
-                    "fetch_error_message": str(exc)[:500],
+                    "fetch_error_message": safe_exception_summary(exc),
                 }
         fetch_cache[work_token] = (work, provenance)
 
