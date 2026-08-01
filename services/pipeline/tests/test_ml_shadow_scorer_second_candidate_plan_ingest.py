@@ -54,8 +54,15 @@ class _Tx:
 
 
 class _FakeConn:
-    def __init__(self, *, fail_on_work_insert: bool = False, existing_snapshot: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        fail_on_work_insert: bool = False,
+        failure_message: str = "controlled insert failure",
+        existing_snapshot: str | None = None,
+    ) -> None:
         self.fail_on_work_insert = fail_on_work_insert
+        self.failure_message = failure_message
         self.existing_snapshot = existing_snapshot
         self.source_policies: set[str] = set()
         self.source_snapshot_versions: dict[str, dict] = {}
@@ -150,7 +157,7 @@ class _FakeConn:
             return _Result()
         if compact.startswith("INSERT INTO works"):
             if self.fail_on_work_insert:
-                raise RuntimeError("controlled insert failure")
+                raise RuntimeError(self.failure_message)
             work_id = self.next_work_id
             self.next_work_id += 1
             self.works[work_id] = {
@@ -374,14 +381,22 @@ def test_duplicate_snapshot_version_fails(tmp_path: Path) -> None:
 
 
 def test_transaction_rollback_on_injected_failure(tmp_path: Path) -> None:
-    conn = _FakeConn(fail_on_work_insert=True)
-    with pytest.raises(MLShadowScorerSecondCandidatePlanIngestError, match="controlled insert failure"):
+    secret = "postgresql://admin:super-secret@localhost:5432/research"
+    conn = _FakeConn(fail_on_work_insert=True, failure_message=f"insert failed for {secret}")
+    with pytest.raises(
+        MLShadowScorerSecondCandidatePlanIngestError,
+        match="second candidate plan ingest failed: RuntimeError: details redacted",
+    ) as caught:
         _build(tmp_path, conn=conn)
 
     assert conn.works == {}
     assert conn.raw_openalex_works == []
     assert len(conn.ingest_runs) == 1
-    assert next(iter(conn.ingest_runs.values()))["status"] == "failed"
+    failed_run = next(iter(conn.ingest_runs.values()))
+    assert failed_run["status"] == "failed"
+    assert failed_run["error_message"] == "RuntimeError: details redacted"
+    assert secret not in json.dumps(failed_run)
+    assert secret not in str(caught.value)
     assert conn.rollback_count >= 1
 
 

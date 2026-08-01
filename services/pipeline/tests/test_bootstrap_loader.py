@@ -7,7 +7,9 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from pipeline.bootstrap_loader import _upsert_work, persist_work
+import pytest
+
+from pipeline.bootstrap_loader import _upsert_work, persist_work, run_bootstrap_ingest
 from pipeline.config import IngestRun, SourceSnapshotVersion
 from pipeline.policy import CorpusPolicy
 
@@ -119,6 +121,41 @@ class _FakeConn:
             return result
 
         raise AssertionError(f"unhandled SQL: {compact}")
+
+
+def test_bootstrap_preflight_failure_persists_only_exception_type(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secret_dsn = "postgresql://admin:super-secret@db.example.test/research"
+    persisted: dict[str, str] = {}
+
+    class SourceResolutionError(RuntimeError):
+        pass
+
+    def _fail_resolution(*args, **kwargs):
+        raise SourceResolutionError(secret_dsn)
+
+    monkeypatch.setattr("pipeline.bootstrap_loader.resolve_all_sources", _fail_resolution)
+    monkeypatch.setattr(
+        "pipeline.bootstrap_loader.write_bootstrap_preflight_failure",
+        lambda output_dir, *, stage, message: persisted.update(stage=stage, message=message),
+    )
+
+    with pytest.raises(SourceResolutionError):
+        run_bootstrap_ingest(
+            policy=CorpusPolicy(),
+            output_dir=tmp_path / "out",
+            raw_root=tmp_path / "raw",
+            note="test",
+            database_url=secret_dsn,
+        )
+
+    assert persisted == {
+        "stage": "source_resolution",
+        "message": "SourceResolutionError: details redacted",
+    }
+    assert secret_dsn not in str(persisted)
 
 
 def test_upsert_work_preserves_canonical_snapshot_on_openalex_conflict() -> None:

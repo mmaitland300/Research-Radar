@@ -11,6 +11,7 @@ from pipeline.clustering_persistence import (
     update_clustering_run_final,
 )
 from pipeline.config import ClusteringCounts, ClusteringRun
+from pipeline.error_reporting import safe_exception_summary
 
 CLUSTERING_ALGORITHM = "kmeans-l2-v0"
 
@@ -125,7 +126,7 @@ def execute_clustering_run(
                 cluster_version=cluster_version,
                 status="failed",
                 counts=None,
-                error_message=str(exc),
+                error_message=safe_exception_summary(exc),
             )
             conn2.commit()
         raise

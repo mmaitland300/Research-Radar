@@ -195,19 +195,22 @@ def test_text_for_embedding_fallback_and_heuristic(tmp_path: Path) -> None:
 
 def test_failure_row_is_preserved_with_preview_text(tmp_path: Path) -> None:
     label_path = _write_label_dataset(tmp_path)
+    secret = "openalex-secret-never-persist"
 
     def fetch(url: str) -> dict:
         token = urlparse(url).path.rsplit("/", 1)[-1]
         if token == "W700003":
-            raise TimeoutError("timeout fixture")
+            raise TimeoutError(f"timeout fixture api_key={secret}")
         return _fake_work(token)
 
     payload = build_external_text_corpus_payload(label_dataset_path=label_path, fetch_json=fetch)
     row3 = next(row for row in payload["rows"] if row["row_id"] == "row-003")
     assert row3["abstract_source"] == "fetch_failed"
     assert row3["provenance"]["error_class"] == "TimeoutError"
+    assert row3["provenance"]["error_message"] == "TimeoutError: details redacted"
     assert row3["hydrated"]["full_abstract"] == ""
     assert row3["text_for_embedding"].startswith("Dataset title 3")
+    assert secret not in json.dumps(payload)
 
 
 def test_strict_external_row_count_fails_fast(tmp_path: Path) -> None:

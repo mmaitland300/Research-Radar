@@ -327,6 +327,26 @@ def test_no_secret_serialization(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     assert secret not in blob
 
 
+def test_failure_record_omits_exception_message_and_database_dsn(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv(OPENALEX_API_KEY_ENV, "x")
+    secret_dsn = "postgresql://admin:super-secret@db.example.test/research"
+    conn = _FakeConn()
+
+    def _fail(_oid: str) -> None:
+        raise RuntimeError(f"connection failed for {secret_dsn}")
+
+    with pytest.raises(CorpusV2HydrateError, match="RuntimeError: details redacted") as caught:
+        _run(tmp_path, conn, fetch_work=_fail, mock_openalex=False)
+
+    failed_run = next(iter(conn.ingest_runs.values()))
+    assert failed_run["error_message"] == "RuntimeError: details redacted"
+    assert secret_dsn not in json.dumps(failed_run)
+    assert secret_dsn not in str(caught.value)
+
+
 def test_snapshot_version_filtering_and_no_other_tables(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv(OPENALEX_API_KEY_ENV, "x")
     conn = _FakeConn()

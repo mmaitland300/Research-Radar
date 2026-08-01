@@ -172,9 +172,10 @@ def test_observation_preservation_duplicate_paper_reuse_fetch_and_fallbacks(tmp_
 def test_fetch_failure_keeps_observation(tmp_path: Path) -> None:
     row = _label_row("fetch-fail", paper_id="https://openalex.org/W500")
     label_path = _write_json(tmp_path, "labels.json", _label_payload([row]))
+    secret = "openalex-secret-never-persist"
 
     def fetch(_url: str) -> dict:
-        raise TimeoutError("timeout fixture")
+        raise TimeoutError(f"timeout fixture api_key={secret}")
 
     payload = build_ml_labeled_text_corpus_payload(
         label_dataset_path=label_path,
@@ -184,7 +185,9 @@ def test_fetch_failure_keeps_observation(tmp_path: Path) -> None:
     out = payload["rows"][0]
     assert out["text_source"] == "fetch_failed"
     assert out["fetch_error_class"] == "TimeoutError"
+    assert out["fetch_error_message"] == "TimeoutError: details redacted"
     assert out["text_for_embedding"].startswith("Fixture title")
+    assert secret not in json.dumps(payload)
 
 
 def test_mock_openalex_uses_stub_without_network(tmp_path: Path) -> None:

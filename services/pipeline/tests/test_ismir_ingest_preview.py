@@ -187,7 +187,9 @@ def test_markdown_render_mentions_attribution_and_dry_run() -> None:
     assert "not" in low and "attributable" in low
 
 
-def test_cli_ismir_preview_mock(tmp_path: Path) -> None:
+def test_cli_ismir_preview_mock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    secret = "oa-secret-never-write-to-artifacts"
+    monkeypatch.setenv("OPENALEX_API_KEY", secret)
     out = tmp_path / "p.json"
     md = tmp_path / "p.md"
     with patch.object(
@@ -213,3 +215,5 @@ def test_cli_ismir_preview_mock(tmp_path: Path) -> None:
     assert payload["selected_total"] == 0
     assert payload["contact_mode"] == "mock"
     assert payload["policy_reference"]["ismir_openalex_source_id"] == ISMIR_SOURCE_ID
+    assert secret not in out.read_text(encoding="utf-8")
+    assert secret not in md.read_text(encoding="utf-8")

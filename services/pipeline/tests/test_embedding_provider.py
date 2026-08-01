@@ -1,6 +1,7 @@
 import io
 import json
-from urllib.error import HTTPError
+import traceback
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -95,5 +96,79 @@ def test_openai_embedding_provider_surfaces_quota_exhaustion_clearly(monkeypatch
 
     provider = OpenAIEmbeddingProvider(api_key="test-key")
 
-    with pytest.raises(RuntimeError, match="OpenAI quota exhausted for embed-works; no embeddings were written."):
+    with pytest.raises(RuntimeError, match="insufficient_quota.*quota exhausted"):
         provider.embed_texts(["hello"])
+
+
+def test_openai_embedding_provider_redacts_http_url_reason_body_and_unknown_code(
+    monkeypatch,
+) -> None:
+    sentinels = (
+        "userinfo-secret",
+        "password-secret",
+        "query-secret",
+        "reason-secret",
+        "body-secret",
+        "code-secret",
+    )
+
+    def fake_urlopen(request, timeout: float):
+        body = io.BytesIO(
+            json.dumps(
+                {
+                    "error": {
+                        "message": "body-secret",
+                        "code": "code-secret",
+                    }
+                }
+            ).encode("utf-8")
+        )
+        raise HTTPError(
+            request.full_url,
+            401,
+            "reason-secret",
+            hdrs=None,
+            fp=body,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    provider = OpenAIEmbeddingProvider(
+        api_key="test-key",
+        base_url=(
+            "https://userinfo-secret:password-secret@api.example.test/v1"
+            "?token=query-secret"
+        ),
+    )
+
+    with pytest.raises(RuntimeError) as raised:
+        provider.embed_texts(["hello"])
+
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert str(raised.value) == "OpenAI embeddings request failed with status 401."
+    for sentinel in sentinels:
+        assert sentinel not in rendered
+
+
+def test_openai_embedding_provider_redacts_url_error_reason(monkeypatch) -> None:
+    def fake_urlopen(request, timeout: float):
+        raise URLError("transport-reason-secret")
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    provider = OpenAIEmbeddingProvider(api_key="test-key")
+
+    with pytest.raises(RuntimeError) as raised:
+        provider.embed_texts(["hello"])
+
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert str(raised.value) == (
+        "OpenAI embeddings request failed: transport details redacted."
+    )
+    assert "transport-reason-secret" not in rendered
