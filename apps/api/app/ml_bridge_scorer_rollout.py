@@ -136,12 +136,8 @@ def _log_gate_closed(
     public_rollout_enabled: bool | None,
     public_rollout_percent: int | None,
     exception_type: str | None = None,
-    exception_message: str | None = None,
     canary_subject_present: bool = False,
 ) -> None:
-    safe_exception_message = None
-    if exception_message:
-        safe_exception_message = str(exception_message).replace("\n", " ")[:300]
     extra = {
         "ranking_mode": "materialized_heuristic",
         "family": family,
@@ -154,7 +150,6 @@ def _log_gate_closed(
         "public_rollout_enabled": public_rollout_enabled,
         "public_rollout_percent": public_rollout_percent,
         "exception_type": exception_type,
-        "exception_message": safe_exception_message,
         "canary_subject_present": canary_subject_present,
     }
     log_fn = logger.warning if canary_subject_present else logger.info
@@ -162,8 +157,7 @@ def _log_gate_closed(
         (
             "bridge_scorer_rollout gate_closed family=%s route=%s reason_closed=%s "
             "current_served=%s cap=%s ranking_run_id=%s public_rollout_enabled=%s "
-            "public_rollout_percent=%s exception_type=%s exception_message=%s "
-            "canary_subject_present=%s"
+            "public_rollout_percent=%s exception_type=%s canary_subject_present=%s"
         ),
         family,
         route,
@@ -174,7 +168,6 @@ def _log_gate_closed(
         public_rollout_enabled,
         public_rollout_percent,
         exception_type,
-        safe_exception_message,
         canary_subject_present,
         extra=extra,
     )
@@ -205,7 +198,6 @@ def maybe_build_bridge_scorer_ranked_response(
             public_rollout_enabled=None,
             public_rollout_percent=None,
             exception_type=type(exc).__name__,
-            exception_message=str(exc),
             canary_subject_present=canary_subject_present,
         )
         return None
@@ -255,7 +247,6 @@ def maybe_build_bridge_scorer_ranked_response(
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
             exception_type=type(exc).__name__,
-            exception_message=str(exc),
             canary_subject_present=canary_subject_present,
         )
         return None
@@ -324,7 +315,6 @@ def maybe_build_bridge_scorer_ranked_response(
                 public_rollout_enabled=gate.public_rollout_enabled,
                 public_rollout_percent=gate.public_rollout_percent,
                 exception_type=type(exc).__name__,
-                exception_message=str(exc),
                 canary_subject_present=canary_subject_present,
             )
             return None
@@ -459,7 +449,6 @@ def maybe_build_bridge_scorer_ranked_response(
             public_rollout_enabled=gate.public_rollout_enabled,
             public_rollout_percent=gate.public_rollout_percent,
             exception_type=type(exc).__name__,
-            exception_message=str(exc),
             canary_subject_present=canary_subject_present,
         )
         return None

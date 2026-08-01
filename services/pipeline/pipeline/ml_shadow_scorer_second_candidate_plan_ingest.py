@@ -27,6 +27,7 @@ from pipeline.corpus_v2_ingest_from_plan import (
     _update_ingest_run_final,
     validate_candidate_plan,
 )
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_fresh_hybrid_candidate_plan_ingest import (
     _database_url_from_env,
     assert_local_database_url as _assert_fresh_local_database_url,
@@ -382,7 +383,7 @@ def _run_ingest_with_conn(conn: Any, *, plan_doc: _SecondPlanDocument, snapshot_
             )
         conn.commit()
     except Exception as exc:
-        _mark_ingest_failed(conn, ingest_run.ingest_run_id, str(exc))
+        _mark_ingest_failed(conn, ingest_run.ingest_run_id, safe_exception_summary(exc))
         raise
     return summary
 
@@ -589,7 +590,7 @@ def build_ml_shadow_scorer_second_candidate_plan_ingest_payload(
         raise
     except Exception as exc:
         raise MLShadowScorerSecondCandidatePlanIngestError(
-            f"second candidate plan ingest failed: {exc}",
+            f"second candidate plan ingest failed: {safe_exception_summary(exc)}",
             code=1,
         ) from exc
     return _artifact_from_summary(

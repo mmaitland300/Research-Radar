@@ -14,6 +14,7 @@ import psycopg
 
 from pipeline.bootstrap_loader import database_url_from_env
 from pipeline.config import IngestRun, SourceSnapshotVersion
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.normalize import clean_openalex_text
 from pipeline.policy import CorpusPolicy
 from pipeline.snapshot_membership import upsert_work_snapshot_membership
@@ -171,12 +172,19 @@ def run_corpus_v2_ingest_from_plan(
                     )
                 conn.commit()
             except Exception as exc:
-                _mark_ingest_failed(conn, ingest_run.ingest_run_id, str(exc))
+                _mark_ingest_failed(
+                    conn,
+                    ingest_run.ingest_run_id,
+                    safe_exception_summary(exc),
+                )
                 raise
     except CorpusV2IngestError:
         raise
     except Exception as exc:
-        raise CorpusV2IngestError(f"corpus-v2 ingest failed: {exc}", code=1) from exc
+        raise CorpusV2IngestError(
+            f"corpus-v2 ingest failed: {safe_exception_summary(exc)}",
+            code=1,
+        ) from exc
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")

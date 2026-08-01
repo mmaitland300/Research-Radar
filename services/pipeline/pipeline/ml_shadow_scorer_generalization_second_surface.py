@@ -24,6 +24,7 @@ from urllib.parse import urlparse
 import psycopg
 from psycopg.rows import dict_row
 
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_fresh_eval_surface_hybrid_materialize import (
     MLFreshEvalSurfaceHybridMaterializeError,
     assert_local_database_url as _assert_materializer_local_database_url,
@@ -1104,8 +1105,10 @@ def write_ml_shadow_scorer_generalization_second_surface(
         conn = _connect_readonly(db_url)
     except Exception as exc:  # pragma: no cover - exact driver exception varies by environment
         if explicit_database_url:
-            raise MLShadowScorerGeneralizationSecondSurfaceError(f"local database unavailable: {exc}") from exc
-        database_unavailable_error = f"{type(exc).__name__}: {exc}"
+            raise MLShadowScorerGeneralizationSecondSurfaceError(
+                f"local database unavailable: {safe_exception_summary(exc)}"
+            ) from exc
+        database_unavailable_error = safe_exception_summary(exc)
     try:
         payload = build_ml_shadow_scorer_generalization_second_surface_payload(
             conn,

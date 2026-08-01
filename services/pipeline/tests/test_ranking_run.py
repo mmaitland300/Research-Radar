@@ -19,6 +19,7 @@ from pipeline.ranking_run import (
     _build_ranking_config,
     _ranking_counts_from_rows,
     build_step3_heuristic_score_rows,
+    execute_ranking_run,
     resolved_family_weights,
     validate_bridge_weight_for_bridge_family,
     validate_bridge_eligibility_mode,
@@ -44,6 +45,52 @@ def _pool_candidate(
         title=title,
         abstract=abstract,
     )
+
+
+class _RunConn:
+    def __init__(self) -> None:
+        self.commit_calls = 0
+
+    def __enter__(self) -> "_RunConn":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def commit(self) -> None:
+        self.commit_calls += 1
+
+
+def test_execute_ranking_run_persists_only_exception_type(monkeypatch: pytest.MonkeyPatch) -> None:
+    secret_dsn = "postgresql://admin:super-secret@db.example.test/research"
+    connections = iter([_RunConn(), _RunConn(), _RunConn()])
+    final_calls: list[tuple[str, str | None]] = []
+
+    monkeypatch.setattr(
+        "pipeline.ranking_run.psycopg.connect",
+        lambda *args, **kwargs: next(connections),
+    )
+    monkeypatch.setattr("pipeline.ranking_run.insert_ranking_run_started", lambda conn, run: None)
+    monkeypatch.setattr(
+        "pipeline.ranking_run.list_ranking_candidates",
+        lambda conn, snapshot: (_ for _ in ()).throw(RuntimeError(secret_dsn)),
+    )
+    monkeypatch.setattr(
+        "pipeline.ranking_run.update_ranking_run_final",
+        lambda conn, run_id, status, counts, error_message: final_calls.append(
+            (status, error_message)
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="super-secret"):
+        execute_ranking_run(
+            database_url=secret_dsn,
+            ranking_version="rank-v1",
+            corpus_snapshot_version="source-snapshot-1",
+        )
+
+    assert final_calls == [("failed", "RuntimeError: details redacted")]
+    assert secret_dsn not in str(final_calls)
 
 
 def test_ranking_run_start_complete_fail_lifecycle() -> None:

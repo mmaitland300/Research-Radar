@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 import psycopg
 from psycopg.rows import dict_row
 
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_label_dataset import row_has_explicit_label, sha256_file
 from pipeline.repo_paths import default_repo_root, portable_repo_path
 
@@ -1046,7 +1047,7 @@ def write_ml_fresh_eval_surface_hybrid_materialize(
         payload["candidate_source"]["selected_source_rationale"] = (
             f"database connection failed before candidate discovery: {type(exc).__name__}"
         )
-        payload["candidate_source"]["connection_error"] = str(exc)
+        payload["candidate_source"]["connection_error"] = safe_exception_summary(exc)
     else:
         with conn_context as conn:
             payload = build_ml_fresh_eval_surface_hybrid_materialize_payload(

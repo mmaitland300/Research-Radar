@@ -259,6 +259,31 @@ def test_dry_run_performs_no_ranking_writes(tmp_path: Path) -> None:
     assert payload["recommended_next_stage"] != "rerun_second_shadow_generalization_surface_discovery_v1"
 
 
+def test_ranking_failure_omits_exception_message_and_database_dsn(tmp_path: Path) -> None:
+    secret_dsn = "postgresql://admin:super-secret@localhost:5432/research"
+    conn = _FakeConn()
+    with (
+        patch.object(ranking_mod.psycopg, "connect", return_value=conn),
+        patch.object(
+            ranking_mod,
+            "_run_ranking",
+            side_effect=RuntimeError(f"connection failed for {secret_dsn}"),
+        ),
+    ):
+        with pytest.raises(
+            MLShadowScorerSecondProductCandidateRankingError,
+            match="RuntimeError: details redacted",
+        ) as caught:
+            build_ml_shadow_scorer_second_product_candidate_ranking_payload(
+                **_paths(tmp_path),
+                database_url=secret_dsn,
+                repo_root=tmp_path,
+            )
+
+    assert secret_dsn not in str(caught.value)
+    assert "super-secret" not in str(caught.value)
+
+
 def test_rejects_embeddings_without_full_coverage(tmp_path: Path) -> None:
     with pytest.raises(MLShadowScorerSecondProductCandidateRankingError, match="full_snapshot_embedding_coverage"):
         build_ml_shadow_scorer_second_product_candidate_ranking_payload(

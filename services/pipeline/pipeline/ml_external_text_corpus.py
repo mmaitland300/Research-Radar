@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlencode
 
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.ml_label_dataset import sha256_file
 from pipeline.openalex_ids import normalize_w_token
 from pipeline.openalex import OPENALEX_WORKS_URL, build_work_select_clause
@@ -340,7 +341,7 @@ def _fetch_one_work(
             "retrieved_at": _now_iso_z(),
             "http_status": getattr(exc, "code", None),
             "error_class": type(exc).__name__,
-            "error_message": str(exc)[:500],
+            "error_message": safe_exception_summary(exc),
             "mock_openalex": False,
             "openalex_response_sha256": None,
         }

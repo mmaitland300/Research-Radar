@@ -10,6 +10,7 @@ from typing import Protocol, Sequence
 DEFAULT_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 EXPECTED_EMBEDDING_DIMENSIONS = 1536
+RECOGNIZED_OPENAI_ERROR_CODES = frozenset({"insufficient_quota"})
 
 
 class EmbeddingProvider(Protocol):
@@ -60,19 +61,24 @@ class OpenAIEmbeddingProvider:
                 error_obj = parsed_detail.get("error")
                 if isinstance(error_obj, dict):
                     code = error_obj.get("code")
-                    if isinstance(code, str):
+                    if isinstance(code, str) and code in RECOGNIZED_OPENAI_ERROR_CODES:
                         error_code = code
 
             if exc.code == 429 and error_code == "insufficient_quota":
                 raise RuntimeError(
-                    "OpenAI quota exhausted for embed-works; no embeddings were written."
-                ) from exc
+                    "OpenAI embeddings request failed with status 429 "
+                    "(insufficient_quota): quota exhausted; no embeddings were written."
+                ) from None
 
+            status = exc.code if isinstance(exc.code, int) else "unknown"
+            code_suffix = f" ({error_code})" if error_code else ""
             raise RuntimeError(
-                f"OpenAI embeddings request failed with status {exc.code}: {detail}"
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"OpenAI embeddings request failed: {exc.reason}") from exc
+                f"OpenAI embeddings request failed with status {status}{code_suffix}."
+            ) from None
+        except urllib.error.URLError:
+            raise RuntimeError(
+                "OpenAI embeddings request failed: transport details redacted."
+            ) from None
 
         body = json.loads(raw_body.decode("utf-8"))
         data = body.get("data")

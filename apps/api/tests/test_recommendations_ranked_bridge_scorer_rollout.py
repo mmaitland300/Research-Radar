@@ -381,7 +381,11 @@ def test_bridge_canary_scorer_failure_emits_sanitized_warning(
     _enable_bridge_gate(monkeypatch, cap="1")
     ctx = _pinned_bridge_ctx()
     rows = _baseline_rows("bridge")
-    serving = _FakeServing([f"WBRIDGE{i:03d}" for i in range(20)], exc=RuntimeError("artifact missing\nline2"))
+    secret_token = "rr-secret-token-bridge-123"
+    serving = _FakeServing(
+        [f"WBRIDGE{i:03d}" for i in range(20)],
+        exc=RuntimeError(f"artifact missing token={secret_token}\nline2"),
+    )
 
     monkeypatch.setattr(bridge_rollout, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
     monkeypatch.setattr(recommendations_router, "list_ranked_recommendations", lambda **_kwargs: (ctx, rows, {}))
@@ -398,8 +402,21 @@ def test_bridge_canary_scorer_failure_emits_sanitized_warning(
     assert "bridge_scorer_rollout gate_closed" in caplog.text
     assert "reason_closed=scorer_failed" in caplog.text
     assert "exception_type=RuntimeError" in caplog.text
-    assert "artifact missing line2" in caplog.text
     assert "canary_subject_present=True" in caplog.text
+    assert secret_token not in caplog.text
+    assert "artifact missing" not in caplog.text
+    failure_records = [
+        record
+        for record in caplog.records
+        if record.name == bridge_rollout.__name__
+        and getattr(record, "reason_closed", None) == "scorer_failed"
+    ]
+    assert len(failure_records) == 1
+    failure_record = failure_records[0]
+    assert failure_record.exception_type == "RuntimeError"
+    assert not hasattr(failure_record, "exception_message")
+    assert failure_record.exc_info is None
+    assert secret_token not in repr(failure_record.__dict__)
 
 
 def test_bridge_scorer_metadata_must_report_no_db_writes(monkeypatch: pytest.MonkeyPatch) -> None:
