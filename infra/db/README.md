@@ -79,8 +79,10 @@ broken revision fails the build.
 ## Snapshot membership (revision `0002`)
 
 Works still carry a canonical home snapshot on `works.corpus_snapshot_version`
-(for pinned live serving). Additional snapshot views use
+(for stable identity and legacy compatibility). Additional snapshot views use
 `work_source_snapshot_memberships` so composed product snapshots can reference
 existing works without moving rows. Pipeline commands that resolve a snapshot
 pool (`cluster-works`, `ranking-run`, `corpus-v2-embed`, `corpus-v2-hydrate`)
-join through this table.
+join through this table. Snapshot-scoped API reads also use membership rows;
+the canonical column identifies a work's home snapshot, not every snapshot in
+which that work participates.

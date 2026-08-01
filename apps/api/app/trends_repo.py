@@ -51,8 +51,10 @@ def list_topic_trends(
         FROM topics t
         JOIN work_topics wt ON wt.topic_id = t.id
         JOIN works w ON w.id = wt.work_id
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         GROUP BY t.id, t.name
         HAVING COUNT(DISTINCT w.id) >= %s
         ORDER BY

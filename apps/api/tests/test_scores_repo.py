@@ -233,6 +233,12 @@ def test_get_paper_family_rankings_uses_global_family_rank_window(
     assert "RANK() OVER" in ranking_query
     assert "PARTITION BY ps.recommendation_family" in ranking_query
     assert "ORDER BY ps.final_score DESC, ps.work_id ASC" in ranking_query
+    assert "work_source_snapshot_memberships wssm" in ranking_query
+    assert "wssm.source_snapshot_version = %s" in ranking_query
+    assert "wssm.inclusion_status = 'included'" in ranking_query
+    assert "w.inclusion_status = 'included'" not in ranking_query
+    ranking_params = mock_conn.execute.call_args_list[1][0][1]
+    assert ranking_params == ("snap-a", "W456", "rank-x")
     _, rows, _ = out
     assert rows == [
         PaperRankingFamilyRow(

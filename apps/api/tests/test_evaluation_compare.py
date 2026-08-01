@@ -3,9 +3,8 @@ from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
+import app.evaluation_repo as evaluation_repo
 from app import main
-from app.routers import evaluation as evaluation_router
-from app.routers import health as health_router
 from app.evaluation_repo import (
     EvalCitationProxy,
     EvalComparePayload,
@@ -17,7 +16,11 @@ from app.evaluation_repo import (
     _arm_stats,
     _pool_cte_sql,
     _select_from_pool,
+    load_evaluation_compare,
 )
+from app.routers import evaluation as evaluation_router
+from app.routers import health as health_router
+from app.scores_repo import RankedRunContext
 
 
 client = TestClient(main.app)
@@ -105,8 +108,11 @@ def test_pool_sql_undercited_uses_low_cite_contract_filters() -> None:
         low_cite_min_year=2019,
         low_cite_max_citations=30,
     )
-    assert "w.inclusion_status = 'included'" in sql
-    assert "w.corpus_snapshot_version = %s" in sql
+    assert "work_source_snapshot_memberships wssm" in sql
+    assert "wssm.work_id = w.id" in sql
+    assert "wssm.inclusion_status = 'included'" in sql
+    assert "wssm.source_snapshot_version = %s" in sql
+    assert "w.corpus_snapshot_version = %s" not in sql
     assert "w.is_core_corpus = TRUE" in sql
     assert "w.year >= %s" in sql
     assert "w.citation_count <= %s" in sql
@@ -122,8 +128,11 @@ def test_pool_sql_non_undercited_uses_all_included_snapshot_works_only() -> None
         low_cite_min_year=2019,
         low_cite_max_citations=30,
     )
-    assert "w.inclusion_status = 'included'" in sql
-    assert "w.corpus_snapshot_version = %s" in sql
+    assert "work_source_snapshot_memberships wssm" in sql
+    assert "wssm.work_id = w.id" in sql
+    assert "wssm.inclusion_status = 'included'" in sql
+    assert "wssm.source_snapshot_version = %s" in sql
+    assert "w.corpus_snapshot_version = %s" not in sql
     assert "w.is_core_corpus = TRUE" not in sql
     assert "w.year >= %s" not in sql
     assert "w.citation_count <= %s" not in sql
@@ -158,6 +167,65 @@ def test_select_from_pool_undercited_keeps_low_cite_params_before_ordering() -> 
     assert "w.is_core_corpus = TRUE" in sql
     assert "CASE WHEN %s = 'citation' THEN pool.citation_count END DESC" in sql
     assert params == ("snap", 2020, 12, "date", 10)
+
+
+def test_ranked_evaluation_uses_membership_for_resolved_run_snapshot(monkeypatch) -> None:
+    conn = MagicMock()
+    conn.__enter__ = MagicMock(return_value=conn)
+    conn.__exit__ = MagicMock(return_value=False)
+
+    pool_result = MagicMock()
+    pool_result.fetchone.return_value = {"pool_n": 0}
+    ranked_result = MagicMock()
+    ranked_result.fetchall.return_value = []
+    citation_result = MagicMock()
+    citation_result.fetchall.return_value = []
+    date_result = MagicMock()
+    date_result.fetchall.return_value = []
+    conn.execute.side_effect = [pool_result, ranked_result, citation_result, date_result]
+
+    monkeypatch.setattr(evaluation_repo.psycopg, "connect", lambda *a, **k: conn)
+    monkeypatch.setattr(
+        evaluation_repo,
+        "latest_corpus_snapshot_version_with_works",
+        lambda _conn: "snapshot-default",
+    )
+    monkeypatch.setattr(
+        evaluation_repo,
+        "resolve_ranked_run_context",
+        lambda *_a, **_k: RankedRunContext(
+            ranking_run_id="rank-1",
+            ranking_version="rank-v1",
+            corpus_snapshot_version="snapshot-composed",
+        ),
+    )
+    monkeypatch.setattr(
+        evaluation_repo,
+        "_fetch_ranking_run_row",
+        lambda *_a, **_k: {
+            "ranking_run_id": "rank-1",
+            "ranking_version": "rank-v1",
+            "corpus_snapshot_version": "snapshot-composed",
+            "embedding_version": "embed-v1",
+            "config_json": {},
+            "status": "succeeded",
+        },
+    )
+
+    payload = load_evaluation_compare(
+        database_url="postgresql://test",
+        family="emerging",
+        limit=5,
+    )
+
+    assert payload is not None
+    ranked_sql, ranked_params = conn.execute.call_args_list[1][0]
+    assert "work_source_snapshot_memberships wssm" in ranked_sql
+    assert "wssm.work_id = w.id" in ranked_sql
+    assert "wssm.source_snapshot_version = %s" in ranked_sql
+    assert "wssm.inclusion_status = 'included'" in ranked_sql
+    assert "w.corpus_snapshot_version = %s" not in ranked_sql
+    assert ranked_params == ("snapshot-composed", "rank-1", "emerging", 5)
 
 
 def test_evaluation_compare_smoke(monkeypatch) -> None:

@@ -219,9 +219,11 @@ def _pool_cte_sql(
         WITH pool AS (
             SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
             FROM works w
-            WHERE w.inclusion_status = 'included'
-              AND w.corpus_snapshot_version = %s
-              AND w.is_core_corpus = TRUE
+            JOIN work_source_snapshot_memberships wssm
+              ON wssm.work_id = w.id
+             AND wssm.source_snapshot_version = %s
+             AND wssm.inclusion_status = 'included'
+            WHERE w.is_core_corpus = TRUE
               AND w.year >= %s
               AND w.citation_count <= %s
               AND length(trim(COALESCE(w.title, ''))) > 0
@@ -236,8 +238,10 @@ def _pool_cte_sql(
     WITH pool AS (
         SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
         FROM works w
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
     )
     SELECT COUNT(*)::bigint AS pool_n FROM pool
     """
@@ -260,9 +264,11 @@ def _select_from_pool(
         WITH pool AS (
             SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
             FROM works w
-            WHERE w.inclusion_status = 'included'
-              AND w.corpus_snapshot_version = %s
-              AND w.is_core_corpus = TRUE
+            JOIN work_source_snapshot_memberships wssm
+              ON wssm.work_id = w.id
+             AND wssm.source_snapshot_version = %s
+             AND wssm.inclusion_status = 'included'
+            WHERE w.is_core_corpus = TRUE
               AND w.year >= %s
               AND w.citation_count <= %s
               AND length(trim(COALESCE(w.title, ''))) > 0
@@ -301,8 +307,10 @@ def _select_from_pool(
     WITH pool AS (
         SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
         FROM works w
-        WHERE w.inclusion_status = 'included'
-          AND w.corpus_snapshot_version = %s
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
     )
     SELECT pool.openalex_id, pool.title, pool.year, pool.citation_count, pool.source_slug,
            COALESCE(topic_agg.topics, '[]'::json) AS topics
@@ -393,6 +401,10 @@ def load_evaluation_compare(
             ps.final_score
         FROM paper_scores ps
         JOIN works w ON w.id = ps.work_id
+        JOIN work_source_snapshot_memberships wssm
+          ON wssm.work_id = w.id
+         AND wssm.source_snapshot_version = %s
+         AND wssm.inclusion_status = 'included'
         LEFT JOIN LATERAL (
             SELECT json_agg(sub.topic_name ORDER BY sub.score DESC, sub.topic_name ASC) AS topics
             FROM (
@@ -406,10 +418,8 @@ def load_evaluation_compare(
         ) topic_agg ON TRUE
         WHERE ps.ranking_run_id = %s
           AND ps.recommendation_family = %s
-          AND w.corpus_snapshot_version = %s
-          AND w.inclusion_status = 'included'
         """
-        ranked_params: list[Any] = [ctx.ranking_run_id, family, ctx.corpus_snapshot_version]
+        ranked_params: list[Any] = [ctx.corpus_snapshot_version, ctx.ranking_run_id, family]
         if family == "undercited":
             ranked_sql += """
           AND w.is_core_corpus = TRUE

@@ -122,11 +122,24 @@ def search_papers(
                     "No succeeded ranking run found for the given search filters."
                 )
 
-        where_clauses = [
-            "w.inclusion_status = 'included'",
-            f"{DOCUMENT_VECTOR_SQL} @@ st.ts_query",
-        ]
+        where_clauses = [f"{DOCUMENT_VECTOR_SQL} @@ st.ts_query"]
         params: list[object] = [resolved_q]
+
+        if resolved_run is None:
+            where_clauses.append("w.inclusion_status = 'included'")
+        else:
+            where_clauses.append(
+                """
+                EXISTS (
+                    SELECT 1
+                    FROM work_source_snapshot_memberships wssm
+                    WHERE wssm.work_id = w.id
+                      AND wssm.source_snapshot_version = %s
+                      AND wssm.inclusion_status = 'included'
+                )
+                """
+            )
+            params.append(resolved_run.corpus_snapshot_version)
 
         if included_scope == "core":
             where_clauses.append("w.is_core_corpus IS TRUE")

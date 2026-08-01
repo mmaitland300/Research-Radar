@@ -437,8 +437,11 @@ def get_paper_family_rankings(
         WITH target_work AS (
             SELECT w.id
             FROM works w
+            JOIN work_source_snapshot_memberships wssm
+              ON wssm.work_id = w.id
+             AND wssm.source_snapshot_version = %s
+             AND wssm.inclusion_status = 'included'
             WHERE w.openalex_id = %s
-              AND w.inclusion_status = 'included'
             LIMIT 1
         ),
         families AS (
@@ -497,7 +500,10 @@ def get_paper_family_rankings(
         )
         if ctx is None:
             return None
-        rows = conn.execute(query, (paper_id, ctx.ranking_run_id)).fetchall()
+        rows = conn.execute(
+            query,
+            (ctx.corpus_snapshot_version, paper_id, ctx.ranking_run_id),
+        ).fetchall()
         cfg_row = conn.execute(
             """
             SELECT config_json
