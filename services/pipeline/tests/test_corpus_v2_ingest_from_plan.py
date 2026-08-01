@@ -457,13 +457,17 @@ def test_deduplicates_by_doi_before_writes(tmp_path: Path) -> None:
 def test_failed_insert_rolls_back_work_writes_and_marks_run_failed(tmp_path: Path) -> None:
     conn = _FakeConn(fail_on_work_insert=True)
 
-    with pytest.raises(CorpusV2IngestError, match="controlled insert failure"):
+    with pytest.raises(CorpusV2IngestError, match="RuntimeError: details redacted") as caught:
         _run_with_fake_db(tmp_path, conn, _plan())
 
     assert conn.works == {}
     assert conn.raw_openalex_works == []
     assert len(conn.ingest_runs) == 1
-    assert next(iter(conn.ingest_runs.values()))["status"] == "failed"
+    failed_run = next(iter(conn.ingest_runs.values()))
+    assert failed_run["status"] == "failed"
+    assert failed_run["error_message"] == "RuntimeError: details redacted"
+    assert "controlled insert failure" not in json.dumps(failed_run)
+    assert "controlled insert failure" not in str(caught.value)
     assert conn.rollback_count >= 1
 
 

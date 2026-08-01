@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 import psycopg
 
 from pipeline.bootstrap_loader import database_url_from_env
+from pipeline.error_reporting import safe_exception_summary
 from pipeline.openalex import OPENALEX_WORKS_URL, build_work_select_clause
 from pipeline.openalex_client import OPENALEX_API_KEY_ENV, fetch_openalex_json, openalex_api_key_from_env
 from pipeline.openalex_text import abstract_plain_text, clean_openalex_text
@@ -140,8 +141,15 @@ def run_corpus_v2_hydrate_openalex(
                 _mark_hydration_run_final(conn, hydration_run_id=hydration_run_id, summary=summary, status="succeeded")
             conn.commit()
         except Exception as exc:
-            _mark_hydration_run_failed(conn, hydration_run_id=hydration_run_id, message=str(exc))
-            raise CorpusV2HydrateError(f"corpus-v2 hydrate failed: {exc}", code=1) from exc
+            _mark_hydration_run_failed(
+                conn,
+                hydration_run_id=hydration_run_id,
+                message=safe_exception_summary(exc),
+            )
+            raise CorpusV2HydrateError(
+                f"corpus-v2 hydrate failed: {safe_exception_summary(exc)}",
+                code=1,
+            ) from exc
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")

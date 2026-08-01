@@ -1,3 +1,5 @@
+import pytest
+
 from pipeline.clustering import ClusteringInput
 from pipeline.clustering_persistence import ClusterInputSummary
 from pipeline.clustering_run import execute_clustering_run
@@ -85,4 +87,46 @@ def test_execute_clustering_run_uses_identity_and_writes_counts(monkeypatch) -> 
     assigned_cluster_version, assigned_rows = calls[1][1]
     assert assigned_cluster_version == "cluster-v0"
     assert len(assigned_rows) == 3
+
+
+def test_execute_clustering_run_persists_only_exception_type(monkeypatch) -> None:
+    secret_dsn = "postgresql://admin:super-secret@db.example.test/research"
+    connections = iter([_FakeConn(), _FakeConn(), _FakeConn()])
+    final_calls: list[tuple[str, str | None]] = []
+
+    monkeypatch.setattr(
+        "pipeline.clustering_run.psycopg.connect",
+        lambda *args, **kwargs: next(connections),
+    )
+    monkeypatch.setattr(
+        "pipeline.clustering_run.list_clustering_inputs",
+        lambda conn, *, embedding_version, corpus_snapshot_version: ClusterInputSummary(
+            corpus_snapshot_version="source-snapshot-1",
+            embedding_version=embedding_version,
+            total_input_works=1,
+            rows=[ClusteringInput(work_id=1, vector=(0.0, 0.0))],
+        ),
+    )
+    monkeypatch.setattr("pipeline.clustering_run.insert_clustering_run_started", lambda conn, run: None)
+    monkeypatch.setattr(
+        "pipeline.clustering_run.cluster_inputs_kmeans",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(secret_dsn)),
+    )
+    monkeypatch.setattr(
+        "pipeline.clustering_run.update_clustering_run_final",
+        lambda conn, cluster_version, status, counts, error_message: final_calls.append(
+            (status, error_message)
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="super-secret"):
+        execute_clustering_run(
+            database_url=secret_dsn,
+            cluster_version="cluster-v0",
+            embedding_version="embed-v1",
+            cluster_count=1,
+        )
+
+    assert final_calls == [("failed", "RuntimeError: details redacted")]
+    assert secret_dsn not in str(final_calls)
 
