@@ -406,6 +406,37 @@ def test_cli_smoke_writes_json_and_markdown(tmp_path: Path, monkeypatch: pytest.
     assert "Top 20 Probability Preview" in out_md.read_text(encoding="utf-8")
 
 
+def test_blocked_database_artifact_omits_exception_message_and_dsn(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secret_dsn = "postgresql://admin:super-secret@localhost:5432/research"
+    out_json = tmp_path / "blocked.json"
+    out_md = tmp_path / "blocked.md"
+    monkeypatch.setattr(apply_module, "_database_url_from_env", lambda: secret_dsn)
+    monkeypatch.setattr(
+        apply_module,
+        "_connect_readonly",
+        lambda database_url: (_ for _ in ()).throw(OSError(f"refused {database_url}")),
+    )
+
+    payload = apply_module.write_ml_shadow_scorer_second_surface_learned_probability_apply(
+        **_paths(tmp_path),
+        output_path=out_json,
+        markdown_output_path=out_md,
+        repo_root=tmp_path,
+    )
+
+    assert payload["execution_summary"]["status"] == "blocked_database_unavailable"
+    assert payload["metadata"]["database_unavailable_error"] == "OSError: details redacted"
+    assert payload["metadata"]["database_target_redacted"] == (
+        "postgresql://admin:***@localhost:5432/research"
+    )
+    assert secret_dsn not in json.dumps(payload)
+    assert secret_dsn not in out_json.read_text(encoding="utf-8")
+    assert secret_dsn not in out_md.read_text(encoding="utf-8")
+
+
 def test_no_direct_forbidden_imports_and_cli_has_expected_database_url() -> None:
     module_source = (
         PACKAGE_ROOT / "pipeline" / "ml_shadow_scorer_second_surface_learned_probability_apply.py"

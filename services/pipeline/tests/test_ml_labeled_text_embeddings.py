@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import traceback
 from pathlib import Path
 from typing import Sequence
 
@@ -32,7 +33,7 @@ class _FakeProvider:
     def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
         self.calls.append(list(texts))
         if self.fail:
-            raise RuntimeError("provider fixture failure")
+            raise RuntimeError("labeled-provider-message-secret")
         dim = self.dimensions + 1 if self.wrong_dimensions else self.dimensions
         return [[float(len(text)), float(index), 0.25][:dim] + [0.0] * max(0, dim - 3) for index, text in enumerate(texts)]
 
@@ -133,6 +134,33 @@ def test_mock_vectors_are_deterministic(tmp_path: Path) -> None:
     assert left["metadata"]["n_mock"] == 4
 
 
+def test_metadata_redacts_openai_base_url_secrets(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv(
+        "OPENAI_BASE_URL",
+        "https://userinfo-secret:password-secret@api.example.test:8443/v1/custom"
+        "?query-secret=value#fragment-secret",
+    )
+
+    payload = build_ml_labeled_text_embeddings_payload(
+        text_corpus_path=_write_corpus(tmp_path),
+        expected_dimensions=3,
+        mock_embeddings=True,
+    )
+
+    stored_url = payload["metadata"]["openai_base_url"]
+    assert stored_url == "https://api.example.test:8443/v1/custom"
+    for secret in (
+        "userinfo-secret",
+        "password-secret",
+        "query-secret",
+        "fragment-secret",
+    ):
+        assert secret not in json.dumps(payload["metadata"])
+
+
 def test_accepts_caller_supplied_source_and_embedding_versions(tmp_path: Path) -> None:
     corpus = _corpus_payload(version="ml-labeled-text-corpus-v3-normalized")
     corpus["metadata"].pop("label_dataset_sha256")
@@ -198,7 +226,7 @@ def test_dimension_and_provider_errors_fail_without_partial_write(tmp_path: Path
         )
 
     output = tmp_path / "out.json"
-    with pytest.raises(MLLabeledTextEmbeddingsError, match="provider failed"):
+    with pytest.raises(MLLabeledTextEmbeddingsError, match="provider failed") as raised:
         write_ml_labeled_text_embeddings(
             text_corpus_path=path,
             output_path=output,
@@ -207,6 +235,42 @@ def test_dimension_and_provider_errors_fail_without_partial_write(tmp_path: Path
             provider=_FakeProvider(dimensions=3, fail=True),
         )
     assert not output.exists()
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert "labeled-provider-message-secret" not in rendered
+    assert "RuntimeError: details redacted" in str(raised.value)
+
+
+def test_provider_initialization_failure_is_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def fail_provider_initialization(**_kwargs: object) -> None:
+        raise RuntimeError("labeled-provider-init-secret")
+
+    monkeypatch.setattr(
+        "pipeline.ml_labeled_text_embeddings.openai_embedding_provider_from_env",
+        fail_provider_initialization,
+    )
+
+    with pytest.raises(MLLabeledTextEmbeddingsError) as raised:
+        build_ml_labeled_text_embeddings_payload(
+            text_corpus_path=_write_corpus(tmp_path),
+            expected_dimensions=3,
+        )
+
+    rendered = "".join(
+        traceback.format_exception(
+            type(raised.value), raised.value, raised.value.__traceback__
+        )
+    )
+    assert str(raised.value) == (
+        "embedding provider initialization failed: RuntimeError: details redacted"
+    )
+    assert "labeled-provider-init-secret" not in rendered
 
 
 def test_markdown_has_caveats_layering_and_no_vectors(tmp_path: Path) -> None:

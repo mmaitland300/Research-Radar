@@ -28,8 +28,13 @@ def get_product_summary() -> ProductSummary:
                 embedding_version=row.embedding_version,
                 config_json=row.config_json,
             )
-    except Exception:
-        logger.exception("Failed to load materialized ranking metadata for product summary")
+    except Exception as exc:
+        exception_type = type(exc).__name__
+        logger.error(
+            "Failed to load materialized ranking metadata for product summary exception_type=%s",
+            exception_type,
+            extra={"exception_type": exception_type},
+        )
         materialized = None
 
     return ProductSummary(

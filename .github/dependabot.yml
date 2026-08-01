@@ -11,6 +11,15 @@ updates:
       - "dependencies"
       - "github-actions"
     open-pull-requests-limit: 5
+    groups:
+      actions-nonmajor:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Major action upgrades remain individual migration PRs.
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -24,13 +33,45 @@ updates:
       - "javascript"
     open-pull-requests-limit: 5
     groups:
-      web-runtime:
+      runtime-security:
+        applies-to: "security-updates"
         patterns:
           - "next"
           - "react"
           - "react-dom"
-      web-tooling:
+
+      sharp-security:
+        applies-to: "security-updates"
+        patterns:
+          - "sharp"
+
+      runtime-patches:
+        applies-to: "version-updates"
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+        update-types:
+          - "patch"
+
+      sharp-patches:
+        applies-to: "version-updates"
+        patterns:
+          - "sharp"
+        update-types:
+          - "patch"
+
+      dev-tooling-nonmajor:
+        applies-to: "version-updates"
         dependency-type: "development"
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "sharp"
+        update-types:
+          - "minor"
+          - "patch"
+    # Major npm upgrades remain individual migration PRs.
 
   - package-ecosystem: "pip"
     directory: "/apps/api"
