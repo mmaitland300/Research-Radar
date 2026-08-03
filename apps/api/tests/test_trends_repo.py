@@ -26,7 +26,13 @@ def test_list_topic_trends_uses_explicit_snapshot(monkeypatch) -> None:
 
     assert result.corpus_snapshot_version == "source-snapshot-explicit"
     call = conn.execute.call_args
+    query = call[0][0]
     params = call[0][1]
+    assert "work_source_snapshot_memberships wssm" in query
+    assert "wssm.work_id = w.id" in query
+    assert "wssm.source_snapshot_version = %s" in query
+    assert "wssm.inclusion_status = 'included'" in query
+    assert "w.corpus_snapshot_version = %s" not in query
     assert params[2] == "source-snapshot-explicit"
 
 
@@ -46,6 +52,9 @@ def test_list_topic_trends_defaults_to_latest_snapshot(monkeypatch) -> None:
     result = list_topic_trends(limit=5, since_year=2025, min_works=2)
 
     assert result.corpus_snapshot_version == "source-snapshot-latest"
-    params = conn.execute.call_args[0][1]
+    query, params = conn.execute.call_args[0]
+    assert "work_source_snapshot_memberships wssm" in query
+    assert "wssm.source_snapshot_version = %s" in query
+    assert "wssm.inclusion_status = 'included'" in query
     assert params[2] == "source-snapshot-latest"
 
