@@ -4,6 +4,8 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
+import pytest
+
 from app.public_release_repo import (
     MaterializedRunContext,
     PublicReleasePromotion,
@@ -92,6 +94,35 @@ def _complete_score_rows(*, outside: int = 0) -> list[dict[str, Any]]:
             "out_of_membership_count": 0,
         },
     ]
+
+
+def _clustered_config() -> dict[str, Any]:
+    return {
+        "families_written": ["emerging", "bridge", "undercited"],
+        "selection_scope": {
+            "type": "included_works",
+            "corpus_snapshot_version": "snapshot-composed",
+        },
+        "clustering_artifact": {
+            "cluster_version": "cluster-v1",
+            "corpus_snapshot_version": "snapshot-composed",
+            "embedding_version": "embedding-v1",
+        },
+    }
+
+
+def _complete_cluster_row(**overrides: Any) -> dict[str, Any]:
+    row = {
+        "status": "succeeded",
+        "finished_at": datetime(2026, 8, 23, tzinfo=UTC),
+        "error_message": None,
+        "corpus_snapshot_version": "snapshot-composed",
+        "embedding_version": "embedding-v1",
+        "member_assignment_count": 2,
+        "out_of_membership_count": 0,
+    }
+    row.update(overrides)
+    return row
 
 
 def test_fetch_latest_promotion_includes_referenced_run() -> None:
@@ -289,39 +320,47 @@ def test_serveability_requires_materialized_selection_scope() -> None:
 
 
 def test_serveability_checks_clustering_when_run_config_identifies_it() -> None:
-    config = {
-        "families_written": ["emerging", "bridge", "undercited"],
-        "selection_scope": {
-            "type": "included_works",
-            "corpus_snapshot_version": "snapshot-composed",
-        },
-        "clustering_artifact": {
-            "cluster_version": "cluster-v1",
-            "corpus_snapshot_version": "snapshot-composed",
-            "embedding_version": "embedding-v1",
-        },
-    }
     conn = _Conn(
         [
             _Result(one={"membership_count": 2, "embedding_count": 2}),
             _Result(all_rows=_complete_score_rows()),
-            _Result(
-                one={
-                    "status": "succeeded",
-                    "corpus_snapshot_version": "snapshot-composed",
-                    "embedding_version": "embedding-v1",
-                    "member_assignment_count": 2,
-                    "out_of_membership_count": 0,
-                }
-            ),
+            _Result(one=_complete_cluster_row()),
         ]
     )
 
     diagnostics = inspect_public_release_serveability(  # type: ignore[arg-type]
-        conn, _promotion(run=_run(config=config))
+        conn, _promotion(run=_run(config=_clustered_config()))
     )
 
     assert diagnostics.serveable is True
     assert diagnostics.cluster_version == "cluster-v1"
     assert diagnostics.cluster_assignment_count == 2
     assert diagnostics.missing_cluster_assignment_count == 0
+
+
+@pytest.mark.parametrize(
+    ("cluster_overrides", "expected_failure"),
+    [
+        ({"finished_at": None}, "clustering_run_not_finished"),
+        ({"error_message": "failed after finalize"}, "clustering_run_has_error"),
+    ],
+)
+def test_serveability_rejects_nonterminal_clustering_run(
+    cluster_overrides: dict[str, Any],
+    expected_failure: str,
+) -> None:
+    conn = _Conn(
+        [
+            _Result(one={"membership_count": 2, "embedding_count": 2}),
+            _Result(all_rows=_complete_score_rows()),
+            _Result(one=_complete_cluster_row(**cluster_overrides)),
+        ]
+    )
+
+    diagnostics = inspect_public_release_serveability(  # type: ignore[arg-type]
+        conn,
+        _promotion(run=_run(config=_clustered_config())),
+    )
+
+    assert diagnostics.serveable is False
+    assert expected_failure in diagnostics.failures

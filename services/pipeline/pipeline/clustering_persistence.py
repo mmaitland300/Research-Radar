@@ -211,12 +211,14 @@ def require_successful_clustering_run(
           AND corpus_snapshot_version = %s
           AND embedding_version = %s
           AND status = 'succeeded'
+          AND finished_at IS NOT NULL
+          AND error_message IS NULL
         """,
         (cluster_version, corpus_snapshot_version, embedding_version),
     ).fetchone()
     if row is None:
         raise RuntimeError(
-            "No succeeded clustering_runs row matches cluster_version="
+            "No completed, error-free succeeded clustering_runs row matches cluster_version="
             f"{cluster_version!r}, corpus_snapshot_version={corpus_snapshot_version!r}, "
             f"embedding_version={embedding_version!r}."
         )

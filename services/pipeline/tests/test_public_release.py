@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -80,11 +81,11 @@ def _install_valid_gate(
     coverage: ScoreCoverage | None = None,
 ) -> SimpleNamespace:
     conn = MagicMock(name="connection")
-    connect_cm = MagicMock(name="connect_context")
-    connect_cm.__enter__.return_value = conn
-    connect_cm.__exit__.return_value = False
-    connect = MagicMock(return_value=connect_cm)
-    lock = MagicMock()
+    @contextmanager
+    def transaction_context(_database_url: str):
+        yield conn
+
+    transaction = MagicMock(side_effect=transaction_context)
     fetch_run = MagicMock(return_value=run or _valid_run())
     count_memberships = MagicMock(return_value=membership_count)
     count_embeddings = MagicMock(return_value=missing_embeddings)
@@ -98,8 +99,7 @@ def _install_valid_gate(
     missing_cluster = MagicMock(return_value=0)
     outside_cluster = MagicMock(return_value=0)
 
-    monkeypatch.setattr(public_release.psycopg, "connect", connect)
-    monkeypatch.setattr(public_release, "acquire_public_release_advisory_lock", lock)
+    monkeypatch.setattr(public_release, "serialized_public_release_transaction", transaction)
     monkeypatch.setattr(public_release, "fetch_ranking_run_for_promotion", fetch_run)
     monkeypatch.setattr(public_release, "count_included_memberships", count_memberships)
     monkeypatch.setattr(
@@ -117,9 +117,7 @@ def _install_valid_gate(
     )
     return SimpleNamespace(
         conn=conn,
-        connect=connect,
-        connect_cm=connect_cm,
-        lock=lock,
+        transaction=transaction,
         fetch_run=fetch_run,
         count_memberships=count_memberships,
         count_embeddings=count_embeddings,
@@ -147,11 +145,7 @@ def test_promotes_valid_exact_run_under_transaction_lock(
     assert result.promotion_id == 18
     assert result.membership_count == 5
     assert result.rows_by_family == {"emerging": 5, "bridge": 5, "undercited": 2}
-    gate.connect.assert_called_once_with("postgresql://test/db", autocommit=False)
-    gate.conn.execute.assert_called_once_with(
-        "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"
-    )
-    gate.lock.assert_called_once_with(gate.conn)
+    gate.transaction.assert_called_once_with("postgresql://test/db")
     gate.fetch_run.assert_called_once_with(gate.conn, ranking_run_id=RUN_ID)
     gate.append.assert_called_once_with(
         gate.conn,
@@ -159,7 +153,6 @@ def test_promotes_valid_exact_run_under_transaction_lock(
         promoted_by="pipeline-cli",
         note=None,
     )
-    gate.connect_cm.__exit__.assert_called_once_with(None, None, None)
 
 
 def test_dry_run_performs_full_validation_without_append(

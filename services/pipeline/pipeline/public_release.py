@@ -19,12 +19,12 @@ from pipeline.public_release_persistence import (
     PublicReleasePromotionRow,
     RankingRunForPromotion,
     ScoreCoverage,
-    acquire_public_release_advisory_lock,
     append_public_release_promotion,
     count_cluster_assignments_outside_membership,
     fetch_active_public_release_promotion,
     fetch_ranking_run_for_promotion,
     fetch_score_coverage,
+    serialized_public_release_transaction,
 )
 from pipeline.snapshot_membership import count_included_memberships
 
@@ -312,9 +312,7 @@ def promote_public_release(
         raise PublicReleasePromotionError("--ranking-run-id is required and must not be blank")
 
     dsn = database_url or database_url_from_env()
-    with psycopg.connect(dsn, autocommit=False) as conn:
-        conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
-        acquire_public_release_advisory_lock(conn)
+    with serialized_public_release_transaction(dsn) as conn:
         run = fetch_ranking_run_for_promotion(conn, ranking_run_id=requested_run_id)
         if run is None:
             raise PublicReleasePromotionError(f"ranking run not found: {requested_run_id}")

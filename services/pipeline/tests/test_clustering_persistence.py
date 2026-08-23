@@ -1,10 +1,13 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from pipeline.clustering import ClusterAssignment
 from pipeline.clustering_persistence import (
     count_included_missing_cluster_assignment,
     list_clustering_inputs,
     replace_cluster_assignments,
+    require_successful_clustering_run,
 )
 
 
@@ -58,4 +61,35 @@ def test_replace_cluster_assignments_delete_then_insert_idempotency_rule() -> No
     assert "INSERT INTO clusters" in calls[1][0][0]
     assert calls[1][0][1] == (1, "c000", "cluster-v0")
     assert calls[2][0][1] == (2, "c001", "cluster-v0")
+
+
+def test_require_successful_clustering_run_requires_clean_terminal_state() -> None:
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = (1,)
+
+    require_successful_clustering_run(
+        conn,
+        cluster_version="cluster-v1",
+        corpus_snapshot_version="snapshot-v1",
+        embedding_version="embedding-v1",
+    )
+
+    sql, params = conn.execute.call_args.args
+    assert "status = 'succeeded'" in sql
+    assert "finished_at IS NOT NULL" in sql
+    assert "error_message IS NULL" in sql
+    assert params == ("cluster-v1", "snapshot-v1", "embedding-v1")
+
+
+def test_require_successful_clustering_run_rejects_nonterminal_match() -> None:
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = None
+
+    with pytest.raises(RuntimeError, match="completed, error-free succeeded"):
+        require_successful_clustering_run(
+            conn,
+            cluster_version="cluster-v1",
+            corpus_snapshot_version="snapshot-v1",
+            embedding_version="embedding-v1",
+        )
 

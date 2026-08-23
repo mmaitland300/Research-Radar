@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
+import pipeline.public_release_persistence as persistence
 from pipeline.public_release_persistence import (
     PUBLIC_RELEASE_ADVISORY_LOCK_ID,
-    acquire_public_release_advisory_lock,
     append_public_release_promotion,
     fetch_active_public_release_promotion,
     fetch_ranking_run_for_promotion,
     fetch_score_coverage,
+    serialized_public_release_transaction,
 )
 
 
@@ -68,13 +69,71 @@ def test_persistence_adapters_accept_default_tuple_rows() -> None:
     assert run.finished_at == NOW
 
 
-def test_advisory_lock_uses_stable_transaction_key() -> None:
+def test_serialized_transaction_locks_before_repeatable_read_snapshot(
+    monkeypatch,
+) -> None:
     conn = MagicMock()
+    conn.closed = False
+    connection_context = MagicMock()
+    connection_context.__enter__.return_value = conn
+    connection_context.__exit__.return_value = False
+    transaction_context = MagicMock()
+    transaction_context.__enter__.return_value = None
+    transaction_context.__exit__.return_value = False
+    conn.transaction.return_value = transaction_context
+    connect = MagicMock(return_value=connection_context)
+    monkeypatch.setattr(persistence.psycopg, "connect", connect)
 
-    acquire_public_release_advisory_lock(conn)
+    with serialized_public_release_transaction("postgresql://test/db") as yielded:
+        assert yielded is conn
 
-    conn.execute.assert_called_once_with(
-        "SELECT pg_advisory_xact_lock(%s)", (PUBLIC_RELEASE_ADVISORY_LOCK_ID,)
+    connect.assert_called_once_with("postgresql://test/db", autocommit=True)
+    assert conn.execute.call_args_list == [
+        call("SELECT pg_advisory_lock(%s)", (PUBLIC_RELEASE_ADVISORY_LOCK_ID,)),
+        call("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"),
+    ]
+    conn.transaction.assert_called_once_with()
+    transaction_context.__exit__.assert_called_once_with(None, None, None)
+    connection_context.__exit__.assert_called_once_with(None, None, None)
+
+
+def test_serialized_transaction_closes_lock_holding_session_after_rollback(
+    monkeypatch,
+) -> None:
+    conn = MagicMock()
+    conn.closed = False
+    connection_context = MagicMock()
+    connection_context.__enter__.return_value = conn
+    connection_context.__exit__.return_value = False
+    transaction_context = MagicMock()
+    transaction_context.__enter__.return_value = None
+    transaction_context.__exit__.return_value = False
+    conn.transaction.return_value = transaction_context
+    monkeypatch.setattr(
+        persistence.psycopg,
+        "connect",
+        MagicMock(return_value=connection_context),
+    )
+
+    error = RuntimeError("validation failed")
+    try:
+        with serialized_public_release_transaction("postgresql://test/db"):
+            raise error
+    except RuntimeError as exc:
+        assert exc is error
+    else:  # pragma: no cover - the context manager must propagate the error.
+        raise AssertionError("transaction error was swallowed")
+
+    transaction_context.__exit__.assert_called_once()
+    exit_args = transaction_context.__exit__.call_args.args
+    assert exit_args[:2] == (RuntimeError, error)
+    assert exit_args[2] is not None
+    connection_context.__exit__.assert_called_once()
+    connection_exit_args = connection_context.__exit__.call_args.args
+    assert connection_exit_args[:2] == (RuntimeError, error)
+    assert connection_exit_args[2] is not None
+    assert conn.execute.call_args_list[-1] == call(
+        "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"
     )
 
 

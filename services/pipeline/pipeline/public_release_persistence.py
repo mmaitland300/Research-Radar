@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Mapping, Sequence
@@ -9,7 +11,7 @@ from typing import Any, Mapping, Sequence
 import psycopg
 
 
-# Stable, repository-specific transaction lock key (ASCII ``RRPUBLIC``).
+# Stable, repository-specific session lock key (ASCII ``RRPUBLIC``).
 PUBLIC_RELEASE_ADVISORY_LOCK_ID = 0x52525055424C4943
 
 
@@ -52,9 +54,24 @@ class ScoreCoverage:
         }
 
 
-def acquire_public_release_advisory_lock(conn: psycopg.Connection) -> None:
-    """Serialize validation and promotion for the one public serving pointer."""
-    conn.execute("SELECT pg_advisory_xact_lock(%s)", (PUBLIC_RELEASE_ADVISORY_LOCK_ID,))
+@contextmanager
+def serialized_public_release_transaction(
+    database_url: str,
+) -> Iterator[psycopg.Connection]:
+    """Yield a repeatable-read transaction serialized around the public pointer.
+
+    The session lock is intentionally acquired in autocommit mode before the
+    transaction begins. A waiter therefore starts its repeatable-read snapshot
+    only after the preceding promoter has committed, so idempotence and rollback
+    decisions cannot be made from a stale snapshot.
+    """
+    with psycopg.connect(database_url, autocommit=True) as conn:
+        conn.execute("SELECT pg_advisory_lock(%s)", (PUBLIC_RELEASE_ADVISORY_LOCK_ID,))
+        with conn.transaction():
+            conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+            yield conn
+        # This is a direct, non-pooled connection. Leaving its context closes
+        # the session and releases the advisory lock after commit or rollback.
 
 
 def _row_value(row: Mapping[str, Any] | Sequence[Any], key: str, index: int) -> Any:
@@ -227,10 +244,10 @@ __all__ = [
     "PublicReleasePromotionRow",
     "RankingRunForPromotion",
     "ScoreCoverage",
-    "acquire_public_release_advisory_lock",
     "append_public_release_promotion",
     "count_cluster_assignments_outside_membership",
     "fetch_active_public_release_promotion",
     "fetch_ranking_run_for_promotion",
     "fetch_score_coverage",
+    "serialized_public_release_transaction",
 ]

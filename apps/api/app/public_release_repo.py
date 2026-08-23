@@ -320,6 +320,8 @@ def inspect_public_release_serveability(
                     """
                     SELECT
                         cr.status,
+                        cr.finished_at,
+                        cr.error_message,
                         cr.corpus_snapshot_version,
                         cr.embedding_version,
                         COUNT(c.work_id) FILTER (WHERE wssm.work_id IS NOT NULL)
@@ -333,7 +335,12 @@ def inspect_public_release_serveability(
                      AND wssm.source_snapshot_version = %s
                      AND wssm.inclusion_status = 'included'
                     WHERE cr.cluster_version = %s
-                    GROUP BY cr.status, cr.corpus_snapshot_version, cr.embedding_version
+                    GROUP BY
+                        cr.status,
+                        cr.finished_at,
+                        cr.error_message,
+                        cr.corpus_snapshot_version,
+                        cr.embedding_version
                     """,
                     (run.corpus_snapshot_version, cluster_version),
                 ).fetchone()
@@ -345,6 +352,10 @@ def inspect_public_release_serveability(
                     out_of_membership_cluster_count = int(cluster_row["out_of_membership_count"] or 0)
                     if str(cluster_row["status"]) != "succeeded":
                         failures.append("clustering_run_not_succeeded")
+                    if cluster_row["finished_at"] is None:
+                        failures.append("clustering_run_not_finished")
+                    if cluster_row["error_message"] is not None:
+                        failures.append("clustering_run_has_error")
                     if str(cluster_row["corpus_snapshot_version"]) != run.corpus_snapshot_version:
                         failures.append("clustering_snapshot_mismatch")
                     if str(cluster_row["embedding_version"]) != run.embedding_version:
