@@ -9,12 +9,44 @@ class HealthResponse(BaseModel):
     timestamp: datetime
 
 
+class PublicReleaseScorerMeta(BaseModel):
+    kind: Literal["materialized_paper_scores"]
+    version: str
+
+
+class ActivePublicReleaseMeta(BaseModel):
+    promotion_id: int
+    ranking_run_id: str
+    ranking_version: str
+    corpus_snapshot_version: str
+    embedding_version: str
+    scorer: PublicReleaseScorerMeta
+    promoted_at: datetime
+
+
+class PublicReleaseReadinessDiagnostics(BaseModel):
+    serveable: bool
+    membership_count: int
+    embedding_count: int
+    missing_embedding_count: int
+    family_score_counts: dict[str, int]
+    expected_family_score_counts: dict[str, int]
+    out_of_membership_score_count: int
+    cluster_version: str | None = None
+    cluster_assignment_count: int | None = None
+    missing_cluster_assignment_count: int | None = None
+    out_of_membership_cluster_count: int | None = None
+    failures: list[str]
+
+
 class ReadinessResponse(BaseModel):
     """Liveness stays cheap; readiness includes a database dependency check."""
 
     status: str
     database: str
     timestamp: datetime
+    active_release: ActivePublicReleaseMeta | None = None
+    release_diagnostics: PublicReleaseReadinessDiagnostics | None = None
 
 
 class EvaluationDisclaimer(BaseModel):
@@ -155,6 +187,7 @@ class ProductSummary(BaseModel):
     ranking_weights: dict[str, float]
     ranking_metadata_note: str
     materialized_ranking: MaterializedRankingMeta | None = None
+    active_release: ActivePublicReleaseMeta | None = None
 
 
 class RankingFamily(BaseModel):

@@ -316,10 +316,13 @@ def test_readiness_ok(monkeypatch) -> None:
             return False
 
     monkeypatch.setattr(health_router.psycopg, "connect", lambda *_a, **_k: FakeConn())
+    monkeypatch.setattr(health_router, "fetch_latest_public_release_promotion", lambda _conn: None)
     response = client.get("/readyz")
 
     assert response.status_code == 200
     assert response.json()["database"] == "connected"
+    assert response.json()["active_release"] is None
+    assert response.json()["release_diagnostics"] is None
 
 
 def test_readiness_db_down(monkeypatch) -> None:

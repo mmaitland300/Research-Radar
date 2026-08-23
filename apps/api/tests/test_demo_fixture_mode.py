@@ -36,6 +36,9 @@ def test_fixture_mode_serves_core_surfaces_without_database(monkeypatch) -> None
     ready = client.get("/readyz")
     assert ready.status_code == 200
     assert ready.json()["database"] == "fixture-data"
+    assert ready.json()["active_release"]["ranking_run_id"] == "fixture-rank-demo-001"
+    assert ready.json()["active_release"]["scorer"]["version"] == "fixture-rank-demo-001"
+    assert ready.json()["release_diagnostics"]["serveable"] is True
 
     meta = client.get("/api/v1/meta/product")
     assert meta.status_code == 200
@@ -43,6 +46,7 @@ def test_fixture_mode_serves_core_surfaces_without_database(monkeypatch) -> None
         meta.json()["materialized_ranking"]["ranking_version"]
         == "fixture-demo-v0-no-db"
     )
+    assert meta.json()["active_release"]["ranking_run_id"] == "fixture-rank-demo-001"
 
     search = client.get("/api/v1/search?q=audio&family_hint=emerging&limit=3")
     assert search.status_code == 200

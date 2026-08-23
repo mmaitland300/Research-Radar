@@ -21,5 +21,26 @@ Current boundaries:
   `pipeline.ml_scorer_rollout_serving` and
   `pipeline.ml_bridge_scorer_rollout_serving`.
 
+## Public release promotion
+
+`public-release-promote` is the operator boundary for selecting one immutable
+ranking run for public serving. Always validate the exact run first:
+
+```bash
+python -m pipeline.cli public-release-promote \
+  --ranking-run-id rank-... \
+  --dry-run
+```
+
+Omit `--dry-run` only after the reported snapshot, embedding coverage, family
+row counts, and optional clustering artifact are the intended release. The
+command never resolves a "latest" run and has no force bypass. Promotions are
+append-only; promoting a prior known-good run is the rollback operation.
+
+During the initial `0003` rollout, use this command in `--dry-run` mode only.
+The public promotion log is not authoritative until the API serving resolver
+is switched to consume it; appending earlier could make metadata disagree
+with the still-legacy page defaults.
+
 When moving legacy modules, keep command names and import compatibility until
 the dependent tests and API serving path have been migrated deliberately.

@@ -6,11 +6,13 @@ from pipeline.cli_app.core_dispatch import handle_core_commands
 from pipeline.cli_app.corpus_dispatch import handle_corpus_commands
 from pipeline.cli_app.dispatch_common import DispatchContext
 from pipeline.cli_app.ml_legacy_dispatch import handle_ml_legacy_commands
+from pipeline.cli_app.release_dispatch import handle_release_commands
 from pipeline.cli_app.review_dispatch import handle_review_commands
 
 
 _HANDLERS = (
     handle_ml_legacy_commands,
+    handle_release_commands,
     handle_corpus_commands,
     handle_review_commands,
     handle_bridge_commands,
