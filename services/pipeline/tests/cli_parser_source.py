@@ -9,6 +9,7 @@ def read_cli_parser_source(package_root: Path) -> str:
     parser_files = (
         "core_parsers.py",
         "review_parsers.py",
+        "release_parsers.py",
         "bridge_parsers.py",
         "corpus_parsers.py",
         "ml_label_parsers.py",

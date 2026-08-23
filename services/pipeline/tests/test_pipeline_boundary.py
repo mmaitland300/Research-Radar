@@ -22,6 +22,24 @@ def test_top_level_cli_dispatch_uses_legacy_ml_boundary() -> None:
     assert "pipeline.cli_app.ml_text_dispatch" not in dispatch_source
 
 
+def test_public_release_cli_keeps_parser_and_dispatch_in_dedicated_modules() -> None:
+    cli_source = (PACKAGE_ROOT / "pipeline" / "cli.py").read_text(encoding="utf-8")
+    core_parser_source = (PACKAGE_ROOT / "pipeline" / "cli_app" / "core_parsers.py").read_text(
+        encoding="utf-8"
+    )
+    product_parser_source = (
+        PACKAGE_ROOT / "pipeline" / "cli_app" / "product_parsers.py"
+    ).read_text(encoding="utf-8")
+    dispatch_source = (PACKAGE_ROOT / "pipeline" / "cli_app" / "dispatch.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "public-release-promote" not in cli_source
+    assert "public-release-promote" not in core_parser_source
+    assert "register_release_parsers" in product_parser_source
+    assert "handle_release_commands" in dispatch_source
+
+
 def test_legacy_ml_dispatch_keeps_existing_handler_order() -> None:
     import pipeline.cli_app.ml_legacy_dispatch as legacy_dispatch
 

@@ -14,6 +14,7 @@ from urllib.parse import unquote
 
 from app.config import PRODUCT_RANKING_METADATA_NOTE, settings
 from app.contracts import (
+    ActivePublicReleaseMeta,
     BridgeDistinctnessDecisionSupport,
     BridgeDistinctnessOverlapMetrics,
     BridgeDistinctnessResponse,
@@ -35,6 +36,8 @@ from app.contracts import (
     PaperRankingFamilyItem,
     PaperRankingResponse,
     ProductSummary,
+    PublicReleaseReadinessDiagnostics,
+    PublicReleaseScorerMeta,
     RankedListExplanation,
     RankedRecommendationItem,
     RankedRecommendationsResponse,
@@ -316,7 +319,38 @@ def fixture_mode_enabled() -> bool:
 
 
 def fixture_readiness() -> ReadinessResponse:
-    return ReadinessResponse(status="ok", database="fixture-data", timestamp=utc_now())
+    family_counts = {family: len(rows) for family, rows in RANKINGS.items()}
+    return ReadinessResponse(
+        status="ok",
+        database="fixture-data",
+        timestamp=utc_now(),
+        active_release=ActivePublicReleaseMeta(
+            promotion_id=0,
+            ranking_run_id=RANKING_RUN_ID,
+            ranking_version=RANKING_VERSION,
+            corpus_snapshot_version=CORPUS_SNAPSHOT_VERSION,
+            embedding_version=EMBEDDING_VERSION,
+            scorer=PublicReleaseScorerMeta(
+                kind="materialized_paper_scores",
+                version=RANKING_RUN_ID,
+            ),
+            promoted_at=utc_now(),
+        ),
+        release_diagnostics=PublicReleaseReadinessDiagnostics(
+            serveable=True,
+            membership_count=len(FIXTURE_PAPERS),
+            embedding_count=len(FIXTURE_PAPERS),
+            missing_embedding_count=0,
+            family_score_counts=family_counts,
+            expected_family_score_counts=family_counts,
+            out_of_membership_score_count=0,
+            cluster_version=CLUSTER_VERSION,
+            cluster_assignment_count=len(FIXTURE_PAPERS),
+            missing_cluster_assignment_count=0,
+            out_of_membership_cluster_count=0,
+            failures=[],
+        ),
+    )
 
 
 def fixture_product_summary() -> ProductSummary:
@@ -344,6 +378,18 @@ def fixture_product_summary() -> ProductSummary:
             corpus_snapshot_version=CORPUS_SNAPSHOT_VERSION,
             embedding_version=EMBEDDING_VERSION,
             config_json=RUN_CONFIG,
+        ),
+        active_release=ActivePublicReleaseMeta(
+            promotion_id=0,
+            ranking_run_id=RANKING_RUN_ID,
+            ranking_version=RANKING_VERSION,
+            corpus_snapshot_version=CORPUS_SNAPSHOT_VERSION,
+            embedding_version=EMBEDDING_VERSION,
+            scorer=PublicReleaseScorerMeta(
+                kind="materialized_paper_scores",
+                version=RANKING_RUN_ID,
+            ),
+            promoted_at=utc_now(),
         ),
     )
 

@@ -87,3 +87,16 @@ pool (`cluster-works`, `ranking-run`, `corpus-v2-embed`, `corpus-v2-hydrate`)
 join through this table. Snapshot-scoped API reads also use membership rows;
 the canonical column identifies a work's home snapshot, not every snapshot in
 which that work participates.
+
+## Public release promotions (revision `0003`)
+
+`public_release_promotions` is an append-only log over immutable
+`ranking_runs`. The row with the greatest `promotion_id` is the selected
+public release. A rollback appends a prior known-good run again; it never
+rewrites or deletes history.
+
+The database accepts a promotion only for a completed, error-free, succeeded
+run and rejects updates, deletes, and truncation of the log. The migration
+deliberately creates an empty log: selecting a public release is an explicit
+operator action after artifact coverage has been validated, never an implicit
+"latest run" decision.

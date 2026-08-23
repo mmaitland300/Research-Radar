@@ -67,20 +67,157 @@ jobs:
           python - <<'EOF'
           import psycopg
 
-          with psycopg.connect("postgresql://research_radar:research_radar@localhost:5432/research_radar") as conn:
+          database_url = "postgresql://research_radar:research_radar@localhost:5432/research_radar"
+
+          def expect_sqlstate(conn, sql, params, expected_sqlstate):
+              try:
+                  conn.execute(sql, params)
+              except psycopg.Error as exc:
+                  assert exc.sqlstate == expected_sqlstate, (
+                      f"expected SQLSTATE {expected_sqlstate}, got {exc.sqlstate}: {exc}"
+                  )
+              else:
+                  raise AssertionError(f"statement unexpectedly succeeded: {sql}")
+
+          with psycopg.connect(database_url, autocommit=True) as conn:
               tables = {
                   row[0]
                   for row in conn.execute(
                       "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
                   )
               }
-              expected = {"works", "embeddings", "ranking_runs", "paper_scores", "alembic_version", "work_source_snapshot_memberships"}
+              expected = {
+                  "works",
+                  "embeddings",
+                  "ranking_runs",
+                  "paper_scores",
+                  "alembic_version",
+                  "work_source_snapshot_memberships",
+                  "public_release_promotions",
+              }
               missing = expected - tables
               assert not missing, f"missing tables after migration: {missing}"
               vector = conn.execute(
                   "SELECT extname FROM pg_extension WHERE extname = 'vector'"
               ).fetchone()
               assert vector, "pgvector extension not installed"
+
+              initial_promotions = conn.execute(
+                  "SELECT COUNT(*) FROM public_release_promotions"
+              ).fetchone()[0]
+              assert initial_promotions == 0, "migration must not bootstrap a public release"
+
+              conn.execute(
+                  """
+                  INSERT INTO source_snapshot_versions (
+                      source_snapshot_version, policy_name, policy_hash, ingest_mode, note
+                  )
+                  VALUES ('source-snapshot-ci-release', 'ci', 'ci-policy-hash', 'api-bootstrap', 'CI')
+                  """
+              )
+              conn.execute(
+                  """
+                  INSERT INTO ranking_runs (
+                      ranking_run_id, ranking_version, corpus_snapshot_version,
+                      embedding_version, status, started_at, finished_at,
+                      config_json, counts_json, error_message, notes
+                  )
+                  VALUES
+                      (
+                          'rank-ci-running', 'ci-v1', 'source-snapshot-ci-release',
+                          'ci-embedding', 'running', NOW(), NULL,
+                          '{}'::jsonb, NULL, NULL, NULL
+                      ),
+                      (
+                          'rank-ci-unfinished', 'ci-v1', 'source-snapshot-ci-release',
+                          'ci-embedding', 'succeeded', NOW(), NULL,
+                          '{}'::jsonb, NULL, NULL, NULL
+                      ),
+                      (
+                          'rank-ci-error', 'ci-v1', 'source-snapshot-ci-release',
+                          'ci-embedding', 'succeeded', NOW(), NOW(),
+                          '{}'::jsonb, NULL, 'failed after finalize', NULL
+                      ),
+                      (
+                          'rank-ci-succeeded', 'ci-v1', 'source-snapshot-ci-release',
+                          'ci-embedding', 'succeeded', NOW(), NOW(),
+                          '{}'::jsonb, NULL, NULL, NULL
+                      )
+                  """
+              )
+
+              promotion_insert = """
+                  INSERT INTO public_release_promotions (
+                      ranking_run_id, promoted_by, note
+                  )
+                  VALUES (%s, %s, %s)
+              """
+              for rejected_run in (
+                  "rank-ci-running",
+                  "rank-ci-unfinished",
+                  "rank-ci-error",
+              ):
+                  expect_sqlstate(
+                      conn,
+                      promotion_insert,
+                      (rejected_run, "ci", "must fail"),
+                      "23514",
+                  )
+              expect_sqlstate(
+                  conn,
+                  promotion_insert,
+                  ("rank-ci-succeeded", "   ", "must fail"),
+                  "23514",
+              )
+
+              conn.execute(
+                  promotion_insert,
+                  ("rank-ci-succeeded", "ci", "initial promotion"),
+              )
+              conn.execute(
+                  promotion_insert,
+                  ("rank-ci-succeeded", "ci", "re-promotion for rollback support"),
+              )
+              promotions = conn.execute(
+                  """
+                  SELECT promotion_id, ranking_run_id
+                  FROM public_release_promotions
+                  ORDER BY promotion_id
+                  """
+              ).fetchall()
+              assert len(promotions) == 2
+              assert promotions[0][0] < promotions[1][0]
+              assert {row[1] for row in promotions} == {"rank-ci-succeeded"}
+
+              expect_sqlstate(
+                  conn,
+                  "UPDATE public_release_promotions SET note = %s",
+                  ("rewrite",),
+                  "55000",
+              )
+              expect_sqlstate(
+                  conn,
+                  "DELETE FROM public_release_promotions",
+                  (),
+                  "55000",
+              )
+              expect_sqlstate(
+                  conn,
+                  "TRUNCATE public_release_promotions",
+                  (),
+                  "55000",
+              )
+              expect_sqlstate(
+                  conn,
+                  "DELETE FROM ranking_runs WHERE ranking_run_id = %s",
+                  ("rank-ci-succeeded",),
+                  "23503",
+              )
+
+              final_promotions = conn.execute(
+                  "SELECT COUNT(*) FROM public_release_promotions"
+              ).fetchone()[0]
+              assert final_promotions == 2
           print("schema sanity check passed")
           EOF
 
