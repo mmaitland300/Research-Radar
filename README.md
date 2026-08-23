@@ -121,6 +121,11 @@ uvicorn app.main:app --reload --app-dir apps/api
 npm run dev:web
 ```
 
+Railway runs the same Alembic upgrade as a pre-deploy step. The API image
+contains the migration tree and pinned migration tooling, so a failed schema
+upgrade blocks the new application deployment instead of serving code against
+an older database revision.
+
 Open `http://localhost:3000/search`.
 
 The Python lock is for Python 3.12 CI/dev reproducibility. Regenerate

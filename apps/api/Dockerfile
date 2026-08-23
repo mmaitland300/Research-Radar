@@ -9,6 +9,8 @@ ENV PYTHONUNBUFFERED=1
 ENV RESEARCH_RADAR_REPO_ROOT=/app
 
 # Keep services/pipeline/pipeline/repo_paths.py -> default_repo_root() == /app
+COPY requirements/python-3.12.lock ./requirements/python-3.12.lock
+COPY infra/db ./infra/db
 COPY services/pipeline ./services/pipeline
 COPY apps/api ./apps/api
 COPY docs/audit/ml-offline-audit-embedding-scorer-v2.json ./docs/audit/ml-offline-audit-embedding-scorer-v2.json
@@ -17,6 +19,7 @@ COPY docs/audit/ml-offline-bridge-recommendable-scorer-v3-regularization-sensiti
 COPY docs/audit/ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json ./docs/audit/ml-shadow-scorer-v1-second-snapshot-embeddings-v1.json
 
 RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -c requirements/python-3.12.lock -r infra/db/requirements.txt \
     && pip install --no-cache-dir ./services/pipeline \
     && pip install --no-cache-dir ./apps/api \
     && chmod +x ./apps/api/docker-entrypoint.sh

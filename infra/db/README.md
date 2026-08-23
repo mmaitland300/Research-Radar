@@ -25,8 +25,9 @@ The rules:
    and databases that were created from `schema.sql` directly.
 2. Every schema change after the baseline is a new Alembic revision under
    `migrations/versions/`. Do not edit `schema.sql` or past revisions.
-3. Migrations run from a repo checkout (developer machine or CI), not from
-   the API container. The deployed API never owns DDL.
+3. Developers and CI run migrations from a repo checkout. Railway runs them
+   in a separate pre-deploy container built from the API image; a failed
+   migration blocks deployment. The long-running API process never owns DDL.
 
 ## Running migrations
 

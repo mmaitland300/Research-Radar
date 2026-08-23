@@ -1,3 +1,6 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/api/Dockerfile"
+
+[deploy]
+preDeployCommand = ["alembic -c infra/db/alembic.ini upgrade head"]
