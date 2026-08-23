@@ -102,19 +102,20 @@ def _seed_serveable_run(database_url: str) -> str:
             """,
             (ranking_run_id, snapshot, embedding, Jsonb(config), Jsonb(counts)),
         )
-        conn.executemany(
-            """
-            INSERT INTO paper_scores (
-                ranking_run_id, work_id, recommendation_family,
-                final_score, reason_short
+        with conn.cursor() as cursor:
+            cursor.executemany(
+                """
+                INSERT INTO paper_scores (
+                    ranking_run_id, work_id, recommendation_family,
+                    final_score, reason_short
+                )
+                VALUES (%s, %s, %s, 1.0, 'Concurrency fixture')
+                """,
+                [
+                    (ranking_run_id, work_id, family)
+                    for family in ("emerging", "bridge", "undercited")
+                ],
             )
-            VALUES (%s, %s, %s, 1.0, 'Concurrency fixture')
-            """,
-            [
-                (ranking_run_id, work_id, family)
-                for family in ("emerging", "bridge", "undercited")
-            ],
-        )
     return ranking_run_id
 
 
