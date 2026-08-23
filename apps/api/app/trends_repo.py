@@ -6,7 +6,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from app.papers_repo import database_url_from_env
-from app.scores_repo import latest_corpus_snapshot_version_with_works
+from app.serving_context import resolve_serving_context
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,8 @@ def list_topic_trends(
     since_year: int,
     min_works: int,
     corpus_snapshot_version: str | None = None,
+    ranking_run_id: str | None = None,
+    ranking_version: str | None = None,
 ) -> TopicTrendsResult:
     query = """
         SELECT
@@ -68,9 +70,13 @@ def list_topic_trends(
         LIMIT %s
     """
     with psycopg.connect(database_url_from_env(), row_factory=dict_row) as conn:
-        resolved_snapshot = corpus_snapshot_version or latest_corpus_snapshot_version_with_works(conn)
-        if resolved_snapshot is None:
-            raise RuntimeError("No corpus_snapshot_version with included works found.")
+        ctx = resolve_serving_context(
+            conn,
+            ranking_run_id=ranking_run_id,
+            corpus_snapshot_version=corpus_snapshot_version,
+            ranking_version=ranking_version,
+        )
+        resolved_snapshot = ctx.corpus_snapshot_version
         params = (
             since_year,
             since_year,

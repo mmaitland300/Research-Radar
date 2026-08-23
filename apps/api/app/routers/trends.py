@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.contracts import TopicTrendItem, TopicTrendsResponse, utc_now
 from app.demo_fixtures import fixture_mode_enabled, fixture_topic_trends
+from app.serving_context import ServingContextNotFoundError, ServingContextUnavailableError
 from app.trends_repo import list_topic_trends
 
 router = APIRouter()
@@ -15,6 +16,8 @@ def get_topic_trends(
     since_year: int = Query(default=utc_now().year - 1, ge=1990, le=2100),
     min_works: int = Query(default=2, ge=1, le=10_000),
     corpus_snapshot_version: str | None = Query(default=None),
+    ranking_run_id: str | None = Query(default=None),
+    ranking_version: str | None = Query(default=None),
 ) -> TopicTrendsResponse:
     if fixture_mode_enabled():
         return fixture_topic_trends(
@@ -28,7 +31,13 @@ def get_topic_trends(
             since_year=since_year,
             min_works=min_works,
             corpus_snapshot_version=corpus_snapshot_version,
+            ranking_run_id=ranking_run_id,
+            ranking_version=ranking_version,
         )
+    except ServingContextNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ServingContextUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=503,

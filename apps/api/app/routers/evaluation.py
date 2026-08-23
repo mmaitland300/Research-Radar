@@ -28,6 +28,7 @@ from app.demo_fixtures import (
 )
 from app.evaluation_repo import EvalListArm, load_evaluation_compare
 from app.papers_repo import database_url_from_env
+from app.serving_context import ServingContextNotFoundError, ServingContextUnavailableError
 
 router = APIRouter()
 
@@ -136,6 +137,10 @@ def get_evaluation_compare(
             ranking_run_id=ranking_run_id,
             ranking_version=ranking_version,
         )
+    except ServingContextNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ServingContextUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
@@ -143,12 +148,6 @@ def get_evaluation_compare(
             status_code=503,
             detail="Database query failed. Confirm Postgres is running and ranking data exists.",
         ) from exc
-
-    if payload is None:
-        raise HTTPException(
-            status_code=404,
-            detail="No succeeded ranking run found for the given filters.",
-        )
 
     return EvaluationCompareResponse(
         disclaimer=EVALUATION_V0_DISCLAIMER,

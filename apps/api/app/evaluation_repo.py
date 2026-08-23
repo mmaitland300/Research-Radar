@@ -13,11 +13,9 @@ import psycopg
 from psycopg.rows import dict_row
 
 from app.papers_repo import _topic_names_from_json
-from app.scores_repo import (
-    VALID_FAMILIES,
-    resolve_ranked_run_context,
-    latest_corpus_snapshot_version_with_works,
-)
+from app.scores_repo import VALID_FAMILIES
+from app.serving_context import resolve_serving_context
+
 
 def _low_cite_params_from_run_config(config: dict[str, Any]) -> tuple[int, int]:
     scope = config.get("selection_scope") if isinstance(config.get("selection_scope"), dict) else {}
@@ -39,22 +37,6 @@ def _parse_config_row(raw: Any) -> dict[str, Any]:
             return {}
         return dict(parsed) if isinstance(parsed, dict) else {}
     return {}
-
-
-def _fetch_ranking_run_row(
-    conn: psycopg.Connection, *, ranking_run_id: str
-) -> dict[str, Any] | None:
-    row = conn.execute(
-        """
-        SELECT ranking_run_id, ranking_version, corpus_snapshot_version, embedding_version, config_json, status
-        FROM ranking_runs
-        WHERE ranking_run_id = %s AND status = 'succeeded'
-        """,
-        (ranking_run_id,),
-    ).fetchone()
-    if row is None:
-        return None
-    return dict(row)
 
 
 @dataclass(frozen=True)
@@ -215,7 +197,7 @@ def _pool_cte_sql(
     low_cite_max_citations: int,
 ) -> tuple[str, tuple[Any, ...]]:
     if family == "undercited":
-        sql = f"""
+        sql = """
         WITH pool AS (
             SELECT w.id, w.openalex_id, w.title, w.year, w.citation_count, w.source_slug
             FROM works w
@@ -343,26 +325,19 @@ def load_evaluation_compare(
     corpus_snapshot_version: str | None = None,
     ranking_run_id: str | None = None,
     ranking_version: str | None = None,
-) -> EvalComparePayload | None:
+) -> EvalComparePayload:
     if family not in VALID_FAMILIES:
         raise ValueError(f"Invalid recommendation family: {family!r}")
 
     with psycopg.connect(database_url, row_factory=dict_row) as conn:
-        snap_default = latest_corpus_snapshot_version_with_works(conn)
-        ctx = resolve_ranked_run_context(
+        ctx = resolve_serving_context(
             conn,
             ranking_run_id=ranking_run_id,
-            corpus_snapshot_version=corpus_snapshot_version or snap_default,
+            corpus_snapshot_version=corpus_snapshot_version,
             ranking_version=ranking_version,
         )
-        if ctx is None:
-            return None
 
-        run_row = _fetch_ranking_run_row(conn, ranking_run_id=ctx.ranking_run_id)
-        if run_row is None:
-            return None
-
-        config = _parse_config_row(run_row.get("config_json"))
+        config = _parse_config_row(ctx.run.config_json)
         low_min, low_max = _low_cite_params_from_run_config(config)
         rev = None
         scope = config.get("selection_scope") if isinstance(config.get("selection_scope"), dict) else {}
@@ -495,9 +470,9 @@ def load_evaluation_compare(
 
     return EvalComparePayload(
         ranking_run_id=ctx.ranking_run_id,
-        ranking_version=str(run_row["ranking_version"]),
+        ranking_version=ctx.ranking_version,
         corpus_snapshot_version=ctx.corpus_snapshot_version,
-        embedding_version=str(run_row["embedding_version"]),
+        embedding_version=ctx.embedding_version,
         family=family,
         pool_definition=pool_def,
         pool_size=pool_size,

@@ -1,5 +1,6 @@
-from unittest.mock import MagicMock
 from dataclasses import replace
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
@@ -20,7 +21,7 @@ from app.evaluation_repo import (
 )
 from app.routers import evaluation as evaluation_router
 from app.routers import health as health_router
-from app.scores_repo import RankedRunContext
+from app.serving_context import ServingContextNotFoundError, ServingContextUnavailableError
 
 
 client = TestClient(main.app)
@@ -185,32 +186,16 @@ def test_ranked_evaluation_uses_membership_for_resolved_run_snapshot(monkeypatch
     conn.execute.side_effect = [pool_result, ranked_result, citation_result, date_result]
 
     monkeypatch.setattr(evaluation_repo.psycopg, "connect", lambda *a, **k: conn)
-    monkeypatch.setattr(
-        evaluation_repo,
-        "latest_corpus_snapshot_version_with_works",
-        lambda _conn: "snapshot-default",
-    )
-    monkeypatch.setattr(
-        evaluation_repo,
-        "resolve_ranked_run_context",
-        lambda *_a, **_k: RankedRunContext(
+    resolve_context = MagicMock(
+        return_value=SimpleNamespace(
             ranking_run_id="rank-1",
             ranking_version="rank-v1",
             corpus_snapshot_version="snapshot-composed",
+            embedding_version="embed-v1",
+            run=SimpleNamespace(config_json={}),
         ),
     )
-    monkeypatch.setattr(
-        evaluation_repo,
-        "_fetch_ranking_run_row",
-        lambda *_a, **_k: {
-            "ranking_run_id": "rank-1",
-            "ranking_version": "rank-v1",
-            "corpus_snapshot_version": "snapshot-composed",
-            "embedding_version": "embed-v1",
-            "config_json": {},
-            "status": "succeeded",
-        },
-    )
+    monkeypatch.setattr(evaluation_repo, "resolve_serving_context", resolve_context)
 
     payload = load_evaluation_compare(
         database_url="postgresql://test",
@@ -226,6 +211,12 @@ def test_ranked_evaluation_uses_membership_for_resolved_run_snapshot(monkeypatch
     assert "wssm.inclusion_status = 'included'" in ranked_sql
     assert "w.corpus_snapshot_version = %s" not in ranked_sql
     assert ranked_params == ("snapshot-composed", "rank-1", "emerging", 5)
+    resolve_context.assert_called_once_with(
+        conn,
+        ranking_run_id=None,
+        corpus_snapshot_version=None,
+        ranking_version=None,
+    )
 
 
 def test_evaluation_compare_smoke(monkeypatch) -> None:
@@ -288,11 +279,37 @@ def test_evaluation_compare_emerging_does_not_emit_low_cite_gate_fields(monkeypa
     assert body["candidate_pool_doc_revision"] is None
 
 
-def test_evaluation_compare_not_found(monkeypatch) -> None:
-    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", MagicMock(return_value=None))
-    response = client.get("/api/v1/evaluation/compare?family=bridge")
+def test_evaluation_compare_historical_selector_not_found(monkeypatch) -> None:
+    load_compare = MagicMock(
+        side_effect=ServingContextNotFoundError(ranking_run_id="rank-missing")
+    )
+    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", load_compare)
+
+    response = client.get(
+        "/api/v1/evaluation/compare?family=bridge&ranking_run_id=rank-missing"
+    )
 
     assert response.status_code == 404
+    assert "rank-missing" in response.json()["detail"]
+
+
+def test_evaluation_compare_unavailable_active_release(monkeypatch) -> None:
+    promotion = SimpleNamespace(
+        promotion_id=7,
+        run=SimpleNamespace(ranking_run_id="rank-active"),
+    )
+    load_compare = MagicMock(
+        side_effect=ServingContextUnavailableError(
+            promotion,
+            failures=("missing_embeddings",),
+        )
+    )
+    monkeypatch.setattr(evaluation_router, "load_evaluation_compare", load_compare)
+
+    response = client.get("/api/v1/evaluation/compare?family=bridge")
+
+    assert response.status_code == 503
+    assert "missing_embeddings" in response.json()["detail"]
 
 
 def test_evaluation_compare_invalid_family() -> None:
