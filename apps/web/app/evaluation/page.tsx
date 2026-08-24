@@ -12,8 +12,6 @@ const FAMILY_LABEL: Record<Family, string> = {
 const API_BASE_URL =
   process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
-const RANKING_VERSION = process.env.NEXT_PUBLIC_RANKING_VERSION?.trim() || undefined;
-
 const API_UNAVAILABLE_MESSAGE =
   "The Research Radar API is unavailable. Try again later, or check the repository setup docs if you are running it locally.";
 
@@ -377,7 +375,6 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
   const limit = parseLimit(resolvedSearchParams.limit, 12, 50);
   const { data, error, status } = await (async () => {
     const params = new URLSearchParams({ family, limit: String(limit) });
-    if (RANKING_VERSION) params.set("ranking_version", RANKING_VERSION);
     if (rankingRunId) params.set("ranking_run_id", rankingRunId);
 
     try {
@@ -389,7 +386,7 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
         return {
           data: null,
           error:
-            "No succeeded ranking run found. Align the configured run label with an existing run, or use an explicit ranking_run_id.",
+            "No succeeded ranking run found. Use an explicit ranking_run_id to inspect a historical run.",
           status: 404
         };
       }
@@ -488,14 +485,14 @@ export default async function EvaluationPage({ searchParams }: PageProps) {
             </Link>
           ))}
         </nav>
-        {RANKING_VERSION ? (
+        {rankingRunId ? (
           <p className="muted-inline">
-            Run label filter: <code>{RANKING_VERSION}</code>
+            Historical run: <code>{rankingRunId}</code>
           </p>
         ) : (
           <p className="muted-inline">
-            Using latest succeeded run for the default snapshot. Use an explicit run label or run id
-            for stable reviewer checks.
+            Using the API-selected public serving context. Use an explicit run id for stable
+            historical review.
           </p>
         )}
         {focusPaperId ? (
